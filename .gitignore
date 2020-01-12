@@ -1,6 +1,9 @@
 devel/
 logs/
+log/
+install/
 build/
+test/
 bin/
 lib/
 msg_gen/
@@ -28,6 +31,7 @@ devel_isolated/
 # eclipse stuff
 .project
 .cproject
+.pydevproject
 
 # qcreator stuff
 CMakeLists.txt.user
