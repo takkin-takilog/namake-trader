@@ -10,28 +10,35 @@ class StreamApi(Node):
 
     def __init__(self):
         super().__init__("stream_api")
-        
+
+        # Set logger lebel
+        logger = super().get_logger()
+        logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+
+        PRMNM_ACCOUNT_NUMBER = "account_number"
+        PRMNM_ACCESS_TOKEN = "access_token"
+        TPCNM_PRICE = "price"
+
         # Declare parameter
-        self.declare_parameter("account_number")
-        self.declare_parameter("access_token")
-        
-        account_number = self.get_parameter("account_number").value
-        access_token = self.get_parameter("access_token").value
-        self.get_logger().error("account_number = %s" % account_number)
-        self.get_logger().error("access_token = %s" % access_token)
-        
+        self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
+        self.declare_parameter(PRMNM_ACCESS_TOKEN)
+
+        account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
+        access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
+        self.get_logger().debug("[OANDA]Account Number:%s" % account_number)
+        self.get_logger().debug("[OANDA]Access Token:%s" % access_token)
+
         self.__api = API(access_token=access_token)
         params = {"instruments": "USD_JPY"}
         self.__ps = PricingStream(account_number, params)
-        
+
         # String型のchatterトピックを送信するpublisherの定義
-        self.publisher = self.create_publisher(String, 'price')        
-        
+        self.publisher = self.create_publisher(String, TPCNM_PRICE)
+
     def request(self):
         msg = String()
         try:
             for rsp in self.__api.request(self.__ps):
-                print("■bidsのみ抽出：")
                 if "bids" in rsp.keys():
                     msg.data = rsp["bids"][0]["price"]
                     # chatterトピックにmsgを送信
