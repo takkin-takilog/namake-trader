@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import Float32
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error
@@ -17,7 +17,8 @@ class StreamApi(Node):
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
         PRMNM_ACCESS_TOKEN = "access_token"
-        TPCNM_PRICE = "price"
+        TPCNM_BIDS_PRICE = "bids_price"
+        TPCNM_ASKS_PRICE = "asks_price"
 
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
@@ -32,19 +33,27 @@ class StreamApi(Node):
         params = {"instruments": "USD_JPY"}
         self.__ps = PricingStream(account_number, params)
 
-        # String型のchatterトピックを送信するpublisherの定義
-        self.publisher = self.create_publisher(String, TPCNM_PRICE)
+        # Declare publisher
+        self.__pub_bids = self.create_publisher(Float32, TPCNM_BIDS_PRICE)
+        self.__pub_asks = self.create_publisher(Float32, TPCNM_ASKS_PRICE)
 
     def request(self):
-        msg = String()
+        BIDS = "bids"
+        ASKS = "asks"
+        PRICE = "price"
+        bids = Float32()
+        asks = Float32()
         try:
             for rsp in self.__api.request(self.__ps):
-                if "bids" in rsp.keys():
-                    msg.data = rsp["bids"][0]["price"]
-                    # chatterトピックにmsgを送信
-                    self.publisher.publish(msg)
-                    # msgの中身を標準出力にログ
-                    self.get_logger().info(msg.data)
+                if (BIDS and ASKS) in rsp.keys():
+                    bids.data = float(rsp[BIDS][0][PRICE])
+                    asks.data = float(rsp[ASKS][0][PRICE])
+                    # Publish topics
+                    self.__pub_bids.publish(bids)
+                    self.__pub_asks.publish(asks)
+                    # output log
+                    self.get_logger().info(str(bids.data))
+                    self.get_logger().info(str(asks.data))
         except V20Error as e:
             print("Error: {}".format(e))
 
