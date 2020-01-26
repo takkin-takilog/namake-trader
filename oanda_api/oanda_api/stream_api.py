@@ -17,6 +17,7 @@ class StreamApi(Node):
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
         PRMNM_ACCESS_TOKEN = "access_token"
+        PRMNM_INSTRUMENTS = "instruments"
         TPCNM_BIDS_PRICE = "bids_price"
         TPCNM_ASKS_PRICE = "asks_price"
         TPCNM_ACT_FLG = "activate_flag"
@@ -24,17 +25,21 @@ class StreamApi(Node):
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
+        self.declare_parameter(PRMNM_INSTRUMENTS)
 
         # initialize
         self.__act_flg = True
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
+        instrumentslist = self.get_parameter(PRMNM_INSTRUMENTS).value
         self.__logger.debug("[OANDA]Account Number:%s" % account_number)
         self.__logger.debug("[OANDA]Access Token:%s" % access_token)
+        self.__logger.debug("[OANDA]Instruments:%s" % instrumentslist)
 
         self.__api = API(access_token=access_token)
-        params = {"instruments": "USD_JPY"}
+        instruments = ",".join(instrumentslist)
+        params = {"instruments": instruments}
         self.__ps = PricingStream(account_number, params)
 
         # Declare publisher and subscriber
@@ -59,6 +64,8 @@ class StreamApi(Node):
         BIDS = "bids"
         ASKS = "asks"
         PRICE = "price"
+        TRADEABLE = "tradeable"
+        INSTRUMENT = "instrument"
         bids = Float32()
         asks = Float32()
         try:
@@ -69,9 +76,19 @@ class StreamApi(Node):
                     self.__logger.debug("terminate PricingStream")
                     self.__ps.terminate()
 
+                import json
+                self.__logger.debug(json.dumps(rsp, indent=2))
+
                 if (BIDS and ASKS) in rsp.keys():
                     bids.data = float(rsp[BIDS][0][PRICE])
                     asks.data = float(rsp[ASKS][0][PRICE])
+
+                if (TRADEABLE and INSTRUMENT) in rsp.keys():
+                    tradeable = rsp[TRADEABLE]
+                    instrument = rsp[INSTRUMENT]
+                    self.__logger.debug("Tradeable: %s" % tradeable)
+                    self.__logger.debug("Instrument: %s" % instrument)
+
                     # Publish topics
                     self.__pub_bids.publish(bids)
                     self.__pub_asks.publish(asks)
