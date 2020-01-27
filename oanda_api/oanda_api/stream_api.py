@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float32, Bool
+from std_msgs.msg import Bool
+from oanda_api_msgs.msg import Pricing
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error, StreamTerminated
@@ -18,8 +19,7 @@ class StreamApi(Node):
         PRMNM_ACCOUNT_NUMBER = "account_number"
         PRMNM_ACCESS_TOKEN = "access_token"
         PRMNM_INSTRUMENTS = "instruments"
-        TPCNM_BIDS_PRICE = "bids_price"
-        TPCNM_ASKS_PRICE = "asks_price"
+        TPCNM_PRICING = "pricing_"
         TPCNM_ACT_FLG = "activate_flag"
 
         # Declare parameter
@@ -43,31 +43,32 @@ class StreamApi(Node):
         self.__ps = PricingStream(account_number, params)
 
         # Declare publisher and subscriber
-        self.__pub_bids = self.create_publisher(Float32, TPCNM_BIDS_PRICE)
-        self.__pub_asks = self.create_publisher(Float32, TPCNM_ASKS_PRICE)
+        self.__pub_dict = {}
+        for instrument in instrumentslist:
+            suffix = instrument.replace("_", "").lower()
+            pub = self.create_publisher(Pricing, TPCNM_PRICING + suffix)
+            self.__pub_dict[instrument] = pub.publish
+
         self.__sub_act = self.create_subscription(Bool, TPCNM_ACT_FLG,
                                                   self.__act_flg_callback)
 
     def background(self):
-        self.__logger.debug("background")
         if self.__act_flg:
             self.__request()
 
     def __act_flg_callback(self, msg):
-        self.__logger.debug("Called callbak func: %s" % msg.data)
         if msg.data:
             self.__act_flg = True
         else:
             self.__act_flg = False
 
     def __request(self):
-        BIDS = "bids"
-        ASKS = "asks"
-        PRICE = "price"
-        TRADEABLE = "tradeable"
+        TIME = "time"
         INSTRUMENT = "instrument"
-        bids = Float32()
-        asks = Float32()
+        BID = "closeoutBid"
+        ASK = "closeoutAsk"
+        TRADEABLE = "tradeable"
+
         try:
             for rsp in self.__api.request(self.__ps):
 
@@ -76,30 +77,24 @@ class StreamApi(Node):
                     self.__logger.debug("terminate PricingStream")
                     self.__ps.terminate()
 
-                import json
-                self.__logger.debug(json.dumps(rsp, indent=2))
-
-                if (BIDS and ASKS) in rsp.keys():
-                    bids.data = float(rsp[BIDS][0][PRICE])
-                    asks.data = float(rsp[ASKS][0][PRICE])
-
-                if (TRADEABLE and INSTRUMENT) in rsp.keys():
-                    tradeable = rsp[TRADEABLE]
-                    instrument = rsp[INSTRUMENT]
-                    self.__logger.debug("Tradeable: %s" % tradeable)
-                    self.__logger.debug("Instrument: %s" % instrument)
+                if TRADEABLE in rsp.keys():
+                    msg = Pricing()
+                    msg.time = rsp[TIME]
+                    msg.instrument = rsp[INSTRUMENT]
+                    msg.closeout_bid = float(rsp[BID])
+                    msg.closeout_ask = float(rsp[ASK])
+                    msg.tradeable = rsp[TRADEABLE]
 
                     # Publish topics
-                    self.__pub_bids.publish(bids)
-                    self.__pub_asks.publish(asks)
-                    # output log
-                    self.__logger.info(str(bids.data))
-                    self.__logger.info(str(asks.data))
+                    self.__pub_dict[msg.instrument](msg)
 
         except V20Error as e:
             print("Error: {}".format(e))
         except StreamTerminated as e:
             print("StreamTerminated: {}".format(e))
+
+    def __handler(self, func, msg):
+        func(msg)
 
 
 def main(args=None):

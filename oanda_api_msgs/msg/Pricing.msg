@@ -9,11 +9,11 @@ string time
 # The Price’s Instrument.
 string instrument
 
-# prices available on the Instrument’s bid side.
-float32 bid_price
+# The closeout bid Price.
+float32 closeout_bid
 
-# prices available on the Instrument’s ask side.
-float32 ask_price
+# The closeout ask Price.
+float32 closeout_ask
 
 # Flag indicating if the Price is tradeable or not
 bool tradeable
