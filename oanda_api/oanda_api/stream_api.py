@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 from oanda_api_msgs.msg import Pricing
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
@@ -20,6 +20,7 @@ class StreamApi(Node):
         PRMNM_ACCESS_TOKEN = "access_token"
         PRMNM_INSTRUMENTS = "instruments"
         TPCNM_PRICING = "pricing_"
+        TPCNM_HEARTBEAT = "heart_beat"
         TPCNM_ACT_FLG = "activate_flag"
 
         # Declare parameter
@@ -48,6 +49,7 @@ class StreamApi(Node):
             suffix = instrument.replace("_", "").lower()
             pub = self.create_publisher(Pricing, TPCNM_PRICING + suffix)
             self.__pub_dict[instrument] = pub.publish
+        self.__pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT)
 
         self.__sub_act = self.create_subscription(Bool, TPCNM_ACT_FLG,
                                                   self.__act_flg_callback)
@@ -63,6 +65,9 @@ class StreamApi(Node):
             self.__act_flg = False
 
     def __request(self):
+        TYPE = "type"
+        TYP_PRICE = "PRICE"
+        TYP_HB = "HEARTBEAT"
         TIME = "time"
         INSTRUMENT = "instrument"
         BID = "closeoutBid"
@@ -74,24 +79,30 @@ class StreamApi(Node):
 
                 rclpy.spin_once(self, timeout_sec=0)
                 if not self.__act_flg:
-                    self.__logger.debug("terminate PricingStream")
                     self.__ps.terminate()
 
-                if TRADEABLE in rsp.keys():
-                    msg = Pricing()
-                    msg.time = rsp[TIME]
-                    msg.instrument = rsp[INSTRUMENT]
-                    msg.closeout_bid = float(rsp[BID])
-                    msg.closeout_ask = float(rsp[ASK])
-                    msg.tradeable = rsp[TRADEABLE]
+                if TYPE in rsp.keys():
+                    typ = rsp[TYPE]
+                    if typ == TYP_PRICE:
+                        msg = Pricing()
+                        msg.time = rsp[TIME]
+                        msg.instrument = rsp[INSTRUMENT]
+                        msg.closeout_bid = float(rsp[BID])
+                        msg.closeout_ask = float(rsp[ASK])
+                        msg.tradeable = rsp[TRADEABLE]
+                        # Publish topics
+                        self.__pub_dict[msg.instrument](msg)
 
-                    # Publish topics
-                    self.__pub_dict[msg.instrument](msg)
+                    elif typ == TYP_HB:
+                        msg = String()
+                        msg.data = rsp[TIME]
+                        # Publish topics
+                        self.__pub_hb.publish(msg)
 
         except V20Error as e:
-            print("Error: {}".format(e))
+            self.__logger.error("V20Error: %s" % e)
         except StreamTerminated as e:
-            print("StreamTerminated: {}".format(e))
+            self.__logger.debug("Stream Terminated: %s" % e)
 
     def __handler(self, func, msg):
         func(msg)
