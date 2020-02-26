@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
-from oanda_api_msgs.msg import Pricing
+from oanda_api_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error, StreamTerminated
@@ -28,7 +28,7 @@ class StreamApi(Node):
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
         self.declare_parameter(PRMNM_INSTRUMENTS)
 
-        # initialize
+        # Initialize
         self.__act_flg = True
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
@@ -70,8 +70,12 @@ class StreamApi(Node):
         TYP_HB = "HEARTBEAT"
         TIME = "time"
         INSTRUMENT = "instrument"
-        BID = "closeoutBid"
-        ASK = "closeoutAsk"
+        BIDS = "bids"
+        ASKS = "asks"
+        PRICE = "price"
+        LIQUIDITY = "liquidity"
+        CLOSEOUT_BID = "closeoutBid"
+        CLOSEOUT_ASK = "closeoutAsk"
         TRADEABLE = "tradeable"
 
         try:
@@ -87,8 +91,18 @@ class StreamApi(Node):
                         msg = Pricing()
                         msg.time = rsp[TIME]
                         msg.instrument = rsp[INSTRUMENT]
-                        msg.closeout_bid = float(rsp[BID])
-                        msg.closeout_ask = float(rsp[ASK])
+                        for bid in rsp[BIDS]:
+                            pb = PriceBucket()
+                            pb.price = float(bid[PRICE])
+                            pb.liquidity = bid[LIQUIDITY]
+                            msg.bids.append(pb)
+                        for ask in rsp[ASKS]:
+                            pb = PriceBucket()
+                            pb.price = float(ask[PRICE])
+                            pb.liquidity = ask[LIQUIDITY]
+                            msg.asks.append(pb)
+                        msg.closeout_bid = float(rsp[CLOSEOUT_BID])
+                        msg.closeout_ask = float(rsp[CLOSEOUT_ASK])
                         msg.tradeable = rsp[TRADEABLE]
                         # Publish topics
                         self.__pub_dict[msg.instrument](msg)
