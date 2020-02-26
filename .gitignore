@@ -3,7 +3,6 @@ logs/
 log/
 install/
 build/
-test/
 bin/
 lib/
 msg_gen/
@@ -27,6 +26,9 @@ devel_isolated/
 # Ignore generated docs
 *.dox
 *.wikidoc
+
+# Ignore .eggs
+.eggs
 
 # eclipse stuff
 .project
