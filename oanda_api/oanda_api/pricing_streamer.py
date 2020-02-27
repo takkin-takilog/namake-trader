@@ -7,10 +7,10 @@ from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error, StreamTerminated
 
 
-class StreamApi(Node):
+class PricingStreamer(Node):
 
     def __init__(self):
-        super().__init__("stream_api")
+        super().__init__("pricing_streamer")
 
         # Set logger lebel
         self.__logger = super().get_logger()
@@ -124,7 +124,7 @@ class StreamApi(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    stream_api = StreamApi()
+    stream_api = PricingStreamer()
     try:
         while True:
             rclpy.spin_once(stream_api, timeout_sec=1.0)

@@ -22,7 +22,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'price_stream_publisher = ' + package_name + '.stream_api:main',
+            'pricing_streamer = ' + package_name + '.pricing_streamer:main',
+            'order_server = ' + package_name + '.order_server:main',
         ],
     },
 )
