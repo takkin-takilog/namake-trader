@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 
 
-class OrderServer(Node):
+class OrderService(Node):
 
     def __init__(self):
         super().__init__("order_service")
@@ -14,6 +14,6 @@ class OrderServer(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    order = OrderServer()
+    order = OrderService()
     rclpy.spin(order)
     rclpy.shutdown()
