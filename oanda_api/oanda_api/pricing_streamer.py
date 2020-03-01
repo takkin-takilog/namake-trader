@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
-from oanda_api_msgs.msg import PriceBucket, Pricing
+from api_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error, StreamTerminated

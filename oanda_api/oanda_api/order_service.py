@@ -5,7 +5,7 @@ from rclpy.node import Node
 class OrderServer(Node):
 
     def __init__(self):
-        super().__init__("order_server")
+        super().__init__("order_service")
 
         # Set logger lebel
         self.__logger = super().get_logger()

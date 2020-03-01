@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(oanda_api_msgs)
+project(api_msgs)
 
 set(CMAKE_CXX_STANDARD 14)
 

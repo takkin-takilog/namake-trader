@@ -12,7 +12,7 @@
   <buildtool_depend>ament_python</buildtool_depend>
 
   <build_depend>rclpy</build_depend>
-  <build_depend>oanda_api_msgs</build_depend>
+  <build_depend>api_msgs</build_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
@@ -20,7 +20,7 @@
   <test_depend>python3-pytest</test_depend>
 
   <exec_depend>rclpy</exec_depend>
-  <exec_depend>oanda_api_msgs</exec_depend>
+  <exec_depend>api_msgs</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 
   <export>
