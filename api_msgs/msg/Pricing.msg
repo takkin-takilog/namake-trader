@@ -3,10 +3,10 @@
 #    https://developer.oanda.com/rest-live-v20/pricing-df/
 #    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/pricing/pricingstream.html
 
-# The date/time when the Price was created
+# The date/time when the Price was created.
 string time
 
-# The Price’s Instrument
+# The Price’s Instrument.
 string instrument
 
 # The list of prices and liquidity available on the Instrument's bid side.
@@ -29,5 +29,5 @@ float32 closeout_bid
 # liquidity. The closeout ask is never used to open a new position.
 float32 closeout_ask
 
-# Flag indicating if the Price is tradeable or not
+# Flag indicating if the Price is tradeable or not.
 bool tradeable

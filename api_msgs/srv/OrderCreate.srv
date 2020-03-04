@@ -1,0 +1,42 @@
+# oandapyV20.endpoints.orders.OrderCreate
+# Reference:
+#    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/orders/ordercreate.html
+
+# Order type defintion
+uint8 TYP_MARKET=0
+uint8 TYP_LIMIT=1
+uint8 TYP_STOP=2
+
+# Order instrument defintion
+uint8 INST_USD_JPY=0
+uint8 INST_EUR_JPY=1
+uint8 INST_EUR_USD=2
+
+# ========================= Request =========================
+# The type of the order.
+int32 type
+
+# Instrument to open the order on.
+int32 instrument
+
+# The number of units to open order for.
+# If positive value is set, it is a "buy" direction,
+# and if a negative value is set, it is a "sell" direction.
+int32 units
+
+# The take profit price.
+float32 take_profit_price
+
+# The stop loss price.
+float32 stop_loss_price
+
+---
+# ========================= Response =========================
+# The type of the order.
+int32 type
+
+# Instrument to open the order on.
+int32 instrument
+
+# The order fill time.
+string time
