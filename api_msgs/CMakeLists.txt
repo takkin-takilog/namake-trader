@@ -16,7 +16,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/PriceBucket.msg"
   "msg/Pricing.msg"
-  "srv/OrderCreate.srv"
+  "srv/OrderCreateSrv.srv"
   DEPENDENCIES std_msgs action_msgs
 )
 

@@ -3,21 +3,24 @@
 #    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/orders/ordercreate.html
 
 # Order type defintion
-uint8 TYP_MARKET=0
-uint8 TYP_LIMIT=1
-uint8 TYP_STOP=2
+string TYP_MARKET="MARKET"
+string TYP_LIMIT="LIMIT"
+string TYP_STOP="STOP"
 
 # Order instrument defintion
-uint8 INST_USD_JPY=0
-uint8 INST_EUR_JPY=1
-uint8 INST_EUR_USD=2
+string INST_USD_JPY="USD_JPY"
+string INST_EUR_JPY="EUR_JPY"
+string INST_EUR_USD="EUR_USD"
 
 # ========================= Request =========================
 # The type of the order.
-int32 type
+string type
+
+# The "limit" or "stop" price.
+float32 price
 
 # Instrument to open the order on.
-int32 instrument
+string instrument
 
 # The number of units to open order for.
 # If positive value is set, it is a "buy" direction,
@@ -33,10 +36,10 @@ float32 stop_loss_price
 ---
 # ========================= Response =========================
 # The type of the order.
-int32 type
+string type
 
 # Instrument to open the order on.
-int32 instrument
+string instrument
 
 # The order fill time.
 string time
