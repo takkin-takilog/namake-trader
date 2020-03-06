@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from api_msgs.srv import OrderCreateSrv
-from api_msgs.srv._order_create import Metaclass_OrderCreate_Request as OrderCreateReq
+from api_msgs.srv._order_create_srv import Metaclass_OrderCreateSrv_Request as OrderCreateReq
 from oandapyV20.endpoints.orders import OrderCreate
 from oandapyV20 import API
 
@@ -58,14 +58,14 @@ class OrderService(Node):
             "instrument": request.instrument,
             "units": request.units,
             "positionFill": "DEFAULT",
-                "takeProfitOnFill": {
-                    "timeInForce": "GTC",
-                    "price": request.take_profit_price
-                },
-                "stopLossOnFill": {
-                    "timeInForce": "GTC",
-                    "price": request.stop_loss_price
-                },
+            "takeProfitOnFill": {
+                "timeInForce": "GTC",
+                "price": request.take_profit_price
+            },
+            "stopLossOnFill": {
+                "timeInForce": "GTC",
+                "price": request.stop_loss_price
+            },
         }
         data_order.update(tmp)
 

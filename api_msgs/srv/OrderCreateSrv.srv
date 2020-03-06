@@ -2,24 +2,26 @@
 # Reference:
 #    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/orders/ordercreate.html
 
-# Order type defintion
+# Order type definition
 string TYP_MARKET="MARKET"
 string TYP_LIMIT="LIMIT"
 string TYP_STOP="STOP"
 
-# Order instrument defintion
+# Order instrument definition
 string INST_USD_JPY="USD_JPY"
 string INST_EUR_JPY="EUR_JPY"
 string INST_EUR_USD="EUR_USD"
 
 # ========================= Request =========================
 # The type of the order.
+# Set definition name of the "Order type definition".
 string type
 
 # The "limit" or "stop" price.
 float32 price
 
 # Instrument to open the order on.
+# Set definition name of the "Order instrument definition".
 string instrument
 
 # The number of units to open order for.
@@ -35,11 +37,25 @@ float32 stop_loss_price
 
 ---
 # ========================= Response =========================
-# The type of the order.
-string type
 
-# Instrument to open the order on.
-string instrument
+# The result of this service process.
+#   True:success
+#   False:fail
+bool result
+
+# The ID of the Trade that was opened.
+int32 trade_id
+
+# The contract price.
+float32 contract_price
+
+# The number of units opened by the Trade.
+int32 units
+
+# The half spread cost for the trade open.
+# This can be a positive or negative value and is represented
+# in the home currency of the Account.
+float32 half_spread_cost
 
 # The order fill time.
 string time

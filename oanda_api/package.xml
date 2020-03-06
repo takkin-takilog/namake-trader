@@ -4,7 +4,7 @@
   <name>oanda_api</name>
   <version>0.1.0</version>
   <description>
-    Python oanda_api nodes.
+    Python oanda_api package.
   </description>
   <maintainer email="takkin.takilog@gmail.com">takkin</maintainer>
   <license>Apache License 2.0</license>
