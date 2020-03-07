@@ -1,9 +1,23 @@
+from requests.exceptions import ConnectionError
 import rclpy
 from rclpy.node import Node
 from api_msgs.srv import OrderCreateSrv
 from api_msgs.srv._order_create_srv import OrderCreateSrv_Request as OrderCreateReq
+from api_msgs.srv._order_create_srv import OrderCreateSrv_Response as OrderCreateRsp
 from oandapyV20.endpoints.orders import OrderCreate
 from oandapyV20 import API
+
+ORDER_TYP_DICT = {
+    OrderCreateReq.TYP_MARKET: "MARKET",
+    OrderCreateReq.TYP_LIMIT: "LIMIT",
+    OrderCreateReq.TYP_STOP: "STOP",
+}
+
+ORDER_INST_DICT = {
+    OrderCreateReq.INST_USD_JPY: "USD_JPY",
+    OrderCreateReq.INST_EUR_JPY: "EUR_JPY",
+    OrderCreateReq.INST_EUR_USD: "EUR_USD",
+}
 
 
 class OrderService(Node):
@@ -43,13 +57,14 @@ class OrderService(Node):
 
         data = {
             "order": {
-                "type": request.type,
+                "type": ORDER_TYP_DICT[request.type],
             }
         }
 
         data_order = data["order"]
 
-        if (request.type == OrderCreateReq.TYP_LIMIT) or (request.type == OrderCreateReq.TYP_STOP):
+        if ((request.type == OrderCreateReq.TYP_LIMIT)
+            or (request.type == OrderCreateReq.TYP_STOP)):
             tmp = {
                 "price": request.units,
                 "timeInForce": "GTC",
@@ -57,7 +72,7 @@ class OrderService(Node):
             data_order.update(tmp)
 
         tmp = {
-            "instrument": request.instrument,
+            "instrument": ORDER_INST_DICT[request.instrument],
             "units": request.units,
             "positionFill": "DEFAULT",
             "takeProfitOnFill": {
@@ -72,10 +87,26 @@ class OrderService(Node):
         data_order.update(tmp)
 
         ep = OrderCreate(accountID=self.__account_number, data=data)
-        rsp = self.__api.request(ep)
 
-        import json
-        print(json.dumps(rsp, indent=2))
+        try:
+            rsp = self.__api.request(ep)
+        except ConnectionError as ce:
+            self.__logger.error("%s" % ce)
+            response.fail_reason_code = OrderCreateRsp.REASON_CONNECTION_ERROR
+        else:
+            if "orderFillTransaction" in rsp.keys():
+                response.fail_reason_code = OrderCreateRsp.REASON_UNSET
+            elif "orderCancelTransaction" in rsp.keys():
+                reason = rsp["orderCancelTransaction"]["reason"]
+                if reason == "MARKET_HALTED":
+                    response.fail_reason_code = OrderCreateRsp.REASON_MARKET_HALTED
+                else:
+                    response.fail_reason_code = OrderCreateRsp.REASON_OTHERS
+            else:
+                response.fail_reason_code = OrderCreateRsp.REASON_OTHERS
+
+            import json
+            print(json.dumps(rsp, indent=2))
 
         return response
 

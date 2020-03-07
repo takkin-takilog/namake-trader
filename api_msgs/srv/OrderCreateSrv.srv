@@ -3,26 +3,26 @@
 #    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/orders/ordercreate.html
 
 # Order type definition
-string TYP_MARKET="MARKET"
-string TYP_LIMIT="LIMIT"
-string TYP_STOP="STOP"
+int32 TYP_MARKET=1
+int32 TYP_LIMIT=2
+int32 TYP_STOP=3
 
 # Order instrument definition
-string INST_USD_JPY="USD_JPY"
-string INST_EUR_JPY="EUR_JPY"
-string INST_EUR_USD="EUR_USD"
+int32 INST_USD_JPY=1
+int32 INST_EUR_JPY=2
+int32 INST_EUR_USD=3
 
 # ========================= Request =========================
 # The type of the order.
 # Set definition name of the "Order type definition".
-string type
+int32 type
 
 # The "limit" or "stop" price.
 float32 price
 
 # Instrument to open the order on.
 # Set definition name of the "Order instrument definition".
-string instrument
+int32 instrument
 
 # The number of units to open order for.
 # If positive value is set, it is a "buy" direction,
@@ -36,12 +36,25 @@ float32 take_profit_price
 float32 stop_loss_price
 
 ---
+# Order failed reason code definition
+int32 REASON_UNSET=0
+#  Filling the Order wasn't possible because the Order's instrument was halted.
+int32 REASON_MARKET_HALTED=1
+#  Connection error.
+int32 REASON_CONNECTION_ERROR=50
+#  Others.
+int32 REASON_OTHERS=99
+
 # ========================= Response =========================
 
 # The result of this service process.
 #   True:success
 #   False:fail
 bool result
+
+# The reason of order create service failed.
+#   Refer to "Order failed reason code definition"
+int32 fail_reason_code
 
 # The ID of the Trade that was opened.
 int32 trade_id
