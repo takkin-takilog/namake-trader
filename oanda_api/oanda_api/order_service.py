@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from api_msgs.srv import OrderCreateSrv
-from api_msgs.srv._order_create_srv import Metaclass_OrderCreateSrv_Request as OrderCreateReq
+from api_msgs.srv._order_create_srv import OrderCreateSrv_Request as OrderCreateReq
 from oandapyV20.endpoints.orders import OrderCreate
 from oandapyV20 import API
 
@@ -22,9 +22,9 @@ class OrderService(Node):
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
 
-        self.__account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
+        account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        self.__logger.debug("[OANDA]Account Number:%s" % self.__account_number)
+        self.__logger.debug("[OANDA]Account Number:%s" % account_number)
         self.__logger.debug("[OANDA]Access Token:%s" % access_token)
 
         # Create service "order_create"
@@ -36,6 +36,8 @@ class OrderService(Node):
                                                     callback)
 
         self.__api = API(access_token=access_token)
+
+        self.__account_number = account_number
 
     def __cb_order_create(self, request, response):
 
@@ -81,5 +83,8 @@ class OrderService(Node):
 def main(args=None):
     rclpy.init(args=args)
     order = OrderService()
-    rclpy.spin(order)
-    rclpy.shutdown()
+    try:
+        rclpy.spin(order)
+    except KeyboardInterrupt:
+        order.destroy_node()
+        rclpy.shutdown()
