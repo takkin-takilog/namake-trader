@@ -10,8 +10,7 @@ api_msgs/OrderType ordertype_msg
 float32 price
 
 # Instrument to open the order on.
-# Set definition name of the "Order instrument definition".
-int32 instrument
+api_msgs/Instrument inst_msg
 
 # The number of units to open order for.
 # If positive value is set, it is a "buy" direction,

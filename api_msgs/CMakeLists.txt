@@ -14,12 +14,18 @@ find_package(action_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/FailReasonCode.msg"
+  "msg/Instrument.msg"
+  "msg/OrderType.msg"
   "msg/PriceBucket.msg"
   "msg/Pricing.msg"
-  "msg/OrderType.msg"
-  "msg/Instrument.msg"
-  "msg/FailReasonCode.msg"
+  "msg/ProfitLossOrder.msg"
+  "msg/ProfitLossOrderTransaction.msg"
+  "msg/TradeState.msg"
   "srv/OrderCreateSrv.srv"
+  "srv/TradeCloseSrv.srv"
+  "srv/TradeCRCDOSrv.srv"
+  "srv/TradeDetailsSrv.srv"
   DEPENDENCIES std_msgs action_msgs
 )
 

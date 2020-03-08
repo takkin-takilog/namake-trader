@@ -72,7 +72,7 @@ class OrderService(Node):
             data_order.update(tmp)
 
         tmp = {
-            "instrument": ORDER_INST_DICT[req.instrument],
+            "instrument": ORDER_INST_DICT[req.inst_msg.instrument_id],
             "units": req.units,
             "positionFill": "DEFAULT",
             "takeProfitOnFill": {
