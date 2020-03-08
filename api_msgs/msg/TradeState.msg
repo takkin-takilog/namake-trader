@@ -2,7 +2,7 @@
 # Reference:
 #    https://developer.oanda.com/rest-live-v20/trade-df/#TradeState
 
-# Order type definition
+# Order type definition/
 int32 STS_OPEN=1
 int32 STS_CLOSED=2
 int32 STS_CLOSE_WHEN_TRADEABLE=3

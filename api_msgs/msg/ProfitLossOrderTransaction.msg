@@ -3,7 +3,7 @@
 #    https://developer.oanda.com/rest-live-v20/transaction-df/#takeProfitOrderTransaction
 #    https://developer.oanda.com/rest-live-v20/transaction-df/#StopLossOrderTransaction
 
-# Profit/Loss order transaction definition
+# Profit/Loss order transaction definition/
 int32 TRA_TAKE_PROFIT_ORDER = 1
 int32 TRA_STOP_LOSS_ORDER = 2
 
