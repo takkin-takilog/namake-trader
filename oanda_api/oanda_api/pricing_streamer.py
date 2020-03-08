@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
-from api_msgs.msg import PriceBucket, Pricing
+from api_msgs.msg import PriceBucket, Pricing, Instrument
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error, StreamTerminated
@@ -12,13 +12,19 @@ class PricingStreamer(Node):
     def __init__(self):
         super().__init__("pricing_streamer")
 
+        INST_NAME_DICT = {
+            Instrument.INST_USD_JPY: "USD_JPY",
+            Instrument.INST_EUR_JPY: "EUR_JPY",
+            Instrument.INST_EUR_USD: "EUR_USD",
+        }
+
         # Set logger lebel
         self.__logger = super().get_logger()
         self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
         PRMNM_ACCESS_TOKEN = "access_token"
-        PRMNM_INSTRUMENTS = "instruments"
+        PRMNM_INSTRUMENT_ID = "instrument_id"
         TPCNM_PRICING = "pricing_"
         TPCNM_HEARTBEAT = "heart_beat"
         TPCNM_ACT_FLG = "activate_flag"
@@ -26,29 +32,35 @@ class PricingStreamer(Node):
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
-        self.declare_parameter(PRMNM_INSTRUMENTS)
+        self.declare_parameter(PRMNM_INSTRUMENT_ID)
 
         # Initialize
         self.__act_flg = True
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        instrumentslist = self.get_parameter(PRMNM_INSTRUMENTS).value
+        inst_id_list = self.get_parameter(PRMNM_INSTRUMENT_ID).value
         self.__logger.debug("[OANDA]Account Number:%s" % account_number)
         self.__logger.debug("[OANDA]Access Token:%s" % access_token)
-        self.__logger.debug("[OANDA]Instruments:%s" % instrumentslist)
+        self.__logger.debug("[OANDA]Instruments:%s" % inst_id_list)
+
+        inst_name_list = []
+        for inst_id in inst_id_list:
+            inst_name = INST_NAME_DICT[inst_id]
+            inst_name_list.append(inst_name)
 
         self.__api = API(access_token=access_token)
-        instruments = ",".join(instrumentslist)
+
+        instruments = ",".join(inst_name_list)
         params = {"instruments": instruments}
         self.__ps = PricingStream(account_number, params)
 
         # Declare publisher and subscriber
         self.__pub_dict = {}
-        for instrument in instrumentslist:
-            suffix = instrument.replace("_", "").lower()
+        for inst_name in inst_name_list:
+            suffix = inst_name.replace("_", "").lower()
             pub = self.create_publisher(Pricing, TPCNM_PRICING + suffix)
-            self.__pub_dict[instrument] = pub.publish
+            self.__pub_dict[inst_name] = pub.publish
         self.__pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT)
 
         self.__sub_act = self.create_subscription(Bool, TPCNM_ACT_FLG,
@@ -90,7 +102,6 @@ class PricingStreamer(Node):
                     if typ == TYP_PRICE:
                         msg = Pricing()
                         msg.time = rsp[TIME]
-                        msg.instrument = rsp[INSTRUMENT]
                         for bid in rsp[BIDS]:
                             pb = PriceBucket()
                             pb.price = float(bid[PRICE])
@@ -105,7 +116,7 @@ class PricingStreamer(Node):
                         msg.closeout_ask = float(rsp[CLOSEOUT_ASK])
                         msg.tradeable = rsp[TRADEABLE]
                         # Publish topics
-                        self.__pub_dict[msg.instrument](msg)
+                        self.__pub_dict[rsp[INSTRUMENT]](msg)
 
                     elif typ == TYP_HB:
                         msg = String()

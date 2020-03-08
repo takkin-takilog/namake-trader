@@ -2,21 +2,21 @@ from requests.exceptions import ConnectionError
 import rclpy
 from rclpy.node import Node
 from api_msgs.srv import OrderCreateSrv
-from api_msgs.srv._order_create_srv import OrderCreateSrv_Request as OrderCreateReq
-from api_msgs.srv._order_create_srv import OrderCreateSrv_Response as OrderCreateRsp
+from api_msgs.msg import OrderType, Instrument
+from api_msgs.msg import FailReasonCode as frc
 from oandapyV20.endpoints.orders import OrderCreate
 from oandapyV20 import API
 
 ORDER_TYP_DICT = {
-    OrderCreateReq.TYP_MARKET: "MARKET",
-    OrderCreateReq.TYP_LIMIT: "LIMIT",
-    OrderCreateReq.TYP_STOP: "STOP",
+    OrderType.TYP_MARKET: "MARKET",
+    OrderType.TYP_LIMIT: "LIMIT",
+    OrderType.TYP_STOP: "STOP",
 }
 
 ORDER_INST_DICT = {
-    OrderCreateReq.INST_USD_JPY: "USD_JPY",
-    OrderCreateReq.INST_EUR_JPY: "EUR_JPY",
-    OrderCreateReq.INST_EUR_USD: "EUR_USD",
+    Instrument.INST_USD_JPY: "USD_JPY",
+    Instrument.INST_EUR_JPY: "EUR_JPY",
+    Instrument.INST_EUR_USD: "EUR_USD",
 }
 
 
@@ -53,35 +53,35 @@ class OrderService(Node):
 
         self.__account_number = account_number
 
-    def __cb_order_create(self, request, response):
+    def __cb_order_create(self, req, rsp):
 
         data = {
             "order": {
-                "type": ORDER_TYP_DICT[request.type],
+                "type": ORDER_TYP_DICT[req.ordertype_msg.type],
             }
         }
 
         data_order = data["order"]
 
-        if ((request.type == OrderCreateReq.TYP_LIMIT)
-            or (request.type == OrderCreateReq.TYP_STOP)):
+        if ((req.ordertype_msg.type == OrderType.TYP_LIMIT)
+                or (req.ordertype_msg.type == OrderType.TYP_STOP)):
             tmp = {
-                "price": request.units,
+                "price": req.units,
                 "timeInForce": "GTC",
             }
             data_order.update(tmp)
 
         tmp = {
-            "instrument": ORDER_INST_DICT[request.instrument],
-            "units": request.units,
+            "instrument": ORDER_INST_DICT[req.instrument],
+            "units": req.units,
             "positionFill": "DEFAULT",
             "takeProfitOnFill": {
                 "timeInForce": "GTC",
-                "price": request.take_profit_price
+                "price": req.take_profit_price
             },
             "stopLossOnFill": {
                 "timeInForce": "GTC",
-                "price": request.stop_loss_price
+                "price": req.stop_loss_price
             },
         }
         data_order.update(tmp)
@@ -89,26 +89,26 @@ class OrderService(Node):
         ep = OrderCreate(accountID=self.__account_number, data=data)
 
         try:
-            rsp = self.__api.request(ep)
+            apirsp = self.__api.request(ep)
         except ConnectionError as ce:
             self.__logger.error("%s" % ce)
-            response.fail_reason_code = OrderCreateRsp.REASON_CONNECTION_ERROR
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
         else:
-            if "orderFillTransaction" in rsp.keys():
-                response.fail_reason_code = OrderCreateRsp.REASON_UNSET
-            elif "orderCancelTransaction" in rsp.keys():
-                reason = rsp["orderCancelTransaction"]["reason"]
+            if "orderFillTransaction" in apirsp.keys():
+                rsp.frc_msg.reason_code = frc.REASON_UNSET
+            elif "orderCancelTransaction" in apirsp.keys():
+                reason = apirsp["orderCancelTransaction"]["reason"]
                 if reason == "MARKET_HALTED":
-                    response.fail_reason_code = OrderCreateRsp.REASON_MARKET_HALTED
+                    rsp.frc_msg.reason_code = frc.REASON_MARKET_HALTED
                 else:
-                    response.fail_reason_code = OrderCreateRsp.REASON_OTHERS
+                    rsp.frc_msg.reason_code = frc.REASON_OTHERS
             else:
-                response.fail_reason_code = OrderCreateRsp.REASON_OTHERS
+                rsp.frc_msg.reason_code = frc.REASON_OTHERS
 
             import json
-            print(json.dumps(rsp, indent=2))
+            print(json.dumps(apirsp, indent=2))
 
-        return response
+        return rsp
 
 
 def main(args=None):

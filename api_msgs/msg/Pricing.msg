@@ -6,9 +6,6 @@
 # The date/time when the Price was created.
 string time
 
-# The Price’s Instrument.
-string instrument
-
 # The list of prices and liquidity available on the Instrument's bid side.
 # It is possible for this list to be empty if there is no bid liquidity
 # currently available for the Instrument in the Account.
