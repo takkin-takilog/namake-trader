@@ -1,11 +1,15 @@
 from requests.exceptions import ConnectionError
 import rclpy
 from rclpy.node import Node
-from api_msgs.srv import OrderCreateSrv
+from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
+                          TradeCRCDOSrv, TradeCloseSrv,
+                          OrderDetailsSrv, OrderCancelSrv)
 from api_msgs.msg import OrderType, Instrument
 from api_msgs.msg import FailReasonCode as frc
-from oandapyV20.endpoints.orders import OrderCreate
+from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
+from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
 from oandapyV20 import API
+from oandapyV20.exceptions import V20Error
 
 ORDER_TYP_DICT = {
     OrderType.TYP_MARKET: "MARKET",
@@ -41,17 +45,67 @@ class OrderService(Node):
         self.__logger.debug("[OANDA]Account Number:%s" % account_number)
         self.__logger.debug("[OANDA]Access Token:%s" % access_token)
 
-        # Create service "order_create"
+        # Create service "OrderCreate"
         srv_type = OrderCreateSrv
         srv_name = "order_create"
         callback = self.__on_order_create
         self.order_create_srv = self.create_service(srv_type,
                                                     srv_name,
                                                     callback)
+        # Create service "TradeDetails"
+        srv_type = TradeDetailsSrv
+        srv_name = "trade_details"
+        callback = self.__on_trade_details
+        self.trade_details_srv = self.create_service(srv_type,
+                                                     srv_name,
+                                                     callback)
+        # Create service "TradeCRCDO"
+        srv_type = TradeCRCDOSrv
+        srv_name = "trade_crcdo"
+        callback = self.__on_trade_crcdo
+        self.trade_crcdo_srv = self.create_service(srv_type,
+                                                   srv_name,
+                                                   callback)
+        # Create service "TradeClose"
+        srv_type = TradeCloseSrv
+        srv_name = "trade_close"
+        callback = self.__on_trade_close
+        self.trade_close_srv = self.create_service(srv_type,
+                                                   srv_name,
+                                                   callback)
+        # Create service "OrderDetailsSrv"
+        srv_type = OrderDetailsSrv
+        srv_name = "order_details"
+        callback = self.__on_order_details
+        self.order_details_srv = self.create_service(srv_type,
+                                                     srv_name,
+                                                     callback)
+        # Create service "OrderCancel"
+        srv_type = OrderCancelSrv
+        srv_name = "order_cancel"
+        callback = self.__on_order_cancel
+        self.order_cancel_srv = self.create_service(srv_type,
+                                                    srv_name,
+                                                    callback)
 
         self.__api = API(access_token=access_token)
 
         self.__account_number = account_number
+
+    def __request_api(self, endpoint, rsp):
+
+        rsp.frc_msg.reason_code = frc.REASON_UNSET
+        apirsp = None
+        try:
+            apirsp = self.__api.request(endpoint)
+        except ConnectionError as err:
+            self.__logger.error("%s" % err)
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+        except V20Error as err:
+            self.__logger.error("%s" % err)
+            rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
+
+        return rsp, apirsp
 
     def __on_order_create(self, req, rsp):
 
@@ -88,19 +142,91 @@ class OrderService(Node):
 
         ep = OrderCreate(accountID=self.__account_number, data=data)
 
-        try:
-            apirsp = self.__api.request(ep)
-        except ConnectionError as ce:
-            self.__logger.error("%s" % ce)
-            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        else:
+        rsp, apirsp = self.__request_api(ep, rsp)
+
+        if rsp.frc_msg.reason_code == frc.REASON_UNSET:
 
             import json
             print(json.dumps(apirsp, indent=2))
 
             rsp = self.__update_order_create_response(apirsp, rsp)
 
+            rsp.result = True
+        else:
+            rsp.result = False
+
+        return rsp
+
+    def __on_trade_details(self, req, rsp):
+
+        ep = TradeDetails(accountID=self.__account_number,
+                          tradeID=req.trade_id)
+        rsp, apirsp = self.__request_api(ep, rsp)
+
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+            import json
+            print(json.dumps(apirsp, indent=2))
+            #rsp = self.__update_order_create_response(apirsp, rsp)
+            rsp.result = True
+        else:
+            rsp.result = False
+
+        return rsp
+
+    def __on_trade_crcdo(self, req, rsp):
+
+        ep = 0
+        rsp, apirsp = self.__request_api(ep, rsp)
+
+        if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+            import json
+            print(json.dumps(apirsp, indent=2))
+            #rsp = self.__update_order_create_response(apirsp, rsp)
+            rsp.result = True
+        else:
+            rsp.result = False
+
+        return rsp
+
+    def __on_trade_close(self, req, rsp):
+
+        ep = 0
+        rsp, apirsp = self.__request_api(ep, rsp)
+
+        if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+            import json
+            print(json.dumps(apirsp, indent=2))
+            #rsp = self.__update_order_create_response(apirsp, rsp)
+            rsp.result = True
+        else:
+            rsp.result = False
+
+        return rsp
+
+    def __on_order_details(self, req, rsp):
+
+        ep = 0
+        rsp, apirsp = self.__request_api(ep, rsp)
+
+        if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+            import json
+            print(json.dumps(apirsp, indent=2))
+            #rsp = self.__update_order_create_response(apirsp, rsp)
+            rsp.result = True
+        else:
+            rsp.result = False
+
+        return rsp
+
+    def __on_order_cancel(self, req, rsp):
+
+        ep = 0
+        rsp, apirsp = self.__request_api(ep, rsp)
+
+        if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+            import json
+            print(json.dumps(apirsp, indent=2))
+            #rsp = self.__update_order_create_response(apirsp, rsp)
             rsp.result = True
         else:
             rsp.result = False
@@ -126,6 +252,10 @@ class OrderService(Node):
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
         else:
             rsp.frc_msg.reason_code = frc.REASON_OTHERS
+
+        return rsp
+
+    def __update_trade_details_response(self, apirsp, rsp):
 
         return rsp
 
