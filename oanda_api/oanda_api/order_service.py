@@ -44,7 +44,7 @@ class OrderService(Node):
         # Create service "order_create"
         srv_type = OrderCreateSrv
         srv_name = "order_create"
-        callback = self.__cb_order_create
+        callback = self.__on_order_create
         self.order_create_srv = self.create_service(srv_type,
                                                     srv_name,
                                                     callback)
@@ -53,7 +53,7 @@ class OrderService(Node):
 
         self.__account_number = account_number
 
-    def __cb_order_create(self, req, rsp):
+    def __on_order_create(self, req, rsp):
 
         data = {
             "order": {
@@ -94,19 +94,38 @@ class OrderService(Node):
             self.__logger.error("%s" % ce)
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
         else:
-            if "orderFillTransaction" in apirsp.keys():
-                rsp.frc_msg.reason_code = frc.REASON_UNSET
-            elif "orderCancelTransaction" in apirsp.keys():
-                reason = apirsp["orderCancelTransaction"]["reason"]
-                if reason == "MARKET_HALTED":
-                    rsp.frc_msg.reason_code = frc.REASON_MARKET_HALTED
-                else:
-                    rsp.frc_msg.reason_code = frc.REASON_OTHERS
-            else:
-                rsp.frc_msg.reason_code = frc.REASON_OTHERS
 
             import json
             print(json.dumps(apirsp, indent=2))
+
+            rsp = self.__update_order_create_response(apirsp, rsp)
+
+        if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+            rsp.result = True
+        else:
+            rsp.result = False
+
+        return rsp
+
+    def __update_order_create_response(self, apirsp, rsp):
+
+        if "orderFillTransaction" in apirsp.keys():
+            data_oft = apirsp["orderFillTransaction"]
+            data_to = data_oft["tradeOpened"]
+            rsp.trade_id = int(data_to["tradeID"])
+            rsp.contract_price = float(data_to["price"])
+            rsp.units = int(data_to["units"])
+            rsp.half_spread_cost = float(data_to["halfSpreadCost"])
+            rsp.time = data_oft["time"]
+            rsp.frc_msg.reason_code = frc.REASON_UNSET
+        elif "orderCancelTransaction" in apirsp.keys():
+            reason = apirsp["orderCancelTransaction"]["reason"]
+            if reason == "MARKET_HALTED":
+                rsp.frc_msg.reason_code = frc.REASON_MARKET_HALTED
+            else:
+                rsp.frc_msg.reason_code = frc.REASON_OTHERS
+        else:
+            rsp.frc_msg.reason_code = frc.REASON_OTHERS
 
         return rsp
 
