@@ -23,8 +23,12 @@ bool result
 # The fail reason code.
 api_msgs/FailReasonCode frc_msg
 
-# The TakeProfitOrder linked to an open Trade.
-api_msgs/ProfitLossOrderTransaction profit_order_transaction_msg
+# The price threshold specified for the TakeProfit Order.
+# The associated Trade will be closed by a market price that is
+# equal to or better than this threshold.
+float32 take_profit_price
 
-# The TakeProfitOrder linked to an open Trade.
-api_msgs/ProfitLossOrderTransaction stop_loss_order_transaction_msg
+# The price threshold specified for the StopLoss Order.
+# The associated Trade will be closed by a market price that is
+# equal to or worse than this threshold.
+float32 stop_loss_price

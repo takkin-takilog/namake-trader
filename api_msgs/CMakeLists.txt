@@ -21,7 +21,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/PriceBucket.msg"
   "msg/Pricing.msg"
   "msg/ProfitLossOrder.msg"
-  "msg/ProfitLossOrderTransaction.msg"
   "msg/TradeState.msg"
   "srv/OrderCancelSrv.srv"
   "srv/OrderCreateSrv.srv"

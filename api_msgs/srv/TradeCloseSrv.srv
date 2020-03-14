@@ -18,7 +18,7 @@ bool result
 api_msgs/FailReasonCode frc_msg
 
 # Instrument to open the order on.
-api_msgs/Instrument instrument_msg
+api_msgs/Instrument inst_msg
 
 # The order fill time.
 string time

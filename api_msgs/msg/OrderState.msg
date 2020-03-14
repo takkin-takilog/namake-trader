@@ -1,6 +1,6 @@
-# Order type Definitions.
+# Order state Definitions.
 # Reference:
-#    https://developer.oanda.com/rest-live-v20/order-df/#OrderType
+#    https://developer.oanda.com/rest-live-v20/order-df/#OrderState
 
 # Order current state definition.
 int32 STS_PENDING = 1
