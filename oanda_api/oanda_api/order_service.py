@@ -89,7 +89,7 @@ class OrderService(Node):
         self.trade_close_srv = self.create_service(srv_type,
                                                    srv_name,
                                                    callback)
-        # Create service "OrderDetailsSrv"
+        # Create service "OrderDetails"
         srv_type = OrderDetailsSrv
         srv_name = "order_details"
         callback = self.__on_order_details
@@ -105,7 +105,6 @@ class OrderService(Node):
                                                     callback)
 
         self.__api = API(access_token=access_token)
-
         self.__account_number = account_number
 
     def __request_api(self, endpoint, rsp):
