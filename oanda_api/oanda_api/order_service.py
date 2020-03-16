@@ -235,11 +235,7 @@ class OrderService(Node):
             if "orderFillTransaction" in apirsp.keys():
                 data_oft = apirsp["orderFillTransaction"]
                 data_to = data_oft["tradeOpened"]
-                rsp.trade_id = int(data_to["tradeID"])
-                rsp.contract_price = float(data_to["price"])
-                rsp.units = int(data_to["units"])
-                rsp.half_spread_cost = float(data_to["halfSpreadCost"])
-                rsp.time = data_oft["time"]
+                rsp.id = int(data_to["tradeID"])
                 rsp.result = True
             elif "orderCancelTransaction" in apirsp.keys():
                 reason = apirsp["orderCancelTransaction"]["reason"]
@@ -247,6 +243,9 @@ class OrderService(Node):
                     rsp.frc_msg.reason_code = frc.REASON_MARKET_HALTED
                 else:
                     rsp.frc_msg.reason_code = frc.REASON_OTHERS
+            elif "orderCreateTransaction" in apirsp.keys():
+                data_oct = apirsp["orderCreateTransaction"]
+                rsp.id = int(data_oct["id"])
             else:
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
 
@@ -260,6 +259,7 @@ class OrderService(Node):
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
             if "trade" in apirsp.keys():
                 data_trd = apirsp["trade"]
+                rsp.contract_price = data_trd["price"]
                 rsp.current_units = data_trd["currentUnits"]
                 rsp.realized_pl = data_trd["realizedPL"]
                 rsp.unrealized_pl = data_trd["unrealizedPL"]

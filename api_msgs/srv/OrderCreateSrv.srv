@@ -34,19 +34,7 @@ bool result
 # The fail reason code.
 api_msgs/FailReasonCode frc_msg
 
-# The ID of the Trade that was opened.
-int32 trade_id
-
-# The contract price.
-float32 contract_price
-
-# The number of units opened by the Trade.
-int32 units
-
-# The half spread cost for the trade open.
-# This can be a positive or negative value and is represented
-# in the home currency of the Account.
-float32 half_spread_cost
-
-# The order fill time.
-string time
+# The ID of the Trade or Order that was opened.
+# If request order type "MARKET", set the "trade id".
+# If request order type "LIMIT" or "STOP", set the "order id".
+int32 id
