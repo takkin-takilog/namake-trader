@@ -189,7 +189,7 @@ class OrderService(Node):
         if ((req.ordertype_msg.type == OrderType.TYP_LIMIT)
                 or (req.ordertype_msg.type == OrderType.TYP_STOP)):
             tmp = {
-                "price": req.units,
+                "price": req.price,
                 "timeInForce": "GTC",
             }
             data_order.update(tmp)
@@ -246,6 +246,7 @@ class OrderService(Node):
             elif "orderCreateTransaction" in apirsp.keys():
                 data_oct = apirsp["orderCreateTransaction"]
                 rsp.id = int(data_oct["id"])
+                rsp.result = True
             else:
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
 
@@ -259,16 +260,17 @@ class OrderService(Node):
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
             if "trade" in apirsp.keys():
                 data_trd = apirsp["trade"]
-                rsp.contract_price = data_trd["price"]
-                rsp.current_units = data_trd["currentUnits"]
-                rsp.realized_pl = data_trd["realizedPL"]
-                rsp.unrealized_pl = data_trd["unrealizedPL"]
+                rsp.contract_price = float(data_trd["price"])
+                rsp.current_units = int(data_trd["currentUnits"])
+                rsp.realized_pl = float(data_trd["realizedPL"])
+                if "unrealizedPL" in data_trd.keys():
+                    rsp.unrealized_pl = float(data_trd["unrealizedPL"])
                 rsp.open_time = data_trd["openTime"]
                 data_tpo = data_trd["takeProfitOrder"]
-                rsp.profit_order_msg.price = data_tpo["price"]
+                rsp.profit_order_msg.price = float(data_tpo["price"])
                 rsp.profit_order_msg.order_state_msg.state = ORDER_STS_DICT[data_tpo["state"]]
                 data_slo = data_trd["stopLossOrder"]
-                rsp.loss_order_msg.price = data_slo["price"]
+                rsp.loss_order_msg.price = float(data_slo["price"])
                 rsp.loss_order_msg.order_state_msg.state = ORDER_STS_DICT[data_slo["state"]]
                 rsp.result = True
             else:
@@ -285,9 +287,9 @@ class OrderService(Node):
             if (("takeProfitOrderTransaction" in apirsp.keys())
                     and ("stopLossOrderTransaction" in apirsp.keys())):
                 data_tpot = apirsp["takeProfitOrderTransaction"]
-                rsp.take_profit_price = data_tpot["price"]
+                rsp.take_profit_price = float(data_tpot["price"])
                 data_slot = apirsp["stopLossOrderTransaction"]
-                rsp.stop_loss_price = data_slot["price"]
+                rsp.stop_loss_price = float(data_slot["price"])
                 rsp.result = True
             else:
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
@@ -302,14 +304,13 @@ class OrderService(Node):
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
             if "orderFillTransaction" in apirsp.keys():
                 data_oft = apirsp["orderFillTransaction"]
-                data_oft.inst_msg.instrument_id = ORDER_INST_NAME_DICT(
-                    data_oft["instrument"])
-                data_oft.time = data_oft["time"]
-                data_tc = data_oft["tradesClosed"]
-                data_oft.units = data_tc["units"]
-                data_oft.price = data_tc["price"]
-                data_oft.realized_pl = data_tc["realizedPL"]
-                data_oft.half_spread_cost = data_tc["halfSpreadCost"]
+                rsp.inst_msg.instrument_id = ORDER_INST_NAME_DICT[data_oft["instrument"]]
+                rsp.time = data_oft["time"]
+                data_tc = data_oft["tradesClosed"][0]
+                rsp.units = int(data_tc["units"])
+                rsp.price = float(data_tc["price"])
+                rsp.realized_pl = float(data_tc["realizedPL"])
+                rsp.half_spread_cost = float(data_tc["halfSpreadCost"])
                 rsp.result = True
             else:
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
@@ -324,17 +325,17 @@ class OrderService(Node):
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
             if "order" in apirsp.keys():
                 data_ord = apirsp["order"]
-                data_ord.ordertype_msg.type = ORDER_TYP_NAME_DICT[data_ord["type"]]
-                data_ord.inst_msg.instrument_id = ORDER_INST_NAME_DICT[data_ord["instrument"]]
-                data_ord.units = data_ord["units"]
-                data_ord.price = data_ord["price"]
-                data_ord.order_state_msg.state = ORDER_STS_DICT[data_ord["state"]]
+                rsp.ordertype_msg.type = ORDER_TYP_NAME_DICT[data_ord["type"]]
+                rsp.inst_msg.instrument_id = ORDER_INST_NAME_DICT[data_ord["instrument"]]
+                rsp.units = int(data_ord["units"])
+                rsp.price = float(data_ord["price"])
+                rsp.order_state_msg.state = ORDER_STS_DICT[data_ord["state"]]
                 if "takeProfitOnFill" in data_ord.keys():
                     data_tpof = data_ord["takeProfitOnFill"]
-                    data_ord.take_profit_pn_fill_price = data_tpof["price"]
+                    rsp.take_profit_pn_fill_price = float(data_tpof["price"])
                 if "stopLossOnFill" in data_ord.keys():
                     data_tpof = data_ord["stopLossOnFill"]
-                    data_ord.stop_loss_on_fill_price = data_tpof["price"]
+                    rsp.stop_loss_on_fill_price = float(data_tpof["price"])
                 rsp.result = True
             else:
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
