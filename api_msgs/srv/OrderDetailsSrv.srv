@@ -1,0 +1,43 @@
+# oandapyV20.endpoints.orders.OrderDetails
+# Reference:
+#    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/orders/orderdetails.html
+
+# ========================= Request =========================
+# The ID  of the order to perform the request on.
+int32 order_id
+
+---
+# ========================= Response =========================
+
+# The result of this service process.
+#   True:success
+#   False:fail
+bool result
+
+# The fail reason code.
+api_msgs/FailReasonCode frc_msg
+
+# The type of the order.
+api_msgs/OrderType ordertype_msg
+
+# The Instrument of the order.
+api_msgs/Instrument inst_msg
+
+# The quantity requested to be filled by the Limit Order.
+int32 units
+
+# The price threshold specified for the Limit/Stop Order.
+float32 price
+
+# The current state of the Order.
+api_msgs/OrderState order_state_msg
+
+# TakeProfitDetails specifies the details of a TakeProfit Order to be created on behalf of a client.
+# This may happen when an Order is filled that opens a Trade requiring a TakeProfit,
+# or when a Trade's dependent Take ProfitOrder is modified directly through the Trade.
+float32 take_profit_pn_fill_price
+
+# TakeProfitDetails specifies the details of a StopLoss Order to be created on behalf of a client.
+# This may happen when an Order is filled that opens a Trade requiring a StopLoss,
+# or when a Trade's dependent Take StopLoss is modified directly through the Trade.
+float32 stop_loss_on_fill_price

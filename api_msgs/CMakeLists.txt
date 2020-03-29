@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(oanda_api_msgs)
+project(api_msgs)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -14,8 +14,20 @@ find_package(action_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/FailReasonCode.msg"
+  "msg/Instrument.msg"
+  "msg/OrderState.msg"
+  "msg/OrderType.msg"
   "msg/PriceBucket.msg"
   "msg/Pricing.msg"
+  "msg/ProfitLossOrder.msg"
+  "msg/TradeState.msg"
+  "srv/OrderCancelSrv.srv"
+  "srv/OrderCreateSrv.srv"
+  "srv/OrderDetailsSrv.srv"
+  "srv/TradeCloseSrv.srv"
+  "srv/TradeCRCDOSrv.srv"
+  "srv/TradeDetailsSrv.srv"
   DEPENDENCIES std_msgs action_msgs
 )
 

@@ -1,0 +1,40 @@
+# oandapyV20.endpoints.trades.TradeDetails
+# Reference:
+#    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/trades/tradedetails.html
+
+# ========================= Request =========================
+# The ID of the Trade that was opened.
+int32 trade_id
+
+---
+# ========================= Response =========================
+
+# The result of this service process.
+#   True:success
+#   False:fail
+bool result
+
+# The fail reason code.
+api_msgs/FailReasonCode frc_msg
+
+# The contract price.
+float32 contract_price
+
+# The number of units currently open for the Trade.
+# This value is reduced to 0.0 as the Trade is closed.
+int32 current_units
+
+# The total profit/loss realized on the closed portion of the Trade.
+float32 realized_pl
+
+# The unrealized profit/loss on the open portion of the Trade.
+float32 unrealized_pl
+
+# The date/time when the Trade was opened.
+string open_time
+
+# The TakeProfitOrder linked to an open Trade.
+api_msgs/ProfitLossOrder profit_order_msg
+
+# The TakeProfitOrder linked to an open Trade.
+api_msgs/ProfitLossOrder loss_order_msg

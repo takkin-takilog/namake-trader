@@ -1,0 +1,38 @@
+# oandapyV20.endpoints.trades.TradeClose
+# Reference:
+#    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/trades/tradeclose.html
+
+# ========================= Request =========================
+# The ID of the Trade that was opened.
+int32 trade_id
+
+---
+# ========================= Response =========================
+
+# The result of this service process.
+#   True:success
+#   False:fail
+bool result
+
+# The fail reason code.
+api_msgs/FailReasonCode frc_msg
+
+# Instrument to open the order on.
+api_msgs/Instrument inst_msg
+
+# The order fill time.
+string time
+
+# The number of units that the Trade was reduced by
+int32 units
+
+# The average price that the units were closed at.
+# This price may be clamped for guaranteed Stop Loss Orders.
+float32 price
+
+# The PL realized when reducing the Trade.
+float32 realized_pl
+
+# The half spread cost for the trade reduce/close.
+# This can be a positive or negative value and is represented in the home currency of the Account.
+float32 half_spread_cost
