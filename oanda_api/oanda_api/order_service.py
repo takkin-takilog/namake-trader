@@ -64,42 +64,42 @@ class OrderService(Node):
         # Create service "OrderCreate"
         srv_type = OrderCreateSrv
         srv_name = "order_create"
-        callback = self.__on_order_create
+        callback = self.__on_recv_order_create
         self.order_create_srv = self.create_service(srv_type,
                                                     srv_name,
                                                     callback)
         # Create service "TradeDetails"
         srv_type = TradeDetailsSrv
         srv_name = "trade_details"
-        callback = self.__on_trade_details
+        callback = self.__on_recv_trade_details
         self.trade_details_srv = self.create_service(srv_type,
                                                      srv_name,
                                                      callback)
         # Create service "TradeCRCDO"
         srv_type = TradeCRCDOSrv
         srv_name = "trade_crcdo"
-        callback = self.__on_trade_crcdo
+        callback = self.__on_recv_trade_crcdo
         self.trade_crcdo_srv = self.create_service(srv_type,
                                                    srv_name,
                                                    callback)
         # Create service "TradeClose"
         srv_type = TradeCloseSrv
         srv_name = "trade_close"
-        callback = self.__on_trade_close
+        callback = self.__on_recv_trade_close
         self.trade_close_srv = self.create_service(srv_type,
                                                    srv_name,
                                                    callback)
         # Create service "OrderDetails"
         srv_type = OrderDetailsSrv
         srv_name = "order_details"
-        callback = self.__on_order_details
+        callback = self.__on_recv_order_details
         self.order_details_srv = self.create_service(srv_type,
                                                      srv_name,
                                                      callback)
         # Create service "OrderCancel"
         srv_type = OrderCancelSrv
         srv_name = "order_cancel"
-        callback = self.__on_order_cancel
+        callback = self.__on_recv_order_cancel
         self.order_cancel_srv = self.create_service(srv_type,
                                                     srv_name,
                                                     callback)
@@ -122,7 +122,7 @@ class OrderService(Node):
 
         return apirsp, rsp
 
-    def __on_order_create(self, req, rsp):
+    def __on_recv_order_create(self, req, rsp):
 
         data = self.__make_data_for_order_create(req)
         ep = OrderCreate(accountID=self.__account_number, data=data)
@@ -131,7 +131,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_trade_details(self, req, rsp):
+    def __on_recv_trade_details(self, req, rsp):
 
         ep = TradeDetails(accountID=self.__account_number,
                           tradeID=req.trade_id)
@@ -140,7 +140,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_trade_crcdo(self, req, rsp):
+    def __on_recv_trade_crcdo(self, req, rsp):
 
         data = self.__make_data_for_trade_crcdo(req)
         ep = TradeCRCDO(accountID=self.__account_number,
@@ -150,7 +150,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_trade_close(self, req, rsp):
+    def __on_recv_trade_close(self, req, rsp):
 
         ep = TradeClose(accountID=self.__account_number, tradeID=req.trade_id)
         apirsp, rsp = self.__request_api(ep, rsp)
@@ -158,7 +158,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_order_details(self, req, rsp):
+    def __on_recv_order_details(self, req, rsp):
 
         ep = OrderDetails(accountID=self.__account_number,
                           orderID=req.order_id)
@@ -167,7 +167,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_order_cancel(self, req, rsp):
+    def __on_recv_order_cancel(self, req, rsp):
 
         ep = OrderCancel(accountID=self.__account_number,
                          orderID=req.order_id)

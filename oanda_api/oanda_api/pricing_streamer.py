@@ -64,13 +64,13 @@ class PricingStreamer(Node):
         self.__pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT)
 
         self.__sub_act = self.create_subscription(Bool, TPCNM_ACT_FLG,
-                                                  self.__act_flg_callback)
+                                                  self.__on_recv_act_flg)
 
     def background(self):
         if self.__act_flg:
             self.__request()
 
-    def __act_flg_callback(self, msg):
+    def __on_recv_act_flg(self, msg):
         if msg.data:
             self.__act_flg = True
         else:
