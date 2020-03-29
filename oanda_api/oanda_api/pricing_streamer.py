@@ -136,10 +136,13 @@ class PricingStreamer(Node):
 def main(args=None):
     rclpy.init(args=args)
     stream_api = PricingStreamer()
+
     try:
-        while True:
+        while rclpy.ok():
             rclpy.spin_once(stream_api, timeout_sec=1.0)
             stream_api.background()
     except KeyboardInterrupt:
-        stream_api.destroy_node()
-        rclpy.shutdown()
+        pass
+
+    stream_api.destroy_node()
+    rclpy.shutdown()
