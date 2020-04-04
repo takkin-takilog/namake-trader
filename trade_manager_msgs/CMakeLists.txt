@@ -15,7 +15,8 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MarketOrderRequest.msg"
-  "msg/LimitStopOrderRequest.msg"
+  "msg/LimitOrderRequest.msg"
+  "msg/StopOrderRequest.msg"
   DEPENDENCIES std_msgs action_msgs
 )
 

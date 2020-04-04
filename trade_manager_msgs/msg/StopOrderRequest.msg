@@ -1,4 +1,4 @@
-# Limit or Stop order request Definitions.
+# Stop order request Definitions.
 
 # instrument ID definition
 int32 INST_USD_JPY=1	# USD/JPY
