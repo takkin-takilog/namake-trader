@@ -1,7 +1,5 @@
 from abc import ABCMeta, abstractmethod
 import datetime as dt
-import sched
-import time
 import rclpy
 from rclpy.node import Node
 from trade_manager_msgs.msg import (MarketOrderRequest,
@@ -10,41 +8,103 @@ from trade_manager_msgs.msg import (MarketOrderRequest,
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
-from api_msgs.msg import OrderType, Instrument
+from api_msgs.msg import OrderType
+
+_DT_FMT = "%Y-%m-%d %H:%M:%S"
 
 
-class OrderStateAbs(metaclass=ABCMeta):
+class OrderState(object):
 
-    def __init__(self):
-        self._DT_FMT = "%Y-%m-%d %H:%M:%S"
-        self._sts = 0
+    ORDER_TYP_MARKET = 1
+    ORDER_TYP_LIMIT = 2
+    ORDER_TYP_STOP = 3
 
-    @abstractmethod
-    def set_future(self, future):
-        pass
+    STS_NEW_ORD_WAIT_RSP = 1        # 新規注文リクエスト応答待ち
+    STS_NEW_ORD_PENDING = 2         # 新規注文保留状態
+    STS_NEW_ORD_DET_WAIT_RSP = 3    # 注文詳細取得リクエスト応答待ち
+    STS_NEW_ORD_CNC_REQ = 4         # 新規注文キャンセルリクエスト応答待ち
+    STS_SET_ORD_PENDING = 5         # 決済注文キャンセル応答待ち
+    STS_TRADE_DET_WAIT_RSP = 6      # トレード詳細取得リクエスト応答待ち
+    STS_TRADE_CLS_WAIT_RSP = 7      # トレードクローズリクエスト応答待ち
 
+    def __init__(self, order_typ, msg, future):
 
-class LimitOrderState(OrderStateAbs):
-
-    def __init__(self, msg):
-        super().__init__()
+        self.__order_typ = order_typ
+        self.__sts = OrderState.STS_NEW_ORD_WAIT_RSP
+        self.__future = future
+        self.__order_id = 0
+        self.__trade_id = 0
 
         self.__inst_id = msg.instrument_id
         self.__units = msg.units
         self.__price = msg.price
         self.__dt_new = dt.datetime.strptime(
-            msg.valid_period_new, self._DT_FMT)
+            msg.valid_period_new, _DT_FMT)
         self.__tp_price = msg.take_profit_price
         self.__sl_price = msg.stop_loss_price
         self.__dt_settlement = dt.datetime.strptime(
-            msg.valid_period_new, self._DT_FMT)
-        self.__future = None
+            msg.valid_period_new, _DT_FMT)
 
+    @property
+    def state(self):
+        self.__sts
+
+    @property
+    def future(self):
+        self.__future
+
+    @future.setter
     def set_future(self, future):
         self.__future = future
 
-    def get_future(self):
-        return self.__future
+    @property
+    def order_id(self):
+        self.__order_id
+
+    @property
+    def trade_id(self):
+        self.__trade_id
+
+    def update(self):
+        if self.__sts == OrderState.STS_NEW_ORD_WAIT_RSP:
+            self.__check_future_by_order_create()
+        elif self.__sts == OrderState.STS_NEW_ORD_PENDING:
+            self.__check_state_new_order_pending()
+        elif self.__sts == OrderState.STS_NEW_ORD_DET_WAIT_RSP:
+            pass
+        elif self.__sts == OrderState.STS_NEW_ORD_CNC_REQ:
+            pass
+        elif self.__sts == OrderState.STS_SET_ORD_PENDING:
+            pass
+        elif self.__sts == OrderState.STS_TRADE_DET_WAIT_RSP:
+            pass
+        elif self.__sts == OrderState.STS_TRADE_CLS_WAIT_RSP:
+            pass
+        else:
+            pass
+
+    def __check_future_by_order_create(self):
+
+        if self.__future.done():
+            rsp = self.__future.result()
+            if rsp is None:
+                e = self.__future.exception()
+                raise RuntimeError("Exception while calling service of node")
+            else:
+                if rsp.result is True:
+                    if self.__order_typ == OrderState.ORDER_TYP_MARKET:
+                        self.__trade_id = rsp.id
+                        # change state: 1 -> 5
+                        self.__sts = OrderState.STS_SET_ORD_PENDING
+                    else:
+                        self.__order_id = rsp.id
+                        # change state: 1 -> 2
+                        self.__sts = OrderState.STS_NEW_ORD_PENDING
+                else:
+                    print("Service request Failed!")
+
+    def __check_state_new_order_pending(self):
+        pass
 
 
 class OrderManager(Node):
@@ -112,60 +172,91 @@ class OrderManager(Node):
 
         self.__ordlist = []
 
-        DT_FMT = "%Y-%m-%d %H:%M:%S"
-        dt_now = dt.datetime.now()
+        self.__timer_10sec = self.create_timer(10.0, self.__on_timeout_10sec)
 
-        self.__logger.debug("<Timer set>:dt_now")
-        self.__logger.debug(dt_now.strftime(DT_FMT))
-        scheduler = sched.scheduler(time.time, time.sleep)
-        run_at = dt_now + dt.timedelta(seconds=10)
-        self.__logger.debug("<Timer set>:run_at")
-        self.__logger.debug(run_at.strftime(DT_FMT))
-        run_at = int(time.mktime(run_at.utctimetuple()))
-        scheduler.enterabs(run_at, 1, self.__on_date)
-        scheduler.run()
-
-    def __on_date(self):
-        JST = dt.timezone(dt.timedelta(hours=+9), "JST")
-        DT_FMT = "%Y-%m-%d %H:%M:%S"
-        dt_now = dt.datetime.now(JST).strftime(DT_FMT)
-        self.__logger.debug("AAAAAAAAAAAAAAAAAAAAAA")
-        self.__logger.debug(dt_now)
-
-    def __on_timeout(self):
+    def __on_timeout_10sec(self):
         self.__logger.debug("Time out")
-        lng = len(self.__ordlist)
-        self.__logger.debug("list length: " + str(lng))
+        # Wait until future complete.
 
-        for ord in self.__ordlist:
-            future = ord.get_future()
+        self.__logger.debug("ordlist len:%d" % len(self.__ordlist))
+
+        for idx, order in enumerate(self.__ordlist):
+            print("**********{}***************" .format(idx))
+            pre_sts = order.state
+            # Update order state.
+            order.update()
+            # change state action.
+            self.__change_state_action(order, pre_sts)
+
+    def __change_state_action(self, order, pre_sts):
+
+        if pre_sts == OrderState.STS_NEW_ORD_WAIT_RSP:
+            if order.state == OrderState.STS_NEW_ORD_PENDING:
+                # change state: 1 -> 2
+                pass
+            elif order.state == OrderState.STS_SET_ORD_PENDING:
+                # change state: 1 -> 5
+                pass
+        elif pre_sts == OrderState.STS_NEW_ORD_PENDING:
+            if order.state == OrderState.STS_NEW_ORD_DET_WAIT_RSP:
+                # change state: 2 -> 3
+                pass
+        elif pre_sts == OrderState.STS_NEW_ORD_DET_WAIT_RSP:
+            if order.state == OrderState.STS_SET_ORD_PENDING:
+                # change state: 3 -> 5
+                pass
+            elif order.state == OrderState.STS_NEW_ORD_CNC_REQ:
+                # change state: 3 -> 4
+                pass
+            elif order.state == OrderState.STS_NEW_ORD_PENDING:
+                # change state: 3 -> 2
+                pass
+        elif pre_sts == OrderState.STS_NEW_ORD_CNC_REQ:
+            pass
+        elif pre_sts == OrderState.STS_SET_ORD_PENDING:
+            if order.state == OrderState.STS_TRADE_DET_WAIT_RSP:
+                # change state: 5 -> 6
+                pass
+        elif pre_sts == OrderState.STS_TRADE_DET_WAIT_RSP:
+            if order.state == OrderState.STS_TRADE_CLS_WAIT_RSP:
+                # change state: 6 -> 7
+                pass
+            elif order.state == OrderState.STS_SET_ORD_PENDING:
+                # change state: 6 -> 5
+                pass
+        elif pre_sts == OrderState.STS_TRADE_CLS_WAIT_RSP:
+            pass
+        else:
+            pass
 
     def __create_service_client(self, srv_type, srv_name):
         # Create service client
         cli = self.create_client(srv_type, srv_name)
         # Wait for a service server
-        while not cli.wait_for_service(timeout_sec=1.0):
-            self.__logger.info("Waiting for \"" + srv_name + "\" service...")
+        ready = cli.wait_for_service(timeout_sec=1.0)
+        if not ready:
+            raise RuntimeError("Wait for service timed out")
         return cli
 
     def __on_recv_market_order_request(self, msg):
         self.__logger.debug("topic rcv:%s" % msg)
 
     def __on_recv_limit_order_request(self, msg):
-        self.__logger.debug("topic rcv:%s" % msg)
-        obj = LimitOrderState(msg)
+        dt_now = dt.datetime.now().strftime(_DT_FMT)
+        self.__logger.debug("<Limit>Recieve Limit Order Start: %s" % (dt_now))
 
         req = OrderCreateSrv.Request()
-        req.ordertype_msg.type = OrderType.TYP_MARKET
-        req.inst_msg.instrument_id = Instrument.INST_USD_JPY
-        req.units = 1000
-        req.take_profit_price = 150.0
-        req.stop_loss_price = 100.0
+        req.ordertype_msg.type = OrderType.TYP_LIMIT
+        req.inst_msg.instrument_id = msg.instrument_id
+        req.units = msg.units
+        req.price = msg.price
+        req.take_profit_price = msg.take_profit_price
+        req.stop_loss_price = msg.stop_loss_price
         future = self.__cli_ordcre.call_async(req)
-        obj.set_future(future)
 
+        order_typ = OrderState.ORDER_TYP_LIMIT
+        obj = OrderState(order_typ, msg, future)
         self.__ordlist.append(obj)
-        self.__tmr = self.create_timer(1.0, self.__on_timeout)
 
     def __on_recv_stop_order_request(self, msg):
         self.__logger.debug("topic rcv:%s" % msg)
