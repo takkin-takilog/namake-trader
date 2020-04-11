@@ -1,4 +1,3 @@
-from abc import ABCMeta, abstractmethod
 import datetime as dt
 import rclpy
 from rclpy.node import Node
@@ -26,6 +25,7 @@ class OrderState(object):
     STS_SET_ORD_PENDING = 5         # 決済注文キャンセル応答待ち
     STS_TRADE_DET_WAIT_RSP = 6      # トレード詳細取得リクエスト応答待ち
     STS_TRADE_CLS_WAIT_RSP = 7      # トレードクローズリクエスト応答待ち
+    STS_END = 255                   # 終了
 
     def __init__(self, order_typ, msg, future):
 
@@ -45,13 +45,15 @@ class OrderState(object):
         self.__dt_settlement = dt.datetime.strptime(
             msg.valid_period_new, _DT_FMT)
 
+        print("===== dt_new: {} =====" .format(self.__dt_new))
+
     @property
     def state(self):
-        self.__sts
+        return self.__sts
 
     @property
     def future(self):
-        self.__future
+        return self.__future
 
     @future.setter
     def set_future(self, future):
@@ -59,11 +61,11 @@ class OrderState(object):
 
     @property
     def order_id(self):
-        self.__order_id
+        return self.__order_id
 
     @property
     def trade_id(self):
-        self.__trade_id
+        return self.__trade_id
 
     def update(self):
         if self.__sts == OrderState.STS_NEW_ORD_WAIT_RSP:
@@ -71,15 +73,15 @@ class OrderState(object):
         elif self.__sts == OrderState.STS_NEW_ORD_PENDING:
             self.__check_state_new_order_pending()
         elif self.__sts == OrderState.STS_NEW_ORD_DET_WAIT_RSP:
-            pass
+            self.__check_future_by_order_details()
         elif self.__sts == OrderState.STS_NEW_ORD_CNC_REQ:
-            pass
+            self.__check_future_by_order_cancel()
         elif self.__sts == OrderState.STS_SET_ORD_PENDING:
-            pass
+            self.__check_state_settlement_order_pending()
         elif self.__sts == OrderState.STS_TRADE_DET_WAIT_RSP:
-            pass
+            self.__check_future_by_trade_details()
         elif self.__sts == OrderState.STS_TRADE_CLS_WAIT_RSP:
-            pass
+            self.__check_future_by_trade_close()
         else:
             pass
 
@@ -102,9 +104,104 @@ class OrderState(object):
                         self.__sts = OrderState.STS_NEW_ORD_PENDING
                 else:
                     print("Service request Failed!")
+                    # TODO: process at failed
 
     def __check_state_new_order_pending(self):
-        pass
+        dt_now = dt.datetime.now()
+        print("----- dt_now: {} -----" .format(dt_now))
+        if self.__dt_new < dt_now:
+            print("============== datetime over =================")
+            # change state: 2 -> 3
+            self.__sts = OrderState.STS_NEW_ORD_DET_WAIT_RSP
+
+    def __check_future_by_order_details(self):
+
+        if self.__future.done():
+            rsp = self.__future.result()
+            if rsp is None:
+                e = self.__future.exception()
+                raise RuntimeError("Exception while calling service of node")
+            else:
+                if rsp.result is True:
+                    if rsp.order_state_msg.state == OrderState.STS_FILLED:
+                        self.__trade_id = rsp.open_trade_id
+                        # change state: 3 -> 5
+                        self.__sts = OrderState.STS_SET_ORD_PENDING
+                    elif rsp.order_state_msg.state == OrderState.STS_PENDING:
+                        dt_now = dt.datetime.now()
+                        if self.__dt_new < dt_now:
+                            print("============== datetime over =================")
+                            # change state: 3 -> 4
+                            self.__sts = OrderState.STS_NEW_ORD_CNC_REQ
+                        else:
+                            # change state: 3 -> 2
+                            self.__sts = OrderState.STS_NEW_ORD_PENDING
+                else:
+                    print("Service request Failed!")
+                    # TODO: process at failed
+
+    def __check_future_by_order_cancel(self):
+
+        if self.__future.done():
+            rsp = self.__future.result()
+            if rsp is None:
+                e = self.__future.exception()
+                raise RuntimeError("Exception while calling service of node")
+            else:
+                if rsp.result is True:
+                    # change state: 4 -> END
+                    self.__sts = OrderState.STS_END
+                else:
+                    print("Service request Failed!")
+                    # TODO: process at failed
+
+    def __check_state_settlement_order_pending(self):
+        dt_now = dt.datetime.now()
+        print("----- dt_now: {} -----" .format(dt_now))
+        if self.__dt_settlement < dt_now:
+            print("============== datetime over =================")
+            # change state: 5 -> 6
+            self.__sts = OrderState.STS_TRADE_DET_WAIT_RSP
+
+    def __check_future_by_trade_details(self):
+
+        if self.__future.done():
+            rsp = self.__future.result()
+            if rsp is None:
+                e = self.__future.exception()
+                raise RuntimeError("Exception while calling service of node")
+            else:
+                if rsp.result is True:
+                    if rsp.order_state_msg.state == OrderState.STS_FILLED:
+                        # change state: 6 -> END
+                        self.__sts = OrderState.STS_END
+                    elif rsp.order_state_msg.state == OrderState.STS_PENDING:
+                        dt_now = dt.datetime.now()
+                        if self.__dt_settlement < dt_now:
+                            print("============== datetime over =================")
+                            # change state: 6 -> 7
+                            self.__sts = OrderState.STS_TRADE_CLS_WAIT_RSP
+                        else:
+                            # change state: 6 -> 5
+                            self.__sts = OrderState.STS_SET_ORD_PENDING
+                else:
+                    print("Service request Failed!")
+                    # TODO: process at failed
+
+    def __check_future_by_trade_close(self):
+
+        if self.__future.done():
+            rsp = self.__future.result()
+            if rsp is None:
+                e = self.__future.exception()
+                raise RuntimeError("Exception while calling service of node")
+            else:
+                if rsp.result is True:
+                    # change state: 7 -> END
+                    self.__sts = OrderState.STS_END
+                else:
+                    print("Service request Failed!")
+                    # TODO: process at failed
 
 
 class OrderManager(Node):
@@ -172,7 +269,7 @@ class OrderManager(Node):
 
         self.__ordlist = []
 
-        self.__timer_10sec = self.create_timer(10.0, self.__on_timeout_10sec)
+        self.__timer_10sec = self.create_timer(1.0, self.__on_timeout_10sec)
 
     def __on_timeout_10sec(self):
         self.__logger.debug("Time out")
@@ -180,7 +277,8 @@ class OrderManager(Node):
 
         self.__logger.debug("ordlist len:%d" % len(self.__ordlist))
 
-        for idx, order in enumerate(self.__ordlist):
+        ordlist = self.__ordlist
+        for idx, order in enumerate(ordlist):
             print("**********{}***************" .format(idx))
             pre_sts = order.state
             # Update order state.
@@ -188,44 +286,35 @@ class OrderManager(Node):
             # change state action.
             self.__change_state_action(order, pre_sts)
 
+        # remove end state
+        self.__ordlist = [o for o in ordlist if o.state != OrderState.STS_END]
+
     def __change_state_action(self, order, pre_sts):
 
-        if pre_sts == OrderState.STS_NEW_ORD_WAIT_RSP:
-            if order.state == OrderState.STS_NEW_ORD_PENDING:
-                # change state: 1 -> 2
-                pass
-            elif order.state == OrderState.STS_SET_ORD_PENDING:
-                # change state: 1 -> 5
-                pass
-        elif pre_sts == OrderState.STS_NEW_ORD_PENDING:
+        if pre_sts == OrderState.STS_NEW_ORD_PENDING:
             if order.state == OrderState.STS_NEW_ORD_DET_WAIT_RSP:
                 # change state: 2 -> 3
-                pass
+                req = OrderDetailsSrv.Request()
+                req.order_id = order.order_id
+                order.future = self.__cli_orddet.call_async(req)
         elif pre_sts == OrderState.STS_NEW_ORD_DET_WAIT_RSP:
-            if order.state == OrderState.STS_SET_ORD_PENDING:
-                # change state: 3 -> 5
-                pass
-            elif order.state == OrderState.STS_NEW_ORD_CNC_REQ:
+            if order.state == OrderState.STS_NEW_ORD_CNC_REQ:
                 # change state: 3 -> 4
-                pass
-            elif order.state == OrderState.STS_NEW_ORD_PENDING:
-                # change state: 3 -> 2
-                pass
-        elif pre_sts == OrderState.STS_NEW_ORD_CNC_REQ:
-            pass
+                req = OrderCancelSrv.Request()
+                req.order_id = order.order_id
+                order.future = self.__cli_ordcnc.call_async(req)
         elif pre_sts == OrderState.STS_SET_ORD_PENDING:
             if order.state == OrderState.STS_TRADE_DET_WAIT_RSP:
                 # change state: 5 -> 6
-                pass
+                req = TradeDetailsSrv.Request()
+                req.trade_id = order.trade_id
+                order.future = self.__cli_tradet.call_async(req)
         elif pre_sts == OrderState.STS_TRADE_DET_WAIT_RSP:
             if order.state == OrderState.STS_TRADE_CLS_WAIT_RSP:
                 # change state: 6 -> 7
-                pass
-            elif order.state == OrderState.STS_SET_ORD_PENDING:
-                # change state: 6 -> 5
-                pass
-        elif pre_sts == OrderState.STS_TRADE_CLS_WAIT_RSP:
-            pass
+                req = TradeCloseSrv.Request()
+                req.trade_id = order.trade_id
+                order.future = self.__cli_tracls.call_async(req)
         else:
             pass
 

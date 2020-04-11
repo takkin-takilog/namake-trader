@@ -336,6 +336,8 @@ class OrderService(Node):
                 if "stopLossOnFill" in data_ord.keys():
                     data_tpof = data_ord["stopLossOnFill"]
                     rsp.stop_loss_on_fill_price = float(data_tpof["price"])
+                if rsp.order_state_msg.state == OrderState.STS_FILLED:
+                    rsp.open_trade_id = data_tpof = data_ord["tradeOpenedID"]
                 rsp.result = True
             else:
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
