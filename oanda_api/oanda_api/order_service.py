@@ -4,7 +4,7 @@ from rclpy.node import Node
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
-from api_msgs.msg import OrderType, OrderState, Instrument
+from api_msgs.msg import OrderType, OrderState, Instrument, TradeState
 from api_msgs.msg import FailReasonCode as frc
 from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
 from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
@@ -37,6 +37,12 @@ ORDER_STS_DICT = {
     "FILLED": OrderState.STS_FILLED,
     "TRIGGERED": OrderState.STS_TRIGGERED,
     "CANCELLED": OrderState.STS_CANCELLED,
+}
+
+TRADE_STS_DICT = {
+    "OPEN": TradeState.STS_OPEN,
+    "STS_CLOSED": TradeState.STS_CLOSED,
+    "CLOSE_WHEN_TRADEABLE": TradeState.STS_CLOSE_WHEN_TRADEABLE,
 }
 
 
@@ -261,6 +267,7 @@ class OrderService(Node):
             if "trade" in apirsp.keys():
                 data_trd = apirsp["trade"]
                 rsp.contract_price = float(data_trd["price"])
+                rsp.trade_state_msg.state = TRADE_STS_DICT[data_trd["state"]]
                 rsp.current_units = int(data_trd["currentUnits"])
                 rsp.realized_pl = float(data_trd["realizedPL"])
                 if "unrealizedPL" in data_trd.keys():

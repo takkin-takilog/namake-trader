@@ -10,6 +10,7 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           OrderDetailsSrv, OrderCancelSrv)
 from api_msgs.msg import OrderType as OrderTypeMsg
 from api_msgs.msg import OrderState as OrderStateMsg
+from api_msgs.msg import TradeState as TradeStateMsg
 
 _DT_FMT = "%Y-%m-%d %H:%M:%S.%f"
 
@@ -42,13 +43,15 @@ class OrderState(object):
 
         self.__inst_id = msg.instrument_id
         self.__units = msg.units
-        self.__price = msg.price
 
-        if not msg.valid_period_new:
-            self.__dt_new = None
-        else:
-            self.__dt_new = dt.datetime.strptime(
-                msg.valid_period_new, _DT_FMT)
+        if not order_typ == OrderState.ORDER_TYP_MARKET:
+            self.__price = msg.price
+            if not msg.valid_period_new:
+                self.__dt_new = None
+            else:
+                self.__dt_new = dt.datetime.strptime(
+                    msg.valid_period_new, _DT_FMT)
+
         self.__tp_price = msg.take_profit_price
         self.__sl_price = msg.stop_loss_price
 
@@ -120,7 +123,7 @@ class OrderState(object):
                         self.__logger.debug("----- [change state: 1 -> 2]")
                         self.__sts = OrderState.STS_NEW_ORD_PENDING
                 else:
-                    print("Service request Failed!")
+                    self.__logger.debug("Service request Failed!")
                     # TODO: process at failed
 
     def __check_state_new_order_pending(self, pol_flg):
@@ -175,7 +178,7 @@ class OrderState(object):
                             self.__logger.debug("----- [change state: 3 -> 2]")
                             self.__sts = OrderState.STS_NEW_ORD_PENDING
                 else:
-                    print("Service request Failed!")
+                    self.__logger.debug("Service request Failed!")
                     # TODO: process at failed
 
     def __check_future_by_order_cancel(self):
@@ -191,7 +194,7 @@ class OrderState(object):
                     self.__logger.debug("----- [change state: 4 -> END]")
                     self.__sts = OrderState.STS_END
                 else:
-                    print("Service request Failed!")
+                    self.__logger.debug("Service request Failed!")
                     # TODO: process at failed
 
     def __check_state_settlement_order_pending(self, pol_flg):
@@ -220,11 +223,11 @@ class OrderState(object):
                 raise RuntimeError("Exception while calling service of node")
             else:
                 if rsp.result is True:
-                    if rsp.order_state_msg.state == OrderStateMsg.STS_FILLED:
+                    if rsp.trade_state_msg.state == TradeStateMsg.STS_CLOSED:
                         # change state: 6 -> END
                         self.__logger.debug("----- [change state: 6 -> END]")
                         self.__sts = OrderState.STS_END
-                    elif rsp.order_state_msg.state == OrderStateMsg.STS_PENDING:
+                    elif rsp.trade_state_msg.state == TradeStateMsg.STS_OPEN:
                         dt_now = dt.datetime.now()
                         self.__logger.debug(
                             "----- [trade_details] %s < %s" % (self.__dt_settlement, dt_now))
@@ -238,8 +241,12 @@ class OrderState(object):
                             # change state: 6 -> 5
                             self.__logger.debug("----- [change state: 6 -> 5]")
                             self.__sts = OrderState.STS_SET_ORD_PENDING
+                    else:
+                        # change state: 6 -> 5
+                        self.__logger.debug("----- [change state: 6 -> 5]")
+                        self.__sts = OrderState.STS_SET_ORD_PENDING
                 else:
-                    print("Service request Failed!")
+                    self.__logger.debug("Service request Failed!")
                     # TODO: process at failed
 
     def __check_future_by_trade_close(self):
@@ -255,7 +262,7 @@ class OrderState(object):
                     self.__logger.debug("----- [change state: 7 -> END]")
                     self.__sts = OrderState.STS_END
                 else:
-                    print("Service request Failed!")
+                    self.__logger.debug("Service request Failed!")
                     # TODO: process at failed
 
 
@@ -411,7 +418,6 @@ class OrderManager(Node):
         req.ordertype_msg.type = OrderTypeMsg.TYP_MARKET
         req.inst_msg.instrument_id = msg.instrument_id
         req.units = msg.units
-        req.price = msg.price
         req.take_profit_price = msg.take_profit_price
         req.stop_loss_price = msg.stop_loss_price
         future = self.__cli_ordcre.call_async(req)
