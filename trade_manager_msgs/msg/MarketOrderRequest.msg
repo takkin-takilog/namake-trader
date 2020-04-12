@@ -5,6 +5,9 @@ int32 INST_USD_JPY=1	# USD/JPY
 int32 INST_EUR_JPY=2	# EUR/JPY
 int32 INST_EUR_USD=3	# EUR/USD
 
+# The request ID.
+int32 req_id
+
 # The instrument ID.
 int32 instrument_id
 

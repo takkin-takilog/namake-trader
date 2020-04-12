@@ -1,6 +1,7 @@
 import datetime as dt
 import rclpy
 from rclpy.node import Node
+from std_msgs.msg import Bool
 from trade_manager_msgs.msg import (MarketOrderRequest,
                                     LimitOrderRequest,
                                     StopOrderRequest)
@@ -9,6 +10,7 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           OrderDetailsSrv, OrderCancelSrv)
 from api_msgs.msg import OrderType as OrderTypeMsg
 from api_msgs.msg import OrderState as OrderStateMsg
+from system_tests_msgs.msg import StateTest
 
 _DT_FMT = "%Y-%m-%d %H:%M:%S"
 
@@ -32,6 +34,7 @@ class OrderState(object):
 
         self.__logger = logger
 
+        self.__req_id = msg.req_id
         self.__order_typ = order_typ
         self.__sts = OrderState.STS_NEW_ORD_WAIT_RSP
         self.__future = future
@@ -41,12 +44,24 @@ class OrderState(object):
         self.__inst_id = msg.instrument_id
         self.__units = msg.units
         self.__price = msg.price
-        self.__dt_new = dt.datetime.strptime(
-            msg.valid_period_new, _DT_FMT)
+
+        if not msg.valid_period_new:
+            self.__dt_new = None
+        else:
+            self.__dt_new = dt.datetime.strptime(
+                msg.valid_period_new, _DT_FMT)
         self.__tp_price = msg.take_profit_price
         self.__sl_price = msg.stop_loss_price
-        self.__dt_settlement = dt.datetime.strptime(
-            msg.valid_period_new, _DT_FMT)
+
+        if not msg.valid_period_settlement:
+            self.__dt_settlement = None
+        else:
+            self.__dt_settlement = dt.datetime.strptime(
+                msg.valid_period_settlement, _DT_FMT)
+
+    @property
+    def request_id(self):
+        return self.__req_id
 
     @property
     def state(self):
@@ -68,17 +83,17 @@ class OrderState(object):
     def trade_id(self):
         return self.__trade_id
 
-    def update(self):
+    def update(self, pol_flg):
         if self.__sts == OrderState.STS_NEW_ORD_WAIT_RSP:
             self.__check_future_by_order_create()
         elif self.__sts == OrderState.STS_NEW_ORD_PENDING:
-            self.__check_state_new_order_pending()
+            self.__check_state_new_order_pending(pol_flg)
         elif self.__sts == OrderState.STS_NEW_ORD_DET_WAIT_RSP:
             self.__check_future_by_order_details()
         elif self.__sts == OrderState.STS_NEW_ORD_CNC_REQ:
             self.__check_future_by_order_cancel()
         elif self.__sts == OrderState.STS_SET_ORD_PENDING:
-            self.__check_state_settlement_order_pending()
+            self.__check_state_settlement_order_pending(pol_flg)
         elif self.__sts == OrderState.STS_TRADE_DET_WAIT_RSP:
             self.__check_future_by_trade_details()
         elif self.__sts == OrderState.STS_TRADE_CLS_WAIT_RSP:
@@ -98,22 +113,32 @@ class OrderState(object):
                     if self.__order_typ == OrderState.ORDER_TYP_MARKET:
                         self.__trade_id = rsp.id
                         # change state: 1 -> 5
+                        self.__logger.debug("----- [change state: 1 -> 5]")
                         self.__sts = OrderState.STS_SET_ORD_PENDING
                     else:
                         self.__order_id = rsp.id
                         # change state: 1 -> 2
+                        self.__logger.debug("----- [change state: 1 -> 2]")
                         self.__sts = OrderState.STS_NEW_ORD_PENDING
                 else:
                     print("Service request Failed!")
                     # TODO: process at failed
 
-    def __check_state_new_order_pending(self):
-        dt_now = dt.datetime.now()
-        self.__logger.debug("----- [new_order_pending] %s < %s" % (self.__dt_new, dt_now))
-        if self.__dt_new < dt_now:
-            self.__logger.debug("----- [new_order_pending]datetime over")
+    def __check_state_new_order_pending(self, pol_flg):
+
+        if pol_flg is True:
             # change state: 2 -> 3
+            self.__logger.debug("----- [change state: 2 -> 3]")
             self.__sts = OrderState.STS_NEW_ORD_DET_WAIT_RSP
+        elif self.__dt_new is not None:
+            dt_now = dt.datetime.now()
+            self.__logger.debug(
+                "----- [new_order_pending] %s < %s" % (self.__dt_new, dt_now))
+            if self.__dt_new < dt_now:
+                self.__logger.debug("----- [new_order_pending]datetime over")
+                # change state: 2 -> 3
+                self.__logger.debug("----- [change state: 2 -> 3]")
+                self.__sts = OrderState.STS_NEW_ORD_DET_WAIT_RSP
 
     def __check_future_by_order_details(self):
 
@@ -127,16 +152,28 @@ class OrderState(object):
                     if rsp.order_state_msg.state == OrderStateMsg.STS_FILLED:
                         self.__trade_id = rsp.open_trade_id
                         # change state: 3 -> 5
+                        self.__logger.debug("----- [change state: 3 -> 5]")
                         self.__sts = OrderState.STS_SET_ORD_PENDING
                     elif rsp.order_state_msg.state == OrderStateMsg.STS_PENDING:
-                        dt_now = dt.datetime.now()
-                        self.__logger.debug("----- [order_details] %s < %s" % (self.__dt_new, dt_now))
-                        if self.__dt_new < dt_now:
-                            self.__logger.debug("----- [order_details]datetime over")
-                            # change state: 3 -> 4
-                            self.__sts = OrderState.STS_NEW_ORD_CNC_REQ
+                        if self.__dt_new is not None:
+                            dt_now = dt.datetime.now()
+                            self.__logger.debug(
+                                "----- [order_details] %s < %s" % (self.__dt_new, dt_now))
+                            if self.__dt_new < dt_now:
+                                self.__logger.debug(
+                                    "----- [order_details]datetime over")
+                                # change state: 3 -> 4
+                                self.__logger.debug(
+                                    "----- [change state: 3 -> 4]")
+                                self.__sts = OrderState.STS_NEW_ORD_CNC_REQ
+                            else:
+                                # change state: 3 -> 2
+                                self.__logger.debug(
+                                    "----- [change state: 3 -> 2]")
+                                self.__sts = OrderState.STS_NEW_ORD_PENDING
                         else:
                             # change state: 3 -> 2
+                            self.__logger.debug("----- [change state: 3 -> 2]")
                             self.__sts = OrderState.STS_NEW_ORD_PENDING
                 else:
                     print("Service request Failed!")
@@ -152,18 +189,28 @@ class OrderState(object):
             else:
                 if rsp.result is True:
                     # change state: 4 -> END
+                    self.__logger.debug("----- [change state: 4 -> END]")
                     self.__sts = OrderState.STS_END
                 else:
                     print("Service request Failed!")
                     # TODO: process at failed
 
-    def __check_state_settlement_order_pending(self):
-        dt_now = dt.datetime.now()
-        self.__logger.debug("----- [settlement_order_pending] %s < %s" % (self.__dt_settlement, dt_now))
-        if self.__dt_settlement < dt_now:
-            self.__logger.debug("----- [settlement_order_pending]datetime over")
+    def __check_state_settlement_order_pending(self, pol_flg):
+
+        if pol_flg is True:
             # change state: 5 -> 6
+            self.__logger.debug("----- [change state: 5 -> 6]")
             self.__sts = OrderState.STS_TRADE_DET_WAIT_RSP
+        elif self.__dt_settlement is not None:
+            dt_now = dt.datetime.now()
+            self.__logger.debug(
+                "----- [settlement_order_pending] %s < %s" % (self.__dt_settlement, dt_now))
+            if self.__dt_settlement < dt_now:
+                self.__logger.debug(
+                    "----- [settlement_order_pending]datetime over")
+                # change state: 5 -> 6
+                self.__logger.debug("----- [change state: 5 -> 6]")
+                self.__sts = OrderState.STS_TRADE_DET_WAIT_RSP
 
     def __check_future_by_trade_details(self):
 
@@ -176,16 +223,21 @@ class OrderState(object):
                 if rsp.result is True:
                     if rsp.order_state_msg.state == OrderStateMsg.STS_FILLED:
                         # change state: 6 -> END
+                        self.__logger.debug("----- [change state: 6 -> END]")
                         self.__sts = OrderState.STS_END
                     elif rsp.order_state_msg.state == OrderStateMsg.STS_PENDING:
                         dt_now = dt.datetime.now()
-                        self.__logger.debug("----- [trade_details] %s < %s" % (self.__dt_settlement, dt_now))
+                        self.__logger.debug(
+                            "----- [trade_details] %s < %s" % (self.__dt_settlement, dt_now))
                         if self.__dt_settlement < dt_now:
-                            self.__logger.debug("----- [trade_details]datetime over")
+                            self.__logger.debug(
+                                "----- [trade_details]datetime over")
                             # change state: 6 -> 7
+                            self.__logger.debug("----- [change state: 6 -> 7]")
                             self.__sts = OrderState.STS_TRADE_CLS_WAIT_RSP
                         else:
                             # change state: 6 -> 5
+                            self.__logger.debug("----- [change state: 6 -> 5]")
                             self.__sts = OrderState.STS_SET_ORD_PENDING
                 else:
                     print("Service request Failed!")
@@ -201,6 +253,7 @@ class OrderState(object):
             else:
                 if rsp.result is True:
                     # change state: 7 -> END
+                    self.__logger.debug("----- [change state: 7 -> END]")
                     self.__sts = OrderState.STS_END
                 else:
                     print("Service request Failed!")
@@ -219,6 +272,7 @@ class OrderManager(Node):
         TPCNM_MARKET_ORDER_REQUEST = "market_order_request"
         TPCNM_LIMIT_ORDER_REQUEST = "limit_order_request"
         TPCNM_STOP_ORDER_REQUEST = "stop_order_request"
+        TPCNM_POLLING = "polling"
 
         # Declare publisher and subscriber
         msg_type = MarketOrderRequest
@@ -236,6 +290,13 @@ class OrderManager(Node):
         msg_type = StopOrderRequest
         topic = TPCNM_STOP_ORDER_REQUEST
         callback = self.__on_recv_stop_order_request
+        self.__sub_stp_req = self.create_subscription(msg_type,
+                                                      topic,
+                                                      callback)
+
+        msg_type = Bool
+        topic = TPCNM_POLLING
+        callback = self.__on_recv_polling
         self.__sub_stp_req = self.create_subscription(msg_type,
                                                       topic,
                                                       callback)
@@ -272,24 +333,39 @@ class OrderManager(Node):
 
         self.__ordlist = []
 
-        self.__timer_10sec = self.create_timer(0.2, self.__on_timeout_10sec)
+        self.__timer_10sec = self.create_timer(1, self.__on_timeout_10sec)
+
+        # for debug
+        msg_type = StateTest
+        topic = "state_test"
+        self.__pub_ststest = self.create_publisher(msg_type, topic)
 
     def __on_timeout_10sec(self):
-        self.__logger.debug("========== Time out[1s] ==========")
-        # Wait until future complete.
+        #self.__logger.debug("========== Time out[1s] ==========")
+        self.__update_state()
 
-        self.__logger.debug("--- 注文OBJ個数:%d" % len(self.__ordlist))
+    def __update_state(self, pol_flg=False):
+
+        #self.__logger.debug("--- 注文OBJ個数:%d" % len(self.__ordlist))
 
         ordlist = self.__ordlist
         for idx, order in enumerate(ordlist):
-            self.__logger.debug("----- 注文OBJ[%d]" % idx)
+            self.__logger.debug("----- 注文OBJ[%d]" % (idx + 1))
             pre_sts = order.state
             # Update order state.
-            order.update()
+            order.update(pol_flg)
             # change state action.
             self.__change_state_action(order, pre_sts)
 
-            self.__logger.debug("----- 状態[%d]" % order.state)
+            #self.__logger.debug("----- 状態[%d]" % order.state)
+
+            # for debug
+            msg = StateTest()
+            msg.req_id = order.request_id
+            msg.state = order.state
+            msg.order_id = order.order_id
+            msg.trade_id = order.trade_id
+            self.__pub_ststest.publish(msg)
 
         # remove end state
         self.__ordlist = [o for o in ordlist if o.state != OrderState.STS_END]
@@ -337,7 +413,8 @@ class OrderManager(Node):
 
     def __on_recv_limit_order_request(self, msg):
         dt_now = dt.datetime.now().strftime(_DT_FMT)
-        self.__logger.debug("---------- [Topic Rcv]<Limit>Start: %s" % (dt_now))
+        self.__logger.debug(
+            "---------- [Topic Rcv]<Limit>Start: %s" % (dt_now))
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_LIMIT
@@ -354,6 +431,10 @@ class OrderManager(Node):
 
     def __on_recv_stop_order_request(self, msg):
         self.__logger.debug("topic rcv:%s" % msg)
+
+    def __on_recv_polling(self, msg):
+        if msg.data is True:
+            self.__update_state(True)
 
 
 def main(args=None):
