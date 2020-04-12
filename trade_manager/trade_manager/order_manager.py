@@ -10,9 +10,8 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           OrderDetailsSrv, OrderCancelSrv)
 from api_msgs.msg import OrderType as OrderTypeMsg
 from api_msgs.msg import OrderState as OrderStateMsg
-from system_tests_msgs.msg import StateTest
 
-_DT_FMT = "%Y-%m-%d %H:%M:%S"
+_DT_FMT = "%Y-%m-%d %H:%M:%S.%f"
 
 
 class OrderState(object):
@@ -333,12 +332,7 @@ class OrderManager(Node):
 
         self.__ordlist = []
 
-        self.__timer_10sec = self.create_timer(1, self.__on_timeout_10sec)
-
-        # for debug
-        msg_type = StateTest
-        topic = "state_test"
-        self.__pub_ststest = self.create_publisher(msg_type, topic)
+        self.__timer_10sec = self.create_timer(0.5, self.__on_timeout_10sec)
 
     def __on_timeout_10sec(self):
         #self.__logger.debug("========== Time out[1s] ==========")
@@ -350,7 +344,7 @@ class OrderManager(Node):
 
         ordlist = self.__ordlist
         for idx, order in enumerate(ordlist):
-            self.__logger.debug("----- 注文OBJ[%d]" % (idx + 1))
+            #self.__logger.debug("----- 注文OBJ[%d]" % (idx + 1))
             pre_sts = order.state
             # Update order state.
             order.update(pol_flg)
@@ -360,12 +354,13 @@ class OrderManager(Node):
             #self.__logger.debug("----- 状態[%d]" % order.state)
 
             # for debug
-            msg = StateTest()
-            msg.req_id = order.request_id
-            msg.state = order.state
-            msg.order_id = order.order_id
-            msg.trade_id = order.trade_id
-            self.__pub_ststest.publish(msg)
+            dt_now = dt.datetime.now().strftime(_DT_FMT)
+            self.__logger.debug("☆★☆ チェック ☆★☆")
+            self.__logger.debug("----- Time: %s" % dt_now)
+            self.__logger.debug("----- 要求ID: %d -----" % order.request_id)
+            self.__logger.debug("      状態: %d" % order.state)
+            self.__logger.debug("      注文ID: %d" % order.order_id)
+            self.__logger.debug("      取引ID: %d" % order.trade_id)
 
         # remove end state
         self.__ordlist = [o for o in ordlist if o.state != OrderState.STS_END]
@@ -409,12 +404,25 @@ class OrderManager(Node):
         return cli
 
     def __on_recv_market_order_request(self, msg):
-        self.__logger.debug("topic rcv:%s" % msg)
+        dt_now = dt.datetime.now().strftime(_DT_FMT)
+        self.__logger.debug("------ [Topic Rcv]<Market>Start: %s" % (dt_now))
+
+        req = OrderCreateSrv.Request()
+        req.ordertype_msg.type = OrderTypeMsg.TYP_MARKET
+        req.inst_msg.instrument_id = msg.instrument_id
+        req.units = msg.units
+        req.price = msg.price
+        req.take_profit_price = msg.take_profit_price
+        req.stop_loss_price = msg.stop_loss_price
+        future = self.__cli_ordcre.call_async(req)
+
+        order_typ = OrderState.ORDER_TYP_MARKET
+        obj = OrderState(order_typ, msg, future, self.__logger)
+        self.__ordlist.append(obj)
 
     def __on_recv_limit_order_request(self, msg):
         dt_now = dt.datetime.now().strftime(_DT_FMT)
-        self.__logger.debug(
-            "---------- [Topic Rcv]<Limit>Start: %s" % (dt_now))
+        self.__logger.debug("------ [Topic Rcv]<Limit>Start: %s" % (dt_now))
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_LIMIT
@@ -430,9 +438,24 @@ class OrderManager(Node):
         self.__ordlist.append(obj)
 
     def __on_recv_stop_order_request(self, msg):
-        self.__logger.debug("topic rcv:%s" % msg)
+        dt_now = dt.datetime.now().strftime(_DT_FMT)
+        self.__logger.debug("------ [Topic Rcv]<Stop>Start: %s" % (dt_now))
+
+        req = OrderCreateSrv.Request()
+        req.ordertype_msg.type = OrderTypeMsg.TYP_STOP
+        req.inst_msg.instrument_id = msg.instrument_id
+        req.units = msg.units
+        req.price = msg.price
+        req.take_profit_price = msg.take_profit_price
+        req.stop_loss_price = msg.stop_loss_price
+        future = self.__cli_ordcre.call_async(req)
+
+        order_typ = OrderState.ORDER_TYP_STOP
+        obj = OrderState(order_typ, msg, future, self.__logger)
+        self.__ordlist.append(obj)
 
     def __on_recv_polling(self, msg):
+        self.__logger.debug("------ [Topic Rcv]<Polling>")
         if msg.data is True:
             self.__update_state(True)
 
