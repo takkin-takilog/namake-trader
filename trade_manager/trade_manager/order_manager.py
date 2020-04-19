@@ -421,7 +421,7 @@ class OrderManager(Node):
         # Create service client
         cli = self.create_client(srv_type, srv_name)
         # Wait for a service server
-        ready = cli.wait_for_service(timeout_sec=1.0)
+        ready = cli.wait_for_service(timeout_sec=3.0)
         if not ready:
             raise RuntimeError("Wait for service timed out")
         return cli
