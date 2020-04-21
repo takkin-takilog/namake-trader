@@ -15,6 +15,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/FailReasonCode.msg"
+  "msg/Granularity.msg"
   "msg/Instrument.msg"
   "msg/OrderState.msg"
   "msg/OrderType.msg"
@@ -22,6 +23,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Pricing.msg"
   "msg/ProfitLossOrder.msg"
   "msg/TradeState.msg"
+  "srv/CandlesSrv.srv"
   "srv/OrderCancelSrv.srv"
   "srv/OrderCreateSrv.srv"
   "srv/OrderDetailsSrv.srv"

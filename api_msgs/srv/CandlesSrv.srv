@@ -1,0 +1,27 @@
+# oandapyV20.endpoints.instruments.InstrumentsCandles
+# Reference:
+#    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/instruments/instrumentlist.html
+
+# ========================= Request =========================
+# The granularity.
+api_msgs/Granularity gran_msg
+
+# The Instrument.
+api_msgs/Instrument inst_msg
+
+# The start of the time range to fetch candlesticks for.
+string from
+
+# The end of the time range to fetch candlesticks for.
+string to
+
+---
+# ========================= Response =========================
+
+# The result of this service process.
+#   True:success
+#   False:fail
+bool result
+
+# The fail reason code.
+api_msgs/FailReasonCode frc_msg
