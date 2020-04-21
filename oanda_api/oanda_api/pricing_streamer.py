@@ -64,13 +64,13 @@ class PricingStreamer(Node):
         self.__pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT)
 
         self.__sub_act = self.create_subscription(Bool, TPCNM_ACT_FLG,
-                                                  self.__act_flg_callback)
+                                                  self.__on_recv_act_flg)
 
     def background(self):
         if self.__act_flg:
             self.__request()
 
-    def __act_flg_callback(self, msg):
+    def __on_recv_act_flg(self, msg):
         if msg.data:
             self.__act_flg = True
         else:
@@ -136,10 +136,13 @@ class PricingStreamer(Node):
 def main(args=None):
     rclpy.init(args=args)
     stream_api = PricingStreamer()
+
     try:
-        while True:
+        while rclpy.ok():
             rclpy.spin_once(stream_api, timeout_sec=1.0)
             stream_api.background()
     except KeyboardInterrupt:
-        stream_api.destroy_node()
-        rclpy.shutdown()
+        pass
+
+    stream_api.destroy_node()
+    rclpy.shutdown()

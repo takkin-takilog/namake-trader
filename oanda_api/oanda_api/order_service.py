@@ -4,7 +4,7 @@ from rclpy.node import Node
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
-from api_msgs.msg import OrderType, OrderState, Instrument
+from api_msgs.msg import OrderType, OrderState, Instrument, TradeState
 from api_msgs.msg import FailReasonCode as frc
 from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
 from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
@@ -39,6 +39,12 @@ ORDER_STS_DICT = {
     "CANCELLED": OrderState.STS_CANCELLED,
 }
 
+TRADE_STS_DICT = {
+    "OPEN": TradeState.STS_OPEN,
+    "STS_CLOSED": TradeState.STS_CLOSED,
+    "CLOSE_WHEN_TRADEABLE": TradeState.STS_CLOSE_WHEN_TRADEABLE,
+}
+
 
 class OrderService(Node):
 
@@ -64,42 +70,42 @@ class OrderService(Node):
         # Create service "OrderCreate"
         srv_type = OrderCreateSrv
         srv_name = "order_create"
-        callback = self.__on_order_create
+        callback = self.__on_recv_order_create
         self.order_create_srv = self.create_service(srv_type,
                                                     srv_name,
                                                     callback)
         # Create service "TradeDetails"
         srv_type = TradeDetailsSrv
         srv_name = "trade_details"
-        callback = self.__on_trade_details
+        callback = self.__on_recv_trade_details
         self.trade_details_srv = self.create_service(srv_type,
                                                      srv_name,
                                                      callback)
         # Create service "TradeCRCDO"
         srv_type = TradeCRCDOSrv
         srv_name = "trade_crcdo"
-        callback = self.__on_trade_crcdo
+        callback = self.__on_recv_trade_crcdo
         self.trade_crcdo_srv = self.create_service(srv_type,
                                                    srv_name,
                                                    callback)
         # Create service "TradeClose"
         srv_type = TradeCloseSrv
         srv_name = "trade_close"
-        callback = self.__on_trade_close
+        callback = self.__on_recv_trade_close
         self.trade_close_srv = self.create_service(srv_type,
                                                    srv_name,
                                                    callback)
         # Create service "OrderDetails"
         srv_type = OrderDetailsSrv
         srv_name = "order_details"
-        callback = self.__on_order_details
+        callback = self.__on_recv_order_details
         self.order_details_srv = self.create_service(srv_type,
                                                      srv_name,
                                                      callback)
         # Create service "OrderCancel"
         srv_type = OrderCancelSrv
         srv_name = "order_cancel"
-        callback = self.__on_order_cancel
+        callback = self.__on_recv_order_cancel
         self.order_cancel_srv = self.create_service(srv_type,
                                                     srv_name,
                                                     callback)
@@ -122,7 +128,7 @@ class OrderService(Node):
 
         return apirsp, rsp
 
-    def __on_order_create(self, req, rsp):
+    def __on_recv_order_create(self, req, rsp):
 
         data = self.__make_data_for_order_create(req)
         ep = OrderCreate(accountID=self.__account_number, data=data)
@@ -131,7 +137,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_trade_details(self, req, rsp):
+    def __on_recv_trade_details(self, req, rsp):
 
         ep = TradeDetails(accountID=self.__account_number,
                           tradeID=req.trade_id)
@@ -140,7 +146,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_trade_crcdo(self, req, rsp):
+    def __on_recv_trade_crcdo(self, req, rsp):
 
         data = self.__make_data_for_trade_crcdo(req)
         ep = TradeCRCDO(accountID=self.__account_number,
@@ -150,7 +156,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_trade_close(self, req, rsp):
+    def __on_recv_trade_close(self, req, rsp):
 
         ep = TradeClose(accountID=self.__account_number, tradeID=req.trade_id)
         apirsp, rsp = self.__request_api(ep, rsp)
@@ -158,7 +164,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_order_details(self, req, rsp):
+    def __on_recv_order_details(self, req, rsp):
 
         ep = OrderDetails(accountID=self.__account_number,
                           orderID=req.order_id)
@@ -167,7 +173,7 @@ class OrderService(Node):
 
         return rsp
 
-    def __on_order_cancel(self, req, rsp):
+    def __on_recv_order_cancel(self, req, rsp):
 
         ep = OrderCancel(accountID=self.__account_number,
                          orderID=req.order_id)
@@ -261,6 +267,7 @@ class OrderService(Node):
             if "trade" in apirsp.keys():
                 data_trd = apirsp["trade"]
                 rsp.contract_price = float(data_trd["price"])
+                rsp.trade_state_msg.state = TRADE_STS_DICT[data_trd["state"]]
                 rsp.current_units = int(data_trd["currentUnits"])
                 rsp.realized_pl = float(data_trd["realizedPL"])
                 if "unrealizedPL" in data_trd.keys():
@@ -336,6 +343,8 @@ class OrderService(Node):
                 if "stopLossOnFill" in data_ord.keys():
                     data_tpof = data_ord["stopLossOnFill"]
                     rsp.stop_loss_on_fill_price = float(data_tpof["price"])
+                if rsp.order_state_msg.state == OrderState.STS_FILLED:
+                    rsp.open_trade_id = data_tpof = data_ord["tradeOpenedID"]
                 rsp.result = True
             else:
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS

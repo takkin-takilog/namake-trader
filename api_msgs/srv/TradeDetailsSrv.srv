@@ -20,6 +20,9 @@ api_msgs/FailReasonCode frc_msg
 # The contract price.
 float32 contract_price
 
+# The current state of the Trade.
+api_msgs/TradeState trade_state_msg
+
 # The number of units currently open for the Trade.
 # This value is reduced to 0.0 as the Trade is closed.
 int32 current_units
