@@ -10,10 +10,10 @@ api_msgs/Granularity gran_msg
 api_msgs/Instrument inst_msg
 
 # The start of the time range to fetch candlesticks for.
-string from
+string dt_from
 
 # The end of the time range to fetch candlesticks for.
-string to
+string dt_to
 
 ---
 # ========================= Response =========================
@@ -25,3 +25,6 @@ bool result
 
 # The fail reason code.
 api_msgs/FailReasonCode frc_msg
+
+# The list of candle message.
+api_msgs/Candle[] cndl_msg_list
