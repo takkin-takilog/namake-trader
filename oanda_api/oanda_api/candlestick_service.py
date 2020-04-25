@@ -1,18 +1,18 @@
+from typing import TypeVar
 import datetime as dt
 import rclpy
-from rclpy.node import Node
-from api_msgs.msg import Granularity, Instrument, Candle
+import oandapyV20.endpoints.instruments as instruments
+from api_msgs.msg import Granularity, Candle
 from api_msgs.msg import FailReasonCode as frc
 from api_msgs.srv import CandlesSrv
-import oandapyV20.endpoints.instruments as instruments
-from oandapyV20 import API
-from oandapyV20.exceptions import V20Error
+from oanda_api.service_common import ServiceAbs
+from oanda_api.service_common import INST_ID_DICT
+
+SrvTypeRequest = TypeVar("SrvTypeRequest")
+SrvTypeResponse = TypeVar("SrvTypeResponse")
+ApiRsp = TypeVar("ApiRsp")
 
 GRAN_ID_DICT = {
-    Granularity.GRAN_S5: "S5",  # 5 seconds
-    Granularity.GRAN_S10: "S10",  # 10 seconds
-    Granularity.GRAN_S15: "S15",  # 15 seconds
-    Granularity.GRAN_S30: "S30",  # 30 seconds
     Granularity.GRAN_M1: "M1",  # 1 minute
     Granularity.GRAN_M2: "M2",  # 2 minutes
     Granularity.GRAN_M3: "M3",  # 3 minutes
@@ -32,17 +32,7 @@ GRAN_ID_DICT = {
     Granularity.GRAN_W: "W",  # 1 Week
 }
 
-ORDER_INST_ID_DICT = {
-    Instrument.INST_USD_JPY: "USD_JPY",
-    Instrument.INST_EUR_JPY: "EUR_JPY",
-    Instrument.INST_EUR_USD: "EUR_USD",
-}
-
 DT_OFT_DICT = {
-    Granularity.GRAN_S5: dt.timedelta(seconds=5),  # 5 seconds
-    Granularity.GRAN_S10: dt.timedelta(seconds=10),  # 10 seconds
-    Granularity.GRAN_S15: dt.timedelta(seconds=15),  # 15 seconds
-    Granularity.GRAN_S30: dt.timedelta(seconds=30),  # 30 seconds
     Granularity.GRAN_M1: dt.timedelta(minutes=1),  # 1 minute
     Granularity.GRAN_M2: dt.timedelta(minutes=2),  # 2 minutes
     Granularity.GRAN_M3: dt.timedelta(minutes=3),  # 3 minutes
@@ -58,31 +48,27 @@ DT_OFT_DICT = {
     Granularity.GRAN_H6: dt.timedelta(hours=6),  # 6 hours
     Granularity.GRAN_H8: dt.timedelta(hours=8),  # 8 hours
     Granularity.GRAN_H12: dt.timedelta(hours=12),  # 12 hours
-    Granularity.GRAN_D: dt.timedelta(day=1),  # 1 Day
+    Granularity.GRAN_D: dt.timedelta(days=1),  # 1 Day
     Granularity.GRAN_W: dt.timedelta(weeks=1),  # 1 Week
 }
 
 
-class CandlestickService(Node):
+class CandlestickService(ServiceAbs):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("candlestick_service")
 
-        # Set logger lebel
-        self.__logger = super().get_logger()
-        self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+        self.__MAX_SIZE = 5000
+        self.__TMDLT = dt.timedelta(hours=9)
+        self.__DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
-        PRMNM_ACCESS_TOKEN = "access_token"
 
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
-        self.declare_parameter(PRMNM_ACCESS_TOKEN)
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        self.__logger.debug("[OANDA]Account Number:%s" % account_number)
-        self.__logger.debug("[OANDA]Access Token:%s" % access_token)
+        self._logger.debug("[OANDA]Account Number:%s" % account_number)
 
         # Create service "Candles"
         srv_type = CandlesSrv
@@ -92,77 +78,122 @@ class CandlestickService(Node):
                                                     srv_name,
                                                     callback)
 
-        self.__api = API(access_token=access_token)
         self.__account_number = account_number
 
-    def __on_recv_candles(self, req, rsp):
+    def __on_recv_candles(self,
+                          req: SrvTypeRequest,
+                          rsp: SrvTypeResponse
+                          ) -> SrvTypeResponse:
 
-        DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
-        ofs = DT_OFT_DICT[req.gran_msg.granularity_id]
+        gran_id = req.gran_msg.granularity_id
 
-        self.__normalize(req)
+        minunit = DT_OFT_DICT[gran_id]
 
-        gran = GRAN_ID_DICT[req.gran_msg.granularity_id]
-        inst = ORDER_INST_ID_DICT[req.inst_msg.instrument_id]
-        params = {
-            "alignmentTimezone": "Japan",
-            "from": req.dt_from.strftime(DT_FMT),
-            "to": req.dt_to.strftime(DT_FMT),
-            "granularity": gran,
-            "price": "AB"
-        }
+        dt_from = self.__normalize(req.dt_from, gran_id)
+        dt_to = self.__normalize(req.dt_to, gran_id) + minunit
 
-        # APIへ過去データをリクエスト
-        ep = instruments.InstrumentsCandles(instrument=inst,
-                                            params=params)
+        gran = GRAN_ID_DICT[gran_id]
+        inst = INST_ID_DICT[req.inst_msg.instrument_id]
+        rsp.cndl_msg_list = []
+        tmpdt = dt_from
+        from_ = dt_from
+        while tmpdt < dt_to:
+            tmpdt = tmpdt + (minunit * self.__MAX_SIZE)
+            if dt_to < tmpdt:
+                tmpdt = dt_to
+            to_ = tmpdt
 
-        apirsp, rsp = self.__request_api(ep, rsp)
-        rsp = self.__update_response(apirsp, rsp)
+            self._logger.debug("------------ fetch Canclestick ------------")
+            self._logger.debug("from:%s" % (from_ - self.__TMDLT))
+            self._logger.debug("to:%s" % (to_ - self.__TMDLT))
+
+            params = {
+                "from": (from_ - self.__TMDLT).strftime(self.__DT_FMT),
+                "to": (to_ - self.__TMDLT).strftime(self.__DT_FMT),
+                "granularity": gran,
+                "price": "AB"
+            }
+
+            ep = instruments.InstrumentsCandles(instrument=inst,
+                                                params=params)
+            apirsp, rsp = self._request_api(ep, rsp)
+            if rsp.frc_msg.reason_code != frc.REASON_UNSET:
+                rsp.result = False
+                break
+            rsp = self.__update_response(apirsp, rsp)
+
+            from_ = to_
+
+        rsp.dt_from_act = dt_from.strftime(self.__DT_FMT)
+        rsp.dt_to_act = dt_to.strftime(self.__DT_FMT)
 
         return rsp
 
-    def __normalize(self, req):
+    def __normalize(self,
+                    datetimestr: str,
+                    gran_id: int
+                    ) -> dt.datetime:
 
-        DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+        dt_ = dt.datetime.strptime(datetimestr, self.__DT_FMT)
 
-        dt_from = dt.datetime.strptime(req.dt_from, DT_FMT)
-        dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
-        gran_id = req.gran_msg.granularity_id
-
-        if ((gran_id == Granularity.GRAN_S5) or
-            (gran_id == Granularity.GRAN_S10) or
-            (gran_id == Granularity.GRAN_S15) or
-                (gran_id == Granularity.GRAN_S30)):
-            pass
-        elif ((gran_id == Granularity.GRAN_M1) or
-              (gran_id == Granularity.GRAN_M2) or
-              (gran_id == Granularity.GRAN_M3) or
-              (gran_id == Granularity.GRAN_M4) or
-              (gran_id == Granularity.GRAN_M5) or
-              (gran_id == Granularity.GRAN_M10) or
-              (gran_id == Granularity.GRAN_M15) or
-              (gran_id == Granularity.GRAN_M30)):
-            pass
-        elif ((gran_id == Granularity.GRAN_H1) or
-              (gran_id == Granularity.GRAN_H2) or
-              (gran_id == Granularity.GRAN_H3) or
-              (gran_id == Granularity.GRAN_H4) or
-              (gran_id == Granularity.GRAN_H6) or
-              (gran_id == Granularity.GRAN_H8) or
-              (gran_id == Granularity.GRAN_H12)):
-            pass
+        if gran_id == Granularity.GRAN_M1:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, dt_.hour,
+                                dt_.minute)
+        elif gran_id == Granularity.GRAN_M2:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, dt_.hour,
+                                dt_.minute - (dt_.minute % 2))
+        elif gran_id == Granularity.GRAN_M3:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, dt_.hour,
+                                dt_.minute - (dt_.minute % 3))
+        elif gran_id == Granularity.GRAN_M4:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, dt_.hour,
+                                dt_.minute - (dt_.minute % 4))
+        elif gran_id == Granularity.GRAN_M5:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, dt_.hour,
+                                dt_.minute - (dt_.minute % 5))
+        elif gran_id == Granularity.GRAN_M10:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, dt_.hour,
+                                dt_.minute - (dt_.minute % 10))
+        elif gran_id == Granularity.GRAN_M15:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, dt_.hour,
+                                dt_.minute - (dt_.minute % 15))
+        elif gran_id == Granularity.GRAN_M30:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, dt_.hour,
+                                dt_.minute - (dt_.minute % 30))
+        elif gran_id == Granularity.GRAN_H1:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, dt_.hour)
+        elif gran_id == Granularity.GRAN_H2:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day,
+                                dt_.hour - (dt_.hour % 2))
+        elif gran_id == Granularity.GRAN_H3:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day,
+                                dt_.hour - (dt_.hour % 3))
+        elif gran_id == Granularity.GRAN_H4:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day,
+                                dt_.hour - (dt_.hour % 4))
+        elif gran_id == Granularity.GRAN_H6:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day,
+                                dt_.hour - (dt_.hour % 6))
+        elif gran_id == Granularity.GRAN_H8:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day,
+                                dt_.hour - (dt_.hour % 8))
+        elif gran_id == Granularity.GRAN_H12:
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day,
+                                dt_.hour - (dt_.hour % 12))
         elif gran_id == Granularity.GRAN_D:
-            pass
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, 6)
         elif gran_id == Granularity.GRAN_W:
-            pass
+            dtnor = dt.datetime(dt_.year, dt_.month, 1)
         else:
             pass
 
-    def __update_response(self, apirsp, rsp):
-        import json
-        print(json.dumps(apirsp, indent=2))
+        return dtnor
 
-        rsp.cndl_msg_list = []
+    def __update_response(self,
+                          apirsp: ApiRsp,
+                          rsp: SrvTypeResponse
+                          ) -> SrvTypeResponse:
+
         rsp.result = False
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
             if "candles" in apirsp.keys():
@@ -176,28 +207,14 @@ class CandlestickService(Node):
                     msg.bid_h = float(raw["bid"]["h"])
                     msg.bid_l = float(raw["bid"]["l"])
                     msg.bid_c = float(raw["bid"]["c"])
-                    msg.time = raw["time"]
+                    dttmp = dt.datetime.strptime(raw["time"], self.__DT_FMT)
+                    msg.time = (dttmp + self.__TMDLT).strftime(self.__DT_FMT)
                     rsp.cndl_msg_list.append(msg)
                 rsp.result = True
             else:
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
 
         return rsp
-
-    def __request_api(self, endpoint, rsp):
-
-        rsp.frc_msg.reason_code = frc.REASON_UNSET
-        apirsp = None
-        try:
-            apirsp = self.__api.request(endpoint)
-        except ConnectionError as err:
-            self.__logger.error("%s" % err)
-            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except V20Error as err:
-            self.__logger.error("%s" % err)
-            rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
-
-        return apirsp, rsp
 
 
 def main(args=None):

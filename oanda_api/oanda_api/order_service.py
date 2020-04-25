@@ -1,18 +1,22 @@
-from requests.exceptions import ConnectionError
+from typing import TypeVar, Dict
 import rclpy
-from rclpy.node import Node
+from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
+from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
-from api_msgs.msg import OrderType, OrderState, Instrument, TradeState
+from api_msgs.msg import OrderType, OrderState, TradeState
 from api_msgs.msg import FailReasonCode as frc
-from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
-from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
-from oandapyV20 import API
-from oandapyV20.exceptions import V20Error
+from oanda_api.service_common import ServiceAbs
+from oanda_api.service_common import INST_ID_DICT
+
+SrvTypeRequest = TypeVar("SrvTypeRequest")
+SrvTypeResponse = TypeVar("SrvTypeResponse")
+JsonFmt = TypeVar("JsonFmt")
+ApiRsp = TypeVar("ApiRsp")
 
 
-def inverse_dict(d):
+def inverse_dict(d: Dict[int, str]) -> Dict[str, int]:
     return {v: k for k, v in d.items()}
 
 
@@ -24,13 +28,7 @@ ORDER_TYP_DICT = {
 
 ORDER_TYP_NAME_DICT = inverse_dict(ORDER_TYP_DICT)
 
-ORDER_INST_ID_DICT = {
-    Instrument.INST_USD_JPY: "USD_JPY",
-    Instrument.INST_EUR_JPY: "EUR_JPY",
-    Instrument.INST_EUR_USD: "EUR_USD",
-}
-
-ORDER_INST_NAME_DICT = inverse_dict(ORDER_INST_ID_DICT)
+INST_NAME_DICT = inverse_dict(INST_ID_DICT)
 
 ORDER_STS_DICT = {
     "PENDING": OrderState.STS_PENDING,
@@ -46,26 +44,18 @@ TRADE_STS_DICT = {
 }
 
 
-class OrderService(Node):
+class OrderService(ServiceAbs):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("order_service")
 
-        # Set logger lebel
-        self.__logger = super().get_logger()
-        self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-
         PRMNM_ACCOUNT_NUMBER = "account_number"
-        PRMNM_ACCESS_TOKEN = "access_token"
 
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
-        self.declare_parameter(PRMNM_ACCESS_TOKEN)
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        self.__logger.debug("[OANDA]Account Number:%s" % account_number)
-        self.__logger.debug("[OANDA]Access Token:%s" % access_token)
+        self._logger.debug("[OANDA]Account Number:%s" % account_number)
 
         # Create service "OrderCreate"
         srv_type = OrderCreateSrv
@@ -110,79 +100,83 @@ class OrderService(Node):
                                                     srv_name,
                                                     callback)
 
-        self.__api = API(access_token=access_token)
         self.__account_number = account_number
 
-    def __request_api(self, endpoint, rsp):
-
-        rsp.frc_msg.reason_code = frc.REASON_UNSET
-        apirsp = None
-        try:
-            apirsp = self.__api.request(endpoint)
-        except ConnectionError as err:
-            self.__logger.error("%s" % err)
-            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except V20Error as err:
-            self.__logger.error("%s" % err)
-            rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
-
-        return apirsp, rsp
-
-    def __on_recv_order_create(self, req, rsp):
+    def __on_recv_order_create(self,
+                               req: SrvTypeRequest,
+                               rsp: SrvTypeResponse
+                               ) -> SrvTypeResponse:
 
         data = self.__make_data_for_order_create(req)
         ep = OrderCreate(accountID=self.__account_number, data=data)
-        apirsp, rsp = self.__request_api(ep, rsp)
+        apirsp, rsp = self._request_api(ep, rsp)
         rsp = self.__update_order_create_response(apirsp, rsp)
 
         return rsp
 
-    def __on_recv_trade_details(self, req, rsp):
+    def __on_recv_trade_details(self,
+                                req: SrvTypeRequest,
+                                rsp: SrvTypeResponse
+                                ) -> SrvTypeResponse:
 
         ep = TradeDetails(accountID=self.__account_number,
                           tradeID=req.trade_id)
-        apirsp, rsp = self.__request_api(ep, rsp)
+        apirsp, rsp = self._request_api(ep, rsp)
         rsp = self.__update_trade_details_response(apirsp, rsp)
 
         return rsp
 
-    def __on_recv_trade_crcdo(self, req, rsp):
+    def __on_recv_trade_crcdo(self,
+                              req: SrvTypeRequest,
+                              rsp: SrvTypeResponse
+                              ) -> SrvTypeResponse:
 
         data = self.__make_data_for_trade_crcdo(req)
         ep = TradeCRCDO(accountID=self.__account_number,
                         tradeID=req.trade_id, data=data)
-        apirsp, rsp = self.__request_api(ep, rsp)
+        apirsp, rsp = self._request_api(ep, rsp)
         rsp = self.__update_trade_crcdo_response(apirsp, rsp)
 
         return rsp
 
-    def __on_recv_trade_close(self, req, rsp):
+    def __on_recv_trade_close(self,
+                              req: SrvTypeRequest,
+                              rsp: SrvTypeResponse
+                              ) -> SrvTypeResponse:
 
         ep = TradeClose(accountID=self.__account_number, tradeID=req.trade_id)
-        apirsp, rsp = self.__request_api(ep, rsp)
+        apirsp, rsp = self._request_api(ep, rsp)
         rsp = self.__update_trade_close_response(apirsp, rsp)
 
         return rsp
 
-    def __on_recv_order_details(self, req, rsp):
+    def __on_recv_order_details(self,
+                                req: SrvTypeRequest,
+                                rsp: SrvTypeResponse
+                                ) -> SrvTypeResponse:
 
         ep = OrderDetails(accountID=self.__account_number,
                           orderID=req.order_id)
-        apirsp, rsp = self.__request_api(ep, rsp)
+        apirsp, rsp = self._request_api(ep, rsp)
         rsp = self.__update_order_details_response(apirsp, rsp)
 
         return rsp
 
-    def __on_recv_order_cancel(self, req, rsp):
+    def __on_recv_order_cancel(self,
+                               req: SrvTypeRequest,
+                               rsp: SrvTypeResponse
+                               ) -> SrvTypeResponse:
 
         ep = OrderCancel(accountID=self.__account_number,
                          orderID=req.order_id)
-        apirsp, rsp = self.__request_api(ep, rsp)
+        apirsp, rsp = self._request_api(ep, rsp)
         rsp = self.__update_order_cancel_response(apirsp, rsp)
 
         return rsp
 
-    def __make_data_for_order_create(self, req):
+    def __make_data_for_order_create(self,
+                                     req: SrvTypeRequest,
+                                     ) -> JsonFmt:
 
         data = {
             "order": {
@@ -201,7 +195,7 @@ class OrderService(Node):
             data_order.update(tmp)
 
         tmp = {
-            "instrument": ORDER_INST_ID_DICT[req.inst_msg.instrument_id],
+            "instrument": INST_ID_DICT[req.inst_msg.instrument_id],
             "units": req.units,
             "positionFill": "DEFAULT",
             "takeProfitOnFill": {
@@ -217,7 +211,9 @@ class OrderService(Node):
 
         return data
 
-    def __make_data_for_trade_crcdo(self, req):
+    def __make_data_for_trade_crcdo(self,
+                                    req: SrvTypeRequest,
+                                    ) -> JsonFmt:
 
         data = {
             "takeProfit": {
@@ -232,7 +228,10 @@ class OrderService(Node):
 
         return data
 
-    def __update_order_create_response(self, apirsp, rsp):
+    def __update_order_create_response(self,
+                                       apirsp: ApiRsp,
+                                       rsp: SrvTypeResponse
+                                       ) -> SrvTypeResponse:
         import json
         print(json.dumps(apirsp, indent=2))
 
@@ -258,7 +257,10 @@ class OrderService(Node):
 
         return rsp
 
-    def __update_trade_details_response(self, apirsp, rsp):
+    def __update_trade_details_response(self,
+                                        apirsp: ApiRsp,
+                                        rsp: SrvTypeResponse
+                                        ) -> SrvTypeResponse:
         import json
         print(json.dumps(apirsp, indent=2))
 
@@ -285,7 +287,10 @@ class OrderService(Node):
 
         return rsp
 
-    def __update_trade_crcdo_response(self, apirsp, rsp):
+    def __update_trade_crcdo_response(self,
+                                      apirsp: ApiRsp,
+                                      rsp: SrvTypeResponse
+                                      ) -> SrvTypeResponse:
         import json
         print(json.dumps(apirsp, indent=2))
 
@@ -303,7 +308,10 @@ class OrderService(Node):
 
         return rsp
 
-    def __update_trade_close_response(self, apirsp, rsp):
+    def __update_trade_close_response(self,
+                                      apirsp: ApiRsp,
+                                      rsp: SrvTypeResponse
+                                      ) -> SrvTypeResponse:
         import json
         print(json.dumps(apirsp, indent=2))
 
@@ -311,7 +319,7 @@ class OrderService(Node):
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
             if "orderFillTransaction" in apirsp.keys():
                 data_oft = apirsp["orderFillTransaction"]
-                rsp.inst_msg.instrument_id = ORDER_INST_NAME_DICT[data_oft["instrument"]]
+                rsp.inst_msg.instrument_id = INST_NAME_DICT[data_oft["instrument"]]
                 rsp.time = data_oft["time"]
                 data_tc = data_oft["tradesClosed"][0]
                 rsp.units = int(data_tc["units"])
@@ -324,7 +332,10 @@ class OrderService(Node):
 
         return rsp
 
-    def __update_order_details_response(self, apirsp, rsp):
+    def __update_order_details_response(self,
+                                        apirsp: ApiRsp,
+                                        rsp: SrvTypeResponse
+                                        ) -> SrvTypeResponse:
         import json
         print(json.dumps(apirsp, indent=2))
 
@@ -333,7 +344,7 @@ class OrderService(Node):
             if "order" in apirsp.keys():
                 data_ord = apirsp["order"]
                 rsp.ordertype_msg.type = ORDER_TYP_NAME_DICT[data_ord["type"]]
-                rsp.inst_msg.instrument_id = ORDER_INST_NAME_DICT[data_ord["instrument"]]
+                rsp.inst_msg.instrument_id = INST_NAME_DICT[data_ord["instrument"]]
                 rsp.units = int(data_ord["units"])
                 rsp.price = float(data_ord["price"])
                 rsp.order_state_msg.state = ORDER_STS_DICT[data_ord["state"]]
@@ -351,7 +362,10 @@ class OrderService(Node):
 
         return rsp
 
-    def __update_order_cancel_response(self, apirsp, rsp):
+    def __update_order_cancel_response(self,
+                                       apirsp: ApiRsp,
+                                       rsp: SrvTypeResponse
+                                       ) -> SrvTypeResponse:
         import json
         print(json.dumps(apirsp, indent=2))
 
@@ -368,8 +382,11 @@ class OrderService(Node):
 def main(args=None):
     rclpy.init(args=args)
     order = OrderService()
+
     try:
         rclpy.spin(order)
     except KeyboardInterrupt:
-        order.destroy_node()
-        rclpy.shutdown()
+        pass
+
+    order.destroy_node()
+    rclpy.shutdown()

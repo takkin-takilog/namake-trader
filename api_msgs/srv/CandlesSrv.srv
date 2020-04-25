@@ -26,5 +26,11 @@ bool result
 # The fail reason code.
 api_msgs/FailReasonCode frc_msg
 
+# The actually start of the time range to fetch candlesticks for.
+string dt_from_act
+
+# The actually end of the time range to fetch candlesticks for.
+string dt_to_act
+
 # The list of candle message.
 api_msgs/Candle[] cndl_msg_list
