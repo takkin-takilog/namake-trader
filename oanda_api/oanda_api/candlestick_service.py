@@ -117,10 +117,10 @@ class CandlestickService(ServiceAbs):
             ep = instruments.InstrumentsCandles(instrument=inst,
                                                 params=params)
             apirsp, rsp = self._request_api(ep, rsp)
-            if rsp.frc_msg.reason_code != frc.REASON_UNSET:
-                rsp.result = False
-                break
             rsp = self.__update_response(apirsp, rsp)
+
+            if rsp.result is False:
+                break
 
             from_ = to_
 
