@@ -1,6 +1,9 @@
+from typing import TypeVar
 import datetime as dt
 import rclpy
 from rclpy.node import Node
+from rclpy.task import Future
+from rclpy.client import Client
 from std_msgs.msg import Bool
 from trade_manager_msgs.msg import (MarketOrderRequest,
                                     LimitOrderRequest,
@@ -11,6 +14,8 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
 from api_msgs.msg import OrderType as OrderTypeMsg
 from api_msgs.msg import OrderState as OrderStateMsg
 from api_msgs.msg import TradeState as TradeStateMsg
+
+MsgType = TypeVar('MsgType')
 
 _DT_FMT = "%Y-%m-%d %H:%M:%S.%f"
 
@@ -33,7 +38,12 @@ class OrderState(object):
     STS_NOR_END = 254               # Normal end
     STS_ABN_END = 255               # Abnormal end
 
-    def __init__(self, order_typ, msg, future, logger):
+    def __init__(self,
+                 order_typ: int,
+                 msg: MsgType,
+                 future: Future,
+                 logger
+                 ) -> None:
 
         self.__logger = logger
 
@@ -65,30 +75,30 @@ class OrderState(object):
                 msg.valid_period_settlement, _DT_FMT)
 
     @property
-    def request_id(self):
+    def request_id(self) -> int:
         return self.__req_id
 
     @property
-    def state(self):
+    def state(self) -> int:
         return self.__sts
 
     @property
-    def future(self):
+    def future(self) -> Future:
         return self.__future
 
     @future.setter
-    def future(self, future):
+    def future(self, future: Future) -> None:
         self.__future = future
 
     @property
-    def order_id(self):
+    def order_id(self) -> int:
         return self.__order_id
 
     @property
-    def trade_id(self):
+    def trade_id(self) -> int:
         return self.__trade_id
 
-    def update(self, pol_flg):
+    def update(self, pol_flg: bool) -> None:
         if self.__sts == OrderState.STS_NEW_ORD_WAIT_RSP:
             self.__check_future_by_order_create()
         elif self.__sts == OrderState.STS_NEW_ORD_PENDING:
@@ -106,7 +116,7 @@ class OrderState(object):
         else:
             pass
 
-    def __check_future_by_order_create(self):
+    def __check_future_by_order_create(self) -> None:
 
         if self.__future.done():
             rsp = self.__future.result()
@@ -134,7 +144,7 @@ class OrderState(object):
                     # change state: 1 -> Abnormal End
                     self.__sts = OrderState.STS_ABN_END
 
-    def __check_state_new_order_pending(self, pol_flg):
+    def __check_state_new_order_pending(self, pol_flg: bool) -> None:
 
         if pol_flg is True:
             # change state: 2 -> 3
@@ -148,7 +158,7 @@ class OrderState(object):
                 self.__logger.debug("[change state: 2 -> 3]")
                 self.__sts = OrderState.STS_NEW_ORD_DET_WAIT_RSP
 
-    def __check_future_by_order_details(self):
+    def __check_future_by_order_details(self) -> None:
 
         if self.__future.done():
             rsp = self.__future.result()
@@ -190,7 +200,7 @@ class OrderState(object):
                     # change state: 1 -> Abnormal End
                     self.__sts = OrderState.STS_ABN_END
 
-    def __check_future_by_order_cancel(self):
+    def __check_future_by_order_cancel(self) -> None:
 
         if self.__future.done():
             rsp = self.__future.result()
@@ -211,7 +221,7 @@ class OrderState(object):
                     # change state: 4 -> Abnormal End
                     self.__sts = OrderState.STS_ABN_END
 
-    def __check_state_settlement_order_pending(self, pol_flg):
+    def __check_state_settlement_order_pending(self, pol_flg: bool) -> None:
 
         if pol_flg is True:
             # change state: 5 -> 6
@@ -225,7 +235,7 @@ class OrderState(object):
                 self.__logger.debug("[change state: 5 -> 6]")
                 self.__sts = OrderState.STS_TRADE_DET_WAIT_RSP
 
-    def __check_future_by_trade_details(self):
+    def __check_future_by_trade_details(self) -> None:
 
         if self.__future.done():
             rsp = self.__future.result()
@@ -262,7 +272,7 @@ class OrderState(object):
                     # change state: 6 -> Abnormal End
                     self.__sts = OrderState.STS_ABN_END
 
-    def __check_future_by_trade_close(self):
+    def __check_future_by_trade_close(self) -> None:
 
         if self.__future.done():
             rsp = self.__future.result()
@@ -286,7 +296,7 @@ class OrderState(object):
 
 class OrderManager(Node):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("order_manager")
 
         # Set logger lebel
@@ -359,10 +369,10 @@ class OrderManager(Node):
 
         self.__timer_1sec = self.create_timer(1.0, self.__on_timeout_1sec)
 
-    def __on_timeout_1sec(self):
+    def __on_timeout_1sec(self) -> None:
         self.__update_state()
 
-    def __update_state(self, pol_flg=False):
+    def __update_state(self, pol_flg: bool=False) -> None:
 
         ordlist = self.__ordlist
         for order in ordlist:
@@ -388,7 +398,7 @@ class OrderManager(Node):
             (o.state == OrderState.STS_NOR_END) or
             (o.state == OrderState.STS_ABN_END))]
 
-    def __change_state_action(self, order, pre_sts):
+    def __change_state_action(self, order: OrderState, pre_sts: int) -> None:
 
         if pre_sts == OrderState.STS_NEW_ORD_PENDING:
             if order.state == OrderState.STS_NEW_ORD_DET_WAIT_RSP:
@@ -417,7 +427,7 @@ class OrderManager(Node):
         else:
             pass
 
-    def __create_service_client(self, srv_type, srv_name):
+    def __create_service_client(self, srv_type: int, srv_name: str) -> Client:
         # Create service client
         cli = self.create_client(srv_type, srv_name)
         # Wait for a service server
@@ -426,7 +436,7 @@ class OrderManager(Node):
             raise RuntimeError("Wait for service timed out")
         return cli
 
-    def __on_recv_market_order_request(self, msg):
+    def __on_recv_market_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(_DT_FMT)
         self.__logger.debug("[Topic Rcv]<Market>Start: %s" % (dt_now))
 
@@ -442,7 +452,7 @@ class OrderManager(Node):
         obj = OrderState(order_typ, msg, future, self.__logger)
         self.__ordlist.append(obj)
 
-    def __on_recv_limit_order_request(self, msg):
+    def __on_recv_limit_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(_DT_FMT)
         self.__logger.debug("[Topic Rcv]<Limit>Start: %s" % (dt_now))
 
@@ -459,7 +469,7 @@ class OrderManager(Node):
         obj = OrderState(order_typ, msg, future, self.__logger)
         self.__ordlist.append(obj)
 
-    def __on_recv_stop_order_request(self, msg):
+    def __on_recv_stop_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(_DT_FMT)
         self.__logger.debug("[Topic Rcv]<Stop>Start: %s" % (dt_now))
 
@@ -476,7 +486,7 @@ class OrderManager(Node):
         obj = OrderState(order_typ, msg, future, self.__logger)
         self.__ordlist.append(obj)
 
-    def __on_recv_polling(self, msg):
+    def __on_recv_polling(self, msg: MsgType) -> None:
         self.__logger.debug("[Topic Rcv]<Polling>")
         if msg.data is True:
             self.__update_state(True)
