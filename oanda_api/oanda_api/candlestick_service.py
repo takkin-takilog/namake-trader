@@ -92,6 +92,10 @@ class CandlestickService(ServiceAbs):
         dt_from = self.__normalize(req.dt_from, gran_id)
         dt_to = self.__normalize(req.dt_to, gran_id) + minunit
 
+        dtnow = dt.datetime.now()
+        if dtnow < dt_to:
+            dt_to = dtnow
+
         gran = GRAN_ID_DICT[gran_id]
         inst = INST_ID_DICT[req.inst_msg.instrument_id]
         rsp.cndl_msg_list = []
@@ -102,6 +106,8 @@ class CandlestickService(ServiceAbs):
             if dt_to < tmpdt:
                 tmpdt = dt_to
             to_ = tmpdt
+
+            from_ = self.__adjust(from_, gran_id)
 
             self._logger.debug("------------ fetch Canclestick ------------")
             self._logger.debug("from:%s" % (from_ - self.__TMDLT))
@@ -181,13 +187,32 @@ class CandlestickService(ServiceAbs):
             dtnor = dt.datetime(dt_.year, dt_.month, dt_.day,
                                 dt_.hour - (dt_.hour % 12))
         elif gran_id == Granularity.GRAN_D:
-            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day, 6)
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day)
         elif gran_id == Granularity.GRAN_W:
-            dtnor = dt.datetime(dt_.year, dt_.month, 1)
+            dtnor = dt.datetime(dt_.year, dt_.month, dt_.day)
         else:
             pass
 
         return dtnor
+
+    def __adjust(self,
+                 dt_in: dt.datetime,
+                 gran_id: int
+                 ) -> dt.datetime:
+
+        if ((gran_id == Granularity.GRAN_H2) or
+            (gran_id == Granularity.GRAN_H3) or
+            (gran_id == Granularity.GRAN_H4) or
+            (gran_id == Granularity.GRAN_H6) or
+            (gran_id == Granularity.GRAN_H8) or
+            (gran_id == Granularity.GRAN_H12) or
+            (gran_id == Granularity.GRAN_D) or
+                (gran_id == Granularity.GRAN_W)):
+            dt_out = dt_in + DT_OFT_DICT[gran_id]
+        else:
+            dt_out = dt_in
+
+        return dt_out
 
     def __update_response(self,
                           apirsp: ApiRsp,
