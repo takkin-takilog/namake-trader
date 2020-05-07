@@ -1,13 +1,11 @@
-# oandapyV20.endpoints.instruments.InstrumentsCandles
-# Reference:
-#    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/instruments/instrumentlist.html
+# Cabdlestick service for monitor.
 
 # ========================= Request =========================
 # The granularity.
-api_msgs/Granularity gran_msg
+trade_manager_msgs/GranularityMnt gran_msg
 
 # The Instrument.
-api_msgs/Instrument inst_msg
+trade_manager_msgs/InstrumentMnt inst_msg
 
 # The start of the time range to fetch candlesticks for.
 # String format is "%Y-%m-%dT%H:%M:00.000000000Z"
@@ -25,8 +23,5 @@ string dt_to
 #   False:fail
 bool result
 
-# The fail reason code.
-api_msgs/FailReasonCode frc_msg
-
 # The list of candle message.
-api_msgs/Candle[] cndl_msg_list
+trade_manager_msgs/CandleMnt[] cndl_msg_list

@@ -75,9 +75,9 @@ class CandlestickService(ServiceAbs):
         srv_type = CandlesSrv
         srv_name = "candles"
         callback = self.__on_recv_candles
-        self.order_create_srv = self.create_service(srv_type,
-                                                    srv_name,
-                                                    callback)
+        self.__candles_srv = self.create_service(srv_type,
+                                                 srv_name,
+                                                 callback)
 
         self.__account_number = account_number
 
@@ -103,6 +103,8 @@ class CandlestickService(ServiceAbs):
         dtnow = dt.datetime.now()
         if dtnow < dt_to:
             dt_to = dtnow
+        if dtnow - minunit < dt_from:
+            dt_from = dtnow - dt.timedelta(seconds=1)
 
         gran = GRAN_ID_DICT[gran_id]
         inst = INST_ID_DICT[req.inst_msg.instrument_id]
@@ -143,9 +145,6 @@ class CandlestickService(ServiceAbs):
                 break
 
             from_ = to_
-
-        rsp.dt_from_act = dt_from.strftime(self.__DT_FMT)
-        rsp.dt_to_act = dt_to.strftime(self.__DT_FMT)
 
         if rsp.result is True:
             tmplist2 = []
