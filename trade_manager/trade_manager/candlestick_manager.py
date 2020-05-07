@@ -18,7 +18,7 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 # pd.set_option('display.max_rows', 500)
 
 
-class CandlestickData():
+class CandlesData():
 
     DT_LSB_DICT = {
         GranMnt.GRAN_M1: dt.timedelta(minutes=1),  # 1 minute
@@ -40,6 +40,16 @@ class CandlestickData():
         GranMnt.GRAN_W: dt.timedelta(weeks=1),  # 1 Week
     }
 
+    COL_NAME_TIME = "time"
+    COL_NAME_ASK_OP = "open(Ask)"
+    COL_NAME_ASK_HI = "high(Ask)"
+    COL_NAME_ASK_LO = "low(Ask)"
+    COL_NAME_ASK_CL = "close(Ask)"
+    COL_NAME_BID_OP = "open(Bid)"
+    COL_NAME_BID_HI = "high(Bid)"
+    COL_NAME_BID_LO = "low(Bid)"
+    COL_NAME_BID_CL = "close(Bid)"
+
     def __init__(self,
                  node: Node,
                  srv_cli: Client,
@@ -48,7 +58,11 @@ class CandlestickData():
                  data_length: int):
 
         self.__DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
-        lsb = CandlestickData.DT_LSB_DICT[gran_id]
+        lsb = CandlesData.DT_LSB_DICT[gran_id]
+        self.__logger = node.get_logger()
+
+        self.__logger.info("===== Create CandlesData object")
+        self.__logger.info("inst_id:[%d], gran_id:[%d]" % (inst_id, gran_id))
 
         req = CandlesSrv.Request()
         req.inst_msg.instrument_id = inst_id
@@ -64,6 +78,7 @@ class CandlestickData():
         req_time = dt.datetime.now()
         rclpy.spin_until_future_complete(node, future, timeout_sec=5.0)
         dlt_time = dt.datetime.now() - req_time
+        self.__logger.info("get candles fetch time: %s" % (dlt_time))
 
         flg = future.done() and future.result() is not None
         assert flg, "initial fetch [Day Candle] failed!"
@@ -86,33 +101,35 @@ class CandlestickData():
                          ])
 
         df = pd.DataFrame(data)
-        df.columns = ["time",
-                      "open(Ask)",
-                      "high(Ask)",
-                      "low(Ask)",
-                      "close(Ask)",
-                      "open(Bid)",
-                      "high(Bid)",
-                      "low(Bid)",
-                      "close(Bid)",
+        df.columns = [CandlesData.COL_NAME_TIME,
+                      CandlesData.COL_NAME_ASK_OP,
+                      CandlesData.COL_NAME_ASK_HI,
+                      CandlesData.COL_NAME_ASK_LO,
+                      CandlesData.COL_NAME_ASK_CL,
+                      CandlesData.COL_NAME_BID_OP,
+                      CandlesData.COL_NAME_BID_HI,
+                      CandlesData.COL_NAME_BID_LO,
+                      CandlesData.COL_NAME_BID_CL,
                       ]
-        df = df.set_index("time")
-        df.index = pd.to_datetime(df.index)
 
-        latest_dt = df.index[-1]
+        TIME = CandlesData.COL_NAME_TIME
+        if GranMnt.GRAN_D <= gran_id:
+            df[TIME] = df[TIME].apply(
+                lambda d: dt.datetime(d.year, d.month, d.day))
 
-        if (latest_dt + lsb) < dt_now:
-            is_latest_dt_fix = True
-        else:
-            is_latest_dt_fix = False
+        df = df.set_index(TIME)
 
         self.__df = df
-        self.__is_latest_dt_fix = is_latest_dt_fix
+        self.__is_latest_complete = rsp.is_latest_complete
         self.__srv_cli = srv_cli
 
     @property
     def dataframe(self) -> pd.DataFrame:
         return self.__df
+
+    @property
+    def is_latest_complete(self) -> bool:
+        return self.__is_latest_complete
 
 
 class CandlestickManager(Node):
@@ -140,6 +157,8 @@ class CandlestickManager(Node):
     def __init__(self):
         super().__init__("candlestick_manager")
 
+        self.__DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+
         # Set logger lebel
         self.__logger = super().get_logger()
         self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
@@ -160,29 +179,64 @@ class CandlestickManager(Node):
         inst_id_list = [Inst.INST_USD_JPY]
         gran_id_list = [Gran.GRAN_D]
 
-        df_map_dict = {}
+        obj_map_dict = {}
         for inst_id in inst_id_list:
             gran_dict = {}
             for gran_id in gran_id_list:
                 data_length = CandlestickManager.DATA_LENGTH_DICT[gran_id]
-                obj = CandlestickData(self, cli_cdl, inst_id, gran_id,
-                                      data_length)
+                obj = CandlesData(self, cli_cdl, inst_id, gran_id,
+                                  data_length)
                 tmp = {gran_id: obj}
                 gran_dict.update(tmp)
             tmp = {inst_id: gran_dict}
-            df_map_dict.update(tmp)
+            obj_map_dict.update(tmp)
 
         # type: Dict[InstrumentMnt][GranularityMnt]
-        self.__df_map_dict = df_map_dict
+        self.__obj_map_dict = obj_map_dict
 
-        obj = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D)
-        print(obj.dataframe)
+        """
+        dt_from = dt.datetime(2020, 5, 1)
+        dt_to = dt.datetime(2020, 5, 5)
+
+        print("1----------------------------")
+        df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D, dt_from, dt_to)
+        print(df)
+        print("2----------------------------")
+        df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D, dt_from)
+        print(df)
+        print("3----------------------------")
+        df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D, None, dt_to)
+        print(df)
+        print("4----------------------------")
+        df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D)
+        print(df)
+        """
 
     def get_dataframe(self,
-                      inst_id: Instrument,
-                      gran_id: Granularity
+                      inst_id: Inst,
+                      gran_id: Gran,
+                      dt_from: dt.datetime=None,
+                      dt_to: dt.datetime=None
                       ) -> pd.DataFrame:
-        return self.__df_map_dict[inst_id][gran_id]
+
+        df = self.__obj_map_dict[inst_id][gran_id].dataframe
+
+        if ((dt_from is not None) and (dt_to is not None)):
+            dftmp = df[((dt_from <= df.index) & (df.index <= dt_to))]
+        elif dt_from is not None:
+            dftmp = df[(dt_from <= df.index)]
+        elif (dt_to is not None):
+            dftmp = df[(df.index <= dt_to)]
+        else:
+            dftmp = df
+
+        return dftmp
+
+    def get_latest_complete(self,
+                            inst_id: Inst,
+                            gran_id: Gran,
+                            ) -> bool:
+        return self.__obj_map_dict[inst_id][gran_id].is_latest_complete
 
     def __create_service_client(self, srv_type: int, srv_name: str) -> Client:
         # Create service client
@@ -196,7 +250,38 @@ class CandlestickManager(Node):
                                 req: SrvTypeRequest,
                                 rsp: SrvTypeResponse
                                 ) -> SrvTypeResponse:
-        pass
+
+        dt_from = None
+        if req.dt_from is not None:
+            dt_from = dt.datetime.strptime(req.dt_from, self.__DT_FMT)
+
+        dt_to = None
+        if req.dt_to is not None:
+            dt_to = dt.datetime.strptime(req.dt_to, self.__DT_FMT)
+
+        df = self.get_dataframe(req.inst_msg.instrument_id,
+                                req.gran_msg.granularity_id,
+                                dt_from,
+                                dt_to)
+
+        rsp.cndl_msg_list = []
+        for sr in df:
+            msg = CandleMnt()
+            msg.ask_o = sr[CandlesData.COL_NAME_ASK_OP]
+            msg.ask_h = sr[CandlesData.COL_NAME_ASK_HI]
+            msg.ask_l = sr[CandlesData.COL_NAME_ASK_LO]
+            msg.ask_c = sr[CandlesData.COL_NAME_ASK_CL]
+            msg.bid_o = sr[CandlesData.COL_NAME_BID_OP]
+            msg.bid_h = sr[CandlesData.COL_NAME_BID_HI]
+            msg.bid_l = sr[CandlesData.COL_NAME_BID_LO]
+            msg.bid_c = sr[CandlesData.COL_NAME_BID_CL]
+            msg.time = sr[CandlesData.COL_NAME_TIME].strftime(self.__DT_FMT)
+            rsp.cndl_msg_list.append(msg)
+
+        rsp.cndl_msg_list = self.get_dataframe(req.inst_msg.instrument_id,
+                                               req.gran_msg.granularity_id)
+
+        return rsp
 
 
 def main(args=None):

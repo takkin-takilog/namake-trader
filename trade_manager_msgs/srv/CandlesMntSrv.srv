@@ -18,10 +18,8 @@ string dt_to
 ---
 # ========================= Response =========================
 
-# The result of this service process.
-#   True:success
-#   False:fail
-bool result
-
 # The list of candle message.
 trade_manager_msgs/CandleMnt[] cndl_msg_list
+
+# A flag indicating if the latest candlestick is complete.
+bool is_latest_complete
