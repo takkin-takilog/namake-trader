@@ -136,22 +136,24 @@ class CandlestickService(ServiceAbs):
             ep = instruments.InstrumentsCandles(instrument=inst,
                                                 params=params)
             apirsp, rsp = self._request_api(ep, rsp)
+
+            if rsp.frc_msg.reason_code != frc.REASON_UNSET:
+                break
+
             rsp = self.__update_response(apirsp, rsp)
 
             if rsp.cndl_msg_list:
                 tmplist.append(rsp.cndl_msg_list)
 
-            if rsp.result is False:
-                break
-
             from_ = to_
 
-        if rsp.result is True:
-            tmplist2 = []
+        if rsp.frc_msg.reason_code == frc.REASON_UNSET:
             if not tmplist:
                 rsp.result = False
                 rsp.frc_msg.reason_code = frc.REASON_DATA_ZERO
             else:
+                rsp.result = True
+                tmplist2 = []
                 for tmp in tmplist:
                     if not tmplist2:
                         tmplist2.extend(tmp)
@@ -161,6 +163,8 @@ class CandlestickService(ServiceAbs):
                         else:
                             tmplist2.extend(tmp)
                 rsp.cndl_msg_list = tmplist2
+        else:
+            rsp.result = False
 
         return rsp
 
@@ -183,25 +187,22 @@ class CandlestickService(ServiceAbs):
                           rsp: SrvTypeResponse
                           ) -> SrvTypeResponse:
 
-        rsp.result = False
-        if rsp.frc_msg.reason_code == frc.REASON_UNSET:
-            if "candles" in apirsp.keys():
-                for raw in apirsp["candles"]:
-                    msg = Candle()
-                    msg.ask_o = float(raw["ask"]["o"])
-                    msg.ask_h = float(raw["ask"]["h"])
-                    msg.ask_l = float(raw["ask"]["l"])
-                    msg.ask_c = float(raw["ask"]["c"])
-                    msg.bid_o = float(raw["bid"]["o"])
-                    msg.bid_h = float(raw["bid"]["h"])
-                    msg.bid_l = float(raw["bid"]["l"])
-                    msg.bid_c = float(raw["bid"]["c"])
-                    dttmp = dt.datetime.strptime(raw["time"], self.__DT_FMT)
-                    msg.time = (dttmp + self.__TMDLT).strftime(self.__DT_FMT)
-                    rsp.cndl_msg_list.append(msg)
-                rsp.result = True
-            else:
-                rsp.frc_msg.reason_code = frc.REASON_OTHERS
+        rsp.result = True
+        if "candles" in apirsp.keys() and apirsp["candles"]:
+            for raw in apirsp["candles"]:
+                msg = Candle()
+                msg.ask_o = float(raw["ask"]["o"])
+                msg.ask_h = float(raw["ask"]["h"])
+                msg.ask_l = float(raw["ask"]["l"])
+                msg.ask_c = float(raw["ask"]["c"])
+                msg.bid_o = float(raw["bid"]["o"])
+                msg.bid_h = float(raw["bid"]["h"])
+                msg.bid_l = float(raw["bid"]["l"])
+                msg.bid_c = float(raw["bid"]["c"])
+                dttmp = dt.datetime.strptime(raw["time"], self.__DT_FMT)
+                msg.time = (dttmp + self.__TMDLT).strftime(self.__DT_FMT)
+                rsp.cndl_msg_list.append(msg)
+            rsp.is_latest_complete = apirsp["candles"][-1]["complete"]
 
         return rsp
 

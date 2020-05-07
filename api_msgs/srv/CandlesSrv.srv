@@ -30,3 +30,6 @@ api_msgs/FailReasonCode frc_msg
 
 # The list of candle message.
 api_msgs/Candle[] cndl_msg_list
+
+# A flag indicating if the latest candlestick is complete.
+bool is_latest_complete
