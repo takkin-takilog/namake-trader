@@ -22,7 +22,7 @@ class CandlestickManager(Node):
 
         self.__DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
 
-        # Create service client
+        # Create service client "Candles"
         srv_type = CandlesSrv
         srv_name = "candles"
         self.__cli_cdl = self.__create_service_client(srv_type, srv_name)

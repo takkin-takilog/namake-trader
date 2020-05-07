@@ -71,7 +71,7 @@ class CandlestickService(ServiceAbs):
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         self._logger.debug("[OANDA]Account Number:%s" % account_number)
 
-        # Create service "Candles"
+        # Create service server "Candles"
         srv_type = CandlesSrv
         srv_name = "candles"
         callback = self.__on_recv_candles
