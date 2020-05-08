@@ -5,6 +5,7 @@ from rclpy.node import Node
 from oandapyV20 import API
 from oandapyV20.exceptions import V20Error
 from api_msgs.msg import Instrument
+from api_msgs.msg import Granularity
 from api_msgs.msg import FailReasonCode as frc
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
@@ -16,6 +17,26 @@ INST_ID_DICT = {
     Instrument.INST_USD_JPY: "USD_JPY",
     Instrument.INST_EUR_JPY: "EUR_JPY",
     Instrument.INST_EUR_USD: "EUR_USD",
+}
+
+GRAN_ID_DICT = {
+    Granularity.GRAN_M1: "M1",  # 1 minute
+    Granularity.GRAN_M2: "M2",  # 2 minutes
+    Granularity.GRAN_M3: "M3",  # 3 minutes
+    Granularity.GRAN_M4: "M4",  # 4 minutes
+    Granularity.GRAN_M5: "M5",  # 5 minutes
+    Granularity.GRAN_M10: "M10",  # 10 minutes
+    Granularity.GRAN_M15: "M15",  # 15 minutes
+    Granularity.GRAN_M30: "M30",  # 30 minutes
+    Granularity.GRAN_H1: "H1",  # 1 hour
+    Granularity.GRAN_H2: "H2",  # 2 hours
+    Granularity.GRAN_H3: "H3",  # 3 hours
+    Granularity.GRAN_H4: "H4",  # 4 hours
+    Granularity.GRAN_H6: "H6",  # 6 hours
+    Granularity.GRAN_H8: "H8",  # 8 hours
+    Granularity.GRAN_H12: "H12",  # 12 hours
+    Granularity.GRAN_D: "D",  # 1 Day
+    Granularity.GRAN_W: "W",  # 1 Week
 }
 
 

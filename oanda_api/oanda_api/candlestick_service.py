@@ -6,54 +6,34 @@ from api_msgs.msg import Granularity, Candle
 from api_msgs.msg import FailReasonCode as frc
 from api_msgs.srv import CandlesSrv
 from oanda_api.service_common import ServiceAbs
-from oanda_api.service_common import INST_ID_DICT
+from oanda_api.service_common import INST_ID_DICT, GRAN_ID_DICT
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 ApiRsp = TypeVar("ApiRsp")
 
-GRAN_ID_DICT = {
-    Granularity.GRAN_M1: "M1",  # 1 minute
-    Granularity.GRAN_M2: "M2",  # 2 minutes
-    Granularity.GRAN_M3: "M3",  # 3 minutes
-    Granularity.GRAN_M4: "M4",  # 4 minutes
-    Granularity.GRAN_M5: "M5",  # 5 minutes
-    Granularity.GRAN_M10: "M10",  # 10 minutes
-    Granularity.GRAN_M15: "M15",  # 15 minutes
-    Granularity.GRAN_M30: "M30",  # 30 minutes
-    Granularity.GRAN_H1: "H1",  # 1 hour
-    Granularity.GRAN_H2: "H2",  # 2 hours
-    Granularity.GRAN_H3: "H3",  # 3 hours
-    Granularity.GRAN_H4: "H4",  # 4 hours
-    Granularity.GRAN_H6: "H6",  # 6 hours
-    Granularity.GRAN_H8: "H8",  # 8 hours
-    Granularity.GRAN_H12: "H12",  # 12 hours
-    Granularity.GRAN_D: "D",  # 1 Day
-    Granularity.GRAN_W: "W",  # 1 Week
-}
-
-DT_OFT_DICT = {
-    Granularity.GRAN_M1: dt.timedelta(minutes=1),  # 1 minute
-    Granularity.GRAN_M2: dt.timedelta(minutes=2),  # 2 minutes
-    Granularity.GRAN_M3: dt.timedelta(minutes=3),  # 3 minutes
-    Granularity.GRAN_M4: dt.timedelta(minutes=4),  # 4 minutes
-    Granularity.GRAN_M5: dt.timedelta(minutes=5),  # 5 minutes
-    Granularity.GRAN_M10: dt.timedelta(minutes=10),  # 10 minutes
-    Granularity.GRAN_M15: dt.timedelta(minutes=15),  # 15 minutes
-    Granularity.GRAN_M30: dt.timedelta(minutes=30),  # 30 minutes
-    Granularity.GRAN_H1: dt.timedelta(hours=1),  # 1 hour
-    Granularity.GRAN_H2: dt.timedelta(hours=2),  # 2 hours
-    Granularity.GRAN_H3: dt.timedelta(hours=3),  # 3 hours
-    Granularity.GRAN_H4: dt.timedelta(hours=4),  # 4 hours
-    Granularity.GRAN_H6: dt.timedelta(hours=6),  # 6 hours
-    Granularity.GRAN_H8: dt.timedelta(hours=8),  # 8 hours
-    Granularity.GRAN_H12: dt.timedelta(hours=12),  # 12 hours
-    Granularity.GRAN_D: dt.timedelta(days=1),  # 1 Day
-    Granularity.GRAN_W: dt.timedelta(weeks=1),  # 1 Week
-}
-
 
 class CandlestickService(ServiceAbs):
+
+    DT_OFT_DICT = {
+        Granularity.GRAN_M1: dt.timedelta(minutes=1),  # 1 minute
+        Granularity.GRAN_M2: dt.timedelta(minutes=2),  # 2 minutes
+        Granularity.GRAN_M3: dt.timedelta(minutes=3),  # 3 minutes
+        Granularity.GRAN_M4: dt.timedelta(minutes=4),  # 4 minutes
+        Granularity.GRAN_M5: dt.timedelta(minutes=5),  # 5 minutes
+        Granularity.GRAN_M10: dt.timedelta(minutes=10),  # 10 minutes
+        Granularity.GRAN_M15: dt.timedelta(minutes=15),  # 15 minutes
+        Granularity.GRAN_M30: dt.timedelta(minutes=30),  # 30 minutes
+        Granularity.GRAN_H1: dt.timedelta(hours=1),  # 1 hour
+        Granularity.GRAN_H2: dt.timedelta(hours=2),  # 2 hours
+        Granularity.GRAN_H3: dt.timedelta(hours=3),  # 3 hours
+        Granularity.GRAN_H4: dt.timedelta(hours=4),  # 4 hours
+        Granularity.GRAN_H6: dt.timedelta(hours=6),  # 6 hours
+        Granularity.GRAN_H8: dt.timedelta(hours=8),  # 8 hours
+        Granularity.GRAN_H12: dt.timedelta(hours=12),  # 12 hours
+        Granularity.GRAN_D: dt.timedelta(days=1),  # 1 Day
+        Granularity.GRAN_W: dt.timedelta(weeks=1),  # 1 Week
+    }
 
     def __init__(self) -> None:
         super().__init__("candlestick_service")
@@ -95,7 +75,7 @@ class CandlestickService(ServiceAbs):
             return rsp
 
         gran_id = req.gran_msg.granularity_id
-        minunit = DT_OFT_DICT[gran_id]
+        minunit = self.DT_OFT_DICT[gran_id]
         dt_from = dt.datetime.strptime(req.dt_from, self.__DT_FMT)
         dt_to = dt.datetime.strptime(req.dt_to, self.__DT_FMT)
         dt_to = dt_to + minunit
@@ -201,8 +181,8 @@ class CandlestickService(ServiceAbs):
                 msg.bid_c = float(raw["bid"]["c"])
                 dttmp = dt.datetime.strptime(raw["time"], self.__DT_FMT)
                 msg.time = (dttmp + self.__TMDLT).strftime(self.__DT_FMT)
+                msg.is_complete = raw["complete"]
                 rsp.cndl_msg_list.append(msg)
-            rsp.is_latest_complete = apirsp["candles"][-1]["complete"]
 
         return rsp
 

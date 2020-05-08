@@ -49,6 +49,7 @@ class CandlesData():
     COL_NAME_BID_HI = "high(Bid)"
     COL_NAME_BID_LO = "low(Bid)"
     COL_NAME_BID_CL = "close(Bid)"
+    COL_NAME_COMP = "complete"
 
     def __init__(self,
                  node: Node,
@@ -58,7 +59,7 @@ class CandlesData():
                  data_length: int):
 
         self.__DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
-        lsb = CandlesData.DT_LSB_DICT[gran_id]
+        lsb = self.DT_LSB_DICT[gran_id]
         self.__logger = node.get_logger()
 
         self.__logger.info("===== Create CandlesData object")
@@ -97,22 +98,24 @@ class CandlesData():
                          cndl_msg.bid_o,
                          cndl_msg.bid_h,
                          cndl_msg.bid_l,
-                         cndl_msg.bid_c
+                         cndl_msg.bid_c,
+                         cndl_msg.is_complete
                          ])
 
         df = pd.DataFrame(data)
-        df.columns = [CandlesData.COL_NAME_TIME,
-                      CandlesData.COL_NAME_ASK_OP,
-                      CandlesData.COL_NAME_ASK_HI,
-                      CandlesData.COL_NAME_ASK_LO,
-                      CandlesData.COL_NAME_ASK_CL,
-                      CandlesData.COL_NAME_BID_OP,
-                      CandlesData.COL_NAME_BID_HI,
-                      CandlesData.COL_NAME_BID_LO,
-                      CandlesData.COL_NAME_BID_CL,
+        df.columns = [self.COL_NAME_TIME,
+                      self.COL_NAME_ASK_OP,
+                      self.COL_NAME_ASK_HI,
+                      self.COL_NAME_ASK_LO,
+                      self.COL_NAME_ASK_CL,
+                      self.COL_NAME_BID_OP,
+                      self.COL_NAME_BID_HI,
+                      self.COL_NAME_BID_LO,
+                      self.COL_NAME_BID_CL,
+                      self.COL_NAME_COMP
                       ]
 
-        TIME = CandlesData.COL_NAME_TIME
+        TIME = self.COL_NAME_TIME
         if GranMnt.GRAN_D <= gran_id:
             df[TIME] = df[TIME].apply(
                 lambda d: dt.datetime(d.year, d.month, d.day))
@@ -120,16 +123,11 @@ class CandlesData():
         df = df.set_index(TIME)
 
         self.__df = df
-        self.__is_latest_complete = rsp.is_latest_complete
         self.__srv_cli = srv_cli
 
     @property
     def dataframe(self) -> pd.DataFrame:
         return self.__df
-
-    @property
-    def is_latest_complete(self) -> bool:
-        return self.__is_latest_complete
 
 
 class CandlestickManager(Node):
@@ -172,9 +170,9 @@ class CandlestickManager(Node):
         srv_type = CandlesMntSrv
         srv_name = "candles_monitor"
         callback = self.__on_recv_candlesnt_mnt
-        self._candles_mnt_srv = self.create_service(srv_type,
-                                                    srv_name,
-                                                    callback)
+        self.__candles_mnt_srv = self.create_service(srv_type,
+                                                     srv_name,
+                                                     callback)
 
         inst_id_list = [Inst.INST_USD_JPY]
         gran_id_list = [Gran.GRAN_D]
@@ -183,7 +181,7 @@ class CandlestickManager(Node):
         for inst_id in inst_id_list:
             gran_dict = {}
             for gran_id in gran_id_list:
-                data_length = CandlestickManager.DATA_LENGTH_DICT[gran_id]
+                data_length = self.DATA_LENGTH_DICT[gran_id]
                 obj = CandlesData(self, cli_cdl, inst_id, gran_id,
                                   data_length)
                 tmp = {gran_id: obj}
@@ -194,7 +192,6 @@ class CandlestickManager(Node):
         # type: Dict[InstrumentMnt][GranularityMnt]
         self.__obj_map_dict = obj_map_dict
 
-        """
         dt_from = dt.datetime(2020, 5, 1)
         dt_to = dt.datetime(2020, 5, 5)
 
@@ -210,7 +207,6 @@ class CandlestickManager(Node):
         print("4----------------------------")
         df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D)
         print(df)
-        """
 
     def get_dataframe(self,
                       inst_id: Inst,
@@ -231,12 +227,6 @@ class CandlestickManager(Node):
             dftmp = df
 
         return dftmp
-
-    def get_latest_complete(self,
-                            inst_id: Inst,
-                            gran_id: Gran,
-                            ) -> bool:
-        return self.__obj_map_dict[inst_id][gran_id].is_latest_complete
 
     def __create_service_client(self, srv_type: int, srv_name: str) -> Client:
         # Create service client
