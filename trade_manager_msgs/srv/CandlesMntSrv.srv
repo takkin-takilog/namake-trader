@@ -20,6 +20,3 @@ string dt_to
 
 # The list of candle message.
 trade_manager_msgs/CandleMnt[] cndl_msg_list
-
-# A flag indicating if the latest candlestick is complete.
-bool is_latest_complete

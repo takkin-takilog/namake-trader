@@ -192,6 +192,7 @@ class CandlestickManager(Node):
         # type: Dict[InstrumentMnt][GranularityMnt]
         self.__obj_map_dict = obj_map_dict
 
+        """
         dt_from = dt.datetime(2020, 5, 1)
         dt_to = dt.datetime(2020, 5, 5)
 
@@ -207,6 +208,7 @@ class CandlestickManager(Node):
         print("4----------------------------")
         df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D)
         print(df)
+        """
 
     def get_dataframe(self,
                       inst_id: Inst,
@@ -266,10 +268,8 @@ class CandlestickManager(Node):
             msg.bid_l = sr[CandlesData.COL_NAME_BID_LO]
             msg.bid_c = sr[CandlesData.COL_NAME_BID_CL]
             msg.time = sr[CandlesData.COL_NAME_TIME].strftime(self.__DT_FMT)
+            msg.is_complete = sr[CandlesData.COL_NAME_COMP]
             rsp.cndl_msg_list.append(msg)
-
-        rsp.cndl_msg_list = self.get_dataframe(req.inst_msg.instrument_id,
-                                               req.gran_msg.granularity_id)
 
         return rsp
 

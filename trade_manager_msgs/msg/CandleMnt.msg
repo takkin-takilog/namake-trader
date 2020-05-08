@@ -14,3 +14,6 @@ float32 bid_c
 
 # The start time of the candlestick.
 string time
+
+# A flag indicating if the latest candlestick is complete.
+bool is_complete
