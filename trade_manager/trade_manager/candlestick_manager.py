@@ -51,14 +51,16 @@ class CandlesData():
     COL_NAME_BID_CL = "close(Bid)"
     COL_NAME_COMP = "complete"
 
+    DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+
     def __init__(self,
                  node: Node,
                  srv_cli: Client,
                  inst_id: InstMnt,
                  gran_id: GranMnt,
-                 data_length: int):
+                 data_length: int
+                 ) -> None:
 
-        self.__DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
         lsb = self.DT_LSB_DICT[gran_id]
         self.__logger = node.get_logger()
 
@@ -72,8 +74,8 @@ class CandlesData():
         dt_now = dt.datetime.now()
         dt_from = dt_now - lsb * data_length
         dt_to = dt_now
-        req.dt_from = dt_from.strftime(self.__DT_FMT)
-        req.dt_to = dt_to.strftime(self.__DT_FMT)
+        req.dt_from = dt_from.strftime(self.DT_FMT)
+        req.dt_to = dt_to.strftime(self.DT_FMT)
 
         future = srv_cli.call_async(req)
         req_time = dt.datetime.now()
@@ -89,7 +91,7 @@ class CandlesData():
 
         data = []
         for cndl_msg in rsp.cndl_msg_list:
-            dt_ = dt.datetime.strptime(cndl_msg.time, self.__DT_FMT)
+            dt_ = dt.datetime.strptime(cndl_msg.time, self.DT_FMT)
             data.append([dt_,
                          cndl_msg.ask_o,
                          cndl_msg.ask_h,
@@ -152,7 +154,7 @@ class CandlestickManager(Node):
         Gran.GRAN_W: 4 * 12,  # 1 Year
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("candlestick_manager")
 
         self.__DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
@@ -166,6 +168,9 @@ class CandlestickManager(Node):
         srv_name = "candles"
         cli_cdl = self.__create_service_client(srv_type, srv_name)
 
+        # initialize "data_map"
+        self.__init_data_map(cli_cdl)
+
         # Create service server "CandlesMonitor"
         srv_type = CandlesMntSrv
         srv_name = "candles_monitor"
@@ -174,23 +179,7 @@ class CandlestickManager(Node):
                                                      srv_name,
                                                      callback)
 
-        inst_id_list = [Inst.INST_USD_JPY]
-        gran_id_list = [Gran.GRAN_D]
-
-        obj_map_dict = {}
-        for inst_id in inst_id_list:
-            gran_dict = {}
-            for gran_id in gran_id_list:
-                data_length = self.DATA_LENGTH_DICT[gran_id]
-                obj = CandlesData(self, cli_cdl, inst_id, gran_id,
-                                  data_length)
-                tmp = {gran_id: obj}
-                gran_dict.update(tmp)
-            tmp = {inst_id: gran_dict}
-            obj_map_dict.update(tmp)
-
-        # type: Dict[InstrumentMnt][GranularityMnt]
-        self.__obj_map_dict = obj_map_dict
+        self.__cli_cdl = cli_cdl
 
         """
         dt_from = dt.datetime(2020, 5, 1)
@@ -210,12 +199,31 @@ class CandlestickManager(Node):
         print(df)
         """
 
-    def get_dataframe(self,
-                      inst_id: Inst,
-                      gran_id: Gran,
-                      dt_from: dt.datetime=None,
-                      dt_to: dt.datetime=None
-                      ) -> pd.DataFrame:
+    def __init_data_map(self, cli: Client) -> None:
+
+        inst_id_list = [Inst.INST_USD_JPY]
+        gran_id_list = [Gran.GRAN_D]
+
+        obj_map_dict = {}
+        for inst_id in inst_id_list:
+            gran_dict = {}
+            for gran_id in gran_id_list:
+                data_length = self.DATA_LENGTH_DICT[gran_id]
+                obj = CandlesData(self, cli, inst_id, gran_id, data_length)
+                tmp = {gran_id: obj}
+                gran_dict.update(tmp)
+            tmp = {inst_id: gran_dict}
+            obj_map_dict.update(tmp)
+
+        # type: Dict[InstrumentMnt][GranularityMnt]
+        self.__obj_map_dict = obj_map_dict
+
+    def __get_dataframe(self,
+                        inst_id: Inst,
+                        gran_id: Gran,
+                        dt_from: dt.datetime=None,
+                        dt_to: dt.datetime=None
+                        ) -> pd.DataFrame:
 
         df = self.__obj_map_dict[inst_id][gran_id].dataframe
 
@@ -243,33 +251,36 @@ class CandlestickManager(Node):
                                 rsp: SrvTypeResponse
                                 ) -> SrvTypeResponse:
 
+        DT_FMT = CandlesData.DT_FMT
+
         dt_from = None
         if req.dt_from is not None:
-            dt_from = dt.datetime.strptime(req.dt_from, self.__DT_FMT)
+            dt_from = dt.datetime.strptime(req.dt_from, DT_FMT)
 
         dt_to = None
         if req.dt_to is not None:
-            dt_to = dt.datetime.strptime(req.dt_to, self.__DT_FMT)
+            dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
 
-        df = self.get_dataframe(req.inst_msg.instrument_id,
-                                req.gran_msg.granularity_id,
-                                dt_from,
-                                dt_to)
+        df = self.__get_dataframe(req.inst_msg.instrument_id,
+                                  req.gran_msg.granularity_id,
+                                  dt_from,
+                                  dt_to)
 
         rsp.cndl_msg_list = []
-        for sr in df:
-            msg = CandleMnt()
-            msg.ask_o = sr[CandlesData.COL_NAME_ASK_OP]
-            msg.ask_h = sr[CandlesData.COL_NAME_ASK_HI]
-            msg.ask_l = sr[CandlesData.COL_NAME_ASK_LO]
-            msg.ask_c = sr[CandlesData.COL_NAME_ASK_CL]
-            msg.bid_o = sr[CandlesData.COL_NAME_BID_OP]
-            msg.bid_h = sr[CandlesData.COL_NAME_BID_HI]
-            msg.bid_l = sr[CandlesData.COL_NAME_BID_LO]
-            msg.bid_c = sr[CandlesData.COL_NAME_BID_CL]
-            msg.time = sr[CandlesData.COL_NAME_TIME].strftime(self.__DT_FMT)
-            msg.is_complete = sr[CandlesData.COL_NAME_COMP]
-            rsp.cndl_msg_list.append(msg)
+        if not df.empty:
+            for time, sr in df.iterrows():
+                msg = CandleMnt()
+                msg.ask_o = sr[CandlesData.COL_NAME_ASK_OP]
+                msg.ask_h = sr[CandlesData.COL_NAME_ASK_HI]
+                msg.ask_l = sr[CandlesData.COL_NAME_ASK_LO]
+                msg.ask_c = sr[CandlesData.COL_NAME_ASK_CL]
+                msg.bid_o = sr[CandlesData.COL_NAME_BID_OP]
+                msg.bid_h = sr[CandlesData.COL_NAME_BID_HI]
+                msg.bid_l = sr[CandlesData.COL_NAME_BID_LO]
+                msg.bid_c = sr[CandlesData.COL_NAME_BID_CL]
+                msg.time = time.strftime(DT_FMT)
+                msg.is_complete = sr[CandlesData.COL_NAME_COMP]
+                rsp.cndl_msg_list.append(msg)
 
         return rsp
 

@@ -35,13 +35,13 @@ class CandlestickService(ServiceAbs):
         Granularity.GRAN_W: dt.timedelta(weeks=1),  # 1 Week
     }
 
+    MAX_SIZE = 4999
+    # MAX_SIZE = 10    # For test
+    TMDLT = dt.timedelta(hours=9)
+    DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+
     def __init__(self) -> None:
         super().__init__("candlestick_service")
-
-        self.__MAX_SIZE = 4999
-        # self.__MAX_SIZE = 10    # For test
-        self.__TMDLT = dt.timedelta(hours=9)
-        self.__DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
 
@@ -76,8 +76,8 @@ class CandlestickService(ServiceAbs):
 
         gran_id = req.gran_msg.granularity_id
         minunit = self.DT_OFT_DICT[gran_id]
-        dt_from = dt.datetime.strptime(req.dt_from, self.__DT_FMT)
-        dt_to = dt.datetime.strptime(req.dt_to, self.__DT_FMT)
+        dt_from = dt.datetime.strptime(req.dt_from, self.DT_FMT)
+        dt_to = dt.datetime.strptime(req.dt_to, self.DT_FMT)
         dt_to = dt_to + minunit
 
         dtnow = dt.datetime.now()
@@ -96,7 +96,7 @@ class CandlestickService(ServiceAbs):
 
         while tmpdt < dt_to:
             rsp.cndl_msg_list = []
-            tmpdt = tmpdt + (minunit * self.__MAX_SIZE)
+            tmpdt = tmpdt + (minunit * self.MAX_SIZE)
 
             if dt_to < tmpdt:
                 tmpdt = dt_to
@@ -107,8 +107,8 @@ class CandlestickService(ServiceAbs):
             self._logger.debug("to:  %s" % to_)
 
             params = {
-                "from": (from_ - self.__TMDLT).strftime(self.__DT_FMT),
-                "to": (to_ - self.__TMDLT).strftime(self.__DT_FMT),
+                "from": (from_ - self.TMDLT).strftime(self.DT_FMT),
+                "to": (to_ - self.TMDLT).strftime(self.DT_FMT),
                 "granularity": gran,
                 "price": "AB"
             }
@@ -153,8 +153,8 @@ class CandlestickService(ServiceAbs):
                             rsp: SrvTypeResponse
                             ) -> SrvTypeResponse:
 
-        dt_from = dt.datetime.strptime(req.dt_from, self.__DT_FMT)
-        dt_to = dt.datetime.strptime(req.dt_to, self.__DT_FMT)
+        dt_from = dt.datetime.strptime(req.dt_from, self.DT_FMT)
+        dt_to = dt.datetime.strptime(req.dt_to, self.DT_FMT)
         dt_now = dt.datetime.now()
 
         if (dt_to < dt_from) or (dt_now < dt_from):
@@ -179,8 +179,8 @@ class CandlestickService(ServiceAbs):
                 msg.bid_h = float(raw["bid"]["h"])
                 msg.bid_l = float(raw["bid"]["l"])
                 msg.bid_c = float(raw["bid"]["c"])
-                dttmp = dt.datetime.strptime(raw["time"], self.__DT_FMT)
-                msg.time = (dttmp + self.__TMDLT).strftime(self.__DT_FMT)
+                dttmp = dt.datetime.strptime(raw["time"], self.DT_FMT)
+                msg.time = (dttmp + self.TMDLT).strftime(self.DT_FMT)
                 msg.is_complete = raw["complete"]
                 rsp.cndl_msg_list.append(msg)
 

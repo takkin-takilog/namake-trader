@@ -49,7 +49,7 @@ class OrderState(object):
 
         self.__req_id = msg.req_id
         self.__order_typ = order_typ
-        self.__sts = OrderState.STS_NEW_ORD_WAIT_RSP
+        self.__sts = self.STS_NEW_ORD_WAIT_RSP
         self.__future = future
         self.__order_id = 0
         self.__trade_id = 0
@@ -57,7 +57,7 @@ class OrderState(object):
         self.__inst_id = msg.instrument_id
         self.__units = msg.units
 
-        if not order_typ == OrderState.ORDER_TYP_MARKET:
+        if not order_typ == self.ORDER_TYP_MARKET:
             self.__price = msg.price
             if not msg.valid_period_new:
                 self.__dt_new = None
@@ -99,19 +99,19 @@ class OrderState(object):
         return self.__trade_id
 
     def update(self, pol_flg: bool) -> None:
-        if self.__sts == OrderState.STS_NEW_ORD_WAIT_RSP:
+        if self.__sts == self.STS_NEW_ORD_WAIT_RSP:
             self.__check_future_by_order_create()
-        elif self.__sts == OrderState.STS_NEW_ORD_PENDING:
+        elif self.__sts == self.STS_NEW_ORD_PENDING:
             self.__check_state_new_order_pending(pol_flg)
-        elif self.__sts == OrderState.STS_NEW_ORD_DET_WAIT_RSP:
+        elif self.__sts == self.STS_NEW_ORD_DET_WAIT_RSP:
             self.__check_future_by_order_details()
-        elif self.__sts == OrderState.STS_NEW_ORD_CNC_REQ:
+        elif self.__sts == self.STS_NEW_ORD_CNC_REQ:
             self.__check_future_by_order_cancel()
-        elif self.__sts == OrderState.STS_SET_ORD_PENDING:
+        elif self.__sts == self.STS_SET_ORD_PENDING:
             self.__check_state_settlement_order_pending(pol_flg)
-        elif self.__sts == OrderState.STS_TRADE_DET_WAIT_RSP:
+        elif self.__sts == self.STS_TRADE_DET_WAIT_RSP:
             self.__check_future_by_trade_details()
-        elif self.__sts == OrderState.STS_TRADE_CLS_WAIT_RSP:
+        elif self.__sts == self.STS_TRADE_CLS_WAIT_RSP:
             self.__check_future_by_trade_close()
         else:
             pass
@@ -124,39 +124,39 @@ class OrderState(object):
                 self.__logger.error("Error while calling service of node."
                                     "[order_create]")
                 # change state: 1 -> Abnormal End
-                self.__sts = OrderState.STS_ABN_END
+                self.__sts = self.STS_ABN_END
             else:
                 if rsp.result is True:
-                    if self.__order_typ == OrderState.ORDER_TYP_MARKET:
+                    if self.__order_typ == self.ORDER_TYP_MARKET:
                         self.__trade_id = rsp.id
                         # change state: 1 -> 5
                         self.__logger.debug("[change state: 1 -> 5]")
-                        self.__sts = OrderState.STS_SET_ORD_PENDING
+                        self.__sts = self.STS_SET_ORD_PENDING
                     else:
                         self.__order_id = rsp.id
                         # change state: 1 -> 2
                         self.__logger.debug("[change state: 1 -> 2]")
-                        self.__sts = OrderState.STS_NEW_ORD_PENDING
+                        self.__sts = self.STS_NEW_ORD_PENDING
                 else:
                     self.__logger.error(
                         "Service <order_create> request Failed!"
                         "[reason code:%d]" % rsp.frc_msg.reason_code)
                     # change state: 1 -> Abnormal End
-                    self.__sts = OrderState.STS_ABN_END
+                    self.__sts = self.STS_ABN_END
 
     def __check_state_new_order_pending(self, pol_flg: bool) -> None:
 
         if pol_flg is True:
             # change state: 2 -> 3
             self.__logger.debug("[change state: 2 -> 3]")
-            self.__sts = OrderState.STS_NEW_ORD_DET_WAIT_RSP
+            self.__sts = self.STS_NEW_ORD_DET_WAIT_RSP
         elif self.__dt_new is not None:
             dt_now = dt.datetime.now()
             if self.__dt_new < dt_now:
                 self.__logger.debug("[new_order_pending]datetime over")
                 # change state: 2 -> 3
                 self.__logger.debug("[change state: 2 -> 3]")
-                self.__sts = OrderState.STS_NEW_ORD_DET_WAIT_RSP
+                self.__sts = self.STS_NEW_ORD_DET_WAIT_RSP
 
     def __check_future_by_order_details(self) -> None:
 
@@ -166,14 +166,14 @@ class OrderState(object):
                 self.__logger.error("Error while calling service of node."
                                     "[order_details]")
                 # change state: 3 -> Abnormal End
-                self.__sts = OrderState.STS_ABN_END
+                self.__sts = self.STS_ABN_END
             else:
                 if rsp.result is True:
                     if rsp.order_state_msg.state == OrderStateMsg.STS_FILLED:
                         self.__trade_id = rsp.open_trade_id
                         # change state: 3 -> 5
                         self.__logger.debug("[change state: 3 -> 5]")
-                        self.__sts = OrderState.STS_SET_ORD_PENDING
+                        self.__sts = self.STS_SET_ORD_PENDING
                     elif rsp.order_state_msg.state == OrderStateMsg.STS_PENDING:
                         if self.__dt_new is not None:
                             dt_now = dt.datetime.now()
@@ -182,15 +182,15 @@ class OrderState(object):
                                     "[order_details]datetime over")
                                 # change state: 3 -> 4
                                 self.__logger.debug("[change state: 3 -> 4]")
-                                self.__sts = OrderState.STS_NEW_ORD_CNC_REQ
+                                self.__sts = self.STS_NEW_ORD_CNC_REQ
                             else:
                                 # change state: 3 -> 2
                                 self.__logger.debug("[change state: 3 -> 2]")
-                                self.__sts = OrderState.STS_NEW_ORD_PENDING
+                                self.__sts = self.STS_NEW_ORD_PENDING
                         else:
                             # change state: 3 -> 2
                             self.__logger.debug("[change state: 3 -> 2]")
-                            self.__sts = OrderState.STS_NEW_ORD_PENDING
+                            self.__sts = self.STS_NEW_ORD_PENDING
                     else:
                         pass
                 else:
@@ -198,7 +198,7 @@ class OrderState(object):
                         "Service <order_details> request Failed!"
                         "[reason code:%d]" % rsp.frc_msg.reason_code)
                     # change state: 1 -> Abnormal End
-                    self.__sts = OrderState.STS_ABN_END
+                    self.__sts = self.STS_ABN_END
 
     def __check_future_by_order_cancel(self) -> None:
 
@@ -208,32 +208,32 @@ class OrderState(object):
                 self.__logger.error("Error while calling service of node."
                                     "[order_cancel]")
                 # change state: 4 -> Abnormal End
-                self.__sts = OrderState.STS_ABN_END
+                self.__sts = self.STS_ABN_END
             else:
                 if rsp.result is True:
                     # change state: 4 -> Normal END
                     self.__logger.debug("[change state: 4 -> END]")
-                    self.__sts = OrderState.STS_NOR_END
+                    self.__sts = self.STS_NOR_END
                 else:
                     self.__logger.error(
                         "Service <order_cancel> request Failed!"
                         "[reason code:%d]" % rsp.frc_msg.reason_code)
                     # change state: 4 -> Abnormal End
-                    self.__sts = OrderState.STS_ABN_END
+                    self.__sts = self.STS_ABN_END
 
     def __check_state_settlement_order_pending(self, pol_flg: bool) -> None:
 
         if pol_flg is True:
             # change state: 5 -> 6
             self.__logger.debug("[change state: 5 -> 6]")
-            self.__sts = OrderState.STS_TRADE_DET_WAIT_RSP
+            self.__sts = self.STS_TRADE_DET_WAIT_RSP
         elif self.__dt_settlement is not None:
             dt_now = dt.datetime.now()
             if self.__dt_settlement < dt_now:
                 self.__logger.debug("[settlement_order_pending]datetime over")
                 # change state: 5 -> 6
                 self.__logger.debug("[change state: 5 -> 6]")
-                self.__sts = OrderState.STS_TRADE_DET_WAIT_RSP
+                self.__sts = self.STS_TRADE_DET_WAIT_RSP
 
     def __check_future_by_trade_details(self) -> None:
 
@@ -243,34 +243,34 @@ class OrderState(object):
                 self.__logger.error("Error while calling service of node."
                                     "[trade_details]")
                 # change state: 6 -> Abnormal End
-                self.__sts = OrderState.STS_ABN_END
+                self.__sts = self.STS_ABN_END
             else:
                 if rsp.result is True:
                     if rsp.trade_state_msg.state == TradeStateMsg.STS_CLOSED:
                         # change state: 6 -> Normal END
                         self.__logger.debug("[change state: 6 -> END]")
-                        self.__sts = OrderState.STS_NOR_END
+                        self.__sts = self.STS_NOR_END
                     elif rsp.trade_state_msg.state == TradeStateMsg.STS_OPEN:
                         dt_now = dt.datetime.now()
                         if self.__dt_settlement < dt_now:
                             self.__logger.debug("[trade_details]datetime over")
                             # change state: 6 -> 7
                             self.__logger.debug("[change state: 6 -> 7]")
-                            self.__sts = OrderState.STS_TRADE_CLS_WAIT_RSP
+                            self.__sts = self.STS_TRADE_CLS_WAIT_RSP
                         else:
                             # change state: 6 -> 5
                             self.__logger.debug("[change state: 6 -> 5]")
-                            self.__sts = OrderState.STS_SET_ORD_PENDING
+                            self.__sts = self.STS_SET_ORD_PENDING
                     else:
                         # change state: 6 -> 5
                         self.__logger.debug("[change state: 6 -> 5]")
-                        self.__sts = OrderState.STS_SET_ORD_PENDING
+                        self.__sts = self.STS_SET_ORD_PENDING
                 else:
                     self.__logger.error(
                         "Service <trade_details> request Failed!"
                         "[reason code:%d]" % rsp.frc_msg.reason_code)
                     # change state: 6 -> Abnormal End
-                    self.__sts = OrderState.STS_ABN_END
+                    self.__sts = self.STS_ABN_END
 
     def __check_future_by_trade_close(self) -> None:
 
@@ -280,18 +280,18 @@ class OrderState(object):
                 self.__logger.error("Error while calling service of node."
                                     "[trade_close(]")
                 # change state: 7 -> Abnormal End
-                self.__sts = OrderState.STS_ABN_END
+                self.__sts = self.STS_ABN_END
             else:
                 if rsp.result is True:
                     # change state: 7 -> Normal END
                     self.__logger.debug("[change state: 7 -> END]")
-                    self.__sts = OrderState.STS_NOR_END
+                    self.__sts = self.STS_NOR_END
                 else:
                     self.__logger.error(
                         "Service <trade_close> request Failed!"
                         "[reason code:%d]" % rsp.frc_msg.reason_code)
                     # change state: 7 -> Abnormal End
-                    self.__sts = OrderState.STS_ABN_END
+                    self.__sts = self.STS_ABN_END
 
 
 class OrderManager(Node):
