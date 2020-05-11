@@ -5,7 +5,7 @@ import threading
 import datetime as dt
 import pandas as pd
 
-from PySide2.QtWidgets import QApplication, QWidget
+from PySide2.QtWidgets import QApplication, QMainWindow
 from PySide2.QtCore import Qt, QFile, QCoreApplication  # @UnresolvedImport
 from PySide2.QtCore import QDateTime
 from PySide2.QtUiTools import QUiLoader  # @UnresolvedImport
@@ -20,7 +20,7 @@ from trade_manager_msgs.msg import GranularityMnt as GranMnt
 from std_msgs.msg import String
 
 
-class GuiMonitor(QWidget):
+class GuiMonitor(QMainWindow):
 
     DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
 
@@ -144,10 +144,10 @@ class GuiMonitor(QWidget):
         chartview = QtCharts.QChartView(chart)
         chartview.setParent(ui.graphicsView_candlestickchart)
 
-        chartview.setChart(chart)
+        #chartview.setChart(chart)
         #chartview.setRenderHint(QPainter.Antialiasing)
 
-
+        """
         h = ui.graphicsView_candlestickchart.height()
         w = ui.graphicsView_candlestickchart.width()
         print("----------------------------------")
@@ -155,8 +155,12 @@ class GuiMonitor(QWidget):
         print(w)
 
         chartview.resize(w, h)
+        """
 
+        ui.show()
         self.__node = node
+        self.__ui = ui
+        self.__chartview = chartview
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")
@@ -178,6 +182,15 @@ class GuiMonitor(QWidget):
 
     def publish_topic(self):
         self.logger.debug("push")
+
+        h = self.__ui.graphicsView_candlestickchart.height()
+        w = self.__ui.graphicsView_candlestickchart.width()
+        print("----------------------------------")
+        print(h)
+        print(w)
+
+        self.__chartview.resize(w, h)
+
         """
         self.pub.publish(str(self.current_value))
         self.pushButton.setEnabled(False)
@@ -190,7 +203,7 @@ def main():
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication([])
     widget = GuiMonitor()
-    widget.show()
+    #widget.show()
 
     ros_th = threading.Thread(target=rclpy.spin, args=(widget.node,))
     ros_th.start()
