@@ -35,9 +35,13 @@ class GuiMonitor(QMainWindow):
     COL_NAME_BID_CL = "close(Bid)"
     COL_NAME_COMP = "complete"
 
-    def __init__(self):
-        super(GuiMonitor, self).__init__()
-        ui = self.load_ui()
+    def __init__(self, parent=None):
+        super(GuiMonitor, self).__init__(parent)
+        ui = self.__load_ui(parent)
+        self.setCentralWidget(ui)
+        self.resize(ui.frameSize())
+
+        ui.pushButton_srvcon.pressed.connect(self.__connect_server)
 
         series = QtCharts.QCandlestickSeries()
         series.setDecreasingColor(Qt.red)
@@ -48,8 +52,6 @@ class GuiMonitor(QMainWindow):
         node = rclpy.create_node('gui_monitor')
         self.logger = node.get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-
-        ui.pushButton_SrvReq.pressed.connect(self.publish_topic)
 
         self.sub = node.create_subscription(String,
                                             'chatter',
@@ -119,7 +121,8 @@ class GuiMonitor(QMainWindow):
             c_ = sr[self.COL_NAME_ASK_CL]
             t_ = QDateTime(dt.datetime.date(time))
 
-            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_, t_.toMSecsSinceEpoch())
+            cnd = QtCharts.QCandlestickSet(
+                o_, h_, l_, c_, t_.toMSecsSinceEpoch())
             series.append(cnd)
 
         # axises
@@ -142,24 +145,26 @@ class GuiMonitor(QMainWindow):
         chart.legend().hide()
 
         chartview = QtCharts.QChartView(chart)
-        chartview.setParent(ui.graphicsView_candlestickchart)
+        chartview.setParent(ui.widget_chart)
+        h = ui.widget_chart.height()
+        w = ui.widget_chart.width()
+        chartview.resize(w, h)
+
+        print("1----------------------------------")
+        print(ui.widget_chart.geometry())
+        print(ui.widget_chart.frameGeometry())
+        print(ui.widget_chart.frameSize())
+
+
 
         #chartview.setChart(chart)
         #chartview.setRenderHint(QPainter.Antialiasing)
 
-        """
-        h = ui.graphicsView_candlestickchart.height()
-        w = ui.graphicsView_candlestickchart.width()
-        print("----------------------------------")
-        print(h)
-        print(w)
 
-        chartview.resize(w, h)
-        """
-
-        ui.show()
+        #self.show()
         self.__node = node
         self.__ui = ui
+        self.__chart = chart
         self.__chartview = chartview
 
     def listener_callback(self, msg):
@@ -170,32 +175,33 @@ class GuiMonitor(QMainWindow):
     def node(self) -> Node:
         return self.__node
 
-    def load_ui(self):
+    @property
+    def ui(self):
+        return self.__ui
+
+    def __load_ui(self, parent):
         loader = QUiLoader()
         path = os.path.join(os.path.dirname(__file__), "gui_monitor.ui")
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)
-        ui = loader.load(ui_file, self)
+        ui = loader.load(ui_file, parent)
         ui_file.close()
 
         return ui
 
-    def publish_topic(self):
+    def __connect_server(self):
         self.logger.debug("push")
-
-        h = self.__ui.graphicsView_candlestickchart.height()
-        w = self.__ui.graphicsView_candlestickchart.width()
-        print("----------------------------------")
-        print(h)
-        print(w)
-
-        self.__chartview.resize(w, h)
 
         """
         self.pub.publish(str(self.current_value))
         self.pushButton.setEnabled(False)
         self.is_pub = True
         """
+    def resizeEvent(self, event):
+        print("resize")
+        h = self.__ui.widget_chart.height()
+        w = self.__ui.widget_chart.width()
+        self.__chartview.resize(w, h)
 
 
 def main():
@@ -203,7 +209,21 @@ def main():
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication([])
     widget = GuiMonitor()
-    #widget.show()
+
+    ui = widget.ui
+    print("2----------------------------------")
+    print(ui.widget_chart.geometry())
+    print(ui.widget_chart.frameGeometry())
+    print(ui.widget_chart.frameSize())
+
+    widget.show()
+
+    ui = widget.ui
+    print("3----------------------------------")
+    print(ui.widget_chart.geometry())
+    print(ui.widget_chart.frameGeometry())
+    print(ui.widget_chart.frameSize())
+
 
     ros_th = threading.Thread(target=rclpy.spin, args=(widget.node,))
     ros_th.start()
@@ -212,6 +232,7 @@ def main():
     widget.node.destroy_node()
     rclpy.shutdown()
     sys.exit(errcd)
+
 
 if __name__ == "__main__":
     main()
