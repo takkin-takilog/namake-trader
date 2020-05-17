@@ -18,6 +18,10 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 # pd.set_option('display.max_rows', 500)
 
 
+class ROSServiceError(Exception):
+    pass
+
+
 class CandlesData():
 
     DT_LSB_DICT = {
@@ -61,33 +65,156 @@ class CandlesData():
                  data_length: int
                  ) -> None:
 
-        lsb = self.DT_LSB_DICT[gran_id]
+        minunit = self.DT_LSB_DICT[gran_id]
         self.__logger = node.get_logger()
 
         self.__logger.info("===== Create CandlesData object")
         self.__logger.info("inst_id:[%d], gran_id:[%d]" % (inst_id, gran_id))
 
-        req = CandlesSrv.Request()
-        req.inst_msg.instrument_id = inst_id
-        req.gran_msg.granularity_id = gran_id
+        dt_now = dt.datetime.now()
+        dt_from = dt_now - minunit * data_length
+        dt_to = dt_now
+
+        interval = minunit
+        dt_1h = dt.timedelta(hours=1)
+        if dt_1h < interval:
+            interval = dt_1h
+
+        self.__node = node
+        self.__srv_cli = srv_cli
+        self.__interval = interval
+        self.__inst_id = inst_id
+        self.__gran_id = gran_id
+        self.__is_minunit_updated = True
+
+        try:
+            df = self.__fetch_data(dt_from, dt_to)
+        except ROSServiceError as e:
+            self.__logger.error("ROSServiceError: %s" % e)
+            assert False, e
+
+        df_comp = df[(df[self.COL_NAME_COMP])]
+        df_prov = df[~(df[self.COL_NAME_COMP])]
+
+        self.__last_update_time = self.__get_last_update_time(gran_id, dt_now)
+        self.__df_comp = df_comp
+        self.__df_prov = df_prov
+
+        self.__logger.debug("last_update_time:%s" % (self.__last_update_time))
+
+    def __get_last_update_time(self,
+                               gran_id: int,
+                               dtin: dt.datetime
+                               ) -> dt.datetime:
+
+        if gran_id == GranMnt.GRAN_M1:
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour, dtin.minute)
+        elif gran_id == GranMnt.GRAN_M2:
+            tmp = dtin.minute - dtin.minute % 2
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour, tmp)
+        elif gran_id == GranMnt.GRAN_M3:
+            tmp = dtin.minute - dtin.minute % 3
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour, tmp)
+        elif gran_id == GranMnt.GRAN_M4:
+            tmp = dtin.minute - dtin.minute % 4
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour, tmp)
+        elif gran_id == GranMnt.GRAN_M5:
+            tmp = dtin.minute - dtin.minute % 5
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour, tmp)
+        elif gran_id == GranMnt.GRAN_M10:
+            tmp = dtin.minute - dtin.minute % 10
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour, tmp)
+        elif gran_id == GranMnt.GRAN_M15:
+            tmp = dtin.minute - dtin.minute % 15
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour, tmp)
+        elif gran_id == GranMnt.GRAN_M30:
+            tmp = dtin.minute - dtin.minute % 30
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour, tmp)
+        elif ((gran_id == GranMnt.GRAN_H1) or (gran_id == GranMnt.GRAN_H2) or
+              (gran_id == GranMnt.GRAN_H3) or (gran_id == GranMnt.GRAN_H4) or
+              (gran_id == GranMnt.GRAN_H6) or (gran_id == GranMnt.GRAN_H8) or
+              (gran_id == GranMnt.GRAN_H12) or (gran_id == GranMnt.GRAN_D) or
+                (gran_id == GranMnt.GRAN_W)):
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour)
+        else:
+            dtout = dt.datetime(dtin.year, dtin.month,
+                                dtin.day, dtin.hour)
+
+        return dtout
+
+    @property
+    def dataframe(self) -> pd.DataFrame:
+        return self.__df_comp
+
+    def update_not_complete_data(self) -> None:
 
         dt_now = dt.datetime.now()
-        dt_from = dt_now - lsb * data_length
-        dt_to = dt_now
+        self.__logger.debug("[%s]update_not_complete_data[inst:%d][gran:%d]" % (
+            dt_now, self.__inst_id, self.__gran_id))
+
+        if self.__interval < dt_now - self.__last_update_time:
+            try:
+                df = self.__fetch_data(self.__last_update_time, dt_now)
+            except ROSServiceError as e:
+                self.__logger.error("ROSServiceError: %s" % e)
+            else:
+                self.__last_update_time += self.__interval
+                self.__logger.debug("update<last_update_time>:%s" % (self.__last_update_time))
+                if not df.empty:
+                    df_comp = df[(df[self.COL_NAME_COMP])]
+                    df_prov = df[~(df[self.COL_NAME_COMP])]
+
+                    self.__logger.debug("df_comp:%s" % (df_comp.index.tolist()))
+                    self.__logger.debug("df_prov:%s" % (df_prov.index.tolist()))
+
+                    if not df_comp.empty:
+                        self.__df_comp.append(df_comp)
+                        """
+                        dftmp = self.__df_comp.append(df_comp)
+                        self.__df_comp = dftmp.groupby(dftmp.index).last()
+                        """
+                    if not df_prov.empty:
+                        self.__df_prov = df_prov
+                    else:
+                        self.__df_prov = self.__df_prov[:0]  # All data delete
+
+    def __fetch_data(self,
+                     dt_from: dt.datetime,
+                     dt_to: dt.datetime
+                     ) -> pd.DataFrame:
+
+        req = CandlesSrv.Request()
+
+        req.inst_msg.instrument_id = self.__inst_id
+        req.gran_msg.granularity_id = self.__gran_id
+
         req.dt_from = dt_from.strftime(self.DT_FMT)
         req.dt_to = dt_to.strftime(self.DT_FMT)
 
-        future = srv_cli.call_async(req)
+        future = self.__srv_cli.call_async(req)
         req_time = dt.datetime.now()
-        rclpy.spin_until_future_complete(node, future, timeout_sec=5.0)
+        rclpy.spin_until_future_complete(self.__node, future, timeout_sec=5.0)
         dlt_time = dt.datetime.now() - req_time
         self.__logger.info("get candles fetch time: %s" % (dlt_time))
 
         flg = future.done() and future.result() is not None
-        assert flg, "initial fetch [Day Candle] failed!"
+        if flg is False:
+            raise ROSServiceError("ROS Service failed(future) \
+            [inst_id:%s][gran_id:%s]" % (self.__inst_id, self.__gran_id))
 
         rsp = future.result()
-        assert rsp.result, "initial fetch [Day Candle] failed!"
+        if rsp.result is False:
+            raise ROSServiceError("ROS Service failed(res.result) \
+            [inst_id:%s][gran_id:%s]" % (self.__inst_id, self.__gran_id))
 
         data = []
         for cndl_msg in rsp.cndl_msg_list:
@@ -118,18 +245,13 @@ class CandlesData():
                       ]
 
         TIME = self.COL_NAME_TIME
-        if GranMnt.GRAN_D <= gran_id:
+        if GranMnt.GRAN_D <= self.__gran_id:
             df[TIME] = df[TIME].apply(
                 lambda d: dt.datetime(d.year, d.month, d.day))
 
         df = df.set_index(TIME)
 
-        self.__df = df
-        self.__srv_cli = srv_cli
-
-    @property
-    def dataframe(self) -> pd.DataFrame:
-        return self.__df
+        return df
 
 
 class CandlestickManager(Node):
@@ -154,14 +276,18 @@ class CandlestickManager(Node):
         Gran.GRAN_W: 4 * 12,  # 1 Year
     }
 
+    DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+
     def __init__(self) -> None:
         super().__init__("candlestick_manager")
-
-        self.__DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
 
         # Set logger lebel
         self.__logger = super().get_logger()
         self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+
+        self.__inst_id_list = [Inst.INST_USD_JPY]
+        self.__gran_id_list = [Gran.GRAN_D, Gran.GRAN_H4, Gran.GRAN_H1,
+                               Gran.GRAN_M1]
 
         # Create service client "Candles"
         srv_type = CandlesSrv
@@ -178,6 +304,10 @@ class CandlestickManager(Node):
         self.__candles_mnt_srv = self.create_service(srv_type,
                                                      srv_name,
                                                      callback)
+
+        # Timer(1s)
+        self.__timer_1s = self.create_timer(timer_period_sec=1.0,
+                                            callback=self.__on_timeout_1s)
 
         self.__cli_cdl = cli_cdl
 
@@ -201,13 +331,10 @@ class CandlestickManager(Node):
 
     def __init_data_map(self, cli: Client) -> None:
 
-        inst_id_list = [Inst.INST_USD_JPY]
-        gran_id_list = [Gran.GRAN_D]
-
         obj_map_dict = {}
-        for inst_id in inst_id_list:
+        for inst_id in self.__inst_id_list:
             gran_dict = {}
-            for gran_id in gran_id_list:
+            for gran_id in self.__gran_id_list:
                 data_length = self.DATA_LENGTH_DICT[gran_id]
                 obj = CandlesData(self, cli, inst_id, gran_id, data_length)
                 tmp = {gran_id: obj}
@@ -283,6 +410,13 @@ class CandlestickManager(Node):
                 rsp.cndl_msg_list.append(msg)
 
         return rsp
+
+    def __on_timeout_1s(self) -> None:
+
+        for inst_id in self.__inst_id_list:
+            for gran_id in self.__gran_id_list:
+                obj = self.__obj_map_dict[inst_id][gran_id]
+                obj.update_not_complete_data()
 
 
 def main(args=None):
