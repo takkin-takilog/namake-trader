@@ -66,6 +66,7 @@ class CandlestickService(ServiceAbs):
                           rsp: SrvTypeResponse
                           ) -> SrvTypeResponse:
 
+        self._logger.debug("------------ Service Start ------------")
         rsp.result = False
         rsp.frc_msg.reason_code = frc.REASON_UNSET
 
@@ -91,7 +92,7 @@ class CandlestickService(ServiceAbs):
         tmpdt = dt_from
         from_ = dt_from
         tmplist = []
-        rsp.frc_msg.reason_code = frc.REASON_DATA_ZERO
+        #rsp.frc_msg.reason_code = frc.REASON_DATA_ZERO
         rsp.cndl_msg_list = []
 
         while tmpdt < dt_to:
@@ -129,7 +130,7 @@ class CandlestickService(ServiceAbs):
 
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
             if not tmplist:
-                rsp.result = False
+                rsp.result = True
                 rsp.frc_msg.reason_code = frc.REASON_DATA_ZERO
             else:
                 rsp.result = True
@@ -145,6 +146,8 @@ class CandlestickService(ServiceAbs):
                 rsp.cndl_msg_list = tmplist2
         else:
             rsp.result = False
+
+        self._logger.debug("------------ Service End ------------")
 
         return rsp
 

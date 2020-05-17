@@ -186,6 +186,8 @@ class CandlesData():
                         self.__df_prov = df_prov
                     else:
                         self.__df_prov = self.__df_prov[:0]  # All data delete
+        self.__logger.debug("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
 
     def __fetch_data(self,
                      dt_from: dt.datetime,
@@ -204,7 +206,7 @@ class CandlesData():
         req_time = dt.datetime.now()
         rclpy.spin_until_future_complete(self.__node, future, timeout_sec=5.0)
         dlt_time = dt.datetime.now() - req_time
-        self.__logger.info("get candles fetch time: %s" % (dlt_time))
+        self.__logger.info("================================== get candles fetch time: %s" % (dlt_time))
 
         flg = future.done() and future.result() is not None
         if flg is False:
