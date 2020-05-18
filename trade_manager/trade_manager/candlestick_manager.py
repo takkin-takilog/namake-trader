@@ -1,9 +1,11 @@
 from typing import TypeVar
 import datetime as dt
 import pandas as pd
+import time
 import rclpy
 from rclpy.node import Node
 from rclpy.client import Client
+from rclpy.task import Future
 from api_msgs.srv import CandlesSrv
 from api_msgs.msg import Instrument as Inst
 from api_msgs.msg import Granularity as Gran
@@ -16,10 +18,6 @@ SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 # pd.set_option('display.max_rows', 500)
-
-
-class ROSServiceError(Exception):
-    pass
 
 
 class CandlesData():
@@ -56,6 +54,8 @@ class CandlesData():
     COL_NAME_COMP = "complete"
 
     DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+    TIMEOUT_SEC = 3.0
+    MARGIN_SEC = dt.timedelta(seconds=1)
 
     def __init__(self,
                  node: Node,
@@ -80,25 +80,25 @@ class CandlesData():
         if dt_1h < interval:
             interval = dt_1h
 
-        self.__node = node
         self.__srv_cli = srv_cli
-        self.__interval = interval
         self.__inst_id = inst_id
         self.__gran_id = gran_id
-        self.__is_minunit_updated = True
 
-        try:
-            df = self.__fetch_data(dt_from, dt_to)
-        except ROSServiceError as e:
-            self.__logger.error("ROSServiceError: %s" % e)
-            assert False, e
+        future = self.__request_async(dt_from, dt_to)
+        rclpy.spin_until_future_complete(node, future, timeout_sec=5.0)
+        df = self.__get_df_from_future(future)
+
+        assert not df.empty, "ROSServiceError"
 
         df_comp = df[(df[self.COL_NAME_COMP])]
         df_prov = df[~(df[self.COL_NAME_COMP])]
 
+        self.__interval = interval
         self.__last_update_time = self.__get_last_update_time(gran_id, dt_now)
         self.__df_comp = df_comp
         self.__df_prov = df_prov
+        self.__future = None
+        self.__timeout_end = 0.0
 
         self.__logger.debug("last_update_time:%s" % (self.__last_update_time))
 
@@ -157,42 +157,38 @@ class CandlesData():
 
     def update_not_complete_data(self) -> None:
 
-        dt_now = dt.datetime.now()
-        self.__logger.debug("[%s]update_not_complete_data[inst:%d][gran:%d]" % (
-            dt_now, self.__inst_id, self.__gran_id))
+        if self.__future is None:
 
-        if self.__interval < dt_now - self.__last_update_time:
-            try:
-                df = self.__fetch_data(self.__last_update_time, dt_now)
-            except ROSServiceError as e:
-                self.__logger.error("ROSServiceError: %s" % e)
+            dt_now = dt.datetime.now()
+            """
+            self.__logger.debug("[%s]update_not_complete_data[inst:%d][gran:%d]" % (
+                dt_now, self.__inst_id, self.__gran_id))
+            """
+            target_time = dt_now - self.__last_update_time - self.MARGIN_SEC
+            if self.__interval < target_time:
+
+                #dt_from = self.__last_update_time
+                dt_from = self.__df_comp.index[-1] + self.__interval
+                dt_to = dt_now
+
+                self.__future = self.__request_async(dt_from, dt_to)
+
+                self.__timeout_end = time.monotonic() + self.TIMEOUT_SEC
+
+        else:
+            if self.__future.done() and self.__future.result() is not None:
+
+                df = self.__get_df_from_future(self.__future)
+                self.__update_df(df)
+                self.__future = None
             else:
-                self.__last_update_time += self.__interval
-                self.__logger.debug("update<last_update_time>:%s" % (self.__last_update_time))
-                if not df.empty:
-                    df_comp = df[(df[self.COL_NAME_COMP])]
-                    df_prov = df[~(df[self.COL_NAME_COMP])]
+                if time.monotonic() >= self.__timeout_end:
+                    self.__future = None
 
-                    self.__logger.debug("df_comp:%s" % (df_comp.index.tolist()))
-                    self.__logger.debug("df_prov:%s" % (df_prov.index.tolist()))
-
-                    if not df_comp.empty:
-                        self.__df_comp.append(df_comp)
-                        """
-                        dftmp = self.__df_comp.append(df_comp)
-                        self.__df_comp = dftmp.groupby(dftmp.index).last()
-                        """
-                    if not df_prov.empty:
-                        self.__df_prov = df_prov
-                    else:
-                        self.__df_prov = self.__df_prov[:0]  # All data delete
-        self.__logger.debug("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-
-
-    def __fetch_data(self,
-                     dt_from: dt.datetime,
-                     dt_to: dt.datetime
-                     ) -> pd.DataFrame:
+    def __request_async(self,
+                        dt_from: dt.datetime,
+                        dt_to: dt.datetime
+                        ) -> Future:
 
         req = CandlesSrv.Request()
 
@@ -203,57 +199,75 @@ class CandlesData():
         req.dt_to = dt_to.strftime(self.DT_FMT)
 
         future = self.__srv_cli.call_async(req)
-        req_time = dt.datetime.now()
-        rclpy.spin_until_future_complete(self.__node, future, timeout_sec=5.0)
-        dlt_time = dt.datetime.now() - req_time
-        self.__logger.info("================================== get candles fetch time: %s" % (dlt_time))
 
-        flg = future.done() and future.result() is not None
-        if flg is False:
-            raise ROSServiceError("ROS Service failed(future) \
-            [inst_id:%s][gran_id:%s]" % (self.__inst_id, self.__gran_id))
+        return future
 
+    def __get_df_from_future(self, future: Future) -> pd.DataFrame:
+
+        df = pd.DataFrame()
         rsp = future.result()
-        if rsp.result is False:
-            raise ROSServiceError("ROS Service failed(res.result) \
-            [inst_id:%s][gran_id:%s]" % (self.__inst_id, self.__gran_id))
+        if rsp.result is True:
 
-        data = []
-        for cndl_msg in rsp.cndl_msg_list:
-            dt_ = dt.datetime.strptime(cndl_msg.time, self.DT_FMT)
-            data.append([dt_,
-                         cndl_msg.ask_o,
-                         cndl_msg.ask_h,
-                         cndl_msg.ask_l,
-                         cndl_msg.ask_c,
-                         cndl_msg.bid_o,
-                         cndl_msg.bid_h,
-                         cndl_msg.bid_l,
-                         cndl_msg.bid_c,
-                         cndl_msg.is_complete
-                         ])
+            data = []
+            for cndl_msg in rsp.cndl_msg_list:
+                dt_ = dt.datetime.strptime(cndl_msg.time, self.DT_FMT)
+                data.append([dt_,
+                             cndl_msg.ask_o,
+                             cndl_msg.ask_h,
+                             cndl_msg.ask_l,
+                             cndl_msg.ask_c,
+                             cndl_msg.bid_o,
+                             cndl_msg.bid_h,
+                             cndl_msg.bid_l,
+                             cndl_msg.bid_c,
+                             cndl_msg.is_complete
+                             ])
 
-        df = pd.DataFrame(data)
-        df.columns = [self.COL_NAME_TIME,
-                      self.COL_NAME_ASK_OP,
-                      self.COL_NAME_ASK_HI,
-                      self.COL_NAME_ASK_LO,
-                      self.COL_NAME_ASK_CL,
-                      self.COL_NAME_BID_OP,
-                      self.COL_NAME_BID_HI,
-                      self.COL_NAME_BID_LO,
-                      self.COL_NAME_BID_CL,
-                      self.COL_NAME_COMP
-                      ]
+            df = pd.DataFrame(data)
 
-        TIME = self.COL_NAME_TIME
-        if GranMnt.GRAN_D <= self.__gran_id:
-            df[TIME] = df[TIME].apply(
-                lambda d: dt.datetime(d.year, d.month, d.day))
+            if not df.empty:
+                df.columns = [self.COL_NAME_TIME,
+                              self.COL_NAME_ASK_OP,
+                              self.COL_NAME_ASK_HI,
+                              self.COL_NAME_ASK_LO,
+                              self.COL_NAME_ASK_CL,
+                              self.COL_NAME_BID_OP,
+                              self.COL_NAME_BID_HI,
+                              self.COL_NAME_BID_LO,
+                              self.COL_NAME_BID_CL,
+                              self.COL_NAME_COMP
+                              ]
 
-        df = df.set_index(TIME)
+                TIME = self.COL_NAME_TIME
+                if GranMnt.GRAN_D <= self.__gran_id:
+                    df[TIME] = df[TIME].apply(
+                        lambda d: dt.datetime(d.year, d.month, d.day))
+
+                df = df.set_index(TIME)
 
         return df
+
+    def __update_df(self, df: pd.DataFrame):
+
+        if not df.empty:
+
+            self.__last_update_time += self.__interval
+            self.__logger.debug("update<last_update_time>:%s" % (self.__last_update_time))
+
+            df_comp = df[(df[self.COL_NAME_COMP])]
+            df_prov = df[~(df[self.COL_NAME_COMP])]
+
+            self.__logger.debug("df_comp:%s" % (df_comp.index.tolist()))
+            self.__logger.debug("df_prov:%s" % (df_prov.index.tolist()))
+
+            if not df_comp.empty:
+                self.__df_comp.append(df_comp)
+                #dftmp = self.__df_comp.append(df_comp)
+                #self.__df_comp = dftmp.groupby(dftmp.index).last()
+            if not df_prov.empty:
+                self.__df_prov = df_prov
+            else:
+                self.__df_prov = self.__df_prov[:0]  # All data delete
 
 
 class CandlestickManager(Node):
@@ -424,7 +438,6 @@ class CandlestickManager(Node):
 def main(args=None):
     rclpy.init(args=args)
     cm = CandlestickManager()
-
     try:
         rclpy.spin(cm)
     except KeyboardInterrupt:
