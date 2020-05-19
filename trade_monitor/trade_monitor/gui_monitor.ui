@@ -50,10 +50,16 @@
          <property name="text">
           <string>接続</string>
          </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="autoExclusive">
+          <bool>false</bool>
+         </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="labe_srvcon_sts">
+        <widget class="QLabel" name="labe_srvcon_status">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -70,10 +76,10 @@
           <string notr="true">background-color: rgb(136, 138, 133);</string>
          </property>
          <property name="frameShape">
-          <enum>QFrame::Box</enum>
+          <enum>QFrame::NoFrame</enum>
          </property>
          <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;未接続&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;切断&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -105,16 +111,6 @@
            <string>USD/JPY</string>
           </property>
          </item>
-         <item>
-          <property name="text">
-           <string>EUR/JPY</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>EUR/USD</string>
-          </property>
-         </item>
         </widget>
        </item>
        <item row="0" column="1" colspan="2">
@@ -134,16 +130,6 @@
          <item>
           <property name="text">
            <string>日足</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>４時間足</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>１時間足</string>
           </property>
          </item>
         </widget>

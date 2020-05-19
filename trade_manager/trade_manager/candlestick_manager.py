@@ -55,7 +55,7 @@ class CandlesData():
 
     DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
     TIMEOUT_SEC = 3.0
-    MARGIN_SEC = dt.timedelta(seconds=1)
+    MARGIN_SEC = dt.timedelta(seconds=2)
 
     def __init__(self,
                  node: Node,
@@ -85,7 +85,10 @@ class CandlesData():
         self.__gran_id = gran_id
 
         future = self.__request_async(dt_from, dt_to)
-        rclpy.spin_until_future_complete(node, future, timeout_sec=5.0)
+        rclpy.spin_until_future_complete(node, future, timeout_sec=10.0)
+
+        assert future.result() is not None, "ROSServiceError:Time Out"
+
         df = self.__get_df_from_future(future)
 
         assert not df.empty, "ROSServiceError"
@@ -94,15 +97,15 @@ class CandlesData():
         df_prov = df[~(df[self.COL_NAME_COMP])]
 
         self.__interval = interval
-        self.__last_update_time = self.__get_last_update_time(gran_id, dt_now)
+        self.__next_update_time = self.__get_next_update_time(gran_id, dt_now)
         self.__df_comp = df_comp
         self.__df_prov = df_prov
         self.__future = None
         self.__timeout_end = 0.0
 
-        self.__logger.debug("last_update_time:%s" % (self.__last_update_time))
+        self.__logger.debug("last_update_time:%s" % (self.__next_update_time))
 
-    def __get_last_update_time(self,
+    def __get_next_update_time(self,
                                gran_id: int,
                                dtin: dt.datetime
                                ) -> dt.datetime:
@@ -164,10 +167,10 @@ class CandlesData():
             self.__logger.debug("[%s]update_not_complete_data[inst:%d][gran:%d]" % (
                 dt_now, self.__inst_id, self.__gran_id))
             """
-            target_time = dt_now - self.__last_update_time - self.MARGIN_SEC
+            target_time = dt_now - self.__next_update_time - self.MARGIN_SEC
             if self.__interval < target_time:
 
-                #dt_from = self.__last_update_time
+                #dt_from = self.__next_update_time
                 dt_from = self.__df_comp.index[-1] + self.__interval
                 dt_to = dt_now
 
@@ -251,8 +254,8 @@ class CandlesData():
 
         if not df.empty:
 
-            self.__last_update_time += self.__interval
-            self.__logger.debug("update<last_update_time>:%s" % (self.__last_update_time))
+            self.__next_update_time += self.__interval
+            self.__logger.debug("update<last_update_time>:%s" % (self.__next_update_time))
 
             df_comp = df[(df[self.COL_NAME_COMP])]
             df_prov = df[~(df[self.COL_NAME_COMP])]
@@ -261,7 +264,8 @@ class CandlesData():
             self.__logger.debug("df_prov:%s" % (df_prov.index.tolist()))
 
             if not df_comp.empty:
-                self.__df_comp.append(df_comp)
+                self.__df_comp = self.__df_comp.append(df_comp)
+                print(self.__df_comp.tail())
                 #dftmp = self.__df_comp.append(df_comp)
                 #self.__df_comp = dftmp.groupby(dftmp.index).last()
             if not df_prov.empty:
@@ -305,14 +309,6 @@ class CandlestickManager(Node):
         self.__gran_id_list = [Gran.GRAN_D, Gran.GRAN_H4, Gran.GRAN_H1,
                                Gran.GRAN_M1]
 
-        # Create service client "Candles"
-        srv_type = CandlesSrv
-        srv_name = "candles"
-        cli_cdl = self.__create_service_client(srv_type, srv_name)
-
-        # initialize "data_map"
-        self.__init_data_map(cli_cdl)
-
         # Create service server "CandlesMonitor"
         srv_type = CandlesMntSrv
         srv_name = "candles_monitor"
@@ -320,6 +316,14 @@ class CandlestickManager(Node):
         self.__candles_mnt_srv = self.create_service(srv_type,
                                                      srv_name,
                                                      callback)
+
+        # Create service client "Candles"
+        srv_type = CandlesSrv
+        srv_name = "candles"
+        cli_cdl = self.__create_service_client(srv_type, srv_name)
+
+        # initialize "data_map"
+        self.__init_data_map(cli_cdl)
 
         # Timer(1s)
         self.__timer_1s = self.create_timer(timer_period_sec=1.0,

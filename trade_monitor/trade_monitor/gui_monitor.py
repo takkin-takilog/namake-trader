@@ -20,6 +20,21 @@ from trade_manager_msgs.msg import GranularityMnt as GranMnt
 from std_msgs.msg import String
 
 
+class MsgDict():
+
+    def __init__(self, msg_id, text) -> None:
+        self.__msg_id = msg_id
+        self.__text = text
+
+    @property
+    def msg_id(self) -> int:
+        return self.__msg_id
+
+    @property
+    def text(self) -> str:
+        return self.__text
+
+
 class GuiMonitor(QMainWindow):
 
     DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
@@ -39,17 +54,17 @@ class GuiMonitor(QMainWindow):
     COL_NAME_MID_CL = "close(Mid)"
     COL_NAME_COMP = "complete"
 
-    INST_DICT = {
-        "USD/JPY": InstMnt.INST_USD_JPY,
-        "EUR/JPY": InstMnt.INST_EUR_JPY,
-        "EUR/USD": InstMnt.INST_EUR_USD,
-    }
+    INST_MSG_LIST = [
+        MsgDict(InstMnt.INST_USD_JPY, "USD/JPY"),
+        MsgDict(InstMnt.INST_EUR_JPY, "EUR/JPY"),
+        MsgDict(InstMnt.INST_EUR_USD, "EUR/USD"),
+    ]
 
-    GRAN_DICT = {
-        "日足": GranMnt.GRAN_D,
-        "４時間足": GranMnt.GRAN_H4,
-        "１時間足": GranMnt.GRAN_H1,
-    }
+    GRAN_MSG_LIST = [
+        MsgDict(GranMnt.GRAN_D, "日足"),
+        MsgDict(GranMnt.GRAN_H4, "４時間足"),
+        MsgDict(GranMnt.GRAN_H1, "１時間足"),
+    ]
 
     def __init__(self, parent=None):
         super(GuiMonitor, self).__init__(parent)
@@ -57,7 +72,21 @@ class GuiMonitor(QMainWindow):
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
 
-        ui.pushButton_srvcon.pressed.connect(self.__connect_server)
+        # set comboBox of Instrument
+        self.__remove_all_items_of_comboBox(ui.comboBox_inst)
+        for obj in self.INST_MSG_LIST:
+            ui.comboBox_inst.addItem(obj.text)
+
+        # set comboBox of Granularity
+        self.__remove_all_items_of_comboBox(ui.comboBox_gran)
+        for obj in self.GRAN_MSG_LIST:
+            ui.comboBox_gran.addItem(obj.text)
+
+        ui.labe_srvcon_status.setAlignment(Qt.AlignCenter)
+
+        ui.pushButton_srvcon.toggled.connect(self.__on_srvcon_toggled)
+        ui.comboBox_inst.currentIndexChanged.connect(self.on_cb_inst_changed)
+        ui.comboBox_gran.currentIndexChanged.connect(self.on_cb_gran_changed)
 
         series = QtCharts.QCandlestickSeries()
         series.setDecreasingColor(Qt.red)
@@ -135,15 +164,55 @@ class GuiMonitor(QMainWindow):
 
         return ui
 
-    def __connect_server(self):
-        self.logger.debug("push")
+    def __remove_all_items_of_comboBox(self, combo_box):
+
+        idx = combo_box.currentIndex()
+        while -1 < idx:
+            combo_box.removeItem(idx)
+            idx = combo_box.currentIndex()
+
+    def on_cb_inst_changed(self, inst_idx):
+        gran_idx = self.__ui.comboBox_gran.currentIndex()
+        self.__display_chart(inst_idx, gran_idx)
+
+    def on_cb_gran_changed(self, gran_idx):
+        inst_idx = self.__ui.comboBox_inst.currentIndex()
+        self.__display_chart(inst_idx, gran_idx)
+
+    def __on_srvcon_toggled(self, flag):
+
+        if flag is True:
+            gran_idx = self.__ui.comboBox_gran.currentIndex()
+            inst_idx = self.__ui.comboBox_inst.currentIndex()
+            self.__display_chart(inst_idx, gran_idx)
+            self.__ui.pushButton_srvcon.setText("切断")
+
+            self.__ui.labe_srvcon_status.setText("接続中")
+            str_ = "background-color: rgb(0, 255, 0);"
+            self.__ui.labe_srvcon_status.setStyleSheet(str_);
+        else:
+            self.__ui.pushButton_srvcon.setText("接続")
+
+            self.__ui.labe_srvcon_status.setText("切断")
+            str_ = "background-color: rgb(136, 138, 133);"
+            self.__ui.labe_srvcon_status.setStyleSheet(str_);
+
+    def init_resize_qchart(self) -> None:
+        fs = self.__ui.widget_chart.frameSize()
+        self.__chartview.resize(fs)
+
+    def resizeEvent(self, event):
+        fs = self.__ui.widget_chart.frameSize()
+        self.__chartview.resize(fs)
+
+    def __display_chart(self, inst_idx, gran_idx):
 
         dt_now = dt.datetime.now()
-        dt_from = dt_now - dt.timedelta(days=10)
+        dt_from = dt_now - dt.timedelta(days=20)
         dt_to = dt_now
 
-        inst_id = self.INST_DICT[self.__ui.comboBox_inst.currentText()]
-        gran_id = self.GRAN_DICT[self.__ui.comboBox_gran.currentText()]
+        inst_id = self.INST_MSG_LIST[inst_idx].msg_id
+        gran_id = self.GRAN_MSG_LIST[gran_idx].msg_id
 
         req = CandlesMntSrv.Request()
         req.gran_msg.granularity_id = gran_id
@@ -213,20 +282,6 @@ class GuiMonitor(QMainWindow):
 
         self.__chart.axisY().setRange(min_, max_)
         self.__chart.createDefaultAxes()
-
-        """
-        self.pub.publish(str(self.current_value))
-        self.pushButton.setEnabled(False)
-        self.is_pub = True
-        """
-
-    def init_resize_qchart(self) -> None:
-        fs = self.__ui.widget_chart.frameSize()
-        self.__chartview.resize(fs)
-
-    def resizeEvent(self, event):
-        fs = self.__ui.widget_chart.frameSize()
-        self.__chartview.resize(fs)
 
 
 def main():
