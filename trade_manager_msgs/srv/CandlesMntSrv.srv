@@ -2,10 +2,10 @@
 
 # ========================= Request =========================
 # The granularity.
-trade_manager_msgs/GranularityMnt gran_msg
+trade_manager_msgs/Granularity gran_msg
 
 # The Instrument.
-trade_manager_msgs/InstrumentMnt inst_msg
+trade_manager_msgs/Instrument inst_msg
 
 # The start of the time range to fetch candlesticks for.
 # String format is "%Y-%m-%dT%H:%M:00.000000000Z"

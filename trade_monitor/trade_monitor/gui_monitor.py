@@ -15,8 +15,8 @@ from PySide2.QtGui import QPainter
 import rclpy
 from rclpy.node import Node
 from trade_manager_msgs.srv import CandlesMntSrv
-from trade_manager_msgs.msg import InstrumentMnt as InstMnt
-from trade_manager_msgs.msg import GranularityMnt as GranMnt
+from trade_manager_msgs.msg import Instrument as Inst
+from trade_manager_msgs.msg import Granularity as Gran
 from std_msgs.msg import String
 
 
@@ -55,15 +55,15 @@ class GuiMonitor(QMainWindow):
     COL_NAME_COMP = "complete"
 
     INST_MSG_LIST = [
-        MsgDict(InstMnt.INST_USD_JPY, "USD/JPY"),
-        MsgDict(InstMnt.INST_EUR_JPY, "EUR/JPY"),
-        MsgDict(InstMnt.INST_EUR_USD, "EUR/USD"),
+        MsgDict(Inst.INST_USD_JPY, "USD/JPY"),
+        MsgDict(Inst.INST_EUR_JPY, "EUR/JPY"),
+        MsgDict(Inst.INST_EUR_USD, "EUR/USD"),
     ]
 
     GRAN_MSG_LIST = [
-        MsgDict(GranMnt.GRAN_D, "日足"),
-        MsgDict(GranMnt.GRAN_H4, "４時間足"),
-        MsgDict(GranMnt.GRAN_H1, "１時間足"),
+        MsgDict(Gran.GRAN_D, "日足"),
+        MsgDict(Gran.GRAN_H4, "４時間足"),
+        MsgDict(Gran.GRAN_H1, "１時間足"),
     ]
 
     def __init__(self, parent=None):

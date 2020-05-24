@@ -8,14 +8,14 @@ from rclpy.client import Client
 from rclpy.publisher import Publisher
 from rclpy.task import Future
 from api_msgs.srv import CandlesSrv
-from api_msgs.msg import Instrument as Inst
-from api_msgs.msg import Granularity as Gran
+from api_msgs.msg import Instrument as InstApi
+from api_msgs.msg import Granularity as GranApi
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_manager_msgs.msg import Candle
 from trade_manager_msgs.msg import HistoricalCandles
 from trade_manager_msgs.msg import CandleMnt
-from trade_manager_msgs.msg import InstrumentMnt as InstMnt
-from trade_manager_msgs.msg import GranularityMnt as GranMnt
+from trade_manager_msgs.msg import Instrument as InstTm
+from trade_manager_msgs.msg import Granularity as GranTm
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -26,23 +26,23 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 class CandlesData():
 
     DT_LSB_DICT = {
-        GranMnt.GRAN_M1: dt.timedelta(minutes=1),  # 1 minute
-        GranMnt.GRAN_M2: dt.timedelta(minutes=2),  # 2 minutes
-        GranMnt.GRAN_M3: dt.timedelta(minutes=3),  # 3 minutes
-        GranMnt.GRAN_M4: dt.timedelta(minutes=4),  # 4 minutes
-        GranMnt.GRAN_M5: dt.timedelta(minutes=5),  # 5 minutes
-        GranMnt.GRAN_M10: dt.timedelta(minutes=10),  # 10 minutes
-        GranMnt.GRAN_M15: dt.timedelta(minutes=15),  # 15 minutes
-        GranMnt.GRAN_M30: dt.timedelta(minutes=30),  # 30 minutes
-        GranMnt.GRAN_H1: dt.timedelta(hours=1),  # 1 hour
-        GranMnt.GRAN_H2: dt.timedelta(hours=2),  # 2 hours
-        GranMnt.GRAN_H3: dt.timedelta(hours=3),  # 3 hours
-        GranMnt.GRAN_H4: dt.timedelta(hours=4),  # 4 hours
-        GranMnt.GRAN_H6: dt.timedelta(hours=6),  # 6 hours
-        GranMnt.GRAN_H8: dt.timedelta(hours=8),  # 8 hours
-        GranMnt.GRAN_H12: dt.timedelta(hours=12),  # 12 hours
-        GranMnt.GRAN_D: dt.timedelta(days=1),  # 1 Day
-        GranMnt.GRAN_W: dt.timedelta(weeks=1),  # 1 Week
+        GranTm.GRAN_M1: dt.timedelta(minutes=1),  # 1 minute
+        GranTm.GRAN_M2: dt.timedelta(minutes=2),  # 2 minutes
+        GranTm.GRAN_M3: dt.timedelta(minutes=3),  # 3 minutes
+        GranTm.GRAN_M4: dt.timedelta(minutes=4),  # 4 minutes
+        GranTm.GRAN_M5: dt.timedelta(minutes=5),  # 5 minutes
+        GranTm.GRAN_M10: dt.timedelta(minutes=10),  # 10 minutes
+        GranTm.GRAN_M15: dt.timedelta(minutes=15),  # 15 minutes
+        GranTm.GRAN_M30: dt.timedelta(minutes=30),  # 30 minutes
+        GranTm.GRAN_H1: dt.timedelta(hours=1),  # 1 hour
+        GranTm.GRAN_H2: dt.timedelta(hours=2),  # 2 hours
+        GranTm.GRAN_H3: dt.timedelta(hours=3),  # 3 hours
+        GranTm.GRAN_H4: dt.timedelta(hours=4),  # 4 hours
+        GranTm.GRAN_H6: dt.timedelta(hours=6),  # 6 hours
+        GranTm.GRAN_H8: dt.timedelta(hours=8),  # 8 hours
+        GranTm.GRAN_H12: dt.timedelta(hours=12),  # 12 hours
+        GranTm.GRAN_D: dt.timedelta(days=1),  # 1 Day
+        GranTm.GRAN_W: dt.timedelta(weeks=1),  # 1 Week
     }
 
     COL_NAME_TIME = "time"
@@ -72,8 +72,8 @@ class CandlesData():
                  node: Node,
                  srv_cli: Client,
                  pub: Publisher,
-                 inst_id: InstMnt,
-                 gran_id: GranMnt,
+                 inst_id: InstTm,
+                 gran_id: GranTm,
                  data_length: int
                  ) -> None:
 
@@ -151,42 +151,42 @@ class CandlesData():
                                dtin: dt.datetime
                                ) -> dt.datetime:
 
-        if gran_id == GranMnt.GRAN_M1:
+        if gran_id == GranTm.GRAN_M1:
             dtout = dt.datetime(dtin.year, dtin.month,
                                 dtin.day, dtin.hour, dtin.minute)
-        elif gran_id == GranMnt.GRAN_M2:
+        elif gran_id == GranTm.GRAN_M2:
             tmp = dtin.minute - dtin.minute % 2
             dtout = dt.datetime(dtin.year, dtin.month,
                                 dtin.day, dtin.hour, tmp)
-        elif gran_id == GranMnt.GRAN_M3:
+        elif gran_id == GranTm.GRAN_M3:
             tmp = dtin.minute - dtin.minute % 3
             dtout = dt.datetime(dtin.year, dtin.month,
                                 dtin.day, dtin.hour, tmp)
-        elif gran_id == GranMnt.GRAN_M4:
+        elif gran_id == GranTm.GRAN_M4:
             tmp = dtin.minute - dtin.minute % 4
             dtout = dt.datetime(dtin.year, dtin.month,
                                 dtin.day, dtin.hour, tmp)
-        elif gran_id == GranMnt.GRAN_M5:
+        elif gran_id == GranTm.GRAN_M5:
             tmp = dtin.minute - dtin.minute % 5
             dtout = dt.datetime(dtin.year, dtin.month,
                                 dtin.day, dtin.hour, tmp)
-        elif gran_id == GranMnt.GRAN_M10:
+        elif gran_id == GranTm.GRAN_M10:
             tmp = dtin.minute - dtin.minute % 10
             dtout = dt.datetime(dtin.year, dtin.month,
                                 dtin.day, dtin.hour, tmp)
-        elif gran_id == GranMnt.GRAN_M15:
+        elif gran_id == GranTm.GRAN_M15:
             tmp = dtin.minute - dtin.minute % 15
             dtout = dt.datetime(dtin.year, dtin.month,
                                 dtin.day, dtin.hour, tmp)
-        elif gran_id == GranMnt.GRAN_M30:
+        elif gran_id == GranTm.GRAN_M30:
             tmp = dtin.minute - dtin.minute % 30
             dtout = dt.datetime(dtin.year, dtin.month,
                                 dtin.day, dtin.hour, tmp)
-        elif ((gran_id == GranMnt.GRAN_H1) or (gran_id == GranMnt.GRAN_H2) or
-              (gran_id == GranMnt.GRAN_H3) or (gran_id == GranMnt.GRAN_H4) or
-              (gran_id == GranMnt.GRAN_H6) or (gran_id == GranMnt.GRAN_H8) or
-              (gran_id == GranMnt.GRAN_H12) or (gran_id == GranMnt.GRAN_D) or
-                (gran_id == GranMnt.GRAN_W)):
+        elif ((gran_id == GranTm.GRAN_H1) or (gran_id == GranTm.GRAN_H2) or
+              (gran_id == GranTm.GRAN_H3) or (gran_id == GranTm.GRAN_H4) or
+              (gran_id == GranTm.GRAN_H6) or (gran_id == GranTm.GRAN_H8) or
+              (gran_id == GranTm.GRAN_H12) or (gran_id == GranTm.GRAN_D) or
+                (gran_id == GranTm.GRAN_W)):
             dtout = dt.datetime(dtin.year, dtin.month,
                                 dtin.day, dtin.hour)
         else:
@@ -305,7 +305,7 @@ class CandlesData():
                               ]
 
                 TIME = self.COL_NAME_TIME
-                if GranMnt.GRAN_D <= self.__gran_id:
+                if GranTm.GRAN_D <= self.__gran_id:
                     df[TIME] = df[TIME].apply(
                         lambda d: dt.datetime(d.year, d.month, d.day))
 
@@ -336,23 +336,23 @@ class CandlesData():
 class CandlestickManager(Node):
 
     DATA_LENGTH_DICT = {
-        Gran.GRAN_M1: 60 * 24 * 10,  # 10 Days
-        Gran.GRAN_M2: 30 * 24 * 10,  # 10 Days
-        Gran.GRAN_M3: 20 * 24 * 10,  # 10 Days
-        Gran.GRAN_M4: 15 * 24 * 10,  # 10 Days
-        Gran.GRAN_M5: 12 * 24 * 10,  # 10 Days
-        Gran.GRAN_M10: 6 * 24 * 10,  # 10 Days
-        Gran.GRAN_M15: 4 * 24 * 10,  # 10 Days
-        Gran.GRAN_M30: 2 * 24 * 10,  # 10 Days
-        Gran.GRAN_H1: 24 * 30,  # 1 Months
-        Gran.GRAN_H2: 12 * 30,  # 1 Months
-        Gran.GRAN_H3: 8 * 30,  # 1 Months
-        Gran.GRAN_H4: 6 * 30,  # 1 Months
-        Gran.GRAN_H6: 4 * 30,  # 1 Months
-        Gran.GRAN_H8: 3 * 30 * 3,  # 3 Months
-        Gran.GRAN_H12: 2 * 30 * 3,  # 3 Months
-        Gran.GRAN_D: 365,  # 1 Year
-        Gran.GRAN_W: 4 * 12,  # 1 Year
+        GranApi.GRAN_M1: 60 * 24 * 10,  # 10 Days
+        GranApi.GRAN_M2: 30 * 24 * 10,  # 10 Days
+        GranApi.GRAN_M3: 20 * 24 * 10,  # 10 Days
+        GranApi.GRAN_M4: 15 * 24 * 10,  # 10 Days
+        GranApi.GRAN_M5: 12 * 24 * 10,  # 10 Days
+        GranApi.GRAN_M10: 6 * 24 * 10,  # 10 Days
+        GranApi.GRAN_M15: 4 * 24 * 10,  # 10 Days
+        GranApi.GRAN_M30: 2 * 24 * 10,  # 10 Days
+        GranApi.GRAN_H1: 24 * 30,  # 1 Months
+        GranApi.GRAN_H2: 12 * 30,  # 1 Months
+        GranApi.GRAN_H3: 8 * 30,  # 1 Months
+        GranApi.GRAN_H4: 6 * 30,  # 1 Months
+        GranApi.GRAN_H6: 4 * 30,  # 1 Months
+        GranApi.GRAN_H8: 3 * 30 * 3,  # 3 Months
+        GranApi.GRAN_H12: 2 * 30 * 3,  # 3 Months
+        GranApi.GRAN_D: 365,  # 1 Year
+        GranApi.GRAN_W: 4 * 12,  # 1 Year
     }
 
     DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
@@ -364,9 +364,9 @@ class CandlestickManager(Node):
         self.__logger = super().get_logger()
         self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
-        self.__inst_id_list = [Inst.INST_USD_JPY]
-        self.__gran_id_list = [Gran.GRAN_D, Gran.GRAN_H4, Gran.GRAN_H1,
-                               Gran.GRAN_M1]
+        self.__inst_id_list = [InstApi.INST_USD_JPY]
+        self.__gran_id_list = [GranApi.GRAN_D, GranApi.GRAN_H4, GranApi.GRAN_H1,
+                               GranApi.GRAN_M1]
 
         # Create service server "CandlesMonitor"
         srv_type = CandlesMntSrv
@@ -401,16 +401,16 @@ class CandlestickManager(Node):
         dt_to = dt.datetime(2020, 5, 5)
 
         print("1----------------------------")
-        df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D, dt_from, dt_to)
+        df = self.get_dataframe(InstApi.INST_USD_JPY, GranApi.GRAN_D, dt_from, dt_to)
         print(df)
         print("2----------------------------")
-        df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D, dt_from)
+        df = self.get_dataframe(InstApi.INST_USD_JPY, GranApi.GRAN_D, dt_from)
         print(df)
         print("3----------------------------")
-        df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D, None, dt_to)
+        df = self.get_dataframe(InstApi.INST_USD_JPY, GranApi.GRAN_D, None, dt_to)
         print(df)
         print("4----------------------------")
-        df = self.get_dataframe(Inst.INST_USD_JPY, Gran.GRAN_D)
+        df = self.get_dataframe(InstApi.INST_USD_JPY, GranApi.GRAN_D)
         print(df)
         """
 
@@ -431,8 +431,8 @@ class CandlestickManager(Node):
         self.__obj_map_dict = obj_map_dict
 
     def __get_dataframe(self,
-                        inst_id: Inst,
-                        gran_id: Gran,
+                        inst_id: InstApi,
+                        gran_id: GranApi,
                         dt_from: dt.datetime=None,
                         dt_to: dt.datetime=None
                         ) -> pd.DataFrame:

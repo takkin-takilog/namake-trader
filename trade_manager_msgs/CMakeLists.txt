@@ -16,9 +16,9 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Candle.msg"
   "msg/CandleMnt.msg"
-  "msg/GranularityMnt.msg"
+  "msg/Granularity.msg"
   "msg/HistoricalCandles.msg"
-  "msg/InstrumentMnt.msg"
+  "msg/Instrument.msg"
   "msg/LimitOrderRequest.msg"
   "msg/MarketOrderRequest.msg"
   "msg/StopOrderRequest.msg"
