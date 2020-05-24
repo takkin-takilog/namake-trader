@@ -5,11 +5,14 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.client import Client
+from rclpy.publisher import Publisher
 from rclpy.task import Future
 from api_msgs.srv import CandlesSrv
 from api_msgs.msg import Instrument as Inst
 from api_msgs.msg import Granularity as Gran
 from trade_manager_msgs.srv import CandlesMntSrv
+from trade_manager_msgs.msg import Candle
+from trade_manager_msgs.msg import HistoricalCandles
 from trade_manager_msgs.msg import CandleMnt
 from trade_manager_msgs.msg import InstrumentMnt as InstMnt
 from trade_manager_msgs.msg import GranularityMnt as GranMnt
@@ -56,10 +59,10 @@ class CandlesData():
     COL_NAME_MID_HI = "high(Mid)"
     COL_NAME_MID_LO = "low(Mid)"
     COL_NAME_MID_CL = "close(Mid)"
-    COL_NAME_HALF_SPREAD_COST_OP = "half_spread_cost(open)"
-    COL_NAME_HALF_SPREAD_COST_HI = "half_spread_cost(high)"
-    COL_NAME_HALF_SPREAD_COST_LO = "half_spread_cost(low)"
-    COL_NAME_HALF_SPREAD_COST_CL = "half_spread_cost(close)"
+    COL_NAME_HSC_OP = "half_spread_cost(open)"
+    COL_NAME_HSC_HI = "half_spread_cost(high)"
+    COL_NAME_HSC_LO = "half_spread_cost(low)"
+    COL_NAME_HSC_CL = "half_spread_cost(close)"
 
     DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
     TIMEOUT_SEC = 3.0
@@ -68,6 +71,7 @@ class CandlesData():
     def __init__(self,
                  node: Node,
                  srv_cli: Client,
+                 pub: Publisher,
                  inst_id: InstMnt,
                  gran_id: GranMnt,
                  data_length: int
@@ -104,12 +108,41 @@ class CandlesData():
         df_comp = df[(df[self.COL_NAME_COMP])]
         df_prov = df[~(df[self.COL_NAME_COMP])]
 
+        # publish
+        msg = HistoricalCandles()
+        msg.gran_msg.granularity_id = gran_id
+        msg.inst_msg.instrument_id = inst_id
+        msg.cndl_msg_list = []
+        for time, sr in df_comp.iterrows():
+            cnd = Candle()
+            cnd.ask_o = sr[self.COL_NAME_ASK_OP]
+            cnd.ask_h = sr[self.COL_NAME_ASK_HI]
+            cnd.ask_l = sr[self.COL_NAME_ASK_LO]
+            cnd.ask_c = sr[self.COL_NAME_ASK_CL]
+            cnd.bid_o = sr[self.COL_NAME_BID_OP]
+            cnd.bid_h = sr[self.COL_NAME_BID_HI]
+            cnd.bid_l = sr[self.COL_NAME_BID_LO]
+            cnd.bid_c = sr[self.COL_NAME_BID_CL]
+            cnd.mid_o = sr[self.COL_NAME_MID_OP]
+            cnd.mid_h = sr[self.COL_NAME_MID_HI]
+            cnd.mid_l = sr[self.COL_NAME_MID_LO]
+            cnd.mid_c = sr[self.COL_NAME_MID_CL]
+            cnd.half_spread_cost_o = sr[self.COL_NAME_HSC_OP]
+            cnd.half_spread_cost_h = sr[self.COL_NAME_HSC_HI]
+            cnd.half_spread_cost_l = sr[self.COL_NAME_HSC_LO]
+            cnd.half_spread_cost_c = sr[self.COL_NAME_HSC_CL]
+            cnd.time = time.strftime(self.DT_FMT)
+            cnd.is_complete = sr[self.COL_NAME_COMP]
+            msg.cndl_msg_list.append(cnd)
+        pub.publish(msg)
+
         self.__interval = interval
         self.__next_update_time = self.__get_next_update_time(gran_id, dt_now)
         self.__df_comp = df_comp
         self.__df_prov = df_prov
         self.__future = None
         self.__timeout_end = 0.0
+        self.__pub = pub
 
         self.__logger.debug("last_update_time:%s" % (self.__next_update_time))
 
@@ -191,7 +224,9 @@ class CandlesData():
 
                 df = self.__get_df_from_future(self.__future)
                 self.__update_df(df)
+                self.__next_update_time += self.__interval
                 self.__future = None
+                self.__logger.debug("update<last_update_time>:%s" % (self.__next_update_time))
             else:
                 if time.monotonic() >= self.__timeout_end:
                     self.__future = None
@@ -262,10 +297,10 @@ class CandlesData():
                               self.COL_NAME_MID_HI,
                               self.COL_NAME_MID_LO,
                               self.COL_NAME_MID_CL,
-                              self.COL_NAME_HALF_SPREAD_COST_OP,
-                              self.COL_NAME_HALF_SPREAD_COST_HI,
-                              self.COL_NAME_HALF_SPREAD_COST_LO,
-                              self.COL_NAME_HALF_SPREAD_COST_CL,
+                              self.COL_NAME_HSC_OP,
+                              self.COL_NAME_HSC_HI,
+                              self.COL_NAME_HSC_LO,
+                              self.COL_NAME_HSC_CL,
                               self.COL_NAME_COMP
                               ]
 
@@ -282,9 +317,6 @@ class CandlesData():
 
         if not df.empty:
 
-            self.__next_update_time += self.__interval
-            self.__logger.debug("update<last_update_time>:%s" % (self.__next_update_time))
-
             df_comp = df[(df[self.COL_NAME_COMP])]
             df_prov = df[~(df[self.COL_NAME_COMP])]
 
@@ -293,7 +325,6 @@ class CandlesData():
 
             if not df_comp.empty:
                 self.__df_comp = self.__df_comp.append(df_comp)
-                print(self.__df_comp.tail())
                 #dftmp = self.__df_comp.append(df_comp)
                 #self.__df_comp = dftmp.groupby(dftmp.index).last()
             if not df_prov.empty:
@@ -350,14 +381,20 @@ class CandlestickManager(Node):
         srv_name = "candles"
         cli_cdl = self.__create_service_client(srv_type, srv_name)
 
+        # Create publisher "HistoricalCandles"
+        msg_type = HistoricalCandles
+        topic = "historical_candles"
+        pub_hc = self.create_publisher(msg_type, topic)
+
         # initialize "data_map"
-        self.__init_data_map(cli_cdl)
+        self.__init_data_map(cli_cdl, pub_hc)
 
         # Timer(1s)
         self.__timer_1s = self.create_timer(timer_period_sec=1.0,
                                             callback=self.__on_timeout_1s)
 
         self.__cli_cdl = cli_cdl
+        self.__pub_hc = pub_hc
 
         """
         dt_from = dt.datetime(2020, 5, 1)
@@ -377,14 +414,14 @@ class CandlestickManager(Node):
         print(df)
         """
 
-    def __init_data_map(self, cli: Client) -> None:
+    def __init_data_map(self, cli: Client, pub: Publisher) -> None:
 
         obj_map_dict = {}
         for inst_id in self.__inst_id_list:
             gran_dict = {}
             for gran_id in self.__gran_id_list:
                 data_length = self.DATA_LENGTH_DICT[gran_id]
-                obj = CandlesData(self, cli, inst_id, gran_id, data_length)
+                obj = CandlesData(self, cli, pub, inst_id, gran_id, data_length)
                 tmp = {gran_id: obj}
                 gran_dict.update(tmp)
             tmp = {inst_id: gran_dict}
