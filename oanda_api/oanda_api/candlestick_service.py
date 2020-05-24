@@ -66,6 +66,9 @@ class CandlestickService(ServiceAbs):
                           rsp: SrvTypeResponse
                           ) -> SrvTypeResponse:
 
+        self._logger.debug("----- fetch candlestick start -----")
+        dbg_tm_start = dt.datetime.now()
+
         rsp.result = False
         rsp.frc_msg.reason_code = frc.REASON_UNSET
 
@@ -91,7 +94,6 @@ class CandlestickService(ServiceAbs):
         tmpdt = dt_from
         from_ = dt_from
         tmplist = []
-        #rsp.frc_msg.reason_code = frc.REASON_DATA_ZERO
         rsp.cndl_msg_list = []
 
         while tmpdt < dt_to:
@@ -102,7 +104,7 @@ class CandlestickService(ServiceAbs):
                 tmpdt = dt_to
             to_ = tmpdt
 
-            self._logger.debug("------------ fetch Canclestick ------------")
+            self._logger.debug("----- fetch Canclestick -----")
             self._logger.debug("from:%s" % from_)
             self._logger.debug("to:  %s" % to_)
 
@@ -145,6 +147,11 @@ class CandlestickService(ServiceAbs):
                 rsp.cndl_msg_list = tmplist2
         else:
             rsp.result = False
+
+        dbg_tm_end = dt.datetime.now()
+        self._logger.debug("----- fetch candlestick end -----")
+        self._logger.debug("----- fetched time [%s] -----"
+                           % (dbg_tm_end - dbg_tm_start))
 
         return rsp
 

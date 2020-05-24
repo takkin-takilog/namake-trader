@@ -52,6 +52,14 @@ class CandlesData():
     COL_NAME_BID_LO = "low(Bid)"
     COL_NAME_BID_CL = "close(Bid)"
     COL_NAME_COMP = "complete"
+    COL_NAME_MID_OP = "open(Mid)"
+    COL_NAME_MID_HI = "high(Mid)"
+    COL_NAME_MID_LO = "low(Mid)"
+    COL_NAME_MID_CL = "close(Mid)"
+    COL_NAME_HALF_SPREAD_COST_OP = "half_spread_cost(open)"
+    COL_NAME_HALF_SPREAD_COST_HI = "half_spread_cost(high)"
+    COL_NAME_HALF_SPREAD_COST_LO = "half_spread_cost(low)"
+    COL_NAME_HALF_SPREAD_COST_CL = "half_spread_cost(close)"
 
     DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
     TIMEOUT_SEC = 3.0
@@ -214,6 +222,10 @@ class CandlesData():
             data = []
             for cndl_msg in rsp.cndl_msg_list:
                 dt_ = dt.datetime.strptime(cndl_msg.time, self.DT_FMT)
+                hsc_o = (cndl_msg.ask_o - cndl_msg.bid_o) / 2
+                hsc_h = (cndl_msg.ask_h - cndl_msg.bid_h) / 2
+                hsc_l = (cndl_msg.ask_l - cndl_msg.bid_l) / 2
+                hsc_c = (cndl_msg.ask_c - cndl_msg.bid_c) / 2
                 data.append([dt_,
                              cndl_msg.ask_o,
                              cndl_msg.ask_h,
@@ -223,6 +235,14 @@ class CandlesData():
                              cndl_msg.bid_h,
                              cndl_msg.bid_l,
                              cndl_msg.bid_c,
+                             cndl_msg.bid_o + hsc_o,
+                             cndl_msg.bid_h + hsc_h,
+                             cndl_msg.bid_l + hsc_l,
+                             cndl_msg.bid_c + hsc_c,
+                             hsc_o,
+                             hsc_h,
+                             hsc_l,
+                             hsc_c,
                              cndl_msg.is_complete
                              ])
 
@@ -238,6 +258,14 @@ class CandlesData():
                               self.COL_NAME_BID_HI,
                               self.COL_NAME_BID_LO,
                               self.COL_NAME_BID_CL,
+                              self.COL_NAME_MID_OP,
+                              self.COL_NAME_MID_HI,
+                              self.COL_NAME_MID_LO,
+                              self.COL_NAME_MID_CL,
+                              self.COL_NAME_HALF_SPREAD_COST_OP,
+                              self.COL_NAME_HALF_SPREAD_COST_HI,
+                              self.COL_NAME_HALF_SPREAD_COST_LO,
+                              self.COL_NAME_HALF_SPREAD_COST_CL,
                               self.COL_NAME_COMP
                               ]
 
