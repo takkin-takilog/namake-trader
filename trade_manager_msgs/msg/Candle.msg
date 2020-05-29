@@ -25,6 +25,7 @@ float32 half_spread_cost_l
 float32 half_spread_cost_c
 
 # The start time of the candlestick.
+# Format is "%Y-%m-%dT%H:%M:00.000000000Z"
 string time
 
 # A flag indicating if the latest candlestick is complete.

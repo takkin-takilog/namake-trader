@@ -7,7 +7,7 @@ import pandas as pd
 
 from PySide2.QtWidgets import QApplication, QMainWindow
 from PySide2.QtCore import Qt, QFile, QCoreApplication  # @UnresolvedImport
-from PySide2.QtCore import QDateTime
+from PySide2.QtCore import QDateTime, QTimer
 from PySide2.QtUiTools import QUiLoader  # @UnresolvedImport
 from PySide2.QtCharts import QtCharts
 from PySide2.QtGui import QPainter
@@ -17,7 +17,7 @@ from rclpy.node import Node
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 
 
 class MsgDict():
@@ -68,6 +68,8 @@ class GuiMonitor(QMainWindow):
 
     def __init__(self, parent=None):
         super(GuiMonitor, self).__init__(parent)
+
+        # --------------- initialize Qt ---------------
         ui = self.__load_ui(parent)
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
@@ -82,6 +84,10 @@ class GuiMonitor(QMainWindow):
         for obj in self.GRAN_MSG_LIST:
             ui.comboBox_gran.addItem(obj.text)
 
+        # QTimer
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.__on_timeout_1s)
+
         ui.labe_srvcon_status.setAlignment(Qt.AlignCenter)
 
         ui.pushButton_srvcon.toggled.connect(self.__on_srvcon_toggled)
@@ -91,23 +97,6 @@ class GuiMonitor(QMainWindow):
         series = QtCharts.QCandlestickSeries()
         series.setDecreasingColor(Qt.red)
         series.setIncreasingColor(Qt.green)
-
-        # initialize ROS
-        node = rclpy.create_node('gui_monitor')
-        self.logger = node.get_logger()
-        self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-
-        self.sub = node.create_subscription(String,
-                                            'chatter',
-                                            self.listener_callback)
-
-        # Create service client "CandlesMonitor"
-        srv_type = CandlesMntSrv
-        srv_name = "candles_monitor"
-        cli_cdl = node.create_client(srv_type, srv_name)
-        # Wait for a service server
-        while not cli_cdl.wait_for_service(timeout_sec=1.0):
-            self.logger.info("Waiting for \"" + srv_name + "\" service...")
 
         # axises
         axis_x = QtCharts.QDateTimeAxis()
@@ -133,12 +122,41 @@ class GuiMonitor(QMainWindow):
         fs = ui.widget_chart.frameSize()
         chartview.resize(fs)
 
+        # --------------- initialize ROS ---------------
+        node = rclpy.create_node('gui_monitor')
+        self.logger = node.get_logger()
+        self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+
+        self.sub = node.create_subscription(String,
+                                            'chatter',
+                                            self.listener_callback)
+
+        # Create service client "CandlesMonitor"
+        srv_type = CandlesMntSrv
+        srv_name = "candles_monitor"
+        cli_cdl = node.create_client(srv_type, srv_name)
+        # Wait for a service server
+        while not cli_cdl.wait_for_service(timeout_sec=1.0):
+            self.logger.info("Waiting for \"" + srv_name + "\" service...")
+
+        # Create publisher "HistoricalCandles"
+        msg_type = Bool
+        topic = "alive"
+        pub_alive = node.create_publisher(msg_type, topic)
+
+        # Timer(1s)
+        """
+        self.__timer_1s = node.create_timer(timer_period_sec=1.0,
+                                            callback=self.__on_timeout_1s)
+        """
+
         self.__node = node
         self.__ui = ui
         self.__cli_cdl = cli_cdl
         self.__series = series
         self.__chart = chart
         self.__chartview = chartview
+        self.__pub_alive = pub_alive
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")
@@ -147,12 +165,6 @@ class GuiMonitor(QMainWindow):
     @property
     def node(self) -> Node:
         return self.__node
-
-    """
-    @property
-    def ui(self):
-        return self.__ui
-    """
 
     def __load_ui(self, parent):
         loader = QUiLoader()
@@ -189,13 +201,17 @@ class GuiMonitor(QMainWindow):
 
             self.__ui.labe_srvcon_status.setText("接続中")
             str_ = "background-color: rgb(0, 255, 0);"
-            self.__ui.labe_srvcon_status.setStyleSheet(str_);
+            self.__ui.labe_srvcon_status.setStyleSheet(str_)
+
+            self.timer.start(1000)
         else:
             self.__ui.pushButton_srvcon.setText("接続")
 
             self.__ui.labe_srvcon_status.setText("切断")
             str_ = "background-color: rgb(136, 138, 133);"
-            self.__ui.labe_srvcon_status.setStyleSheet(str_);
+            self.__ui.labe_srvcon_status.setStyleSheet(str_)
+
+            self.timer.stop()
 
     def init_resize_qchart(self) -> None:
         fs = self.__ui.widget_chart.frameSize()
@@ -282,6 +298,17 @@ class GuiMonitor(QMainWindow):
 
         self.__chart.axisY().setRange(min_, max_)
         self.__chart.createDefaultAxes()
+
+    def __on_timeout_1s(self) -> None:
+
+        if self.__ui.pushButton_srvcon.isChecked():
+            self.logger.debug("publish start")
+        else:
+            self.logger.debug("publish stop")
+
+        msg = Bool()
+        msg.data = True
+        self.__pub_alive.publish(msg)
 
 
 def main():

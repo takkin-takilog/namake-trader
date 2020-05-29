@@ -341,7 +341,7 @@ class CandlestickManager(Node):
         GranApi.GRAN_M3: 20 * 24 * 10,  # 10 Days
         GranApi.GRAN_M4: 15 * 24 * 10,  # 10 Days
         GranApi.GRAN_M5: 12 * 24 * 10,  # 10 Days
-        GranApi.GRAN_M10: 6 * 24 * 365,  # 1 Year
+        GranApi.GRAN_M10: 6 * 24 * 10,  # 1 Year
         GranApi.GRAN_M15: 4 * 24 * 10,  # 10 Days
         GranApi.GRAN_M30: 2 * 24 * 10,  # 10 Days
         GranApi.GRAN_H1: 24 * 30,  # 1 Months
@@ -365,11 +365,8 @@ class CandlestickManager(Node):
         self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         self.__inst_id_list = [InstApi.INST_USD_JPY]
-        self.__gran_id_list = [GranApi.GRAN_M10]
-        """
         self.__gran_id_list = [GranApi.GRAN_D, GranApi.GRAN_H4, GranApi.GRAN_H1,
                                GranApi.GRAN_M10]
-        """
 
         # Create service server "CandlesMonitor"
         srv_type = CandlesMntSrv
