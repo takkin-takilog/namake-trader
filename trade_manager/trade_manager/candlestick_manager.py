@@ -341,7 +341,7 @@ class CandlestickManager(Node):
         GranApi.GRAN_M3: 20 * 24 * 10,  # 10 Days
         GranApi.GRAN_M4: 15 * 24 * 10,  # 10 Days
         GranApi.GRAN_M5: 12 * 24 * 10,  # 10 Days
-        GranApi.GRAN_M10: 6 * 24 * 10,  # 1 Year
+        GranApi.GRAN_M10: 6 * 24 * 100,  # 1 Year
         GranApi.GRAN_M15: 4 * 24 * 10,  # 10 Days
         GranApi.GRAN_M30: 2 * 24 * 10,  # 10 Days
         GranApi.GRAN_H1: 24 * 30,  # 1 Months

@@ -6,23 +6,29 @@ import datetime as dt
 import pandas as pd
 
 from PySide2.QtWidgets import QApplication, QMainWindow
-from PySide2.QtCore import Qt, QFile, QCoreApplication  # @UnresolvedImport
+from PySide2.QtCore import Qt, QFile, QCoreApplication
 from PySide2.QtCore import QDateTime, QTimer
-from PySide2.QtUiTools import QUiLoader  # @UnresolvedImport
+from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCharts import QtCharts
-from PySide2.QtGui import QPainter
+from PySide2.QtGui import QStandardItemModel, QStandardItem
 
 import rclpy
 from rclpy.node import Node
+from rclpy.client import Client
+from trade_apl_msgs.srv import GapFillMntSrv
+from trade_apl_msgs.msg import GapFillMsg
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
 from std_msgs.msg import String, Bool
 
 
-class MsgDict():
+class MsgGranDict():
 
-    def __init__(self, msg_id, text) -> None:
+    def __init__(self,
+                 msg_id: int,
+                 text: str
+                 ) -> None:
         self.__msg_id = msg_id
         self.__text = text
 
@@ -33,6 +39,30 @@ class MsgDict():
     @property
     def text(self) -> str:
         return self.__text
+
+
+class MsgInstDict():
+
+    def __init__(self,
+                 msg_id: int,
+                 text: str,
+                 decimal_digit: int
+                 ) -> None:
+        self.__msg_id = msg_id
+        self.__text = text
+        self.__decimal_digit = decimal_digit
+
+    @property
+    def msg_id(self) -> int:
+        return self.__msg_id
+
+    @property
+    def text(self) -> str:
+        return self.__text
+
+    @property
+    def decimal_digit(self) -> int:
+        return self.__decimal_digit
 
 
 class GuiMonitor(QMainWindow):
@@ -55,16 +85,26 @@ class GuiMonitor(QMainWindow):
     COL_NAME_COMP = "complete"
 
     INST_MSG_LIST = [
-        MsgDict(Inst.INST_USD_JPY, "USD/JPY"),
-        MsgDict(Inst.INST_EUR_JPY, "EUR/JPY"),
-        MsgDict(Inst.INST_EUR_USD, "EUR/USD"),
+        MsgInstDict(Inst.INST_USD_JPY, "USD/JPY", 3),
+        MsgInstDict(Inst.INST_EUR_JPY, "EUR/JPY", 3),
+        MsgInstDict(Inst.INST_EUR_USD, "EUR/USD", 5),
     ]
 
     GRAN_MSG_LIST = [
-        MsgDict(Gran.GRAN_D, "日足"),
-        MsgDict(Gran.GRAN_H4, "４時間足"),
-        MsgDict(Gran.GRAN_H1, "１時間足"),
+        MsgGranDict(Gran.GRAN_D, "日足"),
+        MsgGranDict(Gran.GRAN_H4, "４時間足"),
+        MsgGranDict(Gran.GRAN_H1, "１時間足"),
     ]
+
+    GAP_DIR_DICT = {
+        GapFillMsg.GAP_DIR_UP: "Up",
+        GapFillMsg.GAP_DIR_DOWN: "Down"
+        }
+
+    GAP_FILL_SUCC_DICT = {
+        True: "Success",
+        False: "Failure"
+        }
 
     def __init__(self, parent=None):
         super(GuiMonitor, self).__init__(parent)
@@ -75,14 +115,15 @@ class GuiMonitor(QMainWindow):
         self.resize(ui.frameSize())
 
         # set comboBox of Instrument
-        self.__remove_all_items_of_comboBox(ui.comboBox_inst)
+        self.__remove_all_items_of_comboBox(ui.comboBox_inst_main)
         for obj in self.INST_MSG_LIST:
-            ui.comboBox_inst.addItem(obj.text)
+            ui.comboBox_inst_main.addItem(obj.text)
+            ui.comboBox_inst_gapfill.addItem(obj.text)
 
         # set comboBox of Granularity
-        self.__remove_all_items_of_comboBox(ui.comboBox_gran)
+        self.__remove_all_items_of_comboBox(ui.comboBox_gran_main)
         for obj in self.GRAN_MSG_LIST:
-            ui.comboBox_gran.addItem(obj.text)
+            ui.comboBox_gran_main.addItem(obj.text)
 
         # QTimer
         self.timer = QTimer(self)
@@ -90,9 +131,39 @@ class GuiMonitor(QMainWindow):
 
         ui.labe_srvcon_status.setAlignment(Qt.AlignCenter)
 
-        ui.pushButton_srvcon.toggled.connect(self.__on_srvcon_toggled)
-        ui.comboBox_inst.currentIndexChanged.connect(self.on_cb_inst_changed)
-        ui.comboBox_gran.currentIndexChanged.connect(self.on_cb_gran_changed)
+        callback = self.__on_srvcon_toggled
+        ui.pushButton_srvcon.toggled.connect(callback)
+
+        ui.tabWidget.currentChanged.connect(self.__on_tab_changed)
+
+        # ----- Main Tab -----
+        callback = self.__on_cb_inst_main_changed
+        ui.comboBox_inst_main.currentIndexChanged.connect(callback)
+        callback = self.__on_cb_gran_main_changed
+        ui.comboBox_gran_main.currentIndexChanged.connect(callback)
+
+        # ----- Gap-Fill Tab -----
+        callback = self.__on_cb_inst_gapfill_changed
+        ui.comboBox_inst_gapfill.currentIndexChanged.connect(callback)
+        callback = self.__on_fetch_gapfill_clicked
+        ui.pushButton_fetch_gapfill.clicked.connect(callback)
+
+        tbl_mdl_gapfill = QStandardItemModel()
+        # set header
+        headers = [
+            "Date",
+            "Gap dir",
+            "Previous close price",
+            "Current open price",
+            "Gap range price",
+            "Gap fill result",
+            "Gap filled time",
+            "Max open range",
+            "End close price"
+        ]
+        tbl_mdl_gapfill.setHorizontalHeaderLabels(headers)
+        ui.tableView.setModel(tbl_mdl_gapfill)
+        ui.treeView.setModel(tbl_mdl_gapfill)
 
         series = QtCharts.QCandlestickSeries()
         series.setDecreasingColor(Qt.red)
@@ -118,8 +189,8 @@ class GuiMonitor(QMainWindow):
         chart.legend().hide()
 
         chartview = QtCharts.QChartView(chart)
-        chartview.setParent(ui.widget_chart)
-        fs = ui.widget_chart.frameSize()
+        chartview.setParent(ui.widget_chart_main)
+        fs = ui.widget_chart_main.frameSize()
         chartview.resize(fs)
 
         # --------------- initialize ROS ---------------
@@ -134,29 +205,29 @@ class GuiMonitor(QMainWindow):
         # Create service client "CandlesMonitor"
         srv_type = CandlesMntSrv
         srv_name = "candles_monitor"
-        cli_cdl = node.create_client(srv_type, srv_name)
-        # Wait for a service server
-        while not cli_cdl.wait_for_service(timeout_sec=1.0):
-            self.logger.info("Waiting for \"" + srv_name + "\" service...")
+        cli_cdl = self.__create_client(node, srv_type, srv_name)
+
+        # Create service client "CandlesMonitor"
+        srv_type = GapFillMntSrv
+        srv_name = "gapfill_monitor"
+        cli_gf = self.__create_client(node, srv_type, srv_name)
 
         # Create publisher "HistoricalCandles"
         msg_type = Bool
         topic = "alive"
         pub_alive = node.create_publisher(msg_type, topic)
 
-        # Timer(1s)
-        """
-        self.__timer_1s = node.create_timer(timer_period_sec=1.0,
-                                            callback=self.__on_timeout_1s)
-        """
-
-        self.__node = node
         self.__ui = ui
-        self.__cli_cdl = cli_cdl
         self.__series = series
         self.__chart = chart
+        self.__tbl_mdl_gapfill = tbl_mdl_gapfill
+        self.__node = node
+        self.__cli_cdl = cli_cdl
+        self.__cli_gf = cli_gf
         self.__chartview = chartview
         self.__pub_alive = pub_alive
+
+        self.__inst_id_gapfill = self.INST_MSG_LIST[0].msg_id
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")
@@ -165,6 +236,19 @@ class GuiMonitor(QMainWindow):
     @property
     def node(self) -> Node:
         return self.__node
+
+    def __create_client(self,
+                        node: Node,
+                        srv_type,
+                        srv_name: str
+                        ) -> Client:
+
+        cli = node.create_client(srv_type, srv_name)
+        # Wait for a service server
+        while not cli.wait_for_service(timeout_sec=1.0):
+            self.logger.info("Waiting for \"" + srv_name + "\" service...")
+
+        return cli
 
     def __load_ui(self, parent):
         loader = QUiLoader()
@@ -183,19 +267,53 @@ class GuiMonitor(QMainWindow):
             combo_box.removeItem(idx)
             idx = combo_box.currentIndex()
 
-    def on_cb_inst_changed(self, inst_idx):
-        gran_idx = self.__ui.comboBox_gran.currentIndex()
+    def __on_cb_inst_main_changed(self, inst_idx):
+        gran_idx = self.__ui.comboBox_gran_main.currentIndex()
         self.__display_chart(inst_idx, gran_idx)
 
-    def on_cb_gran_changed(self, gran_idx):
-        inst_idx = self.__ui.comboBox_inst.currentIndex()
+    def __on_cb_gran_main_changed(self, gran_idx):
+        inst_idx = self.__ui.comboBox_inst_main.currentIndex()
         self.__display_chart(inst_idx, gran_idx)
+
+    def __on_cb_inst_gapfill_changed(self, inst_idx):
+        self.__inst_id_gapfill = self.INST_MSG_LIST[inst_idx].msg_id
+
+    def __on_fetch_gapfill_clicked(self):
+
+        inst_id = self.__inst_id_gapfill
+        decimal_digit = self.INST_MSG_LIST[inst_id].decimal_digit
+        fmt = "{:." + str(decimal_digit) + "f}"
+
+        req = GapFillMntSrv.Request()
+        req.inst_msg.instrument_id = self.__inst_id_gapfill
+
+        future = self.__cli_gf.call_async(req)
+        rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
+
+        flg = future.done() and future.result() is not None
+        assert flg, "fetch [Gap-Fill] failed!"
+
+        rsp = future.result()
+        for gapfillmsg in rsp.gapfillmsg_list:
+            items = [
+                QStandardItem(gapfillmsg.date),
+                QStandardItem(self.GAP_DIR_DICT[gapfillmsg.gap_dir]),
+                QStandardItem(fmt.format(gapfillmsg.gap_close_price)),
+                QStandardItem(fmt.format(gapfillmsg.gap_open_price)),
+                QStandardItem(fmt.format(gapfillmsg.gap_range_price)),
+                QStandardItem(self.GAP_FILL_SUCC_DICT[
+                    gapfillmsg.is_gapfill_success]),
+                QStandardItem(gapfillmsg.gap_filled_time),
+                QStandardItem(fmt.format(gapfillmsg.max_open_range)),
+                QStandardItem(fmt.format(gapfillmsg.end_close_price))
+                ]
+            self.__tbl_mdl_gapfill.appendRow(items)
 
     def __on_srvcon_toggled(self, flag):
 
         if flag is True:
-            gran_idx = self.__ui.comboBox_gran.currentIndex()
-            inst_idx = self.__ui.comboBox_inst.currentIndex()
+            gran_idx = self.__ui.comboBox_gran_main.currentIndex()
+            inst_idx = self.__ui.comboBox_inst_main.currentIndex()
             self.__display_chart(inst_idx, gran_idx)
             self.__ui.pushButton_srvcon.setText("切断")
 
@@ -213,12 +331,18 @@ class GuiMonitor(QMainWindow):
 
             self.timer.stop()
 
+    def __on_tab_changed(self, index):
+
+        if index == 0:
+            fs = self.__ui.widget_chart_main.frameSize()
+            self.__chartview.resize(fs)
+
     def init_resize_qchart(self) -> None:
-        fs = self.__ui.widget_chart.frameSize()
+        fs = self.__ui.widget_chart_main.frameSize()
         self.__chartview.resize(fs)
 
     def resizeEvent(self, event):
-        fs = self.__ui.widget_chart.frameSize()
+        fs = self.__ui.widget_chart_main.frameSize()
         self.__chartview.resize(fs)
 
     def __display_chart(self, inst_idx, gran_idx):
