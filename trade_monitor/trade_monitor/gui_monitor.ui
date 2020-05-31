@@ -95,7 +95,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="main">
        <attribute name="title">
@@ -270,9 +270,15 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QTreeView" name="treeView">
+           <widget class="QTreeView" name="treeView_gapfill">
+            <property name="styleSheet">
+             <string notr="true">alternate-background-color: #e8f4fc;</string>
+            </property>
             <property name="editTriggers">
              <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="alternatingRowColors">
+             <bool>true</bool>
             </property>
             <property name="sortingEnabled">
              <bool>true</bool>
@@ -280,9 +286,15 @@
            </widget>
           </item>
           <item>
-           <widget class="QTableView" name="tableView">
+           <widget class="QTableView" name="tableView_gapfill">
+            <property name="styleSheet">
+             <string notr="true">alternate-background-color: #f6fafb;</string>
+            </property>
             <property name="editTriggers">
              <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="alternatingRowColors">
+             <bool>true</bool>
             </property>
             <property name="sortingEnabled">
              <bool>true</bool>

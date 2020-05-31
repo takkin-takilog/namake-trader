@@ -9,6 +9,7 @@ from PySide2.QtWidgets import QApplication, QMainWindow
 from PySide2.QtCore import Qt, QFile, QTimer, QCoreApplication
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtGui import QStandardItemModel, QStandardItem
+from PySide2.QtCore import QItemSelectionModel
 
 import rclpy
 from rclpy.node import Node
@@ -149,6 +150,11 @@ class GuiMonitor(QMainWindow):
         ui.pushButton_fetch_gapfill.clicked.connect(callback)
 
         tbl_mdl_gapfill = QStandardItemModel()
+        self.selModel = QItemSelectionModel(tbl_mdl_gapfill)
+
+        callback = self.__on_selection_gapfill_changed
+        self.selModel.selectionChanged.connect(callback)
+
         # set header
         headers = [
             "Date",
@@ -162,11 +168,12 @@ class GuiMonitor(QMainWindow):
             "End close price"
         ]
         tbl_mdl_gapfill.setHorizontalHeaderLabels(headers)
-        ui.tableView.setModel(tbl_mdl_gapfill)
-        ui.treeView.setModel(tbl_mdl_gapfill)
+        ui.tableView_gapfill.setModel(tbl_mdl_gapfill)
+        ui.treeView_gapfill.setModel(tbl_mdl_gapfill)
+        ui.treeView_gapfill.setSelectionModel(self.selModel)
 
-        fs = ui.widget_chart_main.frameSize()
-        csc_main = CandlestickChart(ui.widget_chart_main, fs)
+        csc_main = CandlestickChart(ui.widget_chart_main)
+        csc_gapfill = CandlestickChart(ui.widget_chart_gapfill)
 
         # --------------- initialize ROS ---------------
         node = rclpy.create_node('gui_monitor')
@@ -194,6 +201,7 @@ class GuiMonitor(QMainWindow):
 
         self.__ui = ui
         self.__csc_main = csc_main
+        self.__csc_gapfill = csc_gapfill
         self.__tbl_mdl_gapfill = tbl_mdl_gapfill
         self.__node = node
         self.__cli_cdl = cli_cdl
@@ -305,18 +313,28 @@ class GuiMonitor(QMainWindow):
             self.timer.stop()
 
     def __on_tab_changed(self, index):
-
-        if index == 0:
-            fs = self.__ui.widget_chart_main.frameSize()
-            self.__csc_main.resize(fs)
+        self.__resize_chart_widget(index)
 
     def init_resize_qchart(self) -> None:
         fs = self.__ui.widget_chart_main.frameSize()
         self.__csc_main.resize(fs)
 
+    def __resize_chart_widget(self, tab_index):
+        if tab_index == 0:
+            fs = self.__ui.widget_chart_main.frameSize()
+            self.__csc_main.resize(fs)
+        elif tab_index == 1:
+            fs = self.__ui.widget_chart_gapfill.frameSize()
+            self.__csc_gapfill.resize(fs)
+
+    def __on_selection_gapfill_changed(self, selected, deselected):
+        model_index = selected.at(0).indexes()[0]
+        target_date = self.__tbl_mdl_gapfill.item(model_index.row()).text()
+        self.logger.debug("target date: " + target_date)
+
     def resizeEvent(self, event):
-        fs = self.__ui.widget_chart_main.frameSize()
-        self.__csc_main.resize(fs)
+        index = self.__ui.tabWidget.currentIndex()
+        self.__resize_chart_widget(index)
 
     def __display_chart(self, inst_idx, gran_idx):
 

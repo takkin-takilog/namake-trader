@@ -10,7 +10,7 @@ class CandlestickChart(object):
     COL_NAME_LO = "low"
     COL_NAME_CL = "close"
 
-    def __init__(self, widget, frame_size):
+    def __init__(self, widget):
 
         series = QtCharts.QCandlestickSeries()
         series.setDecreasingColor(Qt.red)
@@ -37,7 +37,7 @@ class CandlestickChart(object):
 
         chartview = QtCharts.QChartView(chart)
         chartview.setParent(widget)
-        chartview.resize(frame_size)
+        chartview.resize(widget.frameSize())
 
         self.__series = series
         self.__chart = chart
