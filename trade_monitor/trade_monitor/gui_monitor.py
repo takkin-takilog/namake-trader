@@ -6,10 +6,8 @@ import datetime as dt
 import pandas as pd
 
 from PySide2.QtWidgets import QApplication, QMainWindow
-from PySide2.QtCore import Qt, QFile, QCoreApplication
-from PySide2.QtCore import QDateTime, QTimer
+from PySide2.QtCore import Qt, QFile, QTimer, QCoreApplication
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtCharts import QtCharts
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 
 import rclpy
@@ -21,6 +19,8 @@ from trade_manager_msgs.srv import CandlesMntSrv
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
 from std_msgs.msg import String, Bool
+
+from trade_monitor.candlestick_chart import CandlestickChart
 
 
 class MsgGranDict():
@@ -165,33 +165,8 @@ class GuiMonitor(QMainWindow):
         ui.tableView.setModel(tbl_mdl_gapfill)
         ui.treeView.setModel(tbl_mdl_gapfill)
 
-        series = QtCharts.QCandlestickSeries()
-        series.setDecreasingColor(Qt.red)
-        series.setIncreasingColor(Qt.green)
-
-        # axises
-        axis_x = QtCharts.QDateTimeAxis()
-        axis_x.setFormat("yyyy-MM-dd hh:mm:ss")
-        axis_x.setTitleText("Date")
-        axis_x.setLabelsAngle(-90)
-
-        axis_y = QtCharts.QValueAxis()
-        axis_y.setTitleText("Ratio")
-
-        chart = QtCharts.QChart()
-        chart.addAxis(axis_x, Qt.AlignBottom)
-        chart.addAxis(axis_y, Qt.AlignRight)
-        chart.addSeries(series)
-        chart.setAxisX(axis_x, series)
-        chart.setAxisY(axis_y, series)
-
-        chart.createDefaultAxes()
-        chart.legend().hide()
-
-        chartview = QtCharts.QChartView(chart)
-        chartview.setParent(ui.widget_chart_main)
         fs = ui.widget_chart_main.frameSize()
-        chartview.resize(fs)
+        csc_main = CandlestickChart(ui.widget_chart_main, fs)
 
         # --------------- initialize ROS ---------------
         node = rclpy.create_node('gui_monitor')
@@ -218,13 +193,11 @@ class GuiMonitor(QMainWindow):
         pub_alive = node.create_publisher(msg_type, topic)
 
         self.__ui = ui
-        self.__series = series
-        self.__chart = chart
+        self.__csc_main = csc_main
         self.__tbl_mdl_gapfill = tbl_mdl_gapfill
         self.__node = node
         self.__cli_cdl = cli_cdl
         self.__cli_gf = cli_gf
-        self.__chartview = chartview
         self.__pub_alive = pub_alive
 
         self.__inst_id_gapfill = self.INST_MSG_LIST[0].msg_id
@@ -335,15 +308,15 @@ class GuiMonitor(QMainWindow):
 
         if index == 0:
             fs = self.__ui.widget_chart_main.frameSize()
-            self.__chartview.resize(fs)
+            self.__csc_main.resize(fs)
 
     def init_resize_qchart(self) -> None:
         fs = self.__ui.widget_chart_main.frameSize()
-        self.__chartview.resize(fs)
+        self.__csc_main.resize(fs)
 
     def resizeEvent(self, event):
         fs = self.__ui.widget_chart_main.frameSize()
-        self.__chartview.resize(fs)
+        self.__csc_main.resize(fs)
 
     def __display_chart(self, inst_idx, gran_idx):
 
@@ -405,23 +378,18 @@ class GuiMonitor(QMainWindow):
         df[self.COL_NAME_MID_CL] = (
             df[self.COL_NAME_ASK_CL] + df[self.COL_NAME_BID_CL]) / 2
 
-        max_ = df[self.COL_NAME_MID_HI].max()
-        min_ = df[self.COL_NAME_MID_LO].min()
+        dftmp = df.loc[:, [self.COL_NAME_MID_OP,
+                           self.COL_NAME_MID_HI,
+                           self.COL_NAME_MID_LO,
+                           self.COL_NAME_MID_CL
+                           ]]
+        dftmp.columns = [CandlestickChart.COL_NAME_OP,
+                         CandlestickChart.COL_NAME_HI,
+                         CandlestickChart.COL_NAME_LO,
+                         CandlestickChart.COL_NAME_CL
+                         ]
 
-        self.__series.clear()
-        for time, sr in df.iterrows():
-            o_ = sr[self.COL_NAME_MID_OP]
-            h_ = sr[self.COL_NAME_MID_HI]
-            l_ = sr[self.COL_NAME_MID_LO]
-            c_ = sr[self.COL_NAME_MID_CL]
-            t_ = QDateTime(dt.datetime.date(time))
-
-            cnd = QtCharts.QCandlestickSet(
-                o_, h_, l_, c_, t_.toMSecsSinceEpoch())
-            self.__series.append(cnd)
-
-        self.__chart.axisY().setRange(min_, max_)
-        self.__chart.createDefaultAxes()
+        self.__csc_main.update(dftmp)
 
     def __on_timeout_1s(self) -> None:
 
@@ -452,7 +420,3 @@ def main():
     widget.node.destroy_node()
     rclpy.shutdown()
     sys.exit(errcd)
-
-
-if __name__ == "__main__":
-    main()
