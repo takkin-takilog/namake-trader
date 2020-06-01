@@ -439,14 +439,13 @@ class CandlestickManager(Node):
 
         df = self.__obj_map_dict[inst_id][gran_id].dataframe
 
-        if ((dt_from is not None) and (dt_to is not None)):
-            dftmp = df[((dt_from <= df.index) & (df.index <= dt_to))]
-        elif dt_from is not None:
+        if dt_from is not None:
             dftmp = df[(dt_from <= df.index)]
-        elif (dt_to is not None):
-            dftmp = df[(df.index <= dt_to)]
         else:
             dftmp = df
+
+        if dt_to is not None:
+            dftmp = dftmp[(dftmp.index <= dt_to)]
 
         return dftmp
 
@@ -464,13 +463,14 @@ class CandlestickManager(Node):
                                 ) -> SrvTypeResponse:
 
         DT_FMT = CandlesData.DT_FMT
+        INF = "inf"
 
         dt_from = None
-        if req.dt_from is not None:
+        if req.dt_from != INF:
             dt_from = dt.datetime.strptime(req.dt_from, DT_FMT)
 
         dt_to = None
-        if req.dt_to is not None:
+        if req.dt_to != INF:
             dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
 
         df = self.__get_dataframe(req.inst_msg.instrument_id,

@@ -95,6 +95,7 @@ class GuiMonitor(QMainWindow):
         MsgGranDict(Gran.GRAN_D, "日足"),
         MsgGranDict(Gran.GRAN_H4, "４時間足"),
         MsgGranDict(Gran.GRAN_H1, "１時間足"),
+        MsgGranDict(Gran.GRAN_M10, "１０分足"),
     ]
 
     GAP_DIR_DICT = {
@@ -106,6 +107,18 @@ class GuiMonitor(QMainWindow):
         True: "Success",
         False: "Failure"
         }
+
+    GAP_FILL_HEADERS = [
+        "Date",
+        "Gap dir",
+        "Previous close price",
+        "Current open price",
+        "Gap range price",
+        "Gap fill result",
+        "Gap filled time",
+        "Max open range",
+        "End close price"
+    ]
 
     def __init__(self, parent=None):
         super(GuiMonitor, self).__init__(parent)
@@ -156,18 +169,7 @@ class GuiMonitor(QMainWindow):
         self.selModel.selectionChanged.connect(callback)
 
         # set header
-        headers = [
-            "Date",
-            "Gap dir",
-            "Previous close price",
-            "Current open price",
-            "Gap range price",
-            "Gap fill result",
-            "Gap filled time",
-            "Max open range",
-            "End close price"
-        ]
-        tbl_mdl_gapfill.setHorizontalHeaderLabels(headers)
+        tbl_mdl_gapfill.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
         ui.tableView_gapfill.setModel(tbl_mdl_gapfill)
         ui.treeView_gapfill.setModel(tbl_mdl_gapfill)
         ui.treeView_gapfill.setSelectionModel(self.selModel)
@@ -261,12 +263,17 @@ class GuiMonitor(QMainWindow):
 
     def __on_fetch_gapfill_clicked(self):
 
+        self.logger.debug("gapfill start")
+
+        self.__tbl_mdl_gapfill.clear()
+        self.__tbl_mdl_gapfill.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
         inst_id = self.__inst_id_gapfill
         decimal_digit = self.INST_MSG_LIST[inst_id].decimal_digit
         fmt = "{:." + str(decimal_digit) + "f}"
 
+        # fetch Gap-fill data
         req = GapFillMntSrv.Request()
-        req.inst_msg.instrument_id = self.__inst_id_gapfill
+        req.inst_msg.instrument_id = inst_id
 
         future = self.__cli_gf.call_async(req)
         rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
@@ -289,6 +296,51 @@ class GuiMonitor(QMainWindow):
                 QStandardItem(fmt.format(gapfillmsg.end_close_price))
                 ]
             self.__tbl_mdl_gapfill.appendRow(items)
+
+        # fetch Canclestick data
+        req = CandlesMntSrv.Request()
+        req.gran_msg.granularity_id = Gran.GRAN_M10
+        req.inst_msg.instrument_id = inst_id
+        req.dt_from = "inf"
+        req.dt_to = "inf"
+
+        future = self.__cli_cdl.call_async(req)
+        rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
+
+        flg = future.done() and future.result() is not None
+        assert flg, "initial fetch [Day Candle] failed!"
+
+        data = []
+        rsp = future.result()
+        for cndl_msg in rsp.cndl_msg_list:
+            dt_ = dt.datetime.strptime(cndl_msg.time, self.DT_FMT)
+            data.append([dt_,
+                         cndl_msg.ask_o,
+                         cndl_msg.ask_h,
+                         cndl_msg.ask_l,
+                         cndl_msg.ask_c,
+                         cndl_msg.bid_o,
+                         cndl_msg.bid_h,
+                         cndl_msg.bid_l,
+                         cndl_msg.bid_c,
+                         cndl_msg.is_complete
+                         ])
+
+        df = pd.DataFrame(data)
+        df.columns = [self.COL_NAME_TIME,
+                      self.COL_NAME_ASK_OP,
+                      self.COL_NAME_ASK_HI,
+                      self.COL_NAME_ASK_LO,
+                      self.COL_NAME_ASK_CL,
+                      self.COL_NAME_BID_OP,
+                      self.COL_NAME_BID_HI,
+                      self.COL_NAME_BID_LO,
+                      self.COL_NAME_BID_CL,
+                      self.COL_NAME_COMP
+                      ]
+        self.__df = df.set_index(self.COL_NAME_TIME)
+
+        self.logger.debug("gapfill end")
 
     def __on_srvcon_toggled(self, flag):
 
