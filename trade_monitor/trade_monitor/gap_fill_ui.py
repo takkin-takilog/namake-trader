@@ -24,7 +24,7 @@ from trade_monitor.util import (COL_NAME_TIME,
                                 )
 
 
-class GapFill():
+class GapFillUi():
 
     GAP_DIR_DICT = {
         GapFillMsg.GAP_DIR_UP: "Up",
@@ -55,19 +55,19 @@ class GapFill():
         callback = self.__on_fetch_gapfill_clicked
         ui.pushButton_fetch_gapfill.clicked.connect(callback)
 
-        tbl_mdl_gapfill = QStandardItemModel()
-        self.selModel = QItemSelectionModel(tbl_mdl_gapfill)
+        qstd_itm_mdl = QStandardItemModel()
+        sel_mdl = QItemSelectionModel(qstd_itm_mdl)
 
         callback = self.__on_selection_gapfill_changed
-        self.selModel.selectionChanged.connect(callback)
+        sel_mdl.selectionChanged.connect(callback)
 
         # set header
-        tbl_mdl_gapfill.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
-        ui.tableView_gapfill.setModel(tbl_mdl_gapfill)
-        ui.treeView_gapfill.setModel(tbl_mdl_gapfill)
-        ui.treeView_gapfill.setSelectionModel(self.selModel)
+        qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
+        ui.tableView_gapfill.setModel(qstd_itm_mdl)
+        ui.treeView_gapfill.setModel(qstd_itm_mdl)
+        ui.treeView_gapfill.setSelectionModel(sel_mdl)
 
-        csc_gapfill = CandlestickChart(ui.widget_chart_gapfill)
+        cs_chart = CandlestickChart(ui.widget_chart_gapfill)
 
         # Create service client "CandlesMonitor"
         srv_type = GapFillMntSrv
@@ -77,12 +77,11 @@ class GapFill():
         while not srv_cli.wait_for_service(timeout_sec=1.0):
             logger.info("Waiting for \"" + srv_name + "\" service...")
 
-        self.__csc_gapfill = csc_gapfill
-        self.__tbl_mdl_gapfill = tbl_mdl_gapfill
+        self.__cs_chart = cs_chart
+        self.__qstd_itm_mdl = qstd_itm_mdl
 
         self.__inst_id = INST_MSG_LIST[0].msg_id
         self.__ui = ui
-
         self.__node = node
         self.__logger = logger
         self.__srv_cli = srv_cli
@@ -93,8 +92,8 @@ class GapFill():
 
         self.__logger.debug("gapfill start")
 
-        self.__tbl_mdl_gapfill.clear()
-        self.__tbl_mdl_gapfill.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
+        self.__qstd_itm_mdl.clear()
+        self.__qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
         inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
         fmt = "{:." + str(decimal_digit) + "f}"
@@ -123,7 +122,7 @@ class GapFill():
                 QStandardItem(fmt.format(gapfillmsg.max_open_range)),
                 QStandardItem(fmt.format(gapfillmsg.end_close_price))
             ]
-            self.__tbl_mdl_gapfill.appendRow(items)
+            self.__qstd_itm_mdl.appendRow(items)
 
         self.__end_hour = rsp.end_hour
 
@@ -134,7 +133,7 @@ class GapFill():
         gran_id = Gran.GRAN_M10
         inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
         model_index = selected.at(0).indexes()[0]
-        trg_date_str = self.__tbl_mdl_gapfill.item(model_index.row()).text()
+        trg_date_str = self.__qstd_itm_mdl.item(model_index.row()).text()
         self.__logger.debug("target date: " + trg_date_str)
 
         trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
@@ -188,11 +187,11 @@ class GapFill():
                          CandlestickChart.COL_NAME_CL
                          ]
 
-        self.__csc_gapfill.update(dftmp, gran_id)
+        self.__cs_chart.update(dftmp, gran_id)
 
     def resize_chart_widget(self):
         fs = self.__ui.widget_chart_gapfill.frameSize()
-        self.__csc_gapfill.resize(fs)
+        self.__cs_chart.resize(fs)
 
     @property
     def inst_id(self):
