@@ -22,6 +22,7 @@ from trade_manager_msgs.msg import Granularity as Gran
 from std_msgs.msg import String, Bool
 
 from trade_monitor.candlestick_chart import CandlestickChart
+from trade_monitor.gap_fill import GapFill
 
 
 class MsgGranDict():
@@ -210,7 +211,8 @@ class GuiMonitor(QMainWindow):
         self.__cli_gf = cli_gf
         self.__pub_alive = pub_alive
 
-        self.__inst_id_gapfill = self.INST_MSG_LIST[0].msg_id
+        self.__gapfill = GapFill(self.INST_MSG_LIST[0].msg_id)
+        self.__end_hour = 9
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")
@@ -259,7 +261,7 @@ class GuiMonitor(QMainWindow):
         self.__display_chart(inst_idx, gran_idx)
 
     def __on_cb_inst_gapfill_changed(self, inst_idx):
-        self.__inst_id_gapfill = self.INST_MSG_LIST[inst_idx].msg_id
+        self.__gapfill.inst_id = self.INST_MSG_LIST[inst_idx].msg_id
 
     def __on_fetch_gapfill_clicked(self):
 
@@ -267,7 +269,7 @@ class GuiMonitor(QMainWindow):
 
         self.__tbl_mdl_gapfill.clear()
         self.__tbl_mdl_gapfill.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
-        inst_id = self.__inst_id_gapfill
+        inst_id = self.__gapfill.inst_id
         decimal_digit = self.INST_MSG_LIST[inst_id].decimal_digit
         fmt = "{:." + str(decimal_digit) + "f}"
 
@@ -297,7 +299,10 @@ class GuiMonitor(QMainWindow):
                 ]
             self.__tbl_mdl_gapfill.appendRow(items)
 
+        self.__end_hour = rsp.end_hour
+
         # fetch Canclestick data
+        """
         req = CandlesMntSrv.Request()
         req.gran_msg.granularity_id = Gran.GRAN_M10
         req.inst_msg.instrument_id = inst_id
@@ -339,6 +344,7 @@ class GuiMonitor(QMainWindow):
                       self.COL_NAME_COMP
                       ]
         self.__df = df.set_index(self.COL_NAME_TIME)
+        """
 
         self.logger.debug("gapfill end")
 
@@ -380,9 +386,75 @@ class GuiMonitor(QMainWindow):
             self.__csc_gapfill.resize(fs)
 
     def __on_selection_gapfill_changed(self, selected, deselected):
+
+        gran_id = Gran.GRAN_M10
         model_index = selected.at(0).indexes()[0]
-        target_date = self.__tbl_mdl_gapfill.item(model_index.row()).text()
-        self.logger.debug("target date: " + target_date)
+        trg_date_str = self.__tbl_mdl_gapfill.item(model_index.row()).text()
+        self.logger.debug("target date: " + trg_date_str)
+
+        trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
+
+        dt_from = trg_date - dt.timedelta(days=2)
+        dt_to = trg_date + dt.timedelta(hours=self.__end_hour)
+
+        req = CandlesMntSrv.Request()
+        req.gran_msg.granularity_id = gran_id
+        req.inst_msg.instrument_id = self.__gapfill.inst_id
+        req.dt_from = dt_from.strftime(self.DT_FMT)
+        req.dt_to = dt_to.strftime(self.DT_FMT)
+
+        self.logger.debug("dt_from: " + req.dt_from)
+        self.logger.debug("dt_to: " + req.dt_to)
+
+        future = self.__cli_cdl.call_async(req)
+        rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
+
+        flg = future.done() and future.result() is not None
+        assert flg, "initial fetch [Day Candle] failed!"
+
+        data = []
+        rsp = future.result()
+        for cndl_msg in rsp.cndl_msg_list:
+            dt_ = dt.datetime.strptime(cndl_msg.time, self.DT_FMT)
+            data.append([dt_,
+                         cndl_msg.ask_o,
+                         cndl_msg.ask_h,
+                         cndl_msg.ask_l,
+                         cndl_msg.ask_c,
+                         cndl_msg.bid_o,
+                         cndl_msg.bid_h,
+                         cndl_msg.bid_l,
+                         cndl_msg.bid_c,
+                         cndl_msg.is_complete
+                         ])
+
+        df = pd.DataFrame(data)
+        df.columns = [self.COL_NAME_TIME,
+                      self.COL_NAME_ASK_OP,
+                      self.COL_NAME_ASK_HI,
+                      self.COL_NAME_ASK_LO,
+                      self.COL_NAME_ASK_CL,
+                      self.COL_NAME_BID_OP,
+                      self.COL_NAME_BID_HI,
+                      self.COL_NAME_BID_LO,
+                      self.COL_NAME_BID_CL,
+                      self.COL_NAME_COMP
+                      ]
+        df = df.set_index(self.COL_NAME_TIME)
+
+        dftmp = df.loc[:, [self.COL_NAME_ASK_OP,
+                           self.COL_NAME_ASK_HI,
+                           self.COL_NAME_ASK_LO,
+                           self.COL_NAME_ASK_CL
+                           ]]
+        dftmp.columns = [CandlestickChart.COL_NAME_OP,
+                         CandlestickChart.COL_NAME_HI,
+                         CandlestickChart.COL_NAME_LO,
+                         CandlestickChart.COL_NAME_CL
+                         ]
+
+        self.__csc_gapfill.update(dftmp, gran_id)
+
 
     def resizeEvent(self, event):
         index = self.__ui.tabWidget.currentIndex()
@@ -459,7 +531,7 @@ class GuiMonitor(QMainWindow):
                          CandlestickChart.COL_NAME_CL
                          ]
 
-        self.__csc_main.update(dftmp)
+        self.__csc_main.update(dftmp, gran_id)
 
     def __on_timeout_1s(self) -> None:
 

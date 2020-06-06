@@ -1,6 +1,7 @@
 import datetime as dt
 from PySide2.QtCharts import QtCharts
 from PySide2.QtCore import Qt, QDateTime
+from trade_manager_msgs.msg import Granularity as Gran
 
 
 class CandlestickChart(object):
@@ -43,10 +44,19 @@ class CandlestickChart(object):
         self.__chart = chart
         self.__chartview = chartview
 
-    def update(self, df):
+    def update(self, df, gran_id):
 
         max_ = df[self.COL_NAME_HI].max()
         min_ = df[self.COL_NAME_LO].min()
+
+        axis_x = QtCharts.QDateTimeAxis()
+        axis_x.setTitleText("Date")
+        axis_x.setLabelsAngle(-90)
+        if gran_id < Gran.GRAN_D:
+            axis_x.setFormat("yyyy-MM-dd hh:mm:ss")
+        else:
+            axis_x.setFormat("yyyy-MM-dd")
+        self.__chart.setAxisX(axis_x, self.__series)
 
         self.__series.clear()
         for time, sr in df.iterrows():
@@ -54,7 +64,7 @@ class CandlestickChart(object):
             h_ = sr[self.COL_NAME_HI]
             l_ = sr[self.COL_NAME_LO]
             c_ = sr[self.COL_NAME_CL]
-            t_ = QDateTime(dt.datetime.date(time))
+            t_ = QDateTime(time)
 
             cnd = QtCharts.QCandlestickSet(
                 o_, h_, l_, c_, t_.toMSecsSinceEpoch())
