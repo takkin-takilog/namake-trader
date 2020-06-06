@@ -138,7 +138,7 @@ class GapFillUi():
 
         trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
 
-        dt_from = trg_date - dt.timedelta(days=2)
+        dt_from = trg_date - dt.timedelta(days=1, hours=19)
         dt_to = trg_date + dt.timedelta(hours=self.__end_hour)
 
         req = CandlesMntSrv.Request()
