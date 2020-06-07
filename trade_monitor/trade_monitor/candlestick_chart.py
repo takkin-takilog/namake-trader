@@ -1,6 +1,6 @@
 import datetime as dt
 from PySide2.QtCharts import QtCharts
-from PySide2.QtCore import Qt, QDateTime, QDate
+from PySide2.QtCore import Qt, QDateTime, QDate, QTime
 from PySide2.QtGui import QPalette, QLinearGradient, QColor, QFont
 from trade_manager_msgs.msg import Granularity as Gran
 
@@ -54,9 +54,10 @@ class CandlestickChart(object):
         chart.setPlotAreaBackgroundVisible(True)
 
         # X Axis Settings
-        axis_x = QtCharts.QBarCategoryAxis()
+        axis_x = QtCharts.QDateTimeAxis()
         axis_x.setTitleText("Date")
-        axis_x.setLabelsAngle(0)
+        axis_x.setFormat("h:mm")
+        #axis_x.setLabelsAngle(0)
 
         # Y Axis Settings
         axis_y = QtCharts.QValueAxis()
@@ -108,27 +109,36 @@ class CandlestickChart(object):
 
     def update(self, df, gran_id):
 
-        max_y = df[self.COL_NAME_HI].max()
         min_y = df[self.COL_NAME_LO].min()
+        max_y = df[self.COL_NAME_HI].max()
 
         if gran_id < Gran.GRAN_D:
             fmt = "%Y/%m/%d %H:%M"
         else:
             fmt = "%Y/%m/%d"
 
-        x_axis_label = []
         self.__series.clear()
-        for time, sr in df.iterrows():
+        qdatetimelist = []
+        for dt_, sr in df.iterrows():
             o_ = sr[self.COL_NAME_OP]
             h_ = sr[self.COL_NAME_HI]
             l_ = sr[self.COL_NAME_LO]
             c_ = sr[self.COL_NAME_CL]
-            x_axis_label.append(time.strftime(fmt))
-            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_)
+            qd = QDate(dt_.year, dt_.month, dt_.day)
+            qt = QTime(dt_.hour, dt_.minute)
+            qdt = QDateTime(qd, qt).toMSecsSinceEpoch()
+            qdatetimelist.append(qdt)
+            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_, qdt)
             self.__series.append(cnd)
 
-        self.__chart.axisX(self.__series).setCategories(x_axis_label)
-        self.__chart.axisX().setRange(x_axis_label[0], x_axis_label[-1])
+        min_x = qdatetimelist[0]
+        max_x = qdatetimelist[-1]
+
+        print("--------------------")
+        print(min_x)
+        print(max_x)
+
+        self.__chart.axisX().setRange(min_x, max_x)
         self.__chart.axisY().setRange(min_y, max_y)
 
     def resize(self, frame_size):
