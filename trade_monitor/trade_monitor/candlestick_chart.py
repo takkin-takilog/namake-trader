@@ -54,11 +54,9 @@ class CandlestickChart(object):
         chart.setPlotAreaBackgroundVisible(True)
 
         # X Axis Settings
-        #axis_x = QtCharts.QDateTimeAxis()
         axis_x = QtCharts.QBarCategoryAxis()
-        #axis_x.setFormat("yyyy-MM-dd")
         axis_x.setTitleText("Date")
-        axis_x.setLabelsAngle(-90)
+        axis_x.setLabelsAngle(0)
 
         # Y Axis Settings
         axis_y = QtCharts.QValueAxis()
@@ -96,14 +94,6 @@ class CandlestickChart(object):
         chart.addAxis(axis_y, Qt.AlignLeft)
         series.attachAxis(axis_y)
 
-
-        """
-        既存
-        chart.addSeries(series)
-        chart.setAxisX(axis_x, series)
-        chart.setAxisY(axis_y, series)
-
-        """
         chart.legend().hide()
 
         chartview = QtCharts.QChartView(chart)
@@ -121,10 +111,11 @@ class CandlestickChart(object):
         max_y = df[self.COL_NAME_HI].max()
         min_y = df[self.COL_NAME_LO].min()
 
-        max_x = df.index.max()
-        min_x = df.index.min()
+        if gran_id < Gran.GRAN_D:
+            fmt = "%Y/%m/%d %H:%M"
+        else:
+            fmt = "%Y/%m/%d"
 
-        cnt = 0
         x_axis_label = []
         self.__series.clear()
         for time, sr in df.iterrows():
@@ -132,20 +123,12 @@ class CandlestickChart(object):
             h_ = sr[self.COL_NAME_HI]
             l_ = sr[self.COL_NAME_LO]
             c_ = sr[self.COL_NAME_CL]
-            t_ = QDateTime(time)
-            cnt = cnt + 1
-            x_axis_label.append(str(cnt))
-            """
-            cnd = QtCharts.QCandlestickSet(
-                o_, h_, l_, c_, t_.toMSecsSinceEpoch())
-            """
+            x_axis_label.append(time.strftime(fmt))
             cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_)
             self.__series.append(cnd)
-        #self.__chart.createDefaultAxes()
 
         self.__chart.axisX(self.__series).setCategories(x_axis_label)
-
-        self.__chart.axisX().setRange(0, cnt)
+        self.__chart.axisX().setRange(x_axis_label[0], x_axis_label[-1])
         self.__chart.axisY().setRange(min_y, max_y)
 
     def resize(self, frame_size):
