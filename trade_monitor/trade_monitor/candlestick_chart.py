@@ -55,9 +55,14 @@ class CandlestickChart(object):
 
         # X Axis Settings
         axis_x = QtCharts.QDateTimeAxis()
+        axis_x.setTickCount(2)
         axis_x.setTitleText("Date")
-        axis_x.setFormat("h:mm")
-        #axis_x.setLabelsAngle(0)
+        axis_x.setFormat("yyyy/MM/dd h:mm")
+        axis_x.setLabelsAngle(0)
+        #axis_x.setRange(dt.datetime.strptime('202005070000', '%Y%m%d%H%M'),
+        #                dt.datetime.strptime('202006070000', '%Y%m%d%H%M'))
+        axis_x.setRange(QDateTime(QDate(2020, 5, 7), QTime(0, 0)),
+                        QDateTime(QDate(2020, 6, 7), QTime(0, 0)))
 
         # Y Axis Settings
         axis_y = QtCharts.QValueAxis()
@@ -126,9 +131,9 @@ class CandlestickChart(object):
             c_ = sr[self.COL_NAME_CL]
             qd = QDate(dt_.year, dt_.month, dt_.day)
             qt = QTime(dt_.hour, dt_.minute)
-            qdt = QDateTime(qd, qt).toMSecsSinceEpoch()
+            qdt = QDateTime(qd, qt)
             qdatetimelist.append(qdt)
-            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_, qdt)
+            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_, qdt.toMSecsSinceEpoch())
             self.__series.append(cnd)
 
         min_x = qdatetimelist[0]
@@ -138,7 +143,10 @@ class CandlestickChart(object):
         print(min_x)
         print(max_x)
 
-        self.__chart.axisX().setRange(min_x, max_x)
+        self.__chart.axisX().setRange(min_x,
+                                      max_x)
+        #self.__chart.axisX().setRange(dt.datetime.strptime('202005070845','%Y%m%d%H%M'),
+        #                              dt.datetime.strptime('202006071345','%Y%m%d%H%M'))
         self.__chart.axisY().setRange(min_y, max_y)
 
     def resize(self, frame_size):
