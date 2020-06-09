@@ -6,7 +6,7 @@ from PySide2.QtCore import QItemSelectionModel
 
 import rclpy
 
-from trade_monitor.candlestick_chart import CandlestickChart
+from trade_monitor.candlestick_chart import CandlestickChartGapFill
 
 from trade_apl_msgs.srv import GapFillMntSrv
 from trade_apl_msgs.msg import GapFillMsg
@@ -67,7 +67,7 @@ class GapFillUi():
         ui.treeView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
 
-        cs_chart = CandlestickChart(ui.widget_chart_gapfill)
+        cs_chart = CandlestickChartGapFill(ui.widget_chart_gapfill)
 
         # Create service client "CandlesMonitor"
         srv_type = GapFillMntSrv
@@ -181,13 +181,13 @@ class GapFillUi():
                            COL_NAME_ASK_LO,
                            COL_NAME_ASK_CL
                            ]]
-        dftmp.columns = [CandlestickChart.COL_NAME_OP,
-                         CandlestickChart.COL_NAME_HI,
-                         CandlestickChart.COL_NAME_LO,
-                         CandlestickChart.COL_NAME_CL
+        dftmp.columns = [CandlestickChartGapFill.COL_NAME_OP,
+                         CandlestickChartGapFill.COL_NAME_HI,
+                         CandlestickChartGapFill.COL_NAME_LO,
+                         CandlestickChartGapFill.COL_NAME_CL
                          ]
 
-        self.__cs_chart.update(dftmp, gran_id)
+        self.__cs_chart.update(dftmp)
 
     def resize_chart_widget(self):
         fs = self.__ui.widget_chart_gapfill.frameSize()
