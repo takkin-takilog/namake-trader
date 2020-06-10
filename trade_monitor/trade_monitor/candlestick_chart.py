@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import datetime as dt
 from PySide2.QtCharts import QtCharts
-from PySide2.QtCore import Qt, QDateTime, QDate
+from PySide2.QtCore import Qt, QDateTime, QDate, QTime
 from PySide2.QtGui import QPalette, QLinearGradient, QColor, QFont
 from trade_manager_msgs.msg import Granularity as Gran
 
@@ -212,11 +212,11 @@ class CandlestickChartGapFill(CandlestickChartAbs):
         super().__init__(widget)
 
         # X Axis Settings
-        axis_x = QtCharts.QBarCategoryAxis()
-        axis_x.setGridLineVisible(False)
-        axis_x.hide()
-        #axis_x.setTitleText("Date")
-        #axis_x.setLabelsAngle(45)
+        axis_x = QtCharts.QDateTimeAxis()
+        axis_x.setTitleText("Date")
+        axis_x.setFormat("dd-MM-yyyy h:mm")
+        axis_x.setLabelsAngle(0)
+        axis_x.setTickCount(10)
 
         # Y Axis Settings
         axis_y = QtCharts.QValueAxis()
@@ -256,23 +256,31 @@ class CandlestickChartGapFill(CandlestickChartAbs):
 
     def update(self, df):
 
-        FMT = "%H:%M"
-
         max_y = df[self.COL_NAME_HI].max()
         min_y = df[self.COL_NAME_LO].min()
 
-        x_axis_label = []
+        dt_ = df.index[0]
+        qd = QDate(dt_.year, dt_.month, dt_.day)
+        qt = QTime(dt_.hour, dt_.minute)
+        min_x = QDateTime(qd, qt)
+
+        dt_ = df.index[-1]
+        qd = QDate(dt_.year, dt_.month, dt_.day)
+        qt = QTime(dt_.hour, dt_.minute)
+        max_x = QDateTime(qd, qt)
+
         self._series.clear()
-        for time, sr in df.iterrows():
+        for dt_, sr in df.iterrows():
             o_ = sr[self.COL_NAME_OP]
             h_ = sr[self.COL_NAME_HI]
             l_ = sr[self.COL_NAME_LO]
             c_ = sr[self.COL_NAME_CL]
-            x_axis_label.append(time.strftime(FMT))
-            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_)
+            qd = QDate(dt_.year, dt_.month, dt_.day)
+            qt = QTime(dt_.hour, dt_.minute)
+            qdt = QDateTime(qd, qt)
+            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_,
+                                           qdt.toMSecsSinceEpoch())
             self._series.append(cnd)
 
-        self._chart.axisX(self._series).setCategories(x_axis_label)
-        self._chart.axisX().setRange(x_axis_label[0], x_axis_label[-1])
+        self._chart.axisX().setRange(min_x, max_x)
         self._chart.axisY().setRange(min_y, max_y)
-
