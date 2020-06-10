@@ -6,7 +6,8 @@ from PySide2.QtCore import QItemSelectionModel
 
 import rclpy
 
-from trade_monitor.candlestick_chart import CandlestickChartGapFill
+from trade_monitor.candlestick_chart import CandlestickChartGapFillPrev
+from trade_monitor.candlestick_chart import CandlestickChartGapFillCurr
 
 from trade_apl_msgs.srv import GapFillMntSrv
 from trade_apl_msgs.msg import GapFillMsg
@@ -67,7 +68,8 @@ class GapFillUi():
         ui.treeView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
 
-        cs_chart = CandlestickChartGapFill(ui.widget_chart_gapfill)
+        chart_prev = CandlestickChartGapFillPrev(ui.widget_chart_gapfill_prev)
+        chart_curr = CandlestickChartGapFillCurr(ui.widget_chart_gapfill_curr)
 
         # Create service client "CandlesMonitor"
         srv_type = GapFillMntSrv
@@ -77,7 +79,8 @@ class GapFillUi():
         while not srv_cli.wait_for_service(timeout_sec=1.0):
             logger.info("Waiting for \"" + srv_name + "\" service...")
 
-        self.__cs_chart = cs_chart
+        self.__chart_prev = chart_prev
+        self.__chart_curr = chart_curr
         self.__qstd_itm_mdl = qstd_itm_mdl
 
         self.__inst_id = INST_MSG_LIST[0].msg_id
@@ -138,8 +141,8 @@ class GapFillUi():
 
         trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
 
-        dt_from = trg_date - dt.timedelta(days=1, hours=19)
-        dt_to = trg_date + dt.timedelta(hours=self.__end_hour)
+        dt_from = trg_date - dt.timedelta(days=2)
+        dt_to = trg_date + dt.timedelta(hours=12)
 
         req = CandlesMntSrv.Request()
         req.gran_msg.granularity_id = gran_id
@@ -181,17 +184,34 @@ class GapFillUi():
                            COL_NAME_ASK_LO,
                            COL_NAME_ASK_CL
                            ]]
-        dftmp.columns = [CandlestickChartGapFill.COL_NAME_OP,
-                         CandlestickChartGapFill.COL_NAME_HI,
-                         CandlestickChartGapFill.COL_NAME_LO,
-                         CandlestickChartGapFill.COL_NAME_CL
+        dftmp.columns = [CandlestickChartGapFillPrev.COL_NAME_OP,
+                         CandlestickChartGapFillPrev.COL_NAME_HI,
+                         CandlestickChartGapFillPrev.COL_NAME_LO,
+                         CandlestickChartGapFillPrev.COL_NAME_CL
                          ]
 
-        self.__cs_chart.update(dftmp)
+        th = dftmp.index[-1] - dt.timedelta(days=1)
+        df_prev = dftmp[dftmp.index < th].tail(30)
+        df_curr = dftmp[th < dftmp.index].head(30)
+
+        max_prev = df_prev[CandlestickChartGapFillPrev.COL_NAME_HI].max()
+        min_prev = df_prev[CandlestickChartGapFillPrev.COL_NAME_LO].min()
+        max_curr = df_curr[CandlestickChartGapFillCurr.COL_NAME_HI].max()
+        min_curr = df_curr[CandlestickChartGapFillCurr.COL_NAME_LO].min()
+
+        max_y = max(max_prev, max_curr)
+        min_y = min(min_prev, min_curr)
+
+        self.__chart_prev.update(df_prev, min_y, max_y)
+        self.__chart_curr.update(df_curr, min_y, max_y)
+
+        # hours=self.__end_hour
 
     def resize_chart_widget(self):
-        fs = self.__ui.widget_chart_gapfill.frameSize()
-        self.__cs_chart.resize(fs)
+        fs = self.__ui.widget_chart_gapfill_prev.frameSize()
+        self.__chart_prev.resize(fs)
+        fs = self.__ui.widget_chart_gapfill_curr.frameSize()
+        self.__chart_curr.resize(fs)
 
     @property
     def inst_id(self):
