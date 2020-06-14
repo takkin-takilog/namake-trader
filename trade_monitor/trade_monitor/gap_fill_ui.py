@@ -90,6 +90,7 @@ class GapFillUi():
         self.__srv_cli = srv_cli
         self.__cli_cdl = cli_cdl
         self.__end_hour = 9
+        self.__decimal_digit = INST_MSG_LIST[0].decimal_digit
 
     def __on_fetch_gapfill_clicked(self):
 
@@ -128,6 +129,7 @@ class GapFillUi():
             self.__qstd_itm_mdl.appendRow(items)
 
         self.__end_hour = rsp.end_hour
+        self.__decimal_digit = decimal_digit
 
         self.__logger.debug("gapfill end")
 
@@ -202,7 +204,7 @@ class GapFillUi():
         max_y = max(max_prev, max_curr)
         min_y = min(min_prev, min_curr)
 
-        self.__chart_prev.update(df_prev, min_y, max_y)
+        self.__chart_prev.update(df_prev, min_y, max_y, self.__decimal_digit)
         #self.__chart_curr.update(df_curr, min_y, max_y, self.__end_hour)
 
     def resize_chart_widget(self):

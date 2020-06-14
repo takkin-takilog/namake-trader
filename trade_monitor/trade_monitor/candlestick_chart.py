@@ -154,26 +154,9 @@ class CalloutAbs(QGraphicsItem):
         self._textRect = QRectF()
         self._rect = QRectF()
 
-    def setText(self, text: str):
-        self._text = text
-
-        metrics = QFontMetrics(self._chart.font())
-        self._textRect = QRectF(metrics.boundingRect(QRect(0, 0, 150, 150),
-                                                     Qt.AlignLeft,
-                                                     self._text))
-        self._textRect.translate(5, 5)
-        self.prepareGeometryChange()
-        self._rect = self._textRect.adjusted(-5, -5, 5, 5)
-
-    def setAnchor(self, point):
-        self._anchor = point
-
-    def updateGeometry(self):
-        self.prepareGeometryChange()
-        anchor = QPointF()
-        anchor.setX(self._anchor.x() - self._rect.width() / 2)
-        anchor.setY(self._chart.plotArea().bottom())
-        self.setPos(anchor)
+    @abstractmethod
+    def updateGeometry(self, text: str, point):
+        raise NotImplementedError()
 
     def boundingRect(self) -> QRectF:
         from_parent = self.mapFromParent(self._anchor)
@@ -185,27 +168,25 @@ class CalloutAbs(QGraphicsItem):
         rect.setBottom(max(self._rect.bottom(), anchor.y()))
         return rect
 
+    @abstractmethod
     def paint(self,
               painter: QPainter,
               option: QStyleOptionGraphicsItem,
               widget: QWidget):
-        print("---------- paint ----------")
-        path = QPainterPath()
-        mr = self._rect
-        print("mr: {}" .format(mr))
-        path.addRoundedRect(mr, 5, 5)   # 丸みを帯びた長方形の角を規定
+        raise NotImplementedError()
 
-        # 枠を描写
-        painter.setBrush(QColor(93, 93, 93, 90))    # 図形の塗りつぶし
-        painter.setPen(QPen(QColor(93, 93, 93, 75)))
-        painter.drawPath(path)
+    def _setText(self, text: str):
+        self._text = text
 
-        # 文字を描写
-        painter.setPen(QPen(QColor("white")))
-        painter.drawText(self._textRect, self._text)
-
-        #print("text: " .format(self._text))
-        #print("text_rect: " .format(self._textRect))
+        metrics = QFontMetrics(self._chart.font())
+        self._textRect = QRectF(metrics.boundingRect(QRect(0, 0, 0, 0),
+                                                     Qt.AlignLeft,
+                                                     self._text))
+        dx = 5
+        dy = 5
+        self._textRect.translate(dx, dy)
+        self.prepareGeometryChange()
+        self._rect = self._textRect.adjusted(-dx, -dy, dx, dy)
 
 
 class CalloutDataTime(CalloutAbs):
@@ -213,41 +194,16 @@ class CalloutDataTime(CalloutAbs):
     def __init__(self, parent: QtCharts.QChart):
         super().__init__(parent)
 
-    def setText(self, text: str):
-        self._text = text
+    def updateGeometry(self, text: str, point):
 
-        metrics = QFontMetrics(self._chart.font())
-        self._textRect = QRectF(metrics.boundingRect(QRect(0, 0, 0, 0),
-                                                     Qt.AlignLeft,
-                                                     self._text))
-
-        print("------------------ metrics ---------------------")
-        print(self._textRect)
-        dx = 5
-        dy = 5
-        self._textRect.translate(dx, dy)
-        self.prepareGeometryChange()
-        self._rect = self._textRect.adjusted(-dx, -dy, dx, dy)
-
-    def setAnchor(self, point):
+        self._setText(text)
         self._anchor = point
 
-    def updateGeometry(self):
         self.prepareGeometryChange()
         anchor = QPointF()
         anchor.setX(self._anchor.x() - self._rect.width() / 2)
         anchor.setY(self._chart.plotArea().bottom())
         self.setPos(anchor)
-
-    def boundingRect(self) -> QRectF:
-        from_parent = self.mapFromParent(self._anchor)
-        anchor = QPointF(from_parent)
-        rect = QRectF()
-        rect.setLeft(min(self._rect.left(), anchor.x()))
-        rect.setRight(max(self._rect.right(), anchor.x()))
-        rect.setTop(min(self._rect.top(), anchor.y()))
-        rect.setBottom(max(self._rect.bottom(), anchor.y()))
-        return rect
 
     def paint(self,
               painter: QPainter,
@@ -268,8 +224,41 @@ class CalloutDataTime(CalloutAbs):
         painter.setPen(QPen(QColor("white")))
         painter.drawText(self._textRect, self._text)
 
-        #print("text: " .format(self._text))
-        #print("text_rect: " .format(self._textRect))
+
+class CallouPrice(CalloutAbs):
+
+    def __init__(self, parent: QtCharts.QChart):
+        super().__init__(parent)
+
+    def updateGeometry(self, text: str, point):
+
+        self._setText(text)
+        self._anchor = point
+
+        self.prepareGeometryChange()
+        anchor = QPointF()
+        anchor.setX(self._chart.plotArea().left() - self._rect.width())
+        anchor.setY(self._anchor.y() - self._rect.height() / 2)
+        self.setPos(anchor)
+
+    def paint(self,
+              painter: QPainter,
+              option: QStyleOptionGraphicsItem,
+              widget: QWidget):
+        print("---------- paint ----------")
+        path = QPainterPath()
+        mr = self._rect
+        print("mr: {}" .format(mr))
+        path.addRoundedRect(mr, 5, 5)   # 丸みを帯びた長方形の角を規定
+
+        # 枠を描写
+        painter.setBrush(QColor(93, 93, 93, 90))    # 図形の塗りつぶし
+        painter.setPen(QPen(QColor(93, 93, 93, 75)))
+        painter.drawPath(path)
+
+        # 文字を描写
+        painter.setPen(QPen(QColor("white")))
+        painter.drawText(self._textRect, self._text)
 
 
 class CandlestickChartAbs(QtCharts.QChartView):
@@ -381,16 +370,29 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         self._series.attachAxis(axis_y)
 
         self._callout_dt = CalloutDataTime(self._chart)
+        self._callout_pr = CallouPrice(self._chart)
         self.scene().addItem(self._callout_dt)
+        self.scene().addItem(self._callout_pr)
 
-        self._lineItem = QGraphicsLineItem()
-        pen = self._lineItem.pen()
+        # Vertical Line
+        self._ver_lineItem = QGraphicsLineItem()
+        pen = self._ver_lineItem.pen()
         pen.setColor(QColor(93, 93, 93, 75))
         pen.setWidth(3)
-        self._lineItem.setPen(pen)
-        self.scene().addItem(self._lineItem)
+        self._ver_lineItem.setPen(pen)
+        self.scene().addItem(self._ver_lineItem)
 
-    def update(self, df, min_y, max_y):
+        # Horizontal Line
+        self._hor_lineItem = QGraphicsLineItem()
+        pen = self._hor_lineItem.pen()
+        pen.setColor(QColor(93, 93, 93, 75))
+        pen.setWidth(3)
+        self._hor_lineItem.setPen(pen)
+        self.scene().addItem(self._hor_lineItem)
+
+        self.__decimal_digit = 0
+
+    def update(self, df, min_y, max_y, decimal_digit):
 
         dt_ = df.index[0]
         qd = QDate(dt_.year, dt_.month, dt_.day)
@@ -421,6 +423,7 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         self._chart.axisX().setRange(min_x, max_x)
         self._chart.axisY().setRange(min_y, max_y)
         self.__df = df
+        self.__decimal_digit = decimal_digit
 
     def mouseMoveEvent(self, event):
 
@@ -428,9 +431,6 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         if flag:
             m2v = self._chart.mapToValue(event.pos())
             dt_ = QDateTime.fromMSecsSinceEpoch(round(m2v.x()))
-            dtstr = dt_.toString("yyyy/MM/dd hh:mm")
-            pri = m2v.y()
-            #print("x_p: {}" .format(dt_))
             m2p = self._chart.mapToPosition(m2v)
             print("-------------------- mouseMoveEvent -------------------------")
             """
@@ -438,22 +438,35 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
             print("m2v: {}" .format(m2v))
             print("m2p: {}" .format(m2p))
             """
-
-            self._callout_dt.setText(dtstr)
-            self._callout_dt.setAnchor(event.pos())
-            self._callout_dt.setZValue(11)
-            self._callout_dt.updateGeometry()
+            dtstr = dt_.toString("yyyy/MM/dd hh:mm")
+            self._callout_dt.setZValue(0)
+            self._callout_dt.updateGeometry(dtstr, event.pos())
             self._callout_dt.show()
 
+            fmt = "{:." + str(self.__decimal_digit) + "f}"
+            prstr = fmt.format(m2v.y())
+            self._callout_pr.setZValue(1)
+            self._callout_pr.updateGeometry(prstr, event.pos())
+            self._callout_pr.show()
+
             plotAreaRect = self._chart.plotArea()
-            self._lineItem.setLine(QLineF(event.pos().x(),
-                                          plotAreaRect.top(),
-                                          event.pos().x(),
-                                          plotAreaRect.bottom()))
-            self._lineItem.show()
+            self._ver_lineItem.setLine(QLineF(event.pos().x(),
+                                              plotAreaRect.top(),
+                                              event.pos().x(),
+                                              plotAreaRect.bottom()))
+            self._ver_lineItem.show()
+
+            self._hor_lineItem.setLine(QLineF(plotAreaRect.left(),
+                                              event.pos().y(),
+                                              plotAreaRect.right(),
+                                              event.pos().y()))
+            self._hor_lineItem.show()
+
         else:
             self._callout_dt.hide()
-            self._lineItem.hide()
+            self._callout_pr.hide()
+            self._ver_lineItem.hide()
+            self._hor_lineItem.hide()
 
 
 class CandlestickChartGapFillCurr(CandlestickChartAbs):
