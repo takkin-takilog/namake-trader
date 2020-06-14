@@ -69,7 +69,7 @@ class GapFillUi():
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
 
         chart_prev = CandlestickChartGapFillPrev(ui.widget_chart_gapfill_prev)
-        chart_curr = CandlestickChartGapFillCurr(ui.widget_chart_gapfill_curr)
+        chart_curr = CandlestickChartGapFillPrev(ui.widget_chart_gapfill_curr)
 
         # Create service client "CandlesMonitor"
         srv_type = GapFillMntSrv
@@ -203,15 +203,15 @@ class GapFillUi():
         min_y = min(min_prev, min_curr)
 
         self.__chart_prev.update(df_prev, min_y, max_y)
-        self.__chart_curr.update(df_curr, min_y, max_y)
-
-        # hours=self.__end_hour
+        #self.__chart_curr.update(df_curr, min_y, max_y, self.__end_hour)
 
     def resize_chart_widget(self):
         fs = self.__ui.widget_chart_gapfill_prev.frameSize()
         self.__chart_prev.resize(fs)
+        """
         fs = self.__ui.widget_chart_gapfill_curr.frameSize()
         self.__chart_curr.resize(fs)
+        """
 
     @property
     def inst_id(self):

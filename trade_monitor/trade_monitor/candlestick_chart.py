@@ -1,9 +1,12 @@
 from abc import ABCMeta, abstractmethod
 import pandas as pd
 import datetime as dt
+from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from PySide2.QtCharts import QtCharts
-from PySide2.QtCore import Qt, QDateTime, QDate, QTime
-from PySide2.QtGui import QPalette, QLinearGradient, QColor, QFont, QPen
+from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QRectF, QRect, QLineF
+from PySide2.QtGui import QPalette, QColor, QFont, QPen, QFontMetrics, QPainter, QPainterPath
+from PySide2.QtGui import QLinearGradient
+from PySide2.QtWidgets import QGraphicsLineItem
 from trade_manager_msgs.msg import Granularity as Gran
 
 
@@ -139,7 +142,73 @@ class CandlestickChart(object):
         self.__chartview.resize(frame_size)
 
 
-class CandlestickChartAbs(metaclass=ABCMeta):
+class Callout(QGraphicsItem):
+
+    def __init__(self, parent: QtCharts.QChart):
+        super().__init__()
+        self._chart = parent
+        self._text = ""
+        self._anchor = QPointF()
+        self._font = QFont()
+        self._textRect = QRectF()
+        self._rect = QRectF()
+
+    def setText(self, text: str):
+        self._text = text
+
+        metrics = QFontMetrics(self._chart.font())
+        self._textRect = QRectF(metrics.boundingRect(QRect(0, 0, 150, 150),
+                                                     Qt.AlignLeft,
+                                                     self._text))
+        self._textRect.translate(5, 5)
+        self.prepareGeometryChange()
+        self._rect = self._textRect.adjusted(-5, -5, 5, 5)
+
+    def setAnchor(self, point):
+        self._anchor = point
+
+    def updateGeometry(self):
+        self.prepareGeometryChange()
+        anchor = QPointF()
+        anchor.setX(self._anchor.x() - self._rect.width() / 2)
+        anchor.setY(self._chart.plotArea().bottom())
+        self.setPos(anchor)
+
+    def boundingRect(self) -> QRectF:
+        from_parent = self.mapFromParent(self._anchor)
+        anchor = QPointF(from_parent)
+        rect = QRectF()
+        rect.setLeft(min(self._rect.left(), anchor.x()))
+        rect.setRight(max(self._rect.right(), anchor.x()))
+        rect.setTop(min(self._rect.top(), anchor.y()))
+        rect.setBottom(max(self._rect.bottom(), anchor.y()))
+        return rect
+
+    def paint(self,
+              painter: QPainter,
+              option: QStyleOptionGraphicsItem,
+              widget: QWidget):
+        print("---------- paint ----------")
+        path = QPainterPath()
+        mr = self._rect
+        print("mr: {}" .format(mr))
+        path.addRoundedRect(mr, 5, 5)   # 丸みを帯びた長方形の角を規定
+
+        # 枠を描写
+        painter.setBrush(QColor(93, 93, 93, 90))    # 図形の塗りつぶし
+        painter.setPen(QPen(QColor(93, 93, 93, 75)))
+        painter.drawPath(path)
+
+        # 文字を描写
+        painter.setPen(QPen(QColor("white")))
+        painter.drawText(self._textRect, self._text)
+
+        #print("text: " .format(self._text))
+        #print("text_rect: " .format(self._textRect))
+
+
+class CandlestickChartAbs(QtCharts.QChartView):
+    __metaclass__ = ABCMeta
 
     COL_NAME_OP = "open"
     COL_NAME_HI = "high"
@@ -147,6 +216,7 @@ class CandlestickChartAbs(metaclass=ABCMeta):
     COL_NAME_CL = "close"
 
     def __init__(self, widget):
+        super().__init__()
 
         # Chart Type
         series = QtCharts.QCandlestickSeries()
@@ -191,22 +261,19 @@ class CandlestickChartAbs(metaclass=ABCMeta):
 
         chart.legend().hide()
 
-        chartview = QtCharts.QChartView(chart)
-        chartview.setParent(widget)
-        chartview.resize(widget.frameSize())
+        self.setChart(chart)
+        self.setParent(widget)
+        self.resize(widget.frameSize())
 
         chart.legend().setVisible(False)
 
         self._series = series
         self._chart = chart
-        self._chartview = chartview
+        self._widget = widget
 
     @abstractmethod
     def update(self, df):
         raise NotImplementedError()
-
-    def resize(self, frame_size):
-        self._chartview.resize(frame_size)
 
 
 class CandlestickChartGapFillPrev(CandlestickChartAbs):
@@ -243,11 +310,20 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         #axis_x.setLabelsFont(Lfont)
         #axis_y.setLabelsFont(Lfont)
 
-        # add Axis
         self._chart.addAxis(axis_x, Qt.AlignBottom)
         self._series.attachAxis(axis_x)
         self._chart.addAxis(axis_y, Qt.AlignLeft)
         self._series.attachAxis(axis_y)
+
+        self._tooltip = Callout(self._chart)
+        self.scene().addItem(self._tooltip)
+
+        self._lineItem = QGraphicsLineItem()
+        pen = self._lineItem.pen()
+        pen.setColor(QColor(93, 93, 93, 75))
+        pen.setWidth(3)
+        self._lineItem.setPen(pen)
+        self.scene().addItem(self._lineItem)
 
     def update(self, df, min_y, max_y):
 
@@ -279,6 +355,39 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         self._chart.axisX().setTitleText(dtstr)
         self._chart.axisX().setRange(min_x, max_x)
         self._chart.axisY().setRange(min_y, max_y)
+        self.__df = df
+
+    def mouseMoveEvent(self, event):
+
+        flag = self._chart.plotArea().contains(event.pos())
+        if flag:
+            m2v = self._chart.mapToValue(event.pos())
+            dt_ = QDateTime.fromMSecsSinceEpoch(round(m2v.x()))
+            pri = m2v.y()
+            #print("x_p: {}" .format(dt_))
+            m2p = self._chart.mapToPosition(m2v)
+            print("-------------------- mouseMoveEvent -------------------------")
+            """
+            print("pos: {}" .format(event.pos()))
+            print("m2v: {}" .format(m2v))
+            print("m2p: {}" .format(m2p))
+            """
+
+            self._tooltip.setText(f"X: {dt_} \nY: {pri}")
+            self._tooltip.setAnchor(event.pos())
+            self._tooltip.setZValue(11)
+            self._tooltip.updateGeometry()
+            self._tooltip.show()
+
+            plotAreaRect = self._chart.plotArea()
+            self._lineItem.setLine(QLineF(event.pos().x(),
+                                          plotAreaRect.top(),
+                                          event.pos().x(),
+                                          plotAreaRect.bottom()))
+            self._lineItem.show()
+        else:
+            self._tooltip.hide()
+            self._lineItem.hide()
 
 
 class CandlestickChartGapFillCurr(CandlestickChartAbs):
@@ -315,13 +424,12 @@ class CandlestickChartGapFillCurr(CandlestickChartAbs):
         #axis_x.setLabelsFont(Lfont)
         #axis_y.setLabelsFont(Lfont)
 
-        # add Axis
         self._chart.addAxis(axis_x, Qt.AlignBottom)
         self._series.attachAxis(axis_x)
         self._chart.addAxis(axis_y, Qt.AlignRight)
         self._series.attachAxis(axis_y)
 
-    def update(self, df, min_y, max_y):
+    def update(self, df, min_y, max_y, end_hour):
 
         dt_ = df.index[0]
         qd = QDate(dt_.year, dt_.month, dt_.day)
@@ -332,6 +440,10 @@ class CandlestickChartGapFillCurr(CandlestickChartAbs):
         qd = QDate(dt_.year, dt_.month, dt_.day)
         qt = QTime(dt_.hour, dt_.minute)
         max_x = QDateTime(qd, qt)
+
+        # End vertical line
+        qt = QTime(end_hour, 0)
+        line_x = QDateTime(qd, qt).toMSecsSinceEpoch()
 
         dtstr = dt_.strftime("%Y/%m/%d")
 
@@ -351,4 +463,3 @@ class CandlestickChartGapFillCurr(CandlestickChartAbs):
         self._chart.axisX().setTitleText(dtstr)
         self._chart.axisX().setRange(min_x, max_x)
         self._chart.axisY().setRange(min_y, max_y)
-
