@@ -10,6 +10,10 @@ from PySide2.QtWidgets import QGraphicsLineItem
 from trade_manager_msgs.msg import Granularity as Gran
 
 
+CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
+CALLOUT_DATE_COLOR = QColor(0, 204, 51)
+
+
 class CandlestickChart(object):
 
     COL_NAME_OP = "open"
@@ -155,7 +159,7 @@ class CalloutAbs(QGraphicsItem):
         self._rect = QRectF()
 
     @abstractmethod
-    def updateGeometry(self, text: str, point):
+    def updateGeometry(self, text: str, point: QPointF):
         raise NotImplementedError()
 
     def boundingRect(self) -> QRectF:
@@ -194,7 +198,7 @@ class CalloutDataTime(CalloutAbs):
     def __init__(self, parent: QtCharts.QChart):
         super().__init__(parent)
 
-    def updateGeometry(self, text: str, point):
+    def updateGeometry(self, text: str, point: QPointF):
 
         self._setText(text)
         self._anchor = point
@@ -216,8 +220,8 @@ class CalloutDataTime(CalloutAbs):
         path.addRoundedRect(mr, 5, 5)   # 丸みを帯びた長方形の角を規定
 
         # 枠を描写
-        painter.setBrush(QColor(93, 93, 93, 90))    # 図形の塗りつぶし
-        painter.setPen(QPen(QColor(93, 93, 93, 75)))
+        painter.setBrush(CALLOUT_DATE_COLOR)    # 図形の塗りつぶし
+        painter.setPen(QPen(CALLOUT_DATE_COLOR))
         painter.drawPath(path)
 
         # 文字を描写
@@ -230,7 +234,7 @@ class CallouPrice(CalloutAbs):
     def __init__(self, parent: QtCharts.QChart):
         super().__init__(parent)
 
-    def updateGeometry(self, text: str, point):
+    def updateGeometry(self, text: str, point: QPointF):
 
         self._setText(text)
         self._anchor = point
@@ -248,16 +252,15 @@ class CallouPrice(CalloutAbs):
         print("---------- paint ----------")
         path = QPainterPath()
         mr = self._rect
-        print("mr: {}" .format(mr))
         path.addRoundedRect(mr, 5, 5)   # 丸みを帯びた長方形の角を規定
 
         # 枠を描写
-        painter.setBrush(QColor(93, 93, 93, 90))    # 図形の塗りつぶし
-        painter.setPen(QPen(QColor(93, 93, 93, 75)))
+        painter.setBrush(CALLOUT_PRICE_COLOR)    # 図形の塗りつぶし
+        painter.setPen(QPen(CALLOUT_PRICE_COLOR))
         painter.drawPath(path)
 
         # 文字を描写
-        painter.setPen(QPen(QColor("white")))
+        painter.setPen(QPen(QColor(Qt.white)))
         painter.drawText(self._textRect, self._text)
 
 
@@ -276,6 +279,8 @@ class CandlestickChartAbs(QtCharts.QChartView):
         series = QtCharts.QCandlestickSeries()
         series.setDecreasingColor(Qt.red)
         series.setIncreasingColor(Qt.green)
+        #series.setCapsWidth(0.1)
+        #series.setBodyWidth(0.1)
 
         # Create Chart and set General Chart setting
         chart = QtCharts.QChart()
@@ -377,16 +382,16 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         # Vertical Line
         self._ver_lineItem = QGraphicsLineItem()
         pen = self._ver_lineItem.pen()
-        pen.setColor(QColor(93, 93, 93, 75))
-        pen.setWidth(3)
+        pen.setColor(CALLOUT_DATE_COLOR)
+        pen.setWidth(1)
         self._ver_lineItem.setPen(pen)
         self.scene().addItem(self._ver_lineItem)
 
         # Horizontal Line
         self._hor_lineItem = QGraphicsLineItem()
         pen = self._hor_lineItem.pen()
-        pen.setColor(QColor(93, 93, 93, 75))
-        pen.setWidth(3)
+        pen.setColor(CALLOUT_PRICE_COLOR)
+        pen.setWidth(1)
         self._hor_lineItem.setPen(pen)
         self.scene().addItem(self._hor_lineItem)
 

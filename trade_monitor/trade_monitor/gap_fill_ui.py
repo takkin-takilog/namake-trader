@@ -64,7 +64,7 @@ class GapFillUi():
 
         # set header
         qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
-        ui.tableView_gapfill.setModel(qstd_itm_mdl)
+        #ui.tableView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
 
