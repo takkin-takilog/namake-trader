@@ -24,6 +24,24 @@ from trade_monitor.util import (COL_NAME_TIME,
                                 COL_NAME_ASK_CL
                                 )
 
+COL_NAME_DATE = "date"
+COL_NAME_GPA_CLOSE_PRICE = "gap close price"
+COL_NAME_GPA_OPEN_PRICE = "gap open price"
+COL_NAME_GPA_RANGE_PRICE = "gap range price"
+COL_NAME_SUCCESS_FLAG = "success flag"
+COL_NAME_GAP_FILLED_TIME = "gap filled time"
+COL_NAME_MAX_OPEN_RANGE = "max open range"
+COL_NAME_END_CLOSE_PRICE = "end close price"
+
+COLUMNS = [COL_NAME_DATE,
+           COL_NAME_GPA_CLOSE_PRICE,
+           COL_NAME_GPA_OPEN_PRICE,
+           COL_NAME_GPA_RANGE_PRICE,
+           COL_NAME_SUCCESS_FLAG,
+           COL_NAME_GAP_FILLED_TIME,
+           COL_NAME_MAX_OPEN_RANGE,
+           COL_NAME_END_CLOSE_PRICE,
+           ]
 
 class GapFillUi():
 
@@ -113,6 +131,7 @@ class GapFillUi():
         assert flg, "fetch [Gap-Fill] failed!"
 
         rsp = future.result()
+        data = []
         for gapfillmsg in rsp.gapfillmsg_list:
             items = [
                 QStandardItem(gapfillmsg.date),
@@ -127,6 +146,19 @@ class GapFillUi():
                 QStandardItem(fmt.format(gapfillmsg.end_close_price))
             ]
             self.__qstd_itm_mdl.appendRow(items)
+            data.append([gapfillmsg.date,
+                         gapfillmsg.gap_close_price,
+                         gapfillmsg.gap_open_price,
+                         gapfillmsg.gap_range_price,
+                         gapfillmsg.is_gapfill_success,
+                         gapfillmsg.gap_filled_time,
+                         gapfillmsg.max_open_range,
+                         gapfillmsg.end_close_price
+                         ])
+
+        df = pd.DataFrame(data)
+        df.columns = COLUMNS
+        self.__df_gf = df.set_index(COL_NAME_DATE)
 
         self.__end_hour = rsp.end_hour
         self.__decimal_digit = decimal_digit
@@ -139,8 +171,7 @@ class GapFillUi():
         inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
         model_index = selected.at(0).indexes()[0]
         trg_date_str = self.__qstd_itm_mdl.item(model_index.row()).text()
-        self.__logger.debug("target date: " + trg_date_str)
-
+        self.__logger.debug("target_date: " + trg_date_str)
         trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
 
         dt_from = trg_date - dt.timedelta(days=2)
@@ -181,20 +212,20 @@ class GapFillUi():
         df.columns = CANDLE_COL_NAME_LIST
         df = df.set_index(COL_NAME_TIME)
 
-        dftmp = df.loc[:, [COL_NAME_ASK_OP,
+        dfcdl = df.loc[:, [COL_NAME_ASK_OP,
                            COL_NAME_ASK_HI,
                            COL_NAME_ASK_LO,
                            COL_NAME_ASK_CL
                            ]]
-        dftmp.columns = [CandlestickChartGapFillPrev.COL_NAME_OP,
+        dfcdl.columns = [CandlestickChartGapFillPrev.COL_NAME_OP,
                          CandlestickChartGapFillPrev.COL_NAME_HI,
                          CandlestickChartGapFillPrev.COL_NAME_LO,
                          CandlestickChartGapFillPrev.COL_NAME_CL
                          ]
 
-        th = dftmp.index[-1] - dt.timedelta(days=1)
-        df_prev = dftmp[dftmp.index < th].tail(30)
-        df_curr = dftmp[th < dftmp.index].head(30)
+        th = dfcdl.index[-1] - dt.timedelta(days=1)
+        df_prev = dfcdl[dfcdl.index < th].tail(30)
+        df_curr = dfcdl[th < dfcdl.index].head(30)
 
         max_prev = df_prev[CandlestickChartGapFillPrev.COL_NAME_HI].max()
         min_prev = df_prev[CandlestickChartGapFillPrev.COL_NAME_LO].min()
@@ -204,7 +235,13 @@ class GapFillUi():
         max_y = max(max_prev, max_curr)
         min_y = min(min_prev, min_curr)
 
-        self.__chart_prev.update(df_prev, min_y, max_y, self.__decimal_digit)
+        sr_gf = self.__df_gf.loc[trg_date_str]
+
+        self.__chart_prev.update(df_prev,
+                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
+                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
+                                 min_y, max_y,
+                                 self.__decimal_digit)
         #self.__chart_curr.update(df_curr, min_y, max_y, self.__end_hour)
 
     def resize_chart_widget(self):

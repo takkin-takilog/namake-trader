@@ -213,10 +213,10 @@ class CalloutDataTime(CalloutAbs):
               painter: QPainter,
               option: QStyleOptionGraphicsItem,
               widget: QWidget):
-        print("---------- paint ----------")
+        #print("---------- paint ----------")
         path = QPainterPath()
         mr = self._rect
-        print("mr: {}" .format(mr))
+        #print("mr: {}" .format(mr))
         path.addRoundedRect(mr, 5, 5)   # 丸みを帯びた長方形の角を規定
 
         # 枠を描写
@@ -249,7 +249,7 @@ class CallouPrice(CalloutAbs):
               painter: QPainter,
               option: QStyleOptionGraphicsItem,
               widget: QWidget):
-        print("---------- paint ----------")
+        #print("---------- paint ----------")
         path = QPainterPath()
         mr = self._rect
         path.addRoundedRect(mr, 5, 5)   # 丸みを帯びた長方形の角を規定
@@ -379,25 +379,34 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         self.scene().addItem(self._callout_dt)
         self.scene().addItem(self._callout_pr)
 
-        # Vertical Line
-        self._ver_lineItem = QGraphicsLineItem()
-        pen = self._ver_lineItem.pen()
+        # Vertical Line (callout)
+        self._verline_callout = QGraphicsLineItem()
+        pen = self._verline_callout.pen()
         pen.setColor(CALLOUT_DATE_COLOR)
         pen.setWidth(1)
-        self._ver_lineItem.setPen(pen)
-        self.scene().addItem(self._ver_lineItem)
+        self._verline_callout.setPen(pen)
+        self.scene().addItem(self._verline_callout)
 
-        # Horizontal Line
-        self._hor_lineItem = QGraphicsLineItem()
-        pen = self._hor_lineItem.pen()
+        # Horizontal Line (callout)
+        self._horline_callout = QGraphicsLineItem()
+        pen = self._horline_callout.pen()
         pen.setColor(CALLOUT_PRICE_COLOR)
         pen.setWidth(1)
-        self._hor_lineItem.setPen(pen)
-        self.scene().addItem(self._hor_lineItem)
+        self._horline_callout.setPen(pen)
+        self.scene().addItem(self._horline_callout)
+
+        # Horizontal Line (previous close price)
+        self._horline_precls = QGraphicsLineItem()
+        pen = self._horline_precls.pen()
+        pen.setColor(CALLOUT_PRICE_COLOR)
+        pen.setWidth(1)
+        self._horline_precls.setPen(pen)
+        self.scene().addItem(self._horline_precls)
 
         self.__decimal_digit = 0
 
-    def update(self, df, min_y, max_y, decimal_digit):
+    def update(self, df, gap_close_price, gap_open_price,
+               min_y, max_y, decimal_digit):
 
         dt_ = df.index[0]
         qd = QDate(dt_.year, dt_.month, dt_.day)
@@ -430,11 +439,26 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         self.__df = df
         self.__decimal_digit = decimal_digit
 
+        print("------------------------------------------------")
+        print(gap_close_price)
+        print(gap_open_price)
+
+        point = QPointF(0, gap_close_price)
+        m2p = self._chart.mapToPosition(point)
+
+        plotAreaRect = self._chart.plotArea()
+        self._horline_precls.setLine(QLineF(plotAreaRect.left(),
+                                            m2p.y(),
+                                            plotAreaRect.right(),
+                                            m2p.y()))
+        self._horline_precls.show()
+
+
     def mouseMoveEvent(self, event):
 
         flag = self._chart.plotArea().contains(event.pos())
         if flag:
-            print("-------------------- mouseMoveEvent -------------------------")
+            #print("-------------------- mouseMoveEvent -------------------------")
             m2v = self._chart.mapToValue(event.pos())
             dt_ = QDateTime.fromMSecsSinceEpoch(round(m2v.x()))
             qtime = dt_.time()
@@ -455,23 +479,23 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
             self._callout_pr.show()
 
             plotAreaRect = self._chart.plotArea()
-            self._ver_lineItem.setLine(QLineF(m2p.x(),
-                                              plotAreaRect.top(),
-                                              m2p.x(),
-                                              plotAreaRect.bottom()))
-            self._ver_lineItem.show()
+            self._verline_callout.setLine(QLineF(m2p.x(),
+                                                 plotAreaRect.top(),
+                                                 m2p.x(),
+                                                 plotAreaRect.bottom()))
+            self._verline_callout.show()
 
-            self._hor_lineItem.setLine(QLineF(plotAreaRect.left(),
-                                              event.pos().y(),
-                                              plotAreaRect.right(),
-                                              event.pos().y()))
-            self._hor_lineItem.show()
+            self._horline_callout.setLine(QLineF(plotAreaRect.left(),
+                                                 event.pos().y(),
+                                                 plotAreaRect.right(),
+                                                 event.pos().y()))
+            self._horline_callout.show()
 
         else:
             self._callout_dt.hide()
             self._callout_pr.hide()
-            self._ver_lineItem.hide()
-            self._hor_lineItem.hide()
+            self._verline_callout.hide()
+            self._horline_callout.hide()
 
 
 class CandlestickChartGapFillCurr(CandlestickChartAbs):
