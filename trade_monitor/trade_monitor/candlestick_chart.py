@@ -434,18 +434,18 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
 
         flag = self._chart.plotArea().contains(event.pos())
         if flag:
+            print("-------------------- mouseMoveEvent -------------------------")
             m2v = self._chart.mapToValue(event.pos())
             dt_ = QDateTime.fromMSecsSinceEpoch(round(m2v.x()))
+            qtime = dt_.time()
+            minu = round(qtime.minute() / 10) * 10
+            qdttm = QDateTime(dt_.date(),
+                              QTime(qtime.hour(), 0)).addSecs(60 * minu)
+            m2v.setX(qdttm.toMSecsSinceEpoch())
             m2p = self._chart.mapToPosition(m2v)
-            print("-------------------- mouseMoveEvent -------------------------")
-            """
-            print("pos: {}" .format(event.pos()))
-            print("m2v: {}" .format(m2v))
-            print("m2p: {}" .format(m2p))
-            """
-            dtstr = dt_.toString("yyyy/MM/dd hh:mm")
+            dtstr = qdttm.toString("yyyy/MM/dd hh:mm")
             self._callout_dt.setZValue(0)
-            self._callout_dt.updateGeometry(dtstr, event.pos())
+            self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
             fmt = "{:." + str(self.__decimal_digit) + "f}"
@@ -455,9 +455,9 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
             self._callout_pr.show()
 
             plotAreaRect = self._chart.plotArea()
-            self._ver_lineItem.setLine(QLineF(event.pos().x(),
+            self._ver_lineItem.setLine(QLineF(m2p.x(),
                                               plotAreaRect.top(),
-                                              event.pos().x(),
+                                              m2p.x(),
                                               plotAreaRect.bottom()))
             self._ver_lineItem.show()
 
