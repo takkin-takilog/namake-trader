@@ -436,12 +436,7 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         self._chart.axisX().setTitleText(dtstr)
         self._chart.axisX().setRange(min_x, max_x)
         self._chart.axisY().setRange(min_y, max_y)
-        self.__df = df
         self.__decimal_digit = decimal_digit
-
-        print("------------------------------------------------")
-        print(gap_close_price)
-        print(gap_open_price)
 
         point = QPointF(0, gap_close_price)
         m2p = self._chart.mapToPosition(point)

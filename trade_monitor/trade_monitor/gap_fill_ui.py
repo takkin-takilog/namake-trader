@@ -21,10 +21,15 @@ from trade_monitor.util import (COL_NAME_TIME,
                                 COL_NAME_ASK_OP,
                                 COL_NAME_ASK_HI,
                                 COL_NAME_ASK_LO,
-                                COL_NAME_ASK_CL
+                                COL_NAME_ASK_CL,
+                                COL_NAME_BID_OP,
+                                COL_NAME_BID_HI,
+                                COL_NAME_BID_LO,
+                                COL_NAME_BID_CL
                                 )
 
 COL_NAME_DATE = "date"
+COL_NAME_GPA_DIR = "gap dir"
 COL_NAME_GPA_CLOSE_PRICE = "gap close price"
 COL_NAME_GPA_OPEN_PRICE = "gap open price"
 COL_NAME_GPA_RANGE_PRICE = "gap range price"
@@ -33,15 +38,17 @@ COL_NAME_GAP_FILLED_TIME = "gap filled time"
 COL_NAME_MAX_OPEN_RANGE = "max open range"
 COL_NAME_END_CLOSE_PRICE = "end close price"
 
-COLUMNS = [COL_NAME_DATE,
-           COL_NAME_GPA_CLOSE_PRICE,
-           COL_NAME_GPA_OPEN_PRICE,
-           COL_NAME_GPA_RANGE_PRICE,
-           COL_NAME_SUCCESS_FLAG,
-           COL_NAME_GAP_FILLED_TIME,
-           COL_NAME_MAX_OPEN_RANGE,
-           COL_NAME_END_CLOSE_PRICE,
-           ]
+GAP_FILL_COLUMNS = [COL_NAME_DATE,
+                    COL_NAME_GPA_DIR,
+                    COL_NAME_GPA_CLOSE_PRICE,
+                    COL_NAME_GPA_OPEN_PRICE,
+                    COL_NAME_GPA_RANGE_PRICE,
+                    COL_NAME_SUCCESS_FLAG,
+                    COL_NAME_GAP_FILLED_TIME,
+                    COL_NAME_MAX_OPEN_RANGE,
+                    COL_NAME_END_CLOSE_PRICE,
+                    ]
+
 
 class GapFillUi():
 
@@ -66,6 +73,24 @@ class GapFillUi():
         "Max open range",
         "End close price"
     ]
+
+    ASK_COLUMNS = [COL_NAME_ASK_OP,
+                   COL_NAME_ASK_HI,
+                   COL_NAME_ASK_LO,
+                   COL_NAME_ASK_CL
+                   ]
+
+    BID_COLUMNS = [COL_NAME_BID_OP,
+                   COL_NAME_BID_HI,
+                   COL_NAME_BID_LO,
+                   COL_NAME_BID_CL
+                   ]
+
+    CDL_COLUMNS = [CandlestickChartGapFillPrev.COL_NAME_OP,
+                   CandlestickChartGapFillPrev.COL_NAME_HI,
+                   CandlestickChartGapFillPrev.COL_NAME_LO,
+                   CandlestickChartGapFillPrev.COL_NAME_CL
+                   ]
 
     def __init__(self, ui, node, cli_cdl) -> None:
 
@@ -147,6 +172,7 @@ class GapFillUi():
             ]
             self.__qstd_itm_mdl.appendRow(items)
             data.append([gapfillmsg.date,
+                         gapfillmsg.gap_dir,
                          gapfillmsg.gap_close_price,
                          gapfillmsg.gap_open_price,
                          gapfillmsg.gap_range_price,
@@ -157,7 +183,7 @@ class GapFillUi():
                          ])
 
         df = pd.DataFrame(data)
-        df.columns = COLUMNS
+        df.columns = GAP_FILL_COLUMNS
         self.__df_gf = df.set_index(COL_NAME_DATE)
 
         self.__end_hour = rsp.end_hour
@@ -212,20 +238,22 @@ class GapFillUi():
         df.columns = CANDLE_COL_NAME_LIST
         df = df.set_index(COL_NAME_TIME)
 
-        dfcdl = df.loc[:, [COL_NAME_ASK_OP,
-                           COL_NAME_ASK_HI,
-                           COL_NAME_ASK_LO,
-                           COL_NAME_ASK_CL
-                           ]]
-        dfcdl.columns = [CandlestickChartGapFillPrev.COL_NAME_OP,
-                         CandlestickChartGapFillPrev.COL_NAME_HI,
-                         CandlestickChartGapFillPrev.COL_NAME_LO,
-                         CandlestickChartGapFillPrev.COL_NAME_CL
-                         ]
+        sr_gf = self.__df_gf.loc[trg_date_str]
 
-        th = dfcdl.index[-1] - dt.timedelta(days=1)
-        df_prev = dfcdl[dfcdl.index < th].tail(30)
-        df_curr = dfcdl[th < dfcdl.index].head(30)
+        if sr_gf[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_UP:
+            df_prev = df.loc[:, GapFillUi.BID_COLUMNS]
+            df_curr = df.loc[:, GapFillUi.ASK_COLUMNS]
+        else:
+            df_prev = df.loc[:, GapFillUi.ASK_COLUMNS]
+            df_curr = df.loc[:, GapFillUi.BID_COLUMNS]
+
+        df_prev.columns = GapFillUi.CDL_COLUMNS
+        th = df_prev.index[-1] - dt.timedelta(days=1)
+        df_prev = df_prev[df_prev.index < th].tail(30)
+
+        df_curr.columns = GapFillUi.CDL_COLUMNS
+        th = df_curr.index[-1] - dt.timedelta(days=1)
+        df_curr = df_curr[th < df_curr.index].head(30)
 
         max_prev = df_prev[CandlestickChartGapFillPrev.COL_NAME_HI].max()
         min_prev = df_prev[CandlestickChartGapFillPrev.COL_NAME_LO].min()
@@ -234,8 +262,6 @@ class GapFillUi():
 
         max_y = max(max_prev, max_curr)
         min_y = min(min_prev, min_curr)
-
-        sr_gf = self.__df_gf.loc[trg_date_str]
 
         self.__chart_prev.update(df_prev,
                                  sr_gf[COL_NAME_GPA_CLOSE_PRICE],
