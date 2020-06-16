@@ -6,6 +6,12 @@ float32 ask_h
 float32 ask_l
 float32 ask_c
 
+# The mid candle data.
+float32 mid_o
+float32 mid_h
+float32 mid_l
+float32 mid_c
+
 # The bid candle data.
 float32 bid_o
 float32 bid_h

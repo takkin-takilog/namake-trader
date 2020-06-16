@@ -9,14 +9,14 @@ COL_NAME_ASK_OP = "open(Ask)"
 COL_NAME_ASK_HI = "high(Ask)"
 COL_NAME_ASK_LO = "low(Ask)"
 COL_NAME_ASK_CL = "close(Ask)"
-COL_NAME_BID_OP = "open(Bid)"
-COL_NAME_BID_HI = "high(Bid)"
-COL_NAME_BID_LO = "low(Bid)"
-COL_NAME_BID_CL = "close(Bid)"
 COL_NAME_MID_OP = "open(Mid)"
 COL_NAME_MID_HI = "high(Mid)"
 COL_NAME_MID_LO = "low(Mid)"
 COL_NAME_MID_CL = "close(Mid)"
+COL_NAME_BID_OP = "open(Bid)"
+COL_NAME_BID_HI = "high(Bid)"
+COL_NAME_BID_LO = "low(Bid)"
+COL_NAME_BID_CL = "close(Bid)"
 COL_NAME_COMP = "complete"
 
 CANDLE_COL_NAME_LIST = [COL_NAME_TIME,
@@ -24,6 +24,10 @@ CANDLE_COL_NAME_LIST = [COL_NAME_TIME,
                         COL_NAME_ASK_HI,
                         COL_NAME_ASK_LO,
                         COL_NAME_ASK_CL,
+                        COL_NAME_MID_OP,
+                        COL_NAME_MID_HI,
+                        COL_NAME_MID_LO,
+                        COL_NAME_MID_CL,
                         COL_NAME_BID_OP,
                         COL_NAME_BID_HI,
                         COL_NAME_BID_LO,

@@ -212,7 +212,7 @@ class CallouPrice(CalloutChartAbs):
         painter.drawText(self._textRect, self._text)
 
 
-class CandlestickChartGapFillPrev(CandlestickChartAbs):
+class CandlestickChartGapFillBase(CandlestickChartAbs):
 
     def __init__(self, widget):
         super().__init__(widget)
@@ -241,10 +241,10 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         # axis_y.setTitleText("Ratio")
 
         # Customize axis label font
-        #Lfont = QFont("Sans Serif")
-        #Lfont.setPixelSize(16)
-        #axis_x.setLabelsFont(Lfont)
-        #axis_y.setLabelsFont(Lfont)
+        # Lfont = QFont("Sans Serif")
+        # Lfont.setPixelSize(16)
+        # axis_x.setLabelsFont(Lfont)
+        # axis_y.setLabelsFont(Lfont)
 
         self._chart.addAxis(axis_x, Qt.AlignBottom)
         self._series.attachAxis(axis_x)
@@ -277,8 +277,18 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
         pen = self._horline_precls.pen()
         pen.setColor(CALLOUT_PRICE_COLOR)
         pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
         self._horline_precls.setPen(pen)
         self.scene().addItem(self._horline_precls)
+
+        # Horizontal Line (current open price)
+        self._horline_curopn = QGraphicsLineItem()
+        pen = self._horline_curopn.pen()
+        pen.setColor(CALLOUT_DATE_COLOR)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._horline_curopn.setPen(pen)
+        self.scene().addItem(self._horline_curopn)
 
         self.__decimal_digit = 0
 
@@ -286,15 +296,6 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
                min_y, max_y, decimal_digit):
 
         dt_ = df.index[0]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute)
-        min_x = QDateTime(qd, qt)
-
-        dt_ = df.index[-1]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute).addSecs(60 * 10)
-        max_x = QDateTime(qd, qt)
-
         dtstr = dt_.strftime("%Y/%m/%d")
 
         self._series.clear()
@@ -311,20 +312,28 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
             self._series.append(cnd)
 
         self._chart.axisX().setTitleText(dtstr)
-        self._chart.axisX().setRange(min_x, max_x)
         self._chart.axisY().setRange(min_y, max_y)
-        self.__decimal_digit = decimal_digit
 
         point = QPointF(0, gap_close_price)
         m2p = self._chart.mapToPosition(point)
-
         plotAreaRect = self._chart.plotArea()
         self._horline_precls.setLine(QLineF(plotAreaRect.left(),
                                             m2p.y(),
                                             plotAreaRect.right(),
                                             m2p.y()))
-        self._horline_precls.show()
 
+        point = QPointF(0, gap_open_price)
+        m2p = self._chart.mapToPosition(point)
+        plotAreaRect = self._chart.plotArea()
+        self._horline_curopn.setLine(QLineF(plotAreaRect.left(),
+                                            m2p.y(),
+                                            plotAreaRect.right(),
+                                            m2p.y()))
+
+        self._horline_precls.show()
+        self._horline_curopn.show()
+
+        self.__decimal_digit = decimal_digit
 
     def mouseMoveEvent(self, event):
 
@@ -369,77 +378,61 @@ class CandlestickChartGapFillPrev(CandlestickChartAbs):
             self._verline_callout.hide()
             self._horline_callout.hide()
 
+        self._horline_precls.show()
 
-class CandlestickChartGapFillCurr(CandlestickChartAbs):
+
+class CandlestickChartGapFillPrev(CandlestickChartGapFillBase):
 
     def __init__(self, widget):
         super().__init__(widget)
 
-        # X Axis Settings
-        axis_x = QtCharts.QDateTimeAxis()
-        axis_x.setTickCount(2)
-        axis_x.setTitleText("Date")
-        axis_x.setFormat("h:mm")
-        axis_x.setLabelsAngle(0)
+    def update(self,
+               df,
+               gap_close_price,
+               gap_open_price,
+               min_y,
+               max_y,
+               decimal_digit):
+        super().update(df, gap_close_price, gap_open_price, min_y, max_y,
+                       decimal_digit)
 
-        now = QDateTime.currentDateTime()
-        yesterday = QDateTime(QDate(now.date().year(),
-                                    now.date().month(),
-                                    now.date().day() - 1),
-                              QTime(0, 0))
-        today = QDateTime(QDate(now.date().year(),
-                                now.date().month(),
-                                now.date().day()),
-                          QTime(0, 0))
-
-        axis_x.setRange(yesterday, today)
-
-        # Y Axis Settings
-        axis_y = QtCharts.QValueAxis()
-        # axis_y.setTitleText("Ratio")
-
-        # Customize axis label font
-        #Lfont = QFont("Sans Serif")
-        #Lfont.setPixelSize(16)
-        #axis_x.setLabelsFont(Lfont)
-        #axis_y.setLabelsFont(Lfont)
-
-        self._chart.addAxis(axis_x, Qt.AlignBottom)
-        self._series.attachAxis(axis_x)
-        self._chart.addAxis(axis_y, Qt.AlignRight)
-        self._series.attachAxis(axis_y)
-
-    def update(self, df, min_y, max_y, end_hour):
+        dt_ = df.index[-1]
+        qd = QDate(dt_.year, dt_.month, dt_.day)
+        qt = QTime(dt_.hour, dt_.minute).addSecs(60 * 10)
+        max_x = QDateTime(qd, qt)
 
         dt_ = df.index[0]
         qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute).addSecs(60 * (-10))
+        qt = QTime(dt_.hour, dt_.minute)
         min_x = QDateTime(qd, qt)
+
+        self._chart.axisX().setRange(min_x, max_x)
+
+
+class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
+
+    def __init__(self, widget):
+        super().__init__(widget)
+
+    def update(self,
+               df,
+               gap_close_price,
+               gap_open_price,
+               min_y,
+               max_y,
+               decimal_digit):
+        super().update(df, gap_close_price, gap_open_price, min_y, max_y,
+                       decimal_digit)
 
         dt_ = df.index[-1]
         qd = QDate(dt_.year, dt_.month, dt_.day)
         qt = QTime(dt_.hour, dt_.minute)
         max_x = QDateTime(qd, qt)
 
-        # End vertical line
-        qt = QTime(end_hour, 0)
-        line_x = QDateTime(qd, qt).toMSecsSinceEpoch()
+        dt_ = df.index[0]
+        qd = QDate(dt_.year, dt_.month, dt_.day)
+        qt = QTime(dt_.hour, dt_.minute).addSecs(-60 * 10)
+        min_x = QDateTime(qd, qt)
 
-        dtstr = dt_.strftime("%Y/%m/%d")
-
-        self._series.clear()
-        for dt_, sr in df.iterrows():
-            o_ = sr[self.COL_NAME_OP]
-            h_ = sr[self.COL_NAME_HI]
-            l_ = sr[self.COL_NAME_LO]
-            c_ = sr[self.COL_NAME_CL]
-            qd = QDate(dt_.year, dt_.month, dt_.day)
-            qt = QTime(dt_.hour, dt_.minute)
-            qdt = QDateTime(qd, qt)
-            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_,
-                                           qdt.toMSecsSinceEpoch())
-            self._series.append(cnd)
-
-        self._chart.axisX().setTitleText(dtstr)
         self._chart.axisX().setRange(min_x, max_x)
-        self._chart.axisY().setRange(min_y, max_y)
+

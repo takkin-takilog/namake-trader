@@ -18,14 +18,10 @@ from trade_monitor.util import INST_MSG_LIST
 from trade_monitor.util import DT_FMT
 from trade_monitor.util import CANDLE_COL_NAME_LIST
 from trade_monitor.util import (COL_NAME_TIME,
-                                COL_NAME_ASK_OP,
-                                COL_NAME_ASK_HI,
-                                COL_NAME_ASK_LO,
-                                COL_NAME_ASK_CL,
-                                COL_NAME_BID_OP,
-                                COL_NAME_BID_HI,
-                                COL_NAME_BID_LO,
-                                COL_NAME_BID_CL
+                                COL_NAME_MID_OP,
+                                COL_NAME_MID_HI,
+                                COL_NAME_MID_LO,
+                                COL_NAME_MID_CL
                                 )
 
 COL_NAME_DATE = "date"
@@ -74,16 +70,10 @@ class GapFillUi():
         "End close price"
     ]
 
-    ASK_COLUMNS = [COL_NAME_ASK_OP,
-                   COL_NAME_ASK_HI,
-                   COL_NAME_ASK_LO,
-                   COL_NAME_ASK_CL
-                   ]
-
-    BID_COLUMNS = [COL_NAME_BID_OP,
-                   COL_NAME_BID_HI,
-                   COL_NAME_BID_LO,
-                   COL_NAME_BID_CL
+    MID_COLUMNS = [COL_NAME_MID_OP,
+                   COL_NAME_MID_HI,
+                   COL_NAME_MID_LO,
+                   COL_NAME_MID_CL
                    ]
 
     CDL_COLUMNS = [CandlestickChartGapFillPrev.COL_NAME_OP,
@@ -112,7 +102,7 @@ class GapFillUi():
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
 
         chart_prev = CandlestickChartGapFillPrev(ui.widget_chart_gapfill_prev)
-        chart_curr = CandlestickChartGapFillPrev(ui.widget_chart_gapfill_curr)
+        chart_curr = CandlestickChartGapFillCurr(ui.widget_chart_gapfill_curr)
 
         # Create service client "CandlesMonitor"
         srv_type = GapFillMntSrv
@@ -227,6 +217,10 @@ class GapFillUi():
                          cndl_msg.ask_h,
                          cndl_msg.ask_l,
                          cndl_msg.ask_c,
+                         cndl_msg.mid_o,
+                         cndl_msg.mid_h,
+                         cndl_msg.mid_l,
+                         cndl_msg.mid_c,
                          cndl_msg.bid_o,
                          cndl_msg.bid_h,
                          cndl_msg.bid_l,
@@ -240,12 +234,8 @@ class GapFillUi():
 
         sr_gf = self.__df_gf.loc[trg_date_str]
 
-        if sr_gf[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_UP:
-            df_prev = df.loc[:, GapFillUi.BID_COLUMNS]
-            df_curr = df.loc[:, GapFillUi.ASK_COLUMNS]
-        else:
-            df_prev = df.loc[:, GapFillUi.ASK_COLUMNS]
-            df_curr = df.loc[:, GapFillUi.BID_COLUMNS]
+        df_prev = df.loc[:, GapFillUi.MID_COLUMNS]
+        df_curr = df.loc[:, GapFillUi.MID_COLUMNS]
 
         df_prev.columns = GapFillUi.CDL_COLUMNS
         th = df_prev.index[-1] - dt.timedelta(days=1)
@@ -268,15 +258,17 @@ class GapFillUi():
                                  sr_gf[COL_NAME_GPA_OPEN_PRICE],
                                  min_y, max_y,
                                  self.__decimal_digit)
-        #self.__chart_curr.update(df_curr, min_y, max_y, self.__end_hour)
+        self.__chart_curr.update(df_curr,
+                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
+                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
+                                 min_y, max_y,
+                                 self.__decimal_digit)
 
     def resize_chart_widget(self):
         fs = self.__ui.widget_chart_gapfill_prev.frameSize()
         self.__chart_prev.resize(fs)
-        """
         fs = self.__ui.widget_chart_gapfill_curr.frameSize()
         self.__chart_curr.resize(fs)
-        """
 
     @property
     def inst_id(self):
