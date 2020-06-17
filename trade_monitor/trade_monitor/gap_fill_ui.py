@@ -1,6 +1,7 @@
 import pandas as pd
 import datetime as dt
 
+from PySide2.QtWidgets import QHeaderView
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtCore import QItemSelectionModel
 
@@ -29,6 +30,7 @@ COL_NAME_GPA_DIR = "gap dir"
 COL_NAME_GPA_CLOSE_PRICE = "gap close price"
 COL_NAME_GPA_OPEN_PRICE = "gap open price"
 COL_NAME_GPA_RANGE_PRICE = "gap range price"
+COL_NAME_VALID_FLAG = "valid flag"
 COL_NAME_SUCCESS_FLAG = "success flag"
 COL_NAME_GAP_FILLED_TIME = "gap filled time"
 COL_NAME_MAX_OPEN_RANGE = "max open range"
@@ -39,6 +41,7 @@ GAP_FILL_COLUMNS = [COL_NAME_DATE,
                     COL_NAME_GPA_CLOSE_PRICE,
                     COL_NAME_GPA_OPEN_PRICE,
                     COL_NAME_GPA_RANGE_PRICE,
+                    COL_NAME_VALID_FLAG,
                     COL_NAME_SUCCESS_FLAG,
                     COL_NAME_GAP_FILLED_TIME,
                     COL_NAME_MAX_OPEN_RANGE,
@@ -53,6 +56,11 @@ class GapFillUi():
         GapFillMsg.GAP_DIR_DOWN: "Down"
         }
 
+    GAP_FILL_VALID_DICT = {
+        True: "Valid",
+        False: "Invalid"
+        }
+
     GAP_FILL_SUCC_DICT = {
         True: "Success",
         False: "Failure"
@@ -64,7 +72,8 @@ class GapFillUi():
         "Previous close price",
         "Current open price",
         "Gap range price",
-        "Gap fill result",
+        "Valid",
+        "Result",
         "Gap filled time",
         "Max open range",
         "End close price"
@@ -100,6 +109,8 @@ class GapFillUi():
         #ui.tableView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
+        header = ui.treeView_gapfill.header()
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
         chart_prev = CandlestickChartGapFillPrev(ui.widget_chart_gapfill_prev)
         chart_curr = CandlestickChartGapFillCurr(ui.widget_chart_gapfill_curr)
@@ -154,6 +165,8 @@ class GapFillUi():
                 QStandardItem(fmt.format(gapfillmsg.gap_close_price)),
                 QStandardItem(fmt.format(gapfillmsg.gap_open_price)),
                 QStandardItem(fmt.format(gapfillmsg.gap_range_price)),
+                QStandardItem(self.GAP_FILL_VALID_DICT[
+                    gapfillmsg.is_valid]),
                 QStandardItem(self.GAP_FILL_SUCC_DICT[
                     gapfillmsg.is_gapfill_success]),
                 QStandardItem(gapfillmsg.gap_filled_time),
@@ -166,6 +179,7 @@ class GapFillUi():
                          gapfillmsg.gap_close_price,
                          gapfillmsg.gap_open_price,
                          gapfillmsg.gap_range_price,
+                         gapfillmsg.is_valid,
                          gapfillmsg.is_gapfill_success,
                          gapfillmsg.gap_filled_time,
                          gapfillmsg.max_open_range,
@@ -175,6 +189,9 @@ class GapFillUi():
         df = pd.DataFrame(data)
         df.columns = GAP_FILL_COLUMNS
         self.__df_gf = df.set_index(COL_NAME_DATE)
+
+        header = self.__ui.treeView_gapfill.header()
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
         self.__end_hour = rsp.end_hour
         self.__decimal_digit = decimal_digit

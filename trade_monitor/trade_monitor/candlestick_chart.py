@@ -1,10 +1,7 @@
-from abc import ABCMeta, abstractmethod
-import pandas as pd
-import datetime as dt
-from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
+from PySide2.QtWidgets import QStyleOptionGraphicsItem, QWidget
 from PySide2.QtCharts import QtCharts
-from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QRectF, QRect, QLineF
-from PySide2.QtGui import QPalette, QColor, QFont, QPen, QFontMetrics, QPainter, QPainterPath
+from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
+from PySide2.QtGui import QPalette, QColor, QFont, QPen, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient
 from PySide2.QtWidgets import QGraphicsLineItem
 from trade_manager_msgs.msg import Granularity as Gran
@@ -140,7 +137,8 @@ class CandlestickChart(object):
         self.__chart.axisX().setRange(x_axis_label[0], x_axis_label[-1])
         self.__chart.axisY().setRange(min_y, max_y)
 
-        self.__chartview.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
+        self.__chartview.setRubberBand(
+            QtCharts.QChartView.HorizontalRubberBand)
 
     def resize(self, frame_size):
         self.__chartview.resize(frame_size)
@@ -291,6 +289,7 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
         self.scene().addItem(self._horline_curopn)
 
         self.__decimal_digit = 0
+        self.__is_update = False
 
     def update(self, df, gap_close_price, gap_open_price,
                min_y, max_y, decimal_digit):
@@ -335,11 +334,38 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
 
         self.__decimal_digit = decimal_digit
 
+        self.__gap_close_price = gap_close_price
+        self.__gap_open_price = gap_open_price
+        self.__is_update = True
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        if self.__is_update:
+            point = QPointF(0, self.__gap_close_price)
+            m2p = self._chart.mapToPosition(point)
+            plotAreaRect = self._chart.plotArea()
+            self._horline_precls.setLine(QLineF(plotAreaRect.left(),
+                                                m2p.y(),
+                                                plotAreaRect.right(),
+                                                m2p.y()))
+
+            point = QPointF(0, self.__gap_open_price)
+            m2p = self._chart.mapToPosition(point)
+            plotAreaRect = self._chart.plotArea()
+            self._horline_curopn.setLine(QLineF(plotAreaRect.left(),
+                                                m2p.y(),
+                                                plotAreaRect.right(),
+                                                m2p.y()))
+
+            self._horline_precls.show()
+            self._horline_curopn.show()
+
     def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
 
         flag = self._chart.plotArea().contains(event.pos())
         if flag:
-            #print("-------------------- mouseMoveEvent -------------------------")
             m2v = self._chart.mapToValue(event.pos())
             dt_ = QDateTime.fromMSecsSinceEpoch(round(m2v.x()))
             qtime = dt_.time()
@@ -435,4 +461,3 @@ class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
         min_x = QDateTime(qd, qt)
 
         self._chart.axisX().setRange(min_x, max_x)
-
