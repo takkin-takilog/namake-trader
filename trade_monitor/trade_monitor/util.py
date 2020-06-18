@@ -90,3 +90,17 @@ GRAN_MSG_LIST = [
     MsgGranDict(Gran.GRAN_H1, "１時間足"),
     MsgGranDict(Gran.GRAN_M10, "１０分足"),
 ]
+
+SPREAD_MSG_LIST = [
+    "Mid",
+    "Ask",
+    "Bid"
+]
+
+
+def remove_all_items_of_comboBox(combo_box):
+
+    idx = combo_box.currentIndex()
+    while -1 < idx:
+        combo_box.removeItem(idx)
+        idx = combo_box.currentIndex()

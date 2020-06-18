@@ -30,14 +30,14 @@ class CandlestickChart(object):
         chart.createDefaultAxes()
         chart.addSeries(series)
 
-        #Title Font size
+        # Title Font size
         """
         font = QFont("Sans Serif", )
         font.setPixelSize(18)
         chart.setTitleFont(font)
         """
 
-        #chart.setTitle("Temperature in Celcius For Device:")
+        # chart.setTitle("Temperature in Celcius For Device:")
         chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
         palette = QPalette()
@@ -52,7 +52,7 @@ class CandlestickChart(object):
         chart.setBackgroundBrush(backgroundGradient)
         """
 
-        #Plot area background
+        # Plot area background
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor('#f1f1f1'))
         plotAreaGradient.setColorAt(1.0, QColor('#ffffff'))
@@ -273,7 +273,7 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
         # Horizontal Line (previous close price)
         self._horline_precls = QGraphicsLineItem()
         pen = self._horline_precls.pen()
-        pen.setColor(CALLOUT_PRICE_COLOR)
+        pen.setColor(Qt.magenta)
         pen.setWidth(1)
         pen.setStyle(Qt.DashLine)
         self._horline_precls.setPen(pen)
@@ -282,20 +282,22 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
         # Horizontal Line (current open price)
         self._horline_curopn = QGraphicsLineItem()
         pen = self._horline_curopn.pen()
-        pen.setColor(CALLOUT_DATE_COLOR)
+        pen.setColor(Qt.blue)
         pen.setWidth(1)
         pen.setStyle(Qt.DashLine)
         self._horline_curopn.setPen(pen)
         self.scene().addItem(self._horline_curopn)
 
         self.__decimal_digit = 0
-        self.__is_update = False
+        self._is_update = False
 
-    def update(self, df, gap_close_price, gap_open_price,
-               min_y, max_y, decimal_digit):
+    def set_max_y(self, max_y):
+        self.__max_y = max_y
 
-        dt_ = df.index[0]
-        dtstr = dt_.strftime("%Y/%m/%d")
+    def set_min_y(self, min_y):
+        self.__min_y = min_y
+
+    def update(self, df, gap_close_price, gap_open_price, decimal_digit):
 
         self._series.clear()
         for dt_, sr in df.iterrows():
@@ -310,8 +312,7 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
                                            qdt.toMSecsSinceEpoch())
             self._series.append(cnd)
 
-        self._chart.axisX().setTitleText(dtstr)
-        self._chart.axisY().setRange(min_y, max_y)
+        self._chart.axisY().setRange(self.__min_y, self.__max_y)
 
         point = QPointF(0, gap_close_price)
         m2p = self._chart.mapToPosition(point)
@@ -336,12 +337,12 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
 
         self.__gap_close_price = gap_close_price
         self.__gap_open_price = gap_open_price
-        self.__is_update = True
+        self._is_update = True
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
 
-        if self.__is_update:
+        if self._is_update:
             point = QPointF(0, self.__gap_close_price)
             m2p = self._chart.mapToPosition(point)
             plotAreaRect = self._chart.plotArea()
@@ -416,11 +417,8 @@ class CandlestickChartGapFillPrev(CandlestickChartGapFillBase):
                df,
                gap_close_price,
                gap_open_price,
-               min_y,
-               max_y,
                decimal_digit):
-        super().update(df, gap_close_price, gap_open_price, min_y, max_y,
-                       decimal_digit)
+        super().update(df, gap_close_price, gap_open_price, decimal_digit)
 
         dt_ = df.index[-1]
         qd = QDate(dt_.year, dt_.month, dt_.day)
@@ -431,7 +429,9 @@ class CandlestickChartGapFillPrev(CandlestickChartGapFillBase):
         qd = QDate(dt_.year, dt_.month, dt_.day)
         qt = QTime(dt_.hour, dt_.minute)
         min_x = QDateTime(qd, qt)
+        dtstr = dt_.strftime("%Y/%m/%d (Fri)")
 
+        self._chart.axisX().setTitleText(dtstr)
         self._chart.axisX().setRange(min_x, max_x)
 
 
@@ -440,15 +440,24 @@ class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
     def __init__(self, widget):
         super().__init__(widget)
 
+        # Vertical Line (end hour)
+        self.__verline_endhour = QGraphicsLineItem()
+        pen = self.__verline_endhour.pen()
+        pen.setColor(Qt.cyan)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self.__verline_endhour.setPen(pen)
+        self.scene().addItem(self.__verline_endhour)
+
+        self.__end_point = QPointF(0, 0)
+
     def update(self,
                df,
                gap_close_price,
                gap_open_price,
-               min_y,
-               max_y,
-               decimal_digit):
-        super().update(df, gap_close_price, gap_open_price, min_y, max_y,
-                       decimal_digit)
+               decimal_digit,
+               end_hour):
+        super().update(df, gap_close_price, gap_open_price, decimal_digit)
 
         dt_ = df.index[-1]
         qd = QDate(dt_.year, dt_.month, dt_.day)
@@ -459,5 +468,27 @@ class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
         qd = QDate(dt_.year, dt_.month, dt_.day)
         qt = QTime(dt_.hour, dt_.minute).addSecs(-60 * 10)
         min_x = QDateTime(qd, qt)
+        dtstr = dt_.strftime("%Y/%m/%d (Mon)")
 
+        self._chart.axisX().setTitleText(dtstr)
         self._chart.axisX().setRange(min_x, max_x)
+
+        qdttm = QDateTime(dt_.date(), QTime(end_hour, 0))
+        self.__end_point.setX(qdttm.toMSecsSinceEpoch())
+        self.__update_end_hour()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        if self._is_update:
+            self.__update_end_hour()
+
+    def __update_end_hour(self):
+
+        m2p = self._chart.mapToPosition(self.__end_point)
+        plotAreaRect = self._chart.plotArea()
+        self.__verline_endhour.setLine(QLineF(m2p.x(),
+                                              plotAreaRect.top(),
+                                              m2p.x(),
+                                              plotAreaRect.bottom()))
+        self.__verline_endhour.show()

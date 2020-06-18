@@ -15,15 +15,26 @@ from trade_apl_msgs.msg import GapFillMsg
 from trade_manager_msgs.msg import Granularity as Gran
 from trade_manager_msgs.srv import CandlesMntSrv
 
+from trade_monitor import util as utl
+from trade_monitor.util import SPREAD_MSG_LIST
 from trade_monitor.util import INST_MSG_LIST
 from trade_monitor.util import DT_FMT
 from trade_monitor.util import CANDLE_COL_NAME_LIST
 from trade_monitor.util import (COL_NAME_TIME,
+                                COL_NAME_ASK_OP,
+                                COL_NAME_ASK_HI,
+                                COL_NAME_ASK_LO,
+                                COL_NAME_ASK_CL,
                                 COL_NAME_MID_OP,
                                 COL_NAME_MID_HI,
                                 COL_NAME_MID_LO,
-                                COL_NAME_MID_CL
+                                COL_NAME_MID_CL,
+                                COL_NAME_BID_OP,
+                                COL_NAME_BID_HI,
+                                COL_NAME_BID_LO,
+                                COL_NAME_BID_CL
                                 )
+
 
 COL_NAME_DATE = "date"
 COL_NAME_GPA_DIR = "gap dir"
@@ -54,17 +65,17 @@ class GapFillUi():
     GAP_DIR_DICT = {
         GapFillMsg.GAP_DIR_UP: "Up",
         GapFillMsg.GAP_DIR_DOWN: "Down"
-        }
+    }
 
     GAP_FILL_VALID_DICT = {
         True: "Valid",
         False: "Invalid"
-        }
+    }
 
     GAP_FILL_SUCC_DICT = {
         True: "Success",
         False: "Failure"
-        }
+    }
 
     GAP_FILL_HEADERS = [
         "Date",
@@ -79,10 +90,36 @@ class GapFillUi():
         "End close price"
     ]
 
+    ALL_COLUMNS = [COL_NAME_ASK_OP,
+                   COL_NAME_ASK_HI,
+                   COL_NAME_ASK_LO,
+                   COL_NAME_ASK_CL,
+                   COL_NAME_MID_OP,
+                   COL_NAME_MID_HI,
+                   COL_NAME_MID_LO,
+                   COL_NAME_MID_CL,
+                   COL_NAME_BID_OP,
+                   COL_NAME_BID_HI,
+                   COL_NAME_BID_LO,
+                   COL_NAME_BID_CL
+                   ]
+
+    ASK_COLUMNS = [COL_NAME_ASK_OP,
+                   COL_NAME_ASK_HI,
+                   COL_NAME_ASK_LO,
+                   COL_NAME_ASK_CL
+                   ]
+
     MID_COLUMNS = [COL_NAME_MID_OP,
                    COL_NAME_MID_HI,
                    COL_NAME_MID_LO,
                    COL_NAME_MID_CL
+                   ]
+
+    BID_COLUMNS = [COL_NAME_BID_OP,
+                   COL_NAME_BID_HI,
+                   COL_NAME_BID_LO,
+                   COL_NAME_BID_CL
                    ]
 
     CDL_COLUMNS = [CandlestickChartGapFillPrev.COL_NAME_OP,
@@ -91,7 +128,22 @@ class GapFillUi():
                    CandlestickChartGapFillPrev.COL_NAME_CL
                    ]
 
+    SPREAD_COLUMNS_LIST = [MID_COLUMNS,
+                           ASK_COLUMNS,
+                           BID_COLUMNS]
+
     def __init__(self, ui, node, cli_cdl) -> None:
+
+        utl.remove_all_items_of_comboBox(ui.comboBox_spread_prev)
+        utl.remove_all_items_of_comboBox(ui.comboBox_spread_curr)
+        for text in SPREAD_MSG_LIST:
+            ui.comboBox_spread_prev.addItem(text)
+            ui.comboBox_spread_curr.addItem(text)
+
+        ui.comboBox_spread_prev.currentIndexChanged.connect(
+            self.__combobox_spread_prev_changed)
+        ui.comboBox_spread_curr.currentIndexChanged.connect(
+            self.__combobox_spread_curr_changed)
 
         logger = node.get_logger()
 
@@ -135,10 +187,9 @@ class GapFillUi():
         self.__cli_cdl = cli_cdl
         self.__end_hour = 9
         self.__decimal_digit = INST_MSG_LIST[0].decimal_digit
+        self.__is_update = False
 
     def __on_fetch_gapfill_clicked(self):
-
-        self.__logger.debug("gapfill start")
 
         self.__qstd_itm_mdl.clear()
         self.__qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
@@ -195,8 +246,7 @@ class GapFillUi():
 
         self.__end_hour = rsp.end_hour
         self.__decimal_digit = decimal_digit
-
-        self.__logger.debug("gapfill end")
+        self.__is_update = True
 
     def __on_selection_gapfill_changed(self, selected, deselected):
 
@@ -251,35 +301,37 @@ class GapFillUi():
 
         sr_gf = self.__df_gf.loc[trg_date_str]
 
-        df_prev = df.loc[:, GapFillUi.MID_COLUMNS]
-        df_curr = df.loc[:, GapFillUi.MID_COLUMNS]
+        df_prev = df.loc[:, GapFillUi.ALL_COLUMNS]
+        df_curr = df.loc[:, GapFillUi.ALL_COLUMNS]
 
-        df_prev.columns = GapFillUi.CDL_COLUMNS
         th = df_prev.index[-1] - dt.timedelta(days=1)
-        df_prev = df_prev[df_prev.index < th].tail(30)
+        df_prev = df_prev[df_prev.index < th].tail(50)
 
-        df_curr.columns = GapFillUi.CDL_COLUMNS
         th = df_curr.index[-1] - dt.timedelta(days=1)
-        df_curr = df_curr[th < df_curr.index].head(30)
+        df_curr = df_curr[th < df_curr.index].head(50)
 
-        max_prev = df_prev[CandlestickChartGapFillPrev.COL_NAME_HI].max()
-        min_prev = df_prev[CandlestickChartGapFillPrev.COL_NAME_LO].min()
-        max_curr = df_curr[CandlestickChartGapFillCurr.COL_NAME_HI].max()
-        min_curr = df_curr[CandlestickChartGapFillCurr.COL_NAME_LO].min()
+        max_prev = df_prev[COL_NAME_ASK_HI].max()
+        min_prev = df_prev[COL_NAME_BID_LO].min()
+        max_curr = df_curr[COL_NAME_ASK_HI].max()
+        min_curr = df_curr[COL_NAME_BID_LO].min()
 
         max_y = max(max_prev, max_curr)
         min_y = min(min_prev, min_curr)
 
-        self.__chart_prev.update(df_prev,
-                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
-                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
-                                 min_y, max_y,
-                                 self.__decimal_digit)
-        self.__chart_curr.update(df_curr,
-                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
-                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
-                                 min_y, max_y,
-                                 self.__decimal_digit)
+        self.__chart_prev.set_max_y(max_y)
+        self.__chart_prev.set_min_y(min_y)
+        self.__chart_curr.set_max_y(max_y)
+        self.__chart_curr.set_min_y(min_y)
+
+        idx = self.__ui.comboBox_spread_prev.currentIndex()
+        self.__update_prev_chart(idx, df_prev, sr_gf, self.__decimal_digit)
+
+        idx = self.__ui.comboBox_spread_curr.currentIndex()
+        self.__update_curr_chart(idx, df_curr, sr_gf, self.__decimal_digit)
+
+        self.__sr_gf = sr_gf
+        self.__df_prev = df_prev
+        self.__df_curr = df_curr
 
     def resize_chart_widget(self):
         fs = self.__ui.widget_chart_gapfill_prev.frameSize()
@@ -294,3 +346,35 @@ class GapFillUi():
     @inst_id.setter
     def inst_id(self, inst_id):
         self.__inst_id = inst_id
+
+    def __combobox_spread_prev_changed(self, idx):
+
+        if self.__is_update:
+            self.__update_prev_chart(idx, self.__df_prev, self.__sr_gf,
+                                     self.__decimal_digit)
+
+    def __combobox_spread_curr_changed(self, idx):
+
+        if self.__is_update:
+            self.__update_curr_chart(idx, self.__df_curr, self.__sr_gf,
+                                     self.__decimal_digit)
+
+    def __update_prev_chart(self, idx, df, sr_gf, decimal_digit):
+
+        df_prev = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
+        df_prev.columns = GapFillUi.CDL_COLUMNS
+
+        self.__chart_prev.update(df_prev,
+                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
+                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
+                                 decimal_digit)
+
+    def __update_curr_chart(self, idx, df, sr_gf, decimal_digit):
+
+        df_curr = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
+        df_curr.columns = GapFillUi.CDL_COLUMNS
+
+        self.__chart_curr.update(df_curr,
+                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
+                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
+                                 decimal_digit, self.__end_hour)

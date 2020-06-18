@@ -13,6 +13,7 @@ from std_msgs.msg import String, Bool
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor.gap_fill_ui import GapFillUi
 from trade_monitor.main_ui import MainUi
+from trade_monitor import util as utl
 from trade_monitor.util import INST_MSG_LIST
 from trade_monitor.util import GRAN_MSG_LIST
 
@@ -28,13 +29,13 @@ class GuiMonitor(QMainWindow):
         self.resize(ui.frameSize())
 
         # set comboBox of Instrument
-        self.__remove_all_items_of_comboBox(ui.comboBox_inst_main)
+        utl.remove_all_items_of_comboBox(ui.comboBox_inst_main)
         for obj in INST_MSG_LIST:
             ui.comboBox_inst_main.addItem(obj.text)
             ui.comboBox_inst_gapfill.addItem(obj.text)
 
         # set comboBox of Granularity
-        self.__remove_all_items_of_comboBox(ui.comboBox_gran_main)
+        utl.remove_all_items_of_comboBox(ui.comboBox_gran_main)
         for obj in GRAN_MSG_LIST:
             ui.comboBox_gran_main.addItem(obj.text)
 
@@ -106,13 +107,6 @@ class GuiMonitor(QMainWindow):
         ui_file.close()
 
         return ui
-
-    def __remove_all_items_of_comboBox(self, combo_box):
-
-        idx = combo_box.currentIndex()
-        while -1 < idx:
-            combo_box.removeItem(idx)
-            idx = combo_box.currentIndex()
 
     def __on_srvcon_toggled(self, flag):
 
