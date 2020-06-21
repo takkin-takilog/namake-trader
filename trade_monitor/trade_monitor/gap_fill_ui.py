@@ -1,5 +1,6 @@
 import pandas as pd
 import datetime as dt
+import numpy as np
 
 from PySide2.QtWidgets import QHeaderView
 from PySide2.QtGui import QStandardItemModel, QStandardItem
@@ -208,6 +209,7 @@ class GapFillUi():
         assert flg, "fetch [Gap-Fill] failed!"
 
         rsp = future.result()
+        # Parameter data
         data = []
         for gapfillmsg in rsp.gapfillmsg_list:
             items = [
@@ -236,10 +238,27 @@ class GapFillUi():
                          gapfillmsg.max_open_range,
                          gapfillmsg.end_close_price
                          ])
+        df_param = pd.DataFrame(data, columns=GAP_FILL_COLUMNS)
+        self.__df_param = df_param.set_index(COL_NAME_DATE)
 
-        df = pd.DataFrame(data)
-        df.columns = GAP_FILL_COLUMNS
-        self.__df_gf = df.set_index(COL_NAME_DATE)
+        # Heat map data
+        self.__hmap_range_start = rsp.heatmap_range_start
+        self.__hmap_range_end = rsp.heatmap_range_end
+        self.__hmap_range_step = rsp.heatmap_range_step
+
+        hm_idx = [COL_NAME_DATE, COL_NAME_GPA_RANGE_PRICE]
+        hm_x_range = list(np.arange(self.__hmap_range_start,
+                                    self.__hmap_range_end,
+                                    self.__hmap_range_step))
+        columns = hm_idx + hm_x_range
+        data = []
+        for heatmapmsg in rsp.heatmapmsg_list:
+            idx = [heatmapmsg.date,
+                   heatmapmsg.gap_range_price,
+                   ]
+            data.append(idx + heatmapmsg.data_list.tolist())
+        df_hmap = pd.DataFrame(data, columns=columns)
+        self.__df_hmap = df_hmap.set_index(hm_idx)
 
         header = self.__ui.treeView_gapfill.header()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -299,7 +318,7 @@ class GapFillUi():
         df.columns = CANDLE_COL_NAME_LIST
         df = df.set_index(COL_NAME_TIME)
 
-        sr_gf = self.__df_gf.loc[trg_date_str]
+        sr_gf = self.__df_param.loc[trg_date_str]
 
         df_prev = df.loc[:, GapFillUi.ALL_COLUMNS]
         df_curr = df.loc[:, GapFillUi.ALL_COLUMNS]
