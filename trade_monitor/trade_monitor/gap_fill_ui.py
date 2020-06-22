@@ -246,16 +246,14 @@ class GapFillUi():
         self.__hmap_range_end = rsp.heatmap_range_end
         self.__hmap_range_step = rsp.heatmap_range_step
 
-        hm_idx = [COL_NAME_DATE, COL_NAME_GPA_RANGE_PRICE]
+        hm_idx = [COL_NAME_DATE]
         hm_x_range = list(np.arange(self.__hmap_range_start,
                                     self.__hmap_range_end,
                                     self.__hmap_range_step))
         columns = hm_idx + hm_x_range
         data = []
         for heatmapmsg in rsp.heatmapmsg_list:
-            idx = [heatmapmsg.date,
-                   heatmapmsg.gap_range_price,
-                   ]
+            idx = [heatmapmsg.date]
             data.append(idx + heatmapmsg.data_list.tolist())
         df_hmap = pd.DataFrame(data, columns=columns)
         self.__df_hmap = df_hmap.set_index(hm_idx)
