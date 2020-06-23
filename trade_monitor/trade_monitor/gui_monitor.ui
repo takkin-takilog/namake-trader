@@ -393,9 +393,6 @@
           </item>
          </layout>
         </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_6"/>
-        </item>
        </layout>
       </widget>
      </widget>
