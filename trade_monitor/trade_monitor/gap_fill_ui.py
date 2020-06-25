@@ -36,6 +36,7 @@ from trade_monitor.util import (COL_NAME_TIME,
                                 COL_NAME_BID_CL
                                 )
 
+from trade_monitor.gapfill_heatmap import GapFillHeatMap
 
 COL_NAME_DATE = "date"
 COL_NAME_GPA_DIR = "gap dir"
@@ -146,6 +147,9 @@ class GapFillUi():
         ui.comboBox_spread_curr.currentIndexChanged.connect(
             self.__combobox_spread_curr_changed)
 
+        callback = self.__on_gapfill_heatmap_clicked
+        ui.pushButton_gapfill_heatmap.clicked.connect(callback)
+
         logger = node.get_logger()
 
         callback = self.__on_fetch_gapfill_clicked
@@ -189,6 +193,8 @@ class GapFillUi():
         self.__end_hour = 9
         self.__decimal_digit = INST_MSG_LIST[0].decimal_digit
         self.__is_update = False
+
+        self.__widget = GapFillHeatMap()
 
     def __on_fetch_gapfill_clicked(self):
 
@@ -264,6 +270,10 @@ class GapFillUi():
         self.__end_hour = rsp.end_hour
         self.__decimal_digit = decimal_digit
         self.__is_update = True
+
+    def __on_gapfill_heatmap_clicked(self):
+        self.__logger.debug("gapfill_heatmap_clicked")
+        self.__widget.show()
 
     def __on_selection_gapfill_changed(self, selected, deselected):
 
