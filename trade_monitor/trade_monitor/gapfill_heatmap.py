@@ -131,16 +131,27 @@ class HeatMapChartView(HeatMapChartViewAbs):
         series.setBrush(gradient)
 
         chart = QtCharts.QChart()
+        #self.setChart(chart)
+        #chart = self.chart()
+
+        #chart.removeAllSeries()
+        print("--------------------------------------------------------")
+        print(chart)
+        #self.setChart(chart)
+
         chart.addSeries(series)
+        chart.createDefaultAxes()
+        """
         chart.setTitle('Simple Area Chart')
         chart.legend().hide()
         chart.createDefaultAxes()
         chart.axes(Qt.Horizontal)[0].setRange(0, 3)
         chart.axes(Qt.Vertical)[0].setRange(0, 10)
+        """
 
         #chartView = QtCharts.QChartView()
         self.setChart(chart)
-        self.setWindowTitle('Area Chart')
+        #self.setWindowTitle('Area Chart')
 
         #self.setParent(parent)
 
@@ -175,6 +186,34 @@ class HeatMapChartView(HeatMapChartViewAbs):
         #self._chart.addAxis(axis_y, Qt.AlignLeft)
         #self._series.attachAxis(axis_y)
         """
+
+    def test(self):
+        upperSeries = QtCharts.QLineSeries()
+        lowerSeries = QtCharts.QLineSeries()
+
+        x = [x for x in range(1, 3, 1)]
+        y1 = [10, 5]
+        y2 = [1, 5]
+
+        for i in range(len(x)):
+            upperSeries.append(x[i], y1[i])
+            lowerSeries.append(x[i], y2[i])
+
+        series = QtCharts.QAreaSeries(upperSeries, lowerSeries)
+
+        pen = QPen(Qt.red)
+        pen.setWidth(3)
+        series.setPen(pen)
+
+        gradient = QLinearGradient(QPointF(0, 0), QPointF(0, 1))
+        gradient.setColorAt(0.0, QColor(255, 255, 255))
+        gradient.setColorAt(1.0, QColor(0, 255, 0))
+        gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
+        series.setBrush(gradient)
+
+        self.chart().removeAllSeries()
+        print("--------------------------------------------------------")
+        self.chart().addSeries(series)
 
     def set_data(self, df: pd.DataFrame):
 
@@ -243,11 +282,10 @@ class HeatMapChartView(HeatMapChartViewAbs):
         #self.chart().addSeries(series)
         #self.chart().createDefaultAxes()
 
-    """
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         print("---------- mouseMoveEvent ----------")
-    """
+        self.test()
     """
     def update(self):
         super().update()
@@ -286,13 +324,16 @@ class GapFillHeatMap(QMainWindow):
 
     def init_resize(self):
         fs = self.__ui.widget.frameSize()
-        #self.__hmap_chart.resize(fs)
+        #self.__chart_view.resize(fs)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        print("------------------ resizeEvent --------------------")
         fs = self.__ui.widget.frameSize()
-        #self.__hmap_chart.resize(fs)
+        #self.__chart_view.resize(fs)
 
+    def test(self):
+        self.__chart_view.test()
 
 def gen_sample_dataframe():
 
@@ -345,6 +386,6 @@ if __name__ == "__main__":
 
 
     widget.show()
-    #widget.init_resize()
+    widget.init_resize()
 
     sys.exit(app.exec_())
