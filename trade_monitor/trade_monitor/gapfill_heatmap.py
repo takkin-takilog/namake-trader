@@ -7,10 +7,10 @@ from abc import ABCMeta, abstractmethod
 from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QSizePolicy
 from PySide2.QtWidgets import QGraphicsRectItem
 from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
-from PySide2.QtCore import Qt, QFile, QSizeF, QPointF, QRectF
+from PySide2.QtCore import Qt, QFile, QSizeF, QPointF, QRectF, QSize
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtDataVisualization import QtDataVisualization
-from PySide2.QtGui import QVector3D, QGuiApplication
+from PySide2.QtGui import QVector3D, QGuiApplication, QPixmap, QBrush, QIcon
 from PySide2.QtGui import QPalette, QColor, QFont, QPen, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QGradient
 from PySide2.QtCharts import QtCharts
@@ -232,6 +232,32 @@ class GapFillHeatMap(QMainWindow):
         self.setWindowTitle('Qt DataVisualization 3D Bars')
 
         chart_view = HeatMapChartView(ui.widget)
+
+        # Color
+        grBtoY = QLinearGradient(0, 0, 1, 100)
+        grBtoY.setColorAt(1.0, Qt.black)
+        grBtoY.setColorAt(0.67, Qt.blue)
+        grBtoY.setColorAt(0.33, Qt.red)
+        grBtoY.setColorAt(0.0, Qt.yellow)
+        pm1 = QPixmap(24, 100)
+        pmp = QPainter(pm1)
+        pmp.setBrush(QBrush(grBtoY))
+        pmp.setPen(Qt.NoPen)
+        pmp.drawRect(0, 0, 24, 100)
+        ui.pushButton_gradientBtoYPB.setIcon(QIcon(pm1))
+        ui.pushButton_gradientBtoYPB.setIconSize(QSize(24, 100))
+
+        grGtoR = QLinearGradient(0, 0, 1, 100)
+        grGtoR.setColorAt(1.0, Qt.darkGreen)
+        grGtoR.setColorAt(0.5, Qt.yellow)
+        grGtoR.setColorAt(0.2, Qt.red)
+        grGtoR.setColorAt(0.0, Qt.darkRed)
+        pm = QPixmap(24, 100)
+        pmp = QPainter(pm)
+        pmp.setBrush(QBrush(grGtoR))
+        pmp.drawRect(0, 0, 24, 100)
+        ui.pushButton_gradientGtoRPB.setIcon(QIcon(pm))
+        ui.pushButton_gradientGtoRPB.setIconSize(QSize(24, 100))
 
         self.__ui = ui
         self.__chart_view = chart_view
