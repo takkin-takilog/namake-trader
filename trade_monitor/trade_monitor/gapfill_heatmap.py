@@ -42,13 +42,12 @@ class HeatMapChartViewAbs(QtCharts.QChartView):
 
     def __init__(self, parent):
         super().__init__()
+        self.setParent(parent)
 
         # Create Chart and set General Chart setting
-        #chart = QtCharts.QChart()
-        """
+        chart = QtCharts.QChart()
         chart.layout().setContentsMargins(0, 0, 0, 0)
         chart.setBackgroundRoundness(0)
-        """
 
         # itle Font size
         """
@@ -75,7 +74,6 @@ class HeatMapChartViewAbs(QtCharts.QChartView):
         """
 
         # Plot area background
-        """
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor('#f1f1f1'))
         plotAreaGradient.setColorAt(1.0, QColor('#ffffff'))
@@ -84,7 +82,9 @@ class HeatMapChartViewAbs(QtCharts.QChartView):
 
         chart.legend().hide()
         chart.legend().setVisible(False)
-        """
+
+        self.setChart(chart)
+
         """
         self.setChart(chart)
         self.setParent(widget)
@@ -93,7 +93,6 @@ class HeatMapChartViewAbs(QtCharts.QChartView):
         self._chart = chart
         self._widget = widget
         """
-        self.setParent(parent)
 
     """
     @abstractmethod
@@ -107,61 +106,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
     def __init__(self, parent):
         super().__init__(parent)
 
-        upperSeries = QtCharts.QLineSeries()
-        lowerSeries = QtCharts.QLineSeries()
-
-        x = [x for x in range(1, 3, 1)]
-        y1 = [5, 7]
-        y2 = [3, 4]
-
-        for i in range(len(x)):
-            upperSeries.append(x[i], y1[i])
-            lowerSeries.append(x[i], y2[i])
-
-        series = QtCharts.QAreaSeries(upperSeries, lowerSeries)
-
-        pen = QPen(Qt.red)
-        pen.setWidth(3)
-        series.setPen(pen)
-
-        gradient = QLinearGradient(QPointF(0, 0), QPointF(0, 1))
-        gradient.setColorAt(0.0, QColor(255, 255, 255))
-        gradient.setColorAt(1.0, QColor(0, 255, 0))
-        gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
-        series.setBrush(gradient)
-
-        chart = QtCharts.QChart()
-        #self.setChart(chart)
-        #chart = self.chart()
-
-        #chart.removeAllSeries()
-        print("--------------------------------------------------------")
-        print(chart)
-        #self.setChart(chart)
-
-        chart.addSeries(series)
-        chart.createDefaultAxes()
-        """
-        chart.setTitle('Simple Area Chart')
-        chart.legend().hide()
-        chart.createDefaultAxes()
-        chart.axes(Qt.Horizontal)[0].setRange(0, 3)
-        chart.axes(Qt.Vertical)[0].setRange(0, 10)
-        """
-
-        #chartView = QtCharts.QChartView()
-        self.setChart(chart)
-        #self.setWindowTitle('Area Chart')
-
-        #self.setParent(parent)
-
-
-
-
-
-
-
-
+        self.chart().setTitle('Simple Area Chart')
 
 
         """
@@ -211,9 +156,20 @@ class HeatMapChartView(HeatMapChartViewAbs):
         gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
         series.setBrush(gradient)
 
+        chart = QtCharts.QChart()
+        chart.removeAllSeries()
+        chart.addSeries(series)
+        chart.createDefaultAxes()
+
+        self.setChart(chart)
+
+        """
         self.chart().removeAllSeries()
-        print("--------------------------------------------------------")
         self.chart().addSeries(series)
+        self.chart().createDefaultAxes()
+        """
+        #self.chart().axes(Qt.Horizontal)[0].setRange(0, 3)
+        #self.chart().axes(Qt.Vertical)[0].setRange(0, 10)
 
     def set_data(self, df: pd.DataFrame):
 
@@ -286,6 +242,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         super().mouseMoveEvent(event)
         print("---------- mouseMoveEvent ----------")
         self.test()
+        print("--------------------------------------------------------")
     """
     def update(self):
         super().update()
