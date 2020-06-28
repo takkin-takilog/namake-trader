@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>861</width>
-    <height>690</height>
+    <width>892</width>
+    <height>696</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,12 +16,34 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout_3">
     <item>
-     <widget class="QWidget" name="widget" native="true">
+     <widget class="QWidget" name="widget_HeatMap" native="true">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="widget_ColorScale" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>80</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="baseSize">
+       <size>
+        <width>0</width>
+        <height>0</height>
+       </size>
       </property>
      </widget>
     </item>
@@ -156,7 +178,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>861</width>
+     <width>892</width>
      <height>28</height>
     </rect>
    </property>
