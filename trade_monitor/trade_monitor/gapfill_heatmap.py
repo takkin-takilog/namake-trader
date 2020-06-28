@@ -16,12 +16,48 @@ from PySide2.QtGui import QLinearGradient, QGradient
 from PySide2.QtCharts import QtCharts
 
 
-class AreaSeries(QtCharts.QAreaSeries):
+def gen_sample_dataframe():
+
+    import numpy as np
+
+    xlist = [i / 10 for i in range(1, 11, 1)]
+    ylist = [i / 10 for i in range(3, 11, 1)]
+
+    map_ = []
+    for y in ylist:
+        row = []
+        row.append(y)
+        ran = np.random.randint(-100, 100, len(xlist)) / 100
+        map_.append(row + list(ran))
+
+    idx = "Y"
+    columns = [idx] + xlist
+
+    df = pd.DataFrame(map_, columns=columns)
+    df.set_index(idx, inplace=True)
+
+    df_s = df.sort_values(df.index.name, ascending=False)
+
+    delta_y = df_s.index[1] - df_s.index[0]
+    delta_x = df_s.columns[1] - df_s.columns[0]
+
+    for idx, row in df_s.iterrows():
+        idx_pre = idx - delta_y
+        for x in row:
+            point_pre = QPointF(x - delta_x, idx_pre)
+            point_crr = QPointF(x, idx)
+            series = QtCharts.QLineSeries()
+            series.append(point_pre)
+            series.append(point_crr)
+
+    return df
+
+class HeatBlockSeries(QtCharts.QAreaSeries):
 
     def __init__(self,
                  upperSeries: QtCharts.QLineSeries,
                  lowerSeries: QtCharts.QLineSeries,
-                 height: float):
+                 heat_value: float):
         super().__init__(upperSeries, lowerSeries)
 
         pen = QPen(0x059605)
@@ -34,7 +70,12 @@ class AreaSeries(QtCharts.QAreaSeries):
         gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
         self.setBrush(gradient)
 
-        self.__height = height
+        self.__upperSeries = upperSeries
+        self.__lowerSeries = lowerSeries
+        self.__heat_value = heat_value
+
+    def update_heat_value(self, heat_value: float) -> None:
+        self.__heat_value = heat_value
 
 
 class HeatMapChartViewAbs(QtCharts.QChartView):
@@ -74,13 +115,14 @@ class HeatMapChartViewAbs(QtCharts.QChartView):
         """
 
         # Plot area background
+        """
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor('#f1f1f1'))
         plotAreaGradient.setColorAt(1.0, QColor('#ffffff'))
         chart.setPlotAreaBackgroundBrush(plotAreaGradient)
         chart.setPlotAreaBackgroundVisible(True)
+        """
 
-        chart.legend().hide()
         chart.legend().setVisible(False)
 
         self.setChart(chart)
@@ -108,140 +150,70 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         self.chart().setTitle('Simple Area Chart')
 
-
-        """
         # X Axis Settings
         axis_x = QtCharts.QValueAxis()
         axis_x.setTickCount(2)
         axis_x.setTitleText("Value")
         # axis_x.setFormat("h:mm")
-        # axis_x.setLabelsAngle(0)
-        axis_x.setRange(0.0, 1.0)
+        axis_x.setLabelsAngle(0)
+        axis_x.setRange(-10.0, 10.0)
 
         # Y Axis Settings
         axis_y = QtCharts.QValueAxis()
         axis_y.setTickCount(2)
         axis_y.setTitleText("Value")
         # axis_y.setFormat("h:mm")
-        # axis_y.setLabelsAngle(0)
-        axis_y.setRange(0.0, 1.0)
+        axis_y.setLabelsAngle(0)
+        axis_y.setRange(-10.0, 10.0)
 
-        #self._chart.addAxis(axis_x, Qt.AlignBottom)
+        self.chart().addAxis(axis_x, Qt.AlignBottom)
         #self._series.attachAxis(axis_x)
-        #self._chart.addAxis(axis_y, Qt.AlignLeft)
+        self.chart().addAxis(axis_y, Qt.AlignLeft)
         #self._series.attachAxis(axis_y)
-        """
 
-    def test(self):
-        upperSeries = QtCharts.QLineSeries()
-        lowerSeries = QtCharts.QLineSeries()
+        self.__axis_x = axis_x
+        self.__axis_y = axis_y
 
-        x = [x for x in range(1, 3, 1)]
-        y1 = [10, 5]
-        y2 = [1, 5]
-
-        for i in range(len(x)):
-            upperSeries.append(x[i], y1[i])
-            lowerSeries.append(x[i], y2[i])
-
-        series = QtCharts.QAreaSeries(upperSeries, lowerSeries)
-
-        pen = QPen(Qt.red)
-        pen.setWidth(3)
-        series.setPen(pen)
-
-        gradient = QLinearGradient(QPointF(0, 0), QPointF(0, 1))
-        gradient.setColorAt(0.0, QColor(255, 255, 255))
-        gradient.setColorAt(1.0, QColor(0, 255, 0))
-        gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
-        series.setBrush(gradient)
-
-        chart = QtCharts.QChart()
-        chart.removeAllSeries()
-        chart.addSeries(series)
-        chart.createDefaultAxes()
-
-        self.setChart(chart)
-
-        """
-        self.chart().removeAllSeries()
-        self.chart().addSeries(series)
-        self.chart().createDefaultAxes()
-        """
-        #self.chart().axes(Qt.Horizontal)[0].setRange(0, 3)
-        #self.chart().axes(Qt.Vertical)[0].setRange(0, 10)
-
-    def set_data(self, df: pd.DataFrame):
+    def reset_map(self, df: pd.DataFrame):
 
         df_s = df.sort_values(df.index.name, ascending=True)
 
-        print("aaaaaaaaaaa")
+        print(df_s)
+        print(df.columns)
 
         delta_y = df_s.index[1] - df_s.index[0]
         delta_x = df_s.columns[1] - df_s.columns[0]
 
+        self.chart().removeAllSeries()
+
+        self.__block_list = []
         self.chart().series().clear()
-        for idx, row in df_s.iterrows():
-            idx_pre = idx - delta_y
-            print("idx: " + str(idx))
-            for x in row:
-                point_pre = QPointF(x - delta_x, idx_pre)
-                point_crr = QPointF(x, idx_pre)
-                lower_series = QtCharts.QLineSeries()
-                lower_series.append(point_pre)
-                lower_series.append(point_crr)
-
-                point_pre = QPointF(x - delta_x, idx)
-                point_crr = QPointF(x, idx)
+        for idx_y, row in df_s.iterrows():
+            idx_y_pre = idx_y - delta_y
+            for idx_num, x in enumerate(row):
+                idx_x = df.columns[idx_num]
+                idx_x_pre = idx_x - delta_x
                 upper_series = QtCharts.QLineSeries()
-                upper_series.append(point_pre)
-                upper_series.append(point_crr)
+                lower_series = QtCharts.QLineSeries()
+                upper_series.append(idx_x_pre, idx_y)
+                upper_series.append(idx_x, idx_y)
+                lower_series.append(idx_x_pre, idx_y_pre)
+                lower_series.append(idx_x, idx_y_pre)
+                block = HeatBlockSeries(upper_series, lower_series, x)
+                self.chart().addSeries(block)
+                self.__block_list.append(block)
 
-                #are_ser = AreaSeries(upper_series, lower_series, x)
-                are_ser = QtCharts.QAreaSeries(upper_series, lower_series)
-                #self.chart().addSeries(are_ser)
-
-        upperSeries = QtCharts.QLineSeries()
-        lowerSeries = QtCharts.QLineSeries()
-
-        x = [x for x in range(1, 3, 1)]
-        y1 = [5, 7]
-        y2 = [3, 4]
-
-        for i in range(len(x)):
-            upperSeries.append(x[i], y1[i])
-            lowerSeries.append(x[i], y2[i])
-
-        series = QtCharts.QAreaSeries(upperSeries, lowerSeries)
-
-        pen = QPen(Qt.red)
-        pen.setWidth(3)
-        series.setPen(pen)
-
-        gradient = QLinearGradient(QPointF(0, 0), QPointF(0, 1))
-        gradient.setColorAt(0.0, QColor(255, 255, 255))
-        gradient.setColorAt(1.0, QColor(0, 255, 0))
-        gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
-        series.setBrush(gradient)
-
-        self._chart.addSeries(series)
-
-        #series.attachAxis(self.__axis_x)
-        #series.attachAxis(self.__axis_y)
-
-        self._chart.setTitle('Simple Area Chart')
-        self._chart.legend().hide()
-        self._chart.createDefaultAxes()
-        #self._chart.axes(Qt.Horizontal)[0].setRange(0, 3)
-        #self._chart.axes(Qt.Vertical)[0].setRange(0, 10)
-
-        #self.chart().addSeries(series)
-        #self.chart().createDefaultAxes()
+        self.chart().createDefaultAxes()
+        #self.chart().axes(Qt.Horizontal)[0].setRange(0, 1)
+        #self.chart().axes(Qt.Vertical)[0].setRange(0, 1)
+        #chart.createDefaultAxes()
+        #self.setChart(chart)
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         print("---------- mouseMoveEvent ----------")
-        self.test()
+        df = gen_sample_dataframe()
+        self.reset_map(df)
         print("--------------------------------------------------------")
     """
     def update(self):
@@ -269,6 +241,11 @@ class GapFillHeatMap(QMainWindow):
         self.__hmap_chart.set_data(df)
     """
 
+    def reset_map(self, df: pd.DataFrame):
+
+        self.__chart_view.reset_map(df)
+
+
     def __load_ui(self, parent):
         loader = QUiLoader()
         path = os.path.join(os.path.dirname(__file__), "gapfill_heatmap.ui")
@@ -281,58 +258,16 @@ class GapFillHeatMap(QMainWindow):
 
     def init_resize(self):
         fs = self.__ui.widget.frameSize()
-        #self.__chart_view.resize(fs)
+        self.__chart_view.resize(fs)
 
     def resizeEvent(self, event):
-        super().resizeEvent(event)
+        #super().resizeEvent(event)
         print("------------------ resizeEvent --------------------")
         fs = self.__ui.widget.frameSize()
-        #self.__chart_view.resize(fs)
-
-    def test(self):
-        self.__chart_view.test()
-
-def gen_sample_dataframe():
-
-    import numpy as np
-
-    xlist = [i / 10 for i in range(1, 11, 1)]
-    ylist = [i / 10 for i in range(3, 11, 1)]
-
-    map_ = []
-    for y in ylist:
-        row = []
-        row.append(y)
-        ran = np.random.randint(-100, 100, len(xlist)) / 100
-        map_.append(row + list(ran))
-
-    idx = "Y"
-    columns = [idx] + xlist
-
-    df = pd.DataFrame(map_, columns=columns)
-    df.set_index(idx, inplace=True)
-
-    df_s = df.sort_values(df.index.name, ascending=False)
-
-    delta_y = df_s.index[1] - df_s.index[0]
-    delta_x = df_s.columns[1] - df_s.columns[0]
-
-    for idx, row in df_s.iterrows():
-        idx_pre = idx - delta_y
-        for x in row:
-            point_pre = QPointF(x - delta_x, idx_pre)
-            point_crr = QPointF(x, idx)
-            series = QtCharts.QLineSeries()
-            series.append(point_pre)
-            series.append(point_crr)
-
-    return df
-
+        self.__chart_view.resize(fs)
 
 
 if __name__ == "__main__":
-
-    df = gen_sample_dataframe()
 
     from PySide2.QtCore import QCoreApplication
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
