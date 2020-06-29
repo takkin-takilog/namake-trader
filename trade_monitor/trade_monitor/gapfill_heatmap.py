@@ -15,10 +15,14 @@ from PySide2.QtGui import QPalette, QColor, QFont, QPen, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QGradient, QImage
 from PySide2.QtCharts import QtCharts
 
+from trade_monitor.util import GradientManager
+
+gradMng = GradientManager()
+
 
 class ColorScaleChartView(QtCharts.QChartView):
 
-    def __init__(self, parent, init_grad):
+    def __init__(self, parent):
         super().__init__(parent)
 
         # Create Chart and set General Chart setting
@@ -53,28 +57,27 @@ class ColorScaleChartView(QtCharts.QChartView):
 
         self.setChart(chart)
 
-        self.__grad = init_grad
+    def update_intensity_range(self):
+        max_abs = gradMng.intensityMax
+        self.chart().axes(Qt.Vertical)[0].setRange(-max_abs, max_abs)
 
-    def change_intensity_max_abs(self, intensity_max_abs: float):
-          self.chart().axes(Qt.Vertical)[0].setRange(-intensity_max_abs, intensity_max_abs)
-
-    def change_color_scale(self, grad: QLinearGradient):
+    def update_color_scale(self):
         rect = self.chart().plotArea()
+        gradMng.setRect(rect)
+        grad = gradMng.getGradient()
+        """
         grad.setStart(rect.topLeft())
         grad.setFinalStop(0, rect.bottom())
+        """
         self.chart().setPlotAreaBackgroundBrush(grad)
-        self.__grad = grad
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         rect = self.chart().plotArea()
         #rect.setWidth(50)
-        self.__grad.setStart(rect.topLeft())
-        self.__grad.setFinalStop(0, rect.bottom())
-        self.chart().setPlotAreaBackgroundBrush(self.__grad)
-        print("6666666666666666666666666")
-        print(rect)
-        print(event.size().width())
+        gradMng.setRect(rect)
+        grad = gradMng.getGradient()
+        self.chart().setPlotAreaBackgroundBrush(grad)
         #self.chart().setPlotArea(rect)
 
 
@@ -82,8 +85,8 @@ def gen_sample_dataframe():
 
     import numpy as np
 
-    xlist = [i / 10 for i in range(1, 11, 1)]
-    ylist = [i / 10 for i in range(3, 11, 1)]
+    xlist = [i / 10 for i in range(1, 101, 1)]
+    ylist = [i / 10 for i in range(3, 101, 1)]
 
     map_ = []
     for y in ylist:
@@ -98,71 +101,39 @@ def gen_sample_dataframe():
     df = pd.DataFrame(map_, columns=columns)
     df.set_index(idx, inplace=True)
 
-    df_s = df.sort_values(df.index.name, ascending=False)
-
-    delta_y = df_s.index[1] - df_s.index[0]
-    delta_x = df_s.columns[1] - df_s.columns[0]
-
-    for idx, row in df_s.iterrows():
-        idx_pre = idx - delta_y
-        for x in row:
-            point_pre = QPointF(x - delta_x, idx_pre)
-            point_crr = QPointF(x, idx)
-            series = QtCharts.QLineSeries()
-            series.append(point_pre)
-            series.append(point_crr)
+    df_s = df.sort_values(df.index.name, ascending=True)
+    print(df.sort_values(df.index.name, ascending=False))
 
     return df
-
-
-def print_gradient(grad: QLinearGradient):
-
-    grad.setSStart(0, 25.6)
-    grad.setFinalStop(0, 25.6)
-    # create image and fill it with gradient
-    image = QImage(1, 256, QImage.Format_RGB32)
-    painter = QPainter(image)
-    painter.fillRect(image.rect(), grad)
-    painter.end()
-
-    print("w:{}, h:{}" .format(image.width(), image.height()))
-    for i in range(256):
-        print("[{}]:{}" .format(i, image.pixelColor(0, i)))
-
-
-    rgblist = image.colorTable()
-    print(rgblist)
-
 
 class HeatBlockSeries(QtCharts.QAreaSeries):
 
     def __init__(self,
                  upperSeries: QtCharts.QLineSeries,
                  lowerSeries: QtCharts.QLineSeries,
-                 heat_value: float):
+                 intensity: float):
         super().__init__(upperSeries, lowerSeries)
 
         pen = QPen(0x059605)
         pen.setWidth(3)
         self.setPen(pen)
 
-        gradient = QLinearGradient(QPointF(0, 0), QPointF(0, 1))
-        gradient.setColorAt(0.0, 0x3cc63c)
-        gradient.setColorAt(1.0, 0x26f626)
-        gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
-        self.setBrush(gradient)
+        color = gradMng.convertValueToColor(intensity)
+        self.setColor(color)
 
         self.__upperSeries = upperSeries
         self.__lowerSeries = lowerSeries
-        self.__heat_value = heat_value
+        self.__intensity = intensity
 
-    def update_heat_value(self, heat_value: float) -> None:
-        self.__heat_value = heat_value
+    def update_heat_value(self, intensity: float) -> None:
+        self.__intensity = intensity
 
         # brush = QBrush()
         # self.setBrush(brush)
 
-    def update_gradient(self, grad: QLinearGradient):
+    def update_color(self):
+        color = gradMng.convertValueToColor(self.__intensity)
+        self.setColor(color)
 
         """
         pmp = QPainter(QPixmap(1, 256))
@@ -170,13 +141,6 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         pmp.setPen(Qt.NoPen)
         pmp.drawRect(0, 0, 1, 256)
         """
-
-        # create image and fill it with gradient
-        image = QImage(1, 256, QImage.Format_RGB32)
-        painter = QPainter(image)
-        painter.fillRect(image.rect(), grad)
-        rgblist = image.colorTable()
-        print(rgblist)
 
         # brush = QBrush()
         # self.setBrush(brush)
@@ -273,11 +237,8 @@ class HeatMapChartView(HeatMapChartViewAbs):
         #self._series.attachAxis(axis_x)
         self.chart().addAxis(axis_y, Qt.AlignLeft)
         #self._series.attachAxis(axis_y)
+        self.__block_list = []
 
-        self.__intensity_max_abs = 0
-
-    def set_gradient(self, gradient: QLinearGradient):
-        pass
 
     def reset_map(self, df: pd.DataFrame):
 
@@ -285,15 +246,18 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         max_val = df_s.max().max()
         min_val = df_s.min().min()
-        self.__intensity_max_abs = max(abs(max_val), abs(min_val))
+        intensity_max_abs = max(abs(max_val), abs(min_val))
 
-        print(df_s)
-        print(df.columns)
+        print("--------------- updateColorTable start --------------------")
+        gradMng.updateColorTable(intensity_max_abs)
+        print("--------------- updateColorTable end --------------------")
 
         delta_y = df_s.index[1] - df_s.index[0]
         delta_x = df_s.columns[1] - df_s.columns[0]
 
+        print("--------------- removeAllSeries start --------------------")
         self.chart().removeAllSeries()
+        print("--------------- removeAllSeries end --------------------")
 
         self.__block_list = []
         self.chart().series().clear()
@@ -311,6 +275,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 block = HeatBlockSeries(upper_series, lower_series, x)
                 self.chart().addSeries(block)
                 self.__block_list.append(block)
+                print("x:{}, y:{}" .format(idx_num, idx_y))
 
         self.chart().createDefaultAxes()
         #self.chart().axes(Qt.Horizontal)[0].setRange(0, 1)
@@ -318,10 +283,9 @@ class HeatMapChartView(HeatMapChartViewAbs):
         #chart.createDefaultAxes()
         #self.setChart(chart)
 
-        return self.__intensity_max_abs
-
-    def change_color_scale(self, grad: QLinearGradient):
-        pass
+    def update_color(self):
+        for block in self.__block_list:
+            block.update_color()
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -346,35 +310,23 @@ class GapFillHeatMap(QMainWindow):
         chart_view = HeatMapChartView(ui.widget_HeatMap)
 
         # Color
-        grBtoY = QLinearGradient(0, 0, 0, 100)
-        grBtoY.setColorAt(1.0, Qt.black)
-        grBtoY.setColorAt(0.67, Qt.blue)
-        grBtoY.setColorAt(0.33, Qt.red)
-        grBtoY.setColorAt(0.0, Qt.yellow)
-        pm1 = QPixmap(24, 100)
-        pmp = QPainter(pm1)
-        pmp.setBrush(QBrush(grBtoY))
-        pmp.setPen(Qt.NoPen)
-        pmp.drawRect(0, 0, 24, 100)
-        pmp.end()
-        ui.pushButton_gradientBtoYPB.setIcon(QIcon(pm1))
-        ui.pushButton_gradientBtoYPB.setIconSize(QSize(24, 100))
-
-        print_gradient(grBtoY)
-
-        grGtoR = QLinearGradient(0, 0, 0, 100)
+        grGtoR = QLinearGradient()
         grGtoR.setColorAt(1.0, Qt.darkGreen)
         grGtoR.setColorAt(0.5, Qt.yellow)
         grGtoR.setColorAt(0.2, Qt.red)
         grGtoR.setColorAt(0.0, Qt.darkRed)
-        pm2 = QPixmap(24, 100)
-        pmp = QPainter(pm2)
-        pmp.setBrush(QBrush(grGtoR))
-        pmp.setPen(Qt.NoPen)
-        pmp.drawRect(0, 0, 24, 100)
-        pmp.end()
-        ui.pushButton_gradientGtoRPB.setIcon(QIcon(pm2))
+        icon = GradientManager.generateIcon(grGtoR, 24, 100)
+        ui.pushButton_gradientGtoRPB.setIcon(icon)
         ui.pushButton_gradientGtoRPB.setIconSize(QSize(24, 100))
+
+        grBtoY = QLinearGradient()
+        grBtoY.setColorAt(1.0, Qt.black)
+        grBtoY.setColorAt(0.67, Qt.blue)
+        grBtoY.setColorAt(0.33, Qt.red)
+        grBtoY.setColorAt(0.0, Qt.yellow)
+        icon = GradientManager.generateIcon(grBtoY, 24, 100)
+        ui.pushButton_gradientBtoYPB.setIcon(icon)
+        ui.pushButton_gradientBtoYPB.setIconSize(QSize(24, 100))
 
         callback = self.__on_gradientBtoYPB_clicked
         ui.pushButton_gradientBtoYPB.clicked.connect(callback)
@@ -382,21 +334,44 @@ class GapFillHeatMap(QMainWindow):
         callback = self.__on_gradientGtoRPB_clicked
         ui.pushButton_gradientGtoRPB.clicked.connect(callback)
 
-        color_view = ColorScaleChartView(ui.widget_ColorScale, grBtoY)
+        gradMng.setGradient(grBtoY)
+        color_view = ColorScaleChartView(ui.widget_ColorScale)
+
+        callback = self.__on_pushButton_clicked
+        ui.pushButton.clicked.connect(callback)
 
         self.__ui = ui
         self.__chart_view = chart_view
         self.__color_view = color_view
-        self.__grBtoY = grBtoY
-        self.__grGtoR = grGtoR
 
     def __on_gradientBtoYPB_clicked(self):
-        self.__chart_view.change_color_scale(self.__grBtoY)
-        self.__color_view.change_color_scale(self.__grBtoY)
+        grBtoY = QLinearGradient(0, 0, 0, 100)
+        grBtoY.setColorAt(1.0, Qt.black)
+        grBtoY.setColorAt(0.67, Qt.blue)
+        grBtoY.setColorAt(0.33, Qt.red)
+        grBtoY.setColorAt(0.0, Qt.yellow)
+        gradMng.setGradient(grBtoY)
+
+        self.__chart_view.update_color()
+        self.__color_view.update_color_scale()
 
     def __on_gradientGtoRPB_clicked(self):
-        self.__chart_view.change_color_scale(self.__grGtoR)
-        self.__color_view.change_color_scale(self.__grGtoR)
+        grGtoR = QLinearGradient(0, 0, 0, 100)
+        grGtoR.setColorAt(1.0, Qt.darkGreen)
+        grGtoR.setColorAt(0.5, Qt.yellow)
+        grGtoR.setColorAt(0.2, Qt.red)
+        grGtoR.setColorAt(0.0, Qt.darkRed)
+        gradMng.setGradient(grGtoR)
+
+        self.__chart_view.update_color()
+        self.__color_view.update_color_scale()
+
+    def __on_pushButton_clicked(self):
+        # 以下はテストコード
+        print("--------------- start --------------------")
+        df = gen_sample_dataframe()
+        print("--------------- df comp --------------------")
+        self.reset_map(df)
 
     """
     def set_data(self, df: pd.DataFrame):
@@ -404,10 +379,9 @@ class GapFillHeatMap(QMainWindow):
     """
 
     def reset_map(self, df: pd.DataFrame):
-
-        intensity_max_abs = self.__chart_view.reset_map(df)
-        self.__color_view.change_intensity_max_abs(intensity_max_abs)
-
+        self.__chart_view.reset_map(df)
+        print("--------------- reset_map comp --------------------")
+        self.__color_view.update_intensity_range()
 
     def __load_ui(self, parent):
         loader = QUiLoader()
@@ -432,9 +406,6 @@ class GapFillHeatMap(QMainWindow):
         self.__chart_view.resize(fs)
         fs = self.__ui.widget_ColorScale.frameSize()
         self.__color_view.resize(fs)
-
-        df = gen_sample_dataframe()
-        self.reset_map(df)
 
 
 if __name__ == "__main__":

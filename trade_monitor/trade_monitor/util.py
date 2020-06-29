@@ -1,6 +1,6 @@
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QRectF
 from PySide2.QtGui import QImage, QPixmap, QBrush, QIcon, QPainter
-from PySide2.QtGui import QLinearGradient
+from PySide2.QtGui import QLinearGradient, QColor
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
 
@@ -83,32 +83,36 @@ class MsgInstDict():
 
 class GradientManager():
 
-    RBG_MAX = 255
+    __RBG_MAX = 255
 
     def __init__(self) -> None:
-        self.__gradList = []
-        self.__idx = 0
+        self.__grad = 0
         self.__slope = 0
         self.__intercept = 0
+        self.__intensityMax = 1
+        self.__intensityMin = 0
+        self.__image = QImage()
 
-    def setGradientAt(self, grad: QLinearGradient) -> int:
-        self.__gradList.append(grad)
-        self.__idx = len(self.__gradList) - 1
-        return self.__idx
+    @property
+    def intensityMax(self):
+        return self.__intensityMax
 
-    def switchGradient(self, idx: int) -> None:
-        if len(self.__gradList) <= idx:
-            self.__idx = len(self.__gradList) - 1
-        else:
-            self.__idx = idx
+    @property
+    def intensityMin(self):
+        return self.__intensityMin
 
-    def generateIcon(self,
+    def setGradient(self, grad: QLinearGradient) -> None:
+        self.__grad = grad
+        self.updateColorTable(self.__intensityMax,
+                              self.__intensityMin)
+
+    @staticmethod
+    def generateIcon(grad: QLinearGradient,
                      width: int,
                      height: int
                      ) -> QIcon:
 
-        grad = self.__gradList[self.__idx]
-        grad.setFinalStop(width, height)
+        grad.setFinalStop(0, height)
         pm = QPixmap(width, height)
         pmp = QPainter(pm)
         pmp.setBrush(QBrush(grad))
@@ -118,28 +122,47 @@ class GradientManager():
 
         return QIcon(pm)
 
-    def updateColorTable(self, min_, max_):
+    def updateColorTable(self, max_, min_=None):
 
-        grad = self.__gradList[self.__idx]
-        grad.setStart(0, 0)
-        grad.setFinalStop(0, self.RBG_MAX)
+        if min_ is None:
+            min_ = -max_
+
+        self.__grad.setStart(0, 0)
+        self.__grad.setFinalStop(0, self.__RBG_MAX)
         # create image and fill it with gradient
-        image = QImage(1, self.RBG_MAX + 1, QImage.Format_RGB32)
+        image = QImage(1, self.__RBG_MAX + 1, QImage.Format_RGB32)
         painter = QPainter(image)
-        painter.fillRect(image.rect(), grad)
+        painter.fillRect(image.rect(), self.__grad)
         painter.end()
 
-        self.__slope = self.RBG_MAX / (max_ - min_)
-        self.__intercept = self.RBG_MAX * min_ / (min_ - max_)
+        self.__slope = self.__RBG_MAX / (min_ - max_)
+        self.__intercept = self.__RBG_MAX * max_ / (max_ - min_)
 
+        self.__intensityMax = max_
+        self.__intensityMin = min_
+        self.__image = image
+
+        """
         print("w:{}, h:{}" .format(image.width(), image.height()))
-        for i in range(self.RBG_MAX + 1):
+        for i in range(self.__RBG_MAX + 1):
             print("[{}]:{}" .format(i, image.pixelColor(0, i)))
+        """
+
+    def convertValueToColor(self, value) -> QColor:
+        calcf = self.__slope * value + self.__intercept
+        return self.__image.pixelColor(0, calcf)
 
     def convertValueToIntensity(self, value):
         calcf = self.__slope * value + self.__intercept
         print("calcf: {}" .format(calcf))
         return int(calcf)
+
+    def setRect(self, rect: QRectF):
+        self.__grad.setStart(rect.topLeft())
+        self.__grad.setFinalStop(0, rect.bottom())
+
+    def getGradient(self) -> QLinearGradient:
+        return self.__grad
 
 
 INST_MSG_LIST = [
