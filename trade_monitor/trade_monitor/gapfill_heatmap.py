@@ -7,6 +7,7 @@ from abc import ABCMeta, abstractmethod
 from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QSizePolicy
 from PySide2.QtWidgets import QGraphicsRectItem
 from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
+from PySide2.QtWidgets import QLabel, QProgressBar
 from PySide2.QtCore import Qt, QFile, QSizeF, QPointF, QRectF, QSize, QMargins
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtDataVisualization import QtDataVisualization
@@ -106,23 +107,40 @@ def gen_sample_dataframe():
 
     return df
 
+
 class HeatBlockSeries(QtCharts.QAreaSeries):
 
-    def __init__(self,
-                 upperSeries: QtCharts.QLineSeries,
-                 lowerSeries: QtCharts.QLineSeries,
-                 intensity: float):
-        super().__init__(upperSeries, lowerSeries)
+    def __init__(self):
 
-        pen = QPen(0x059605)
-        pen.setWidth(3)
-        self.setPen(pen)
+        upper_series = QtCharts.QLineSeries()
+        lower_series = QtCharts.QLineSeries()
+        upper_series.append(0, 0)
+        upper_series.append(0, 0)
+        lower_series.append(0, 0)
+        lower_series.append(0, 0)
+
+        super().__init__(upper_series, lower_series)
+        self.setPen(Qt.NoPen)
+
+        self.__upper_series = upper_series
+        self.__lower_series = lower_series
+        self.__intensity = 0
+
+    def update(self,
+               left_x: float,
+               right_x: float,
+               upper_y: float,
+               lower_y: float,
+               intensity: float) -> None:
+
+        self.upperSeries().replace(0, left_x, upper_y)
+        self.upperSeries().replace(1, right_x, upper_y)
+        self.lowerSeries().replace(0, left_x, lower_y)
+        self.lowerSeries().replace(1, right_x, lower_y)
 
         color = gradMng.convertValueToColor(intensity)
         self.setColor(color)
 
-        self.__upperSeries = upperSeries
-        self.__lowerSeries = lowerSeries
         self.__intensity = intensity
 
     def update_heat_value(self, intensity: float) -> None:
@@ -212,7 +230,7 @@ class HeatMapChartViewAbs(QtCharts.QChartView):
 
 class HeatMapChartView(HeatMapChartViewAbs):
 
-    def __init__(self, parent):
+    def __init__(self, parent, sts_prog_bar):
         super().__init__(parent)
 
         self.chart().setTitle('Simple Area Chart')
@@ -223,7 +241,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         axis_x.setTitleText("Value")
         # axis_x.setFormat("h:mm")
         axis_x.setLabelsAngle(0)
-        axis_x.setRange(-10.0, 10.0)
+        #axis_x.setRange(-10.0, 10.0)
 
         # Y Axis Settings
         axis_y = QtCharts.QValueAxis()
@@ -231,14 +249,12 @@ class HeatMapChartView(HeatMapChartViewAbs):
         axis_y.setTitleText("Value")
         # axis_y.setFormat("h:mm")
         axis_y.setLabelsAngle(0)
-        axis_y.setRange(-10.0, 10.0)
+        #axis_y.setRange(-10.0, 10.0)
 
         self.chart().addAxis(axis_x, Qt.AlignBottom)
-        #self._series.attachAxis(axis_x)
         self.chart().addAxis(axis_y, Qt.AlignLeft)
-        #self._series.attachAxis(axis_y)
-        self.__block_list = []
 
+        self.__sts_prog_bar = sts_prog_bar
 
     def reset_map(self, df: pd.DataFrame):
 
@@ -248,43 +264,42 @@ class HeatMapChartView(HeatMapChartViewAbs):
         min_val = df_s.min().min()
         intensity_max_abs = max(abs(max_val), abs(min_val))
 
-        print("--------------- updateColorTable start --------------------")
         gradMng.updateColorTable(intensity_max_abs)
-        print("--------------- updateColorTable end --------------------")
 
         delta_y = df_s.index[1] - df_s.index[0]
         delta_x = df_s.columns[1] - df_s.columns[0]
 
-        print("--------------- removeAllSeries start --------------------")
-        self.chart().removeAllSeries()
-        print("--------------- removeAllSeries end --------------------")
+        diff = df_s.size - len(self.chart().series())
 
-        self.__block_list = []
-        self.chart().series().clear()
-        for idx_y, row in df_s.iterrows():
-            idx_y_pre = idx_y - delta_y
-            for idx_num, x in enumerate(row):
-                idx_x = df.columns[idx_num]
-                idx_x_pre = idx_x - delta_x
-                upper_series = QtCharts.QLineSeries()
-                lower_series = QtCharts.QLineSeries()
-                upper_series.append(idx_x_pre, idx_y)
-                upper_series.append(idx_x, idx_y)
-                lower_series.append(idx_x_pre, idx_y_pre)
-                lower_series.append(idx_x, idx_y_pre)
-                block = HeatBlockSeries(upper_series, lower_series, x)
+        if 0 < diff:
+            for _ in range(diff):
+                block = HeatBlockSeries()
                 self.chart().addSeries(block)
-                self.__block_list.append(block)
-                print("x:{}, y:{}" .format(idx_num, idx_y))
+                block.attachAxis(self.chart().axes(Qt.Horizontal)[0])
+                block.attachAxis(self.chart().axes(Qt.Vertical)[0])
+        elif diff < 0:
+            for i in range(diff, 0):
+                sr = self.chart().series()[i]
+                self.chart().removeSeries(sr)
 
-        self.chart().createDefaultAxes()
-        #self.chart().axes(Qt.Horizontal)[0].setRange(0, 1)
-        #self.chart().axes(Qt.Vertical)[0].setRange(0, 1)
-        #chart.createDefaultAxes()
-        #self.setChart(chart)
+        self.__sts_prog_bar.setRange(0, df_s.size)
+        itr = 0
+        for upper_y, row in df_s.iterrows():
+            lower_y = upper_y - delta_y
+            for idx_num, x in enumerate(row):
+                right_x = df.columns[idx_num]
+                left_x = right_x - delta_x
+                block = self.chart().series()[itr]
+                block.update(left_x, right_x, upper_y, lower_y, x)
+                itr = itr + 1
+                self.__sts_prog_bar.setValue(itr)
+
+        #self.chart().createDefaultAxes()
+        self.chart().axes(Qt.Horizontal)[0].setRange(df_s.columns[0]-delta_x, df_s.columns[-1])
+        self.chart().axes(Qt.Vertical)[0].setRange(df_s.index[0]-delta_y, df_s.index[-1])
 
     def update_color(self):
-        for block in self.__block_list:
+        for block in self.chart().series():
             block.update_color()
 
     def mouseMoveEvent(self, event):
@@ -301,13 +316,24 @@ class GapFillHeatMap(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+
         ui = self.__load_ui(parent)
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
 
         self.setWindowTitle('Qt DataVisualization 3D Bars')
 
-        chart_view = HeatMapChartView(ui.widget_HeatMap)
+        # set status bar
+        # sts_label = QLabel()
+        sts_prog_bar = QProgressBar()
+        # sts_label.setText("Status Label")
+        sts_prog_bar.setTextVisible(True)
+        # ui.statusbar.addPermanentWidget(sts_label)
+        ui.statusbar.addPermanentWidget(sts_prog_bar, 1)
+
+        chart_view = HeatMapChartView(ui.widget_HeatMap,
+                                      sts_prog_bar)
 
         # Color
         grGtoR = QLinearGradient()

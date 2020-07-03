@@ -4,7 +4,7 @@ import numpy as np
 
 from PySide2.QtWidgets import QHeaderView
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtCore import QItemSelectionModel
+from PySide2.QtCore import QItemSelectionModel, Qt
 
 import rclpy
 
@@ -194,8 +194,6 @@ class GapFillUi():
         self.__decimal_digit = INST_MSG_LIST[0].decimal_digit
         self.__is_update = False
 
-        self.__widget = GapFillHeatMap()
-
     def __on_fetch_gapfill_clicked(self):
 
         self.__qstd_itm_mdl.clear()
@@ -273,6 +271,8 @@ class GapFillUi():
 
     def __on_gapfill_heatmap_clicked(self):
         self.__logger.debug("gapfill_heatmap_clicked")
+
+        self.__widget = GapFillHeatMap()
         self.__widget.show()
 
     def __on_selection_gapfill_changed(self, selected, deselected):

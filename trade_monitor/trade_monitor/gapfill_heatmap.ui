@@ -63,6 +63,16 @@
        </spacer>
       </item>
       <item>
+       <widget class="QSpinBox" name="spinBox_ThinOut">
+        <property name="maximum">
+         <number>20</number>
+        </property>
+        <property name="value">
+         <number>10</number>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="pushButton">
         <property name="text">
          <string>PushButton</string>
