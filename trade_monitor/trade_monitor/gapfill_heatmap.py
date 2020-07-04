@@ -7,7 +7,7 @@ from abc import ABCMeta, abstractmethod
 from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QSizePolicy
 from PySide2.QtWidgets import QGraphicsRectItem
 from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
-from PySide2.QtWidgets import QLabel, QProgressBar
+from PySide2.QtWidgets import QLabel, QProgressBar, QStatusBar
 from PySide2.QtCore import Qt, QFile, QSizeF, QPointF, QRectF, QSize, QMargins
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtDataVisualization import QtDataVisualization
@@ -19,6 +19,35 @@ from PySide2.QtCharts import QtCharts
 from trade_monitor.util import GradientManager
 
 gradMng = GradientManager()
+
+
+class StatusBar():
+
+    def __init__(self, parent):
+
+        sts_label = QLabel()
+        sts_label.setVisible(False)
+
+        prog_bar = QProgressBar()
+        prog_bar.setVisible(False)
+        prog_bar.setTextVisible(True)
+
+        parent.addPermanentWidget(sts_label)
+        parent.addPermanentWidget(prog_bar, 1)
+
+        self.__sts_label = sts_label
+        self.__prog_bar = prog_bar
+
+    def set_label_text(self, text):
+        self.__sts_label.setText(text)
+        self.__sts_label.setVisible(True)
+
+    def set_bar_range(self, minimum, maximum):
+        self.__prog_bar.setVisible(True)
+        self.__prog_bar.setRange(minimum, maximum)
+
+    def set_bar_value(self, value):
+        self.__prog_bar.setValue(value)
 
 
 class ColorScaleChartView(QtCharts.QChartView):
@@ -82,12 +111,12 @@ class ColorScaleChartView(QtCharts.QChartView):
         #self.chart().setPlotArea(rect)
 
 
-def gen_sample_dataframe():
+def gen_sample_dataframe(val):
 
     import numpy as np
 
-    xlist = [i / 10 for i in range(1, 101, 1)]
-    ylist = [i / 10 for i in range(3, 101, 1)]
+    xlist = [i / 10 for i in range(1, val*10+1, 1)]
+    ylist = [i / 10 for i in range(3, val*10+1, 1)]
 
     map_ = []
     for y in ylist:
@@ -230,7 +259,7 @@ class HeatMapChartViewAbs(QtCharts.QChartView):
 
 class HeatMapChartView(HeatMapChartViewAbs):
 
-    def __init__(self, parent, sts_prog_bar):
+    def __init__(self, parent, sts_bar):
         super().__init__(parent)
 
         self.chart().setTitle('Simple Area Chart')
@@ -254,7 +283,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.chart().addAxis(axis_x, Qt.AlignBottom)
         self.chart().addAxis(axis_y, Qt.AlignLeft)
 
-        self.__sts_prog_bar = sts_prog_bar
+        self.__sts_bar = sts_bar
 
     def reset_map(self, df: pd.DataFrame):
 
@@ -271,18 +300,26 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         diff = df_s.size - len(self.chart().series())
 
+        self.__sts_bar.set_label_text("[1/2]")
         if 0 < diff:
-            for _ in range(diff):
+            print("===== 0 < diff =====")
+            self.__sts_bar.set_bar_range(0, diff)
+            for i in range(diff):
                 block = HeatBlockSeries()
                 self.chart().addSeries(block)
                 block.attachAxis(self.chart().axes(Qt.Horizontal)[0])
                 block.attachAxis(self.chart().axes(Qt.Vertical)[0])
+                self.__sts_bar.set_bar_value(i+1)
         elif diff < 0:
-            for i in range(diff, 0):
-                sr = self.chart().series()[i]
+            print("===== diff < 0 =====")
+            self.__sts_bar.set_bar_range(0, -diff)
+            for i in range(-diff):
+                sr = self.chart().series()[-1]
                 self.chart().removeSeries(sr)
+                self.__sts_bar.set_bar_value(i+1)
 
-        self.__sts_prog_bar.setRange(0, df_s.size)
+        self.__sts_bar.set_label_text("[2/2]")
+        self.__sts_bar.set_bar_range(0, df_s.size)
         itr = 0
         for upper_y, row in df_s.iterrows():
             lower_y = upper_y - delta_y
@@ -292,7 +329,9 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 block = self.chart().series()[itr]
                 block.update(left_x, right_x, upper_y, lower_y, x)
                 itr = itr + 1
-                self.__sts_prog_bar.setValue(itr)
+                self.__sts_bar.set_bar_value(itr)
+
+        print("length: {}" .format(len(self.chart().series())))
 
         #self.chart().createDefaultAxes()
         self.chart().axes(Qt.Horizontal)[0].setRange(df_s.columns[0]-delta_x, df_s.columns[-1])
@@ -324,6 +363,7 @@ class GapFillHeatMap(QMainWindow):
 
         self.setWindowTitle('Qt DataVisualization 3D Bars')
 
+        """
         # set status bar
         # sts_label = QLabel()
         sts_prog_bar = QProgressBar()
@@ -331,9 +371,12 @@ class GapFillHeatMap(QMainWindow):
         sts_prog_bar.setTextVisible(True)
         # ui.statusbar.addPermanentWidget(sts_label)
         ui.statusbar.addPermanentWidget(sts_prog_bar, 1)
+        """
+
+        sts_bar = StatusBar(ui.statusbar)
 
         chart_view = HeatMapChartView(ui.widget_HeatMap,
-                                      sts_prog_bar)
+                                      sts_bar)
 
         # Color
         grGtoR = QLinearGradient()
@@ -395,7 +438,9 @@ class GapFillHeatMap(QMainWindow):
     def __on_pushButton_clicked(self):
         # 以下はテストコード
         print("--------------- start --------------------")
-        df = gen_sample_dataframe()
+        val = self.__ui.spinBox_ThinOut.value()
+        print("----- {} ----" .format(val))
+        df = gen_sample_dataframe(val)
         print("--------------- df comp --------------------")
         self.reset_map(df)
 
