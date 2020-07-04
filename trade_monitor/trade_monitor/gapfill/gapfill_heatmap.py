@@ -1,6 +1,7 @@
 import sys
 import os
 import pandas as pd
+import numpy as np
 
 from abc import ABCMeta, abstractmethod
 
@@ -19,6 +20,32 @@ from PySide2.QtCharts import QtCharts
 from trade_monitor.util import GradientManager
 
 gradMng = GradientManager()
+
+
+def gen_sample_dataframe(val):
+
+    import numpy as np
+
+    xlist = [i / 10 for i in range(1, val*10+1, 1)]
+    ylist = [i / 10 for i in range(3, val*10+1, 1)]
+
+    map_ = []
+    for y in ylist:
+        row = []
+        row.append(y)
+        ran = np.random.randint(-100, 100, len(xlist)) / 100
+        map_.append(row + list(ran))
+
+    idx = "Y"
+    columns = [idx] + xlist
+
+    df = pd.DataFrame(map_, columns=columns)
+    df.set_index(idx, inplace=True)
+
+    df_s = df.sort_values(df.index.name, ascending=True)
+    #print(df.sort_values(df.index.name, ascending=False))
+
+    return df
 
 
 class StatusBar():
@@ -109,32 +136,6 @@ class ColorScaleChartView(QtCharts.QChartView):
         grad = gradMng.getGradient()
         self.chart().setPlotAreaBackgroundBrush(grad)
         #self.chart().setPlotArea(rect)
-
-
-def gen_sample_dataframe(val):
-
-    import numpy as np
-
-    xlist = [i / 10 for i in range(1, val*10+1, 1)]
-    ylist = [i / 10 for i in range(3, val*10+1, 1)]
-
-    map_ = []
-    for y in ylist:
-        row = []
-        row.append(y)
-        ran = np.random.randint(-100, 100, len(xlist)) / 100
-        map_.append(row + list(ran))
-
-    idx = "Y"
-    columns = [idx] + xlist
-
-    df = pd.DataFrame(map_, columns=columns)
-    df.set_index(idx, inplace=True)
-
-    df_s = df.sort_values(df.index.name, ascending=True)
-    print(df.sort_values(df.index.name, ascending=False))
-
-    return df
 
 
 class HeatBlockSeries(QtCharts.QAreaSeries):
@@ -285,7 +286,11 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         self.__sts_bar = sts_bar
 
-    def reset_map(self, df: pd.DataFrame):
+    def reset_map(self, df: pd.DataFrame, thin_rang: int):
+
+        df_s = df.sort_values(df.index.name, ascending=True)
+
+        self.__thin_out_map(df_s, thin_rang)
 
         df_s = df.sort_values(df.index.name, ascending=True)
 
@@ -344,6 +349,35 @@ class HeatMapChartView(HeatMapChartViewAbs):
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         print("---------- mouseMoveEvent ----------")
+
+    def __thin_out_map(self, df: pd.DataFrame, thin_rang: int):
+
+        print(df)
+        print(thin_rang)
+        delta_y = df.index[1] - df.index[0]
+        delta_x = df.columns[1] - df.columns[0]
+        step_x = delta_x * thin_rang
+        step_y = delta_y * thin_rang
+
+        rng_y = np.arange(0.0,
+                          df.index[-1] + (step_y * 0.9),
+                          step_y,
+                          dtype=float)
+        rng_y = rng_y[df.index[0] - (step_y * 0.1) < rng_y]
+
+        rng_x = np.arange(0.0,
+                          df.columns[-1] + (step_x * 0.9),
+                          step_x,
+                          dtype=float)
+        rng_x = rng_x[df.columns[0] - (step_x * 0.1) < rng_x]
+
+        print("step_x: {}" .format(step_x))
+        print("step_y: {}" .format(step_y))
+        print("delta_x: {}" .format(delta_x))
+        print("delta_y: {}" .format(delta_y))
+        print("rng_x: {}" .format(rng_x))
+        print("rng_y: {}" .format(rng_y))
+
 
     """
     def update(self):
@@ -450,7 +484,9 @@ class GapFillHeatMap(QMainWindow):
     """
 
     def reset_map(self, df: pd.DataFrame):
-        self.__chart_view.reset_map(df)
+
+        thin_rang = self.__ui.spinBox_ThinOut.value()
+        self.__chart_view.reset_map(df, thin_rang)
         print("--------------- reset_map comp --------------------")
         self.__color_view.update_intensity_range()
 
