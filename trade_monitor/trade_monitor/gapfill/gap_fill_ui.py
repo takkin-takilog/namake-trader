@@ -36,7 +36,7 @@ from trade_monitor.util import (COL_NAME_TIME,
                                 COL_NAME_BID_CL
                                 )
 
-from trade_monitor.gapfill_heatmap import GapFillHeatMap
+from trade_monitor.gapfill.gapfill_heatmap import GapFillHeatMap
 
 COL_NAME_DATE = "date"
 COL_NAME_GPA_DIR = "gap dir"
