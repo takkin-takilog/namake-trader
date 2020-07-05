@@ -191,3 +191,15 @@ def remove_all_items_of_comboBox(combo_box):
     while -1 < idx:
         combo_box.removeItem(idx)
         idx = combo_box.currentIndex()
+
+
+def limit(val, min_val, max_val):
+
+    if val < min_val:
+        ret_val = min_val
+    elif max_val < val:
+        ret_val = max_val
+    else:
+        ret_val = val
+
+    return ret_val

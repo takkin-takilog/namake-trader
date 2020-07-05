@@ -1,7 +1,9 @@
 import sys
 import os
+import math
 import pandas as pd
 import numpy as np
+from decimal import Decimal, ROUND_HALF_UP
 
 from abc import ABCMeta, abstractmethod
 
@@ -17,17 +19,17 @@ from PySide2.QtGui import QPalette, QColor, QFont, QPen, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QGradient, QImage
 from PySide2.QtCharts import QtCharts
 
+from trade_monitor import util as utl
 from trade_monitor.util import GradientManager
+from trade_monitor.util import INST_MSG_LIST
 
 gradMng = GradientManager()
 
 
-def gen_sample_dataframe(val):
+def gen_sample_dataframe():
 
-    import numpy as np
-
-    xlist = [i / 10 for i in range(1, val*10+1, 1)]
-    ylist = [i / 10 for i in range(3, val*10+1, 1)]
+    xlist = [i for i in range(1, 50+1, 1)]
+    ylist = [i for i in range(4, 50+1, 1)]
 
     map_ = []
     for y in ylist:
@@ -45,7 +47,9 @@ def gen_sample_dataframe(val):
     df_s = df.sort_values(df.index.name, ascending=True)
     #print(df.sort_values(df.index.name, ascending=False))
 
-    return df
+    inst_id = 0
+
+    return df, inst_id
 
 
 class StatusBar():
@@ -286,26 +290,101 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         self.__sts_bar = sts_bar
 
-    def reset_map(self, df: pd.DataFrame, thin_rang: int):
+    def reset_map(self, df: pd.DataFrame, inst_id: int, thin_rang: int):
 
         df_s = df.sort_values(df.index.name, ascending=True)
 
-        self.__thin_out_map(df_s, thin_rang)
+        df_t = self.__thin_out_map(df_s, thin_rang)
+        self.__draw_map(df_t, inst_id)
 
-        df_s = df.sort_values(df.index.name, ascending=True)
+    def update_color(self):
+        for block in self.chart().series():
+            block.update_color()
 
-        max_val = df_s.max().max()
-        min_val = df_s.min().min()
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        print("---------- mouseMoveEvent ----------")
+
+    def __thin_out_map(self, df: pd.DataFrame, thin_rang: int):
+
+        print("---------- thin_out_map ----------")
+        print(df)
+        print(thin_rang)
+
+        if thin_rang < 2:
+            return df
+
+        col_min = df.columns[0]
+        col_max = df.columns[-1]
+        row_min = df.index[0]
+        row_max = df.index[-1]
+
+        rng_y = list(range(((row_min - 1) // thin_rang) * thin_rang + thin_rang,
+                           row_max + thin_rang,
+                           thin_rang))
+
+        rng_x = list(range(((col_min - 1) // thin_rang) * thin_rang + thin_rang,
+                           col_max + thin_rang,
+                           thin_rang))
+
+        print("rng_x: {}" .format(rng_x))
+        print("rng_y: {}" .format(rng_y))
+
+        self.__sts_bar.set_label_text("[1/3]")
+        self.__sts_bar.set_bar_range(0, len(rng_y) * len(rng_x))
+
+        new_y_map = []
+        cnt = 0
+        for y in rng_y:
+            str_y = y - thin_rang + 1
+            str_y = utl.limit(str_y, row_min, row_max)
+            end_y = utl.limit(y, row_min, row_max) + 1
+            y_rng = range(str_y,  end_y, 1)
+            new_x_list = [y]
+            for x in rng_x:
+                str_x = x - thin_rang + 1
+                str_x = utl.limit(str_x, col_min, col_max)
+                end_x = utl.limit(x, col_min, col_max) + 1
+                x_rng = range(str_x,  end_x, 1)
+                new_x_list.append(df.loc[y_rng][x_rng].max().max())
+                cnt = cnt + 1
+                self.__sts_bar.set_bar_value(cnt)
+            new_y_map.append(new_x_list)
+
+        idx = "Y"
+        columns = [idx] + list(rng_x)
+        df_new = pd.DataFrame(new_y_map, columns=columns)
+        df_new.set_index(idx, inplace=True)
+        print(df_new)
+
+        return df_new
+
+    def __draw_map(self, df: pd.DataFrame, inst_id: int):
+
+        print("---------- draw_map ----------")
+        print(df)
+
+        max_val = df.max().max()
+        min_val = df.min().min()
         intensity_max_abs = max(abs(max_val), abs(min_val))
 
         gradMng.updateColorTable(intensity_max_abs)
 
-        delta_y = df_s.index[1] - df_s.index[0]
-        delta_x = df_s.columns[1] - df_s.columns[0]
+        decimal_digit = INST_MSG_LIST[inst_id].decimal_digit
+        lsb = math.pow(10, -decimal_digit)
 
-        diff = df_s.size - len(self.chart().series())
+        rows_list = [n * lsb for n in df.index.to_list()]
+        cols_list = [n * lsb for n in df.columns.to_list()]
 
-        self.__sts_bar.set_label_text("[1/2]")
+        print("rows_list: {}" .format(rows_list))
+        print("cols_list: {}" .format(cols_list))
+
+        delta_y = rows_list[1] - rows_list[0]
+        delta_x = cols_list[1] - cols_list[0]
+
+        diff = df.size - len(self.chart().series())
+
+        self.__sts_bar.set_label_text("[2/3]")
         if 0 < diff:
             print("===== 0 < diff =====")
             self.__sts_bar.set_bar_range(0, diff)
@@ -323,13 +402,14 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 self.chart().removeSeries(sr)
                 self.__sts_bar.set_bar_value(i+1)
 
-        self.__sts_bar.set_label_text("[2/2]")
-        self.__sts_bar.set_bar_range(0, df_s.size)
+        self.__sts_bar.set_label_text("[3/3]")
+        self.__sts_bar.set_bar_range(0, df.size)
         itr = 0
-        for upper_y, row in df_s.iterrows():
+        for y, row in df.iterrows():
+            upper_y = y * lsb
             lower_y = upper_y - delta_y
             for idx_num, x in enumerate(row):
-                right_x = df.columns[idx_num]
+                right_x = cols_list[idx_num]
                 left_x = right_x - delta_x
                 block = self.chart().series()[itr]
                 block.update(left_x, right_x, upper_y, lower_y, x)
@@ -339,45 +419,8 @@ class HeatMapChartView(HeatMapChartViewAbs):
         print("length: {}" .format(len(self.chart().series())))
 
         #self.chart().createDefaultAxes()
-        self.chart().axes(Qt.Horizontal)[0].setRange(df_s.columns[0]-delta_x, df_s.columns[-1])
-        self.chart().axes(Qt.Vertical)[0].setRange(df_s.index[0]-delta_y, df_s.index[-1])
-
-    def update_color(self):
-        for block in self.chart().series():
-            block.update_color()
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        print("---------- mouseMoveEvent ----------")
-
-    def __thin_out_map(self, df: pd.DataFrame, thin_rang: int):
-
-        print(df)
-        print(thin_rang)
-        delta_y = df.index[1] - df.index[0]
-        delta_x = df.columns[1] - df.columns[0]
-        step_x = delta_x * thin_rang
-        step_y = delta_y * thin_rang
-
-        rng_y = np.arange(0.0,
-                          df.index[-1] + (step_y * 0.9),
-                          step_y,
-                          dtype=float)
-        rng_y = rng_y[df.index[0] - (step_y * 0.1) < rng_y]
-
-        rng_x = np.arange(0.0,
-                          df.columns[-1] + (step_x * 0.9),
-                          step_x,
-                          dtype=float)
-        rng_x = rng_x[df.columns[0] - (step_x * 0.1) < rng_x]
-
-        print("step_x: {}" .format(step_x))
-        print("step_y: {}" .format(step_y))
-        print("delta_x: {}" .format(delta_x))
-        print("delta_y: {}" .format(delta_y))
-        print("rng_x: {}" .format(rng_x))
-        print("rng_y: {}" .format(rng_y))
-
+        self.chart().axes(Qt.Horizontal)[0].setRange(cols_list[0]-delta_x, cols_list[-1])
+        self.chart().axes(Qt.Vertical)[0].setRange(rows_list[0]-delta_y, rows_list[-1])
 
     """
     def update(self):
@@ -474,19 +517,19 @@ class GapFillHeatMap(QMainWindow):
         print("--------------- start --------------------")
         val = self.__ui.spinBox_ThinOut.value()
         print("----- {} ----" .format(val))
-        df = gen_sample_dataframe(val)
+        df, inst_id = gen_sample_dataframe()
         print("--------------- df comp --------------------")
-        self.reset_map(df)
+        self.reset_map(df, inst_id)
 
     """
     def set_data(self, df: pd.DataFrame):
         self.__hmap_chart.set_data(df)
     """
 
-    def reset_map(self, df: pd.DataFrame):
+    def reset_map(self, df: pd.DataFrame, inst_id: int):
 
         thin_rang = self.__ui.spinBox_ThinOut.value()
-        self.__chart_view.reset_map(df, thin_rang)
+        self.__chart_view.reset_map(df, inst_id, thin_rang)
         print("--------------- reset_map comp --------------------")
         self.__color_view.update_intensity_range()
 
