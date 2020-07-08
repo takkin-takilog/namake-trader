@@ -290,11 +290,11 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         self.__sts_bar = sts_bar
 
-    def reset_map(self, df: pd.DataFrame, inst_id: int, thin_rang: int):
+    def reset_map(self, df: pd.DataFrame, inst_id: int, thin_num: int):
 
         df_s = df.sort_values(df.index.name, ascending=True)
 
-        df_t = self.__thin_out_map(df_s, thin_rang)
+        df_t = self.__thin_out_map(df_s, thin_num)
         self.__draw_map(df_t, inst_id)
 
     def update_color(self):
@@ -305,13 +305,13 @@ class HeatMapChartView(HeatMapChartViewAbs):
         super().mouseMoveEvent(event)
         print("---------- mouseMoveEvent ----------")
 
-    def __thin_out_map(self, df: pd.DataFrame, thin_rang: int):
+    def __thin_out_map(self, df: pd.DataFrame, thin_num: int):
 
         print("---------- thin_out_map ----------")
         print(df)
-        print(thin_rang)
+        print(thin_num)
 
-        if thin_rang < 2:
+        if thin_num < 2:
             return df
 
         col_min = df.columns[0]
@@ -319,13 +319,13 @@ class HeatMapChartView(HeatMapChartViewAbs):
         row_min = df.index[0]
         row_max = df.index[-1]
 
-        rng_y = list(range(((row_min - 1) // thin_rang) * thin_rang + thin_rang,
-                           row_max + thin_rang,
-                           thin_rang))
+        rng_y = list(range(((row_min - 1) // thin_num) * thin_num + thin_num,
+                           row_max + thin_num,
+                           thin_num))
 
-        rng_x = list(range(((col_min - 1) // thin_rang) * thin_rang + thin_rang,
-                           col_max + thin_rang,
-                           thin_rang))
+        rng_x = list(range(((col_min - 1) // thin_num) * thin_num + thin_num,
+                           col_max + thin_num,
+                           thin_num))
 
         print("rng_x: {}" .format(rng_x))
         print("rng_y: {}" .format(rng_y))
@@ -336,13 +336,13 @@ class HeatMapChartView(HeatMapChartViewAbs):
         new_y_map = []
         cnt = 0
         for y in rng_y:
-            str_y = y - thin_rang + 1
+            str_y = y - thin_num + 1
             str_y = utl.limit(str_y, row_min, row_max)
             end_y = utl.limit(y, row_min, row_max) + 1
             y_rng = range(str_y,  end_y, 1)
             new_x_list = [y]
             for x in rng_x:
-                str_x = x - thin_rang + 1
+                str_x = x - thin_num + 1
                 str_x = utl.limit(str_x, col_min, col_max)
                 end_x = utl.limit(x, col_min, col_max) + 1
                 x_rng = range(str_x,  end_x, 1)
@@ -486,6 +486,9 @@ class GapFillHeatMap(QMainWindow):
         callback = self.__on_pushButton_clicked
         ui.pushButton.clicked.connect(callback)
 
+        callback = self.__on_spinBoxThinOut_changed
+        ui.spinBox_ThinOut.valueChanged.connect(callback)
+
         self.__ui = ui
         self.__chart_view = chart_view
         self.__color_view = color_view
@@ -521,6 +524,10 @@ class GapFillHeatMap(QMainWindow):
         print("--------------- df comp --------------------")
         self.reset_map(df, inst_id)
 
+    def __on_spinBoxThinOut_changed(self, i):
+        print(i)
+        #self.__ui.label_Roughness.setText()
+
     """
     def set_data(self, df: pd.DataFrame):
         self.__hmap_chart.set_data(df)
@@ -528,8 +535,8 @@ class GapFillHeatMap(QMainWindow):
 
     def reset_map(self, df: pd.DataFrame, inst_id: int):
 
-        thin_rang = self.__ui.spinBox_ThinOut.value()
-        self.__chart_view.reset_map(df, inst_id, thin_rang)
+        thin_num = self.__ui.spinBox_ThinOut.value()
+        self.__chart_view.reset_map(df, inst_id, thin_num)
         print("--------------- reset_map comp --------------------")
         self.__color_view.update_intensity_range()
 

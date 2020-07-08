@@ -193,6 +193,7 @@ class GapFillUi():
         self.__end_hour = 9
         self.__decimal_digit = INST_MSG_LIST[0].decimal_digit
         self.__is_update = False
+        self.__df_param = pd.DataFrame()
 
     def __on_fetch_gapfill_clicked(self):
 
@@ -272,8 +273,8 @@ class GapFillUi():
     def __on_gapfill_heatmap_clicked(self):
         self.__logger.debug("gapfill_heatmap_clicked")
 
-        self.__widget = GapFillHeatMap()
-        self.__widget.show()
+        self.__widget_htmap = GapFillHeatMap()
+        self.__widget_htmap.show()
 
     def __on_selection_gapfill_changed(self, selected, deselected):
 

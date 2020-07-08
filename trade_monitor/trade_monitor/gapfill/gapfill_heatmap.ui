@@ -63,13 +63,43 @@
        </spacer>
       </item>
       <item>
-       <widget class="QSpinBox" name="spinBox_ThinOut">
-        <property name="maximum">
-         <number>20</number>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>150</height>
+         </size>
         </property>
-        <property name="value">
-         <number>10</number>
+        <property name="title">
+         <string>データ粒度</string>
         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>間引き数：</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="spinBox_ThinOut">
+           <property name="maximum">
+            <number>20</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_Roughness">
+           <property name="text">
+            <string>行数：
+列数：</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item>
