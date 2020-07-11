@@ -62,11 +62,13 @@ class MsgInstDict():
     def __init__(self,
                  msg_id: int,
                  text: str,
-                 decimal_digit: int
+                 decimal_digit: int,
+                 min_unit: str
                  ) -> None:
         self.__msg_id = msg_id
         self.__text = text
         self.__decimal_digit = decimal_digit
+        self.__min_unit = min_unit
 
     @property
     def msg_id(self) -> int:
@@ -79,6 +81,10 @@ class MsgInstDict():
     @property
     def decimal_digit(self) -> int:
         return self.__decimal_digit
+
+    @property
+    def min_unit(self) -> str:
+        return self.__min_unit
 
 
 class GradientManager():
@@ -166,9 +172,9 @@ class GradientManager():
 
 
 INST_MSG_LIST = [
-    MsgInstDict(Inst.INST_USD_JPY, "USD/JPY", 3),
-    MsgInstDict(Inst.INST_EUR_JPY, "EUR/JPY", 3),
-    MsgInstDict(Inst.INST_EUR_USD, "EUR/USD", 5),
+    MsgInstDict(Inst.INST_USD_JPY, "USD/JPY", 3, "0.001"),
+    MsgInstDict(Inst.INST_EUR_JPY, "EUR/JPY", 3, "0.001"),
+    MsgInstDict(Inst.INST_EUR_USD, "EUR/USD", 5, "0.00001"),
 ]
 
 GRAN_MSG_LIST = [

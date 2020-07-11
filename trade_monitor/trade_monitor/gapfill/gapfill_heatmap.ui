@@ -35,7 +35,7 @@
       </property>
       <property name="minimumSize">
        <size>
-        <width>80</width>
+        <width>100</width>
         <height>0</height>
        </size>
       </property>
@@ -49,6 +49,13 @@
     </item>
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QPushButton" name="pushButton_test">
+        <property name="text">
+         <string>test</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <spacer name="verticalSpacer">
         <property name="orientation">
@@ -83,6 +90,9 @@
          </item>
          <item>
           <widget class="QSpinBox" name="spinBox_ThinOut">
+           <property name="minimum">
+            <number>1</number>
+           </property>
            <property name="maximum">
             <number>20</number>
            </property>

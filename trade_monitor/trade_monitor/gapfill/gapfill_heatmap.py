@@ -23,6 +23,22 @@ from trade_monitor import util as utl
 from trade_monitor.util import GradientManager
 from trade_monitor.util import INST_MSG_LIST
 
+COL_NAME_DATE = "date"
+COL_NAME_GPA_DIR = "gap dir"
+COL_NAME_GPA_CLOSE_PRICE = "gap close price"
+COL_NAME_GPA_OPEN_PRICE = "gap open price"
+COL_NAME_GPA_PRICE_MID = "gap price(mid)"
+COL_NAME_GPA_PRICE_REAL = "gap price(real)"
+COL_NAME_VALID_FLAG = "valid flag"
+COL_NAME_SUCCESS_FLAG = "success flag"
+COL_NAME_GAP_FILLED_TIME = "gap filled time"
+COL_NAME_MAX_OPEN_RANGE = "max open range"
+COL_NAME_END_CLOSE_PRICE = "end close price"
+
+COL_GPA_PRICE_TH = "gap price thresh"
+pd.set_option('display.max_columns', 1000)
+# pd.set_option('display.max_rows', 1000)
+
 gradMng = GradientManager()
 
 
@@ -46,6 +62,40 @@ def gen_sample_dataframe():
 
     df_s = df.sort_values(df.index.name, ascending=True)
     #print(df.sort_values(df.index.name, ascending=False))
+
+    inst_id = 0
+
+    return df, inst_id
+
+
+def gen_sample_gapdata():
+
+    datalist = [
+        ["2020-04-06", 0, 108.528, 108.382004, 0.145996, 0.096001, True, True, "7:00:00", 0.112999, 108.976997],
+        ["2020-04-13", 0, 108.464996, 108.403, 0.061996, 0.011993, True, True, "6:50:00", 0.100006, 108.167],
+        ["2020-04-27", 1, 107.503006, 107.574005, 0.070999, 0.020996, True, True, "7:00:00", 0.125999, 107.556999],
+        ["2020-05-11", 0, 106.639999, 106.539993, 0.100006, 0.050003, True, True, "6:40:00", 0.133995, 106.950996],
+        ["2020-05-18", 1, 107.074501, 107.114502, 0.040001, 0.002502, True, False, "", 0.228996, 107.178001],
+        ["2020-06-01", 0, 107.820999, 107.720001, 0.100998, 0.087997, True, True, "9:10:00", 0.094002, 107.744003],
+        ["2020-06-22", 0, 106.891006, 106.772995, 0.118011, 0.068008, True, True, "9:20:00", 0.099998, 106.864998],
+        ["2020-06-29", 0, 107.218994, 107.160004, 0.05899, 0.008995, True, True, "8:50:00", 0.148003, 107.266998],
+    ]
+    columns = [
+        COL_NAME_DATE,
+        COL_NAME_GPA_DIR,
+        COL_NAME_GPA_CLOSE_PRICE,
+        COL_NAME_GPA_OPEN_PRICE,
+        COL_NAME_GPA_PRICE_MID,
+        COL_NAME_GPA_PRICE_REAL,
+        COL_NAME_VALID_FLAG,
+        COL_NAME_SUCCESS_FLAG,
+        COL_NAME_GAP_FILLED_TIME,
+        COL_NAME_MAX_OPEN_RANGE,
+        COL_NAME_END_CLOSE_PRICE
+    ]
+
+    df = pd.DataFrame(datalist, columns=columns)
+    df.set_index("date", inplace=True)
 
     inst_id = 0
 
@@ -94,6 +144,7 @@ class ColorScaleChartView(QtCharts.QChartView):
         margin.setLeft(0)
         margin.setRight(0)
         chart.setMargins(margin)
+        #chart.setLocalizeNumbers(True)
 
         # Chart Background
         """
@@ -112,11 +163,16 @@ class ColorScaleChartView(QtCharts.QChartView):
         #axis_y.setTitleText("Value")
         # axis_y.setFormat("h:mm")
         axis_y.setLabelsAngle(0)
-        axis_y.setRange(-1.0, 1.0)
+        axis_y.setRange(-100.0, 100.0)
 
         chart.addAxis(axis_y, Qt.AlignRight)
 
         self.setChart(chart)
+
+        """
+        callback = self.__on_plotAreaChanged
+        self.chart().plotAreaChanged.connect(callback)
+        """
 
     def update_intensity_range(self):
         max_abs = gradMng.intensityMax
@@ -290,12 +346,12 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         self.__sts_bar = sts_bar
 
-    def reset_map(self, df: pd.DataFrame, inst_id: int, thin_num: int):
+    def reset_map(self, df: pd.DataFrame, inst_idx: int, thin_num: int):
 
         df_s = df.sort_values(df.index.name, ascending=True)
 
         df_t = self.__thin_out_map(df_s, thin_num)
-        self.__draw_map(df_t, inst_id)
+        self.__draw_map(df_t, inst_idx)
 
     def update_color(self):
         for block in self.chart().series():
@@ -359,7 +415,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         return df_new
 
-    def __draw_map(self, df: pd.DataFrame, inst_id: int):
+    def __draw_map(self, df: pd.DataFrame, inst_idx: int):
 
         print("---------- draw_map ----------")
         print(df)
@@ -370,7 +426,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         gradMng.updateColorTable(intensity_max_abs)
 
-        decimal_digit = INST_MSG_LIST[inst_id].decimal_digit
+        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
         lsb = math.pow(10, -decimal_digit)
 
         rows_list = [n * lsb for n in df.index.to_list()]
@@ -489,9 +545,122 @@ class GapFillHeatMap(QMainWindow):
         callback = self.__on_spinBoxThinOut_changed
         ui.spinBox_ThinOut.valueChanged.connect(callback)
 
+        # ----- test -----
+        callback = self.__on_pushButton_test_clicked
+        ui.pushButton_test.clicked.connect(callback)
+
         self.__ui = ui
         self.__chart_view = chart_view
         self.__color_view = color_view
+        self.__inst_idx = 0
+
+        self.__df_param = pd.DataFrame()
+        self.__df_htbl = pd.DataFrame()
+
+    def __on_pushButton_test_clicked(self):
+        df, inst_idx = gen_sample_gapdata()
+        self.set_gapfill_param(df, inst_idx)
+
+    def set_gapfill_param(self, df_param: pd.DataFrame, inst_idx):
+        df_valid = df_param[df_param[COL_NAME_VALID_FLAG]]
+
+        print("---------- df_valid ----------")
+        print(df_valid)
+        print("---------- df_valid ----------")
+        max_open_price_max = df_valid[COL_NAME_MAX_OPEN_RANGE].max()
+        print("---------- max_open_price_max: {}" .format(max_open_price_max))
+        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+        lsb = math.pow(10, decimal_digit)
+
+        margin = 5
+        max_open_pips_max = math.floor(max_open_price_max * lsb + 0.5) + margin
+        print("---------- max_open_pips_max: {}" .format(max_open_pips_max))
+        hmap_col = [COL_NAME_DATE] + list(range(1, max_open_pips_max + 1))
+        print("---------- hmap_col: {}" .format(hmap_col))
+
+        roslist = []
+        for date, is_succ, mop, gpr in zip(df_valid.index,
+                                           df_valid[COL_NAME_SUCCESS_FLAG],
+                                           df_valid[COL_NAME_MAX_OPEN_RANGE],
+                                           df_valid[COL_NAME_GPA_PRICE_REAL]):
+
+            if is_succ:
+                max_open_pips = math.floor(mop * lsb + 0.5)
+            else:
+                max_open_pips = max_open_pips_max
+
+            row_left = list(range(-1, -max_open_pips-1, -1))
+            gap_pips = math.floor(gpr * lsb + 0.5)
+
+            row_right = [gap_pips] * (max_open_pips_max - max_open_pips)
+            roslist.append([date] + row_left + row_right)
+            #print("^^^^^^^^^^ {} ^^^^^^^^^^" .format(date))
+            #print([date] + row_left + row_right)
+
+        print("----- len(roslist):{} -----" .format(len(roslist)))
+        print("----- len(hmap_col):{} -----" .format(len(hmap_col)))
+        df_htbl = pd.DataFrame(roslist, columns=hmap_col)
+        df_htbl.set_index(COL_NAME_DATE, inplace=True)
+
+        print("--- df_htbl ---")
+        print(df_htbl)
+
+        df_hmap = self.__make_hmap(df_param, df_htbl, inst_idx)
+
+        print("########## Heat Map ##################")
+        print(df_hmap)
+
+        lenmax = max(df_hmap.shape)
+        thinout = (lenmax // 100) + 1
+
+        self.__df_param = df_param
+        self.__df_htbl = df_htbl
+        self.__inst_idx = inst_idx
+        self.__df_hmap = df_hmap
+
+        self.__ui.spinBox_ThinOut.setValue(thinout)
+
+    def __make_hmap(self,
+                    df_param: pd.DataFrame,
+                    df_htbl: pd.DataFrame,
+                    inst_idx: int
+                    ):
+
+        gap_price_real_max = df_param[COL_NAME_GPA_PRICE_REAL].max()
+        print("---------- gap_price_real_max: {}" .format(gap_price_real_max))
+        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+        lsb = math.pow(10, decimal_digit)
+
+        margin = 5
+        gap_pips_max = math.floor(gap_price_real_max * lsb + 0.5) + margin
+        print("---------- gap_pips_max: {}" .format(gap_pips_max))
+
+        print("---------- column: {}" .format(df_htbl.columns))
+
+        df_mst = pd.DataFrame()
+        for date, htbl in df_htbl.iterrows():
+            gap_price = df_param.loc[date][COL_NAME_GPA_PRICE_REAL]
+            gap_pips = math.floor(gap_price * lsb + 0.5)
+            collist = [htbl.to_list()] * (gap_pips_max - gap_pips)
+            #print("---------- collist: {}" .format(len(collist)))
+            gpt_col = list(range(gap_pips + 1, gap_pips_max + 1))
+
+            # =================================================
+            # invalid flag = Flaseのときの処理を入れる
+            # =================================================
+            #print("---------- idx_col: {}" .format(gpt_col))
+            df = pd.DataFrame(collist,
+                              columns=df_htbl.columns)
+            df[COL_GPA_PRICE_TH] = gpt_col
+            df[COL_NAME_DATE] = date
+            df.set_index([COL_NAME_DATE, COL_GPA_PRICE_TH], inplace=True)
+            #print("===== df =====")
+            #print(df)
+            df_mst = pd.concat([df_mst, df])
+        #df_mst.sort_index(inplace=True)
+        #print(df_mst)
+
+        return df_mst.sum(level=COL_GPA_PRICE_TH).sort_index()
 
     def __on_gradientBtoYPB_clicked(self):
         grBtoY = QLinearGradient(0, 0, 0, 100)
@@ -517,26 +686,29 @@ class GapFillHeatMap(QMainWindow):
 
     def __on_pushButton_clicked(self):
         # 以下はテストコード
+        """
         print("--------------- start --------------------")
         val = self.__ui.spinBox_ThinOut.value()
         print("----- {} ----" .format(val))
-        df, inst_id = gen_sample_dataframe()
+        df, inst_idx = gen_sample_dataframe()
         print("--------------- df comp --------------------")
-        self.reset_map(df, inst_id)
+        """
+        self.reset_map(self.__df_hmap, self.__inst_idx)
 
     def __on_spinBoxThinOut_changed(self, i):
-        print(i)
-        #self.__ui.label_Roughness.setText()
+        print("========= __on_spinBoxThinOut_changed =========")
+        self.__update_map_size_txt(self.__df_hmap, i)
 
-    """
-    def set_data(self, df: pd.DataFrame):
-        self.__hmap_chart.set_data(df)
-    """
+    def __update_map_size_txt(self, df_hmap, thinout):
+        row_size = df_hmap.shape[0] // thinout
+        col_size = df_hmap.shape[1] // thinout
+        txt = "行数：" + str(row_size) + "\n列数：" + str(col_size)
+        self.__ui.label_Roughness.setText(txt)
 
-    def reset_map(self, df: pd.DataFrame, inst_id: int):
+    def reset_map(self, df: pd.DataFrame, inst_idx: int):
 
         thin_num = self.__ui.spinBox_ThinOut.value()
-        self.__chart_view.reset_map(df, inst_id, thin_num)
+        self.__chart_view.reset_map(df, inst_idx, thin_num)
         print("--------------- reset_map comp --------------------")
         self.__color_view.update_intensity_range()
 

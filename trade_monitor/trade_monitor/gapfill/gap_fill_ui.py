@@ -38,28 +38,17 @@ from trade_monitor.util import (COL_NAME_TIME,
 
 from trade_monitor.gapfill.gapfill_heatmap import GapFillHeatMap
 
-COL_NAME_DATE = "date"
-COL_NAME_GPA_DIR = "gap dir"
-COL_NAME_GPA_CLOSE_PRICE = "gap close price"
-COL_NAME_GPA_OPEN_PRICE = "gap open price"
-COL_NAME_GPA_RANGE_PRICE = "gap range price"
-COL_NAME_VALID_FLAG = "valid flag"
-COL_NAME_SUCCESS_FLAG = "success flag"
-COL_NAME_GAP_FILLED_TIME = "gap filled time"
-COL_NAME_MAX_OPEN_RANGE = "max open range"
-COL_NAME_END_CLOSE_PRICE = "end close price"
-
-GAP_FILL_COLUMNS = [COL_NAME_DATE,
-                    COL_NAME_GPA_DIR,
-                    COL_NAME_GPA_CLOSE_PRICE,
-                    COL_NAME_GPA_OPEN_PRICE,
-                    COL_NAME_GPA_RANGE_PRICE,
-                    COL_NAME_VALID_FLAG,
-                    COL_NAME_SUCCESS_FLAG,
-                    COL_NAME_GAP_FILLED_TIME,
-                    COL_NAME_MAX_OPEN_RANGE,
-                    COL_NAME_END_CLOSE_PRICE,
-                    ]
+from trade_monitor.gapfill.gapfill_heatmap import (COL_NAME_DATE,
+                                                   COL_NAME_GPA_DIR,
+                                                   COL_NAME_GPA_CLOSE_PRICE,
+                                                   COL_NAME_GPA_OPEN_PRICE,
+                                                   COL_NAME_GPA_PRICE_MID,
+                                                   COL_NAME_GPA_PRICE_REAL,
+                                                   COL_NAME_VALID_FLAG,
+                                                   COL_NAME_SUCCESS_FLAG,
+                                                   COL_NAME_GAP_FILLED_TIME,
+                                                   COL_NAME_MAX_OPEN_RANGE,
+                                                   COL_NAME_END_CLOSE_PRICE)
 
 
 class GapFillUi():
@@ -84,7 +73,8 @@ class GapFillUi():
         "Gap dir",
         "Previous close price",
         "Current open price",
-        "Gap range price",
+        "Gap price(mid)",
+        "Gap price(real)",
         "Valid",
         "Result",
         "Gap filled time",
@@ -180,6 +170,8 @@ class GapFillUi():
         while not srv_cli.wait_for_service(timeout_sec=1.0):
             logger.info("Waiting for \"" + srv_name + "\" service...")
 
+        self.__widget_htmap = GapFillHeatMap()
+
         self.__chart_prev = chart_prev
         self.__chart_curr = chart_curr
         self.__qstd_itm_mdl = qstd_itm_mdl
@@ -222,7 +214,8 @@ class GapFillUi():
                 QStandardItem(self.GAP_DIR_DICT[gapfillmsg.gap_dir]),
                 QStandardItem(fmt.format(gapfillmsg.gap_close_price)),
                 QStandardItem(fmt.format(gapfillmsg.gap_open_price)),
-                QStandardItem(fmt.format(gapfillmsg.gap_range_price)),
+                QStandardItem(fmt.format(gapfillmsg.gap_price_mid)),
+                QStandardItem(fmt.format(gapfillmsg.gap_price_real)),
                 QStandardItem(self.GAP_FILL_VALID_DICT[
                     gapfillmsg.is_valid]),
                 QStandardItem(self.GAP_FILL_SUCC_DICT[
@@ -236,15 +229,32 @@ class GapFillUi():
                          gapfillmsg.gap_dir,
                          gapfillmsg.gap_close_price,
                          gapfillmsg.gap_open_price,
-                         gapfillmsg.gap_range_price,
+                         gapfillmsg.gap_price_mid,
+                         gapfillmsg.gap_price_real,
                          gapfillmsg.is_valid,
                          gapfillmsg.is_gapfill_success,
                          gapfillmsg.gap_filled_time,
                          gapfillmsg.max_open_range,
                          gapfillmsg.end_close_price
                          ])
-        df_param = pd.DataFrame(data, columns=GAP_FILL_COLUMNS)
+
+        columns = [COL_NAME_DATE,
+                   COL_NAME_GPA_DIR,
+                   COL_NAME_GPA_CLOSE_PRICE,
+                   COL_NAME_GPA_OPEN_PRICE,
+                   COL_NAME_GPA_PRICE_MID,
+                   COL_NAME_GPA_PRICE_REAL,
+                   COL_NAME_VALID_FLAG,
+                   COL_NAME_SUCCESS_FLAG,
+                   COL_NAME_GAP_FILLED_TIME,
+                   COL_NAME_MAX_OPEN_RANGE,
+                   COL_NAME_END_CLOSE_PRICE,
+                   ]
+
+        df_param = pd.DataFrame(data, columns=columns)
         self.__df_param = df_param.set_index(COL_NAME_DATE)
+
+        self.__widget_htmap.set_gapfill_param(self.__df_param, inst_idx)
 
         # Heat map data
         self.__hmap_range_start = rsp.heatmap_range_start
@@ -273,7 +283,6 @@ class GapFillUi():
     def __on_gapfill_heatmap_clicked(self):
         self.__logger.debug("gapfill_heatmap_clicked")
 
-        self.__widget_htmap = GapFillHeatMap()
         self.__widget_htmap.show()
 
     def __on_selection_gapfill_changed(self, selected, deselected):
@@ -366,14 +375,6 @@ class GapFillUi():
         self.__chart_prev.resize(fs)
         fs = self.__ui.widget_chart_gapfill_curr.frameSize()
         self.__chart_curr.resize(fs)
-
-    @property
-    def inst_id(self):
-        return self.__inst_id
-
-    @inst_id.setter
-    def inst_id(self, inst_id):
-        self.__inst_id = inst_id
 
     def __combobox_spread_prev_changed(self, idx):
 
