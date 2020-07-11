@@ -210,18 +210,23 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         lower_series.append(0, 0)
 
         super().__init__(upper_series, lower_series)
-        self.setPen(Qt.NoPen)
+
+        pen = QPen(Qt.black)
+        pen.setWidth(1)
+        self.setPen(pen)
+        # self.setPen(Qt.NoPen)
 
         self.__upper_series = upper_series
         self.__lower_series = lower_series
         self.__intensity = 0
 
     def update(self,
-               left_x: float,
-               right_x: float,
-               upper_y: float,
-               lower_y: float,
-               intensity: float) -> None:
+               left_x: int,
+               right_x: int,
+               upper_y: int,
+               lower_y: int,
+               intensity: int,
+               is_mark: bool = False) -> None:
 
         self.upperSeries().replace(0, left_x, upper_y)
         self.upperSeries().replace(1, right_x, upper_y)
@@ -231,9 +236,14 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         color = gradMng.convertValueToColor(intensity)
         self.setColor(color)
 
+        if is_mark:
+            pen = QPen(Qt.white)
+            pen.setWidth(1)
+            self.setPen(pen)
+
         self.__intensity = intensity
 
-    def update_heat_value(self, intensity: float) -> None:
+    def update_heat_value(self, intensity: int) -> None:
         self.__intensity = intensity
 
         # brush = QBrush()
@@ -346,12 +356,12 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         self.__sts_bar = sts_bar
 
-    def reset_map(self, df: pd.DataFrame, inst_idx: int, thin_num: int):
+    def reset_map(self, df: pd.DataFrame, thin_num: int):
 
         df_s = df.sort_values(df.index.name, ascending=True)
 
         df_t = self.__thin_out_map(df_s, thin_num)
-        self.__draw_map(df_t, inst_idx)
+        self.__draw_map(df_t)
 
     def update_color(self):
         for block in self.chart().series():
@@ -364,8 +374,8 @@ class HeatMapChartView(HeatMapChartViewAbs):
     def __thin_out_map(self, df: pd.DataFrame, thin_num: int):
 
         print("---------- thin_out_map ----------")
-        print(df)
-        print(thin_num)
+        #print(df)
+        #print(thin_num)
 
         if thin_num < 2:
             return df
@@ -383,8 +393,8 @@ class HeatMapChartView(HeatMapChartViewAbs):
                            col_max + thin_num,
                            thin_num))
 
-        print("rng_x: {}" .format(rng_x))
-        print("rng_y: {}" .format(rng_y))
+        #print("rng_x: {}" .format(rng_x))
+        #print("rng_y: {}" .format(rng_y))
 
         self.__sts_bar.set_label_text("[1/3]")
         self.__sts_bar.set_bar_range(0, len(rng_y) * len(rng_x))
@@ -411,14 +421,14 @@ class HeatMapChartView(HeatMapChartViewAbs):
         columns = [idx] + list(rng_x)
         df_new = pd.DataFrame(new_y_map, columns=columns)
         df_new.set_index(idx, inplace=True)
-        print(df_new)
+        #print(df_new)
 
         return df_new
 
-    def __draw_map(self, df: pd.DataFrame, inst_idx: int):
+    def __draw_map(self, df: pd.DataFrame):
 
-        print("---------- draw_map ----------")
-        print(df)
+        #print("---------- draw_map ----------")
+        #print(df)
 
         max_val = df.max().max()
         min_val = df.min().min()
@@ -426,14 +436,14 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         gradMng.updateColorTable(intensity_max_abs)
 
-        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-        lsb = math.pow(10, -decimal_digit)
+        #decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+        #lsb = math.pow(10, -decimal_digit)
 
-        rows_list = [n * lsb for n in df.index.to_list()]
-        cols_list = [n * lsb for n in df.columns.to_list()]
+        rows_list = [n for n in df.index.to_list()]
+        cols_list = [n for n in df.columns.to_list()]
 
-        print("rows_list: {}" .format(rows_list))
-        print("cols_list: {}" .format(cols_list))
+        #print("rows_list: {}" .format(rows_list))
+        #print("cols_list: {}" .format(cols_list))
 
         delta_y = rows_list[1] - rows_list[0]
         delta_x = cols_list[1] - cols_list[0]
@@ -442,7 +452,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         self.__sts_bar.set_label_text("[2/3]")
         if 0 < diff:
-            print("===== 0 < diff =====")
+            #print("===== 0 < diff =====")
             self.__sts_bar.set_bar_range(0, diff)
             for i in range(diff):
                 block = HeatBlockSeries()
@@ -451,7 +461,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 block.attachAxis(self.chart().axes(Qt.Vertical)[0])
                 self.__sts_bar.set_bar_value(i+1)
         elif diff < 0:
-            print("===== diff < 0 =====")
+            #print("===== diff < 0 =====")
             self.__sts_bar.set_bar_range(0, -diff)
             for i in range(-diff):
                 sr = self.chart().series()[-1]
@@ -461,14 +471,17 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.__sts_bar.set_label_text("[3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
         itr = 0
-        for y, row in df.iterrows():
-            upper_y = y * lsb
+        for upper_y, row in df.iterrows():
             lower_y = upper_y - delta_y
             for idx_num, x in enumerate(row):
                 right_x = cols_list[idx_num]
                 left_x = right_x - delta_x
                 block = self.chart().series()[itr]
-                block.update(left_x, right_x, upper_y, lower_y, x)
+                if max_val <= x:
+                    is_mark = True
+                else:
+                    is_mark = False
+                block.update(left_x, right_x, upper_y, lower_y, x, is_mark)
                 itr = itr + 1
                 self.__sts_bar.set_bar_value(itr)
 
@@ -564,19 +577,19 @@ class GapFillHeatMap(QMainWindow):
     def set_gapfill_param(self, df_param: pd.DataFrame, inst_idx):
         df_valid = df_param[df_param[COL_NAME_VALID_FLAG]]
 
-        print("---------- df_valid ----------")
-        print(df_valid)
-        print("---------- df_valid ----------")
+        #print("---------- df_valid ----------")
+        #print(df_valid)
+        #print("---------- df_valid ----------")
         max_open_price_max = df_valid[COL_NAME_MAX_OPEN_RANGE].max()
-        print("---------- max_open_price_max: {}" .format(max_open_price_max))
+        #print("---------- max_open_price_max: {}" .format(max_open_price_max))
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
         lsb = math.pow(10, decimal_digit)
 
         margin = 5
         max_open_pips_max = math.floor(max_open_price_max * lsb + 0.5) + margin
-        print("---------- max_open_pips_max: {}" .format(max_open_pips_max))
+        #print("---------- max_open_pips_max: {}" .format(max_open_pips_max))
         hmap_col = [COL_NAME_DATE] + list(range(1, max_open_pips_max + 1))
-        print("---------- hmap_col: {}" .format(hmap_col))
+        #print("---------- hmap_col: {}" .format(hmap_col))
 
         roslist = []
         for date, is_succ, mop, gpr in zip(df_valid.index,
@@ -597,18 +610,18 @@ class GapFillHeatMap(QMainWindow):
             #print("^^^^^^^^^^ {} ^^^^^^^^^^" .format(date))
             #print([date] + row_left + row_right)
 
-        print("----- len(roslist):{} -----" .format(len(roslist)))
-        print("----- len(hmap_col):{} -----" .format(len(hmap_col)))
+        #print("----- len(roslist):{} -----" .format(len(roslist)))
+        #print("----- len(hmap_col):{} -----" .format(len(hmap_col)))
         df_htbl = pd.DataFrame(roslist, columns=hmap_col)
         df_htbl.set_index(COL_NAME_DATE, inplace=True)
 
-        print("--- df_htbl ---")
-        print(df_htbl)
+        #print("--- df_htbl ---")
+        #print(df_htbl)
 
         df_hmap = self.__make_hmap(df_param, df_htbl, inst_idx)
 
-        print("########## Heat Map ##################")
-        print(df_hmap)
+        #print("########## Heat Map ##################")
+        #print(df_hmap)
 
         lenmax = max(df_hmap.shape)
         thinout = (lenmax // 100) + 1
@@ -627,15 +640,15 @@ class GapFillHeatMap(QMainWindow):
                     ):
 
         gap_price_real_max = df_param[COL_NAME_GPA_PRICE_REAL].max()
-        print("---------- gap_price_real_max: {}" .format(gap_price_real_max))
+        #print("---------- gap_price_real_max: {}" .format(gap_price_real_max))
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
         lsb = math.pow(10, decimal_digit)
 
         margin = 5
         gap_pips_max = math.floor(gap_price_real_max * lsb + 0.5) + margin
-        print("---------- gap_pips_max: {}" .format(gap_pips_max))
+        #print("---------- gap_pips_max: {}" .format(gap_pips_max))
 
-        print("---------- column: {}" .format(df_htbl.columns))
+        #print("---------- column: {}" .format(df_htbl.columns))
 
         df_mst = pd.DataFrame()
         for date, htbl in df_htbl.iterrows():
@@ -693,10 +706,10 @@ class GapFillHeatMap(QMainWindow):
         df, inst_idx = gen_sample_dataframe()
         print("--------------- df comp --------------------")
         """
-        self.reset_map(self.__df_hmap, self.__inst_idx)
+        self.reset_map(self.__df_hmap)
 
     def __on_spinBoxThinOut_changed(self, i):
-        print("========= __on_spinBoxThinOut_changed =========")
+        #print("========= __on_spinBoxThinOut_changed =========")
         self.__update_map_size_txt(self.__df_hmap, i)
 
     def __update_map_size_txt(self, df_hmap, thinout):
@@ -705,10 +718,10 @@ class GapFillHeatMap(QMainWindow):
         txt = "行数：" + str(row_size) + "\n列数：" + str(col_size)
         self.__ui.label_Roughness.setText(txt)
 
-    def reset_map(self, df: pd.DataFrame, inst_idx: int):
+    def reset_map(self, df: pd.DataFrame):
 
         thin_num = self.__ui.spinBox_ThinOut.value()
-        self.__chart_view.reset_map(df, inst_idx, thin_num)
+        self.__chart_view.reset_map(df, thin_num)
         print("--------------- reset_map comp --------------------")
         self.__color_view.update_intensity_range()
 
