@@ -26,22 +26,10 @@
      </widget>
     </item>
     <item>
-     <widget class="QWidget" name="widget_ColorScale" native="true">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
+     <widget class="QWidget" name="widget_ColorMap" native="true">
       <property name="minimumSize">
        <size>
-        <width>100</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="baseSize">
-       <size>
-        <width>0</width>
+        <width>80</width>
         <height>0</height>
        </size>
       </property>

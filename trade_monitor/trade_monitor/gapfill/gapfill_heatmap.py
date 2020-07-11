@@ -131,72 +131,72 @@ class StatusBar():
         self.__prog_bar.setValue(value)
 
 
-class ColorScaleChartView(QtCharts.QChartView):
+class ColorMapLabel(QLabel):
 
     def __init__(self, parent):
         super().__init__(parent)
 
-        # Create Chart and set General Chart setting
-        chart = QtCharts.QChart()
-        chart.layout().setContentsMargins(0, 0, 0, 0)
-        chart.setBackgroundRoundness(0)
-        margin = chart.margins()
-        margin.setLeft(0)
-        margin.setRight(0)
-        chart.setMargins(margin)
-        #chart.setLocalizeNumbers(True)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        # Chart Background
-        """
-        backgroundGradient = QLinearGradient(0, 0, 0, 400)
-        backgroundGradient.setColorAt(0.0, QColor('#50a1dc'))
-        backgroundGradient.setColorAt(1.0, QColor('#00a1de'))
-        chart.setBackgroundBrush(backgroundGradient)
-        """
+        self.__margin_topbottom = 0.05
+        self.__margin_leftright = 0.3
 
-        chart.setPlotAreaBackgroundVisible(True)
-        chart.legend().setVisible(False)
+        self.__max_abs = 100
+        self.__div = 2
 
-        # Y Axis Settings
-        axis_y = QtCharts.QValueAxis()
-        axis_y.setTickCount(3)
-        #axis_y.setTitleText("Value")
-        # axis_y.setFormat("h:mm")
-        axis_y.setLabelsAngle(0)
-        axis_y.setRange(-100.0, 100.0)
-
-        chart.addAxis(axis_y, Qt.AlignRight)
-
-        self.setChart(chart)
-
-        """
-        callback = self.__on_plotAreaChanged
-        self.chart().plotAreaChanged.connect(callback)
-        """
+        self.__frame_size = QSize()
 
     def update_intensity_range(self):
-        max_abs = gradMng.intensityMax
-        self.chart().axes(Qt.Vertical)[0].setRange(-max_abs, max_abs)
+        self.__max_abs = gradMng.intensityMax
+        self.__update()
 
     def update_color_scale(self):
-        rect = self.chart().plotArea()
+        self.__update()
+
+    def resize(self, frame_size):
+        super().resize(frame_size)
+        self.__frame_size = frame_size
+        self.__update()
+
+    def __update(self):
+
+        frame_size = self.__frame_size
+
+        tmp = frame_size.height() * self.__margin_topbottom
+        tb_margin = math.floor(tmp + 0.5)
+
+        tmp = frame_size.width() * self.__margin_leftright
+        lr_margin = math.floor(tmp + 0.5)
+
+        height = frame_size.height() - (tb_margin * 2)
+        width = frame_size.width() - (lr_margin * 2)
+        print("height: {}" .format(height))
+
+        rect = QRectF(0, tb_margin, width, height)
+
         gradMng.setRect(rect)
         grad = gradMng.getGradient()
-        """
-        grad.setStart(rect.topLeft())
-        grad.setFinalStop(0, rect.bottom())
-        """
-        self.chart().setPlotAreaBackgroundBrush(grad)
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        rect = self.chart().plotArea()
-        #rect.setWidth(50)
-        gradMng.setRect(rect)
-        grad = gradMng.getGradient()
-        self.chart().setPlotAreaBackgroundBrush(grad)
-        #self.chart().setPlotArea(rect)
+        pm = QPixmap(frame_size)
+        pm.fill(Qt.transparent)
+        pmp = QPainter(pm)
+        pmp.setBrush(grad)
+        pmp.setPen(Qt.NoPen)
+        pmp.drawRect(rect)
 
+        stpl = math.floor(height / self.__div + 0.5)
+        stpi = math.floor((self.__max_abs * 2) / self.__div + 0.5)
+        for i in range(0, self.__div + 1, 1):
+            yPos = i * stpl + tb_margin
+            yVal = -i * stpi + self.__max_abs
+            print(yPos)
+            pmp.setPen(Qt.lightGray)
+            pmp.drawLine(0, yPos, width, yPos)
+            pmp.setPen(Qt.black)
+            pmp.drawText(width + 5, yPos + 5, str(yVal))
+        pmp.end()
+
+        self.setPixmap(pm)
 
 class HeatBlockSeries(QtCharts.QAreaSeries):
 
@@ -550,7 +550,7 @@ class GapFillHeatMap(QMainWindow):
         ui.pushButton_gradientGtoRPB.clicked.connect(callback)
 
         gradMng.setGradient(grBtoY)
-        color_view = ColorScaleChartView(ui.widget_ColorScale)
+        color_map = ColorMapLabel(ui.widget_ColorMap)
 
         callback = self.__on_pushButton_clicked
         ui.pushButton.clicked.connect(callback)
@@ -564,7 +564,7 @@ class GapFillHeatMap(QMainWindow):
 
         self.__ui = ui
         self.__chart_view = chart_view
-        self.__color_view = color_view
+        self.__color_map = color_map
         self.__inst_idx = 0
 
         self.__df_param = pd.DataFrame()
@@ -684,7 +684,7 @@ class GapFillHeatMap(QMainWindow):
         gradMng.setGradient(grBtoY)
 
         self.__chart_view.update_color()
-        self.__color_view.update_color_scale()
+        self.__color_map.update_color_scale()
 
     def __on_gradientGtoRPB_clicked(self):
         grGtoR = QLinearGradient(0, 0, 0, 100)
@@ -695,7 +695,7 @@ class GapFillHeatMap(QMainWindow):
         gradMng.setGradient(grGtoR)
 
         self.__chart_view.update_color()
-        self.__color_view.update_color_scale()
+        self.__color_map.update_color_scale()
 
     def __on_pushButton_clicked(self):
         # 以下はテストコード
@@ -723,7 +723,7 @@ class GapFillHeatMap(QMainWindow):
         thin_num = self.__ui.spinBox_ThinOut.value()
         self.__chart_view.reset_map(df, thin_num)
         print("--------------- reset_map comp --------------------")
-        self.__color_view.update_intensity_range()
+        self.__color_map.update_intensity_range()
 
     def __load_ui(self, parent):
         loader = QUiLoader()
@@ -738,16 +738,16 @@ class GapFillHeatMap(QMainWindow):
     def init_resize(self):
         fs = self.__ui.widget_HeatMap.frameSize()
         self.__chart_view.resize(fs)
-        fs = self.__ui.widget_ColorScale.frameSize()
-        self.__color_view.resize(fs)
+        fs = self.__ui.widget_ColorMap.frameSize()
+        self.__color_map.resize(fs)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         print("------------------ resizeEvent --------------------")
         fs = self.__ui.widget_HeatMap.frameSize()
         self.__chart_view.resize(fs)
-        fs = self.__ui.widget_ColorScale.frameSize()
-        self.__color_view.resize(fs)
+        fs = self.__ui.widget_ColorMap.frameSize()
+        self.__color_map.resize(fs)
 
 
 if __name__ == "__main__":
