@@ -198,6 +198,39 @@ class ColorMapLabel(QLabel):
 
         self.setPixmap(pm)
 
+
+class FrameLineSeries(QtCharts.QAreaSeries):
+
+    def __init__(self):
+
+        upper_series = QtCharts.QLineSeries()
+        lower_series = QtCharts.QLineSeries()
+        upper_series.append(0, 0)
+        upper_series.append(0, 0)
+        lower_series.append(0, 0)
+        lower_series.append(0, 0)
+
+        super().__init__(upper_series, lower_series)
+
+        self.__upper_series = upper_series
+        self.__lower_series = lower_series
+
+    def update(self,
+               left_x: int,
+               right_x: int,
+               upper_y: int,
+               lower_y: int) -> None:
+
+        self.upperSeries().replace(0, left_x, upper_y)
+        self.upperSeries().replace(1, right_x, upper_y)
+        self.lowerSeries().replace(0, left_x, lower_y)
+        self.lowerSeries().replace(1, right_x, lower_y)
+
+        self.setColor(QColor(0, 0, 0, 0))
+        pen = QPen(Qt.white)
+        pen.setWidth(2)
+        self.setPen(pen)
+
 class HeatBlockSeries(QtCharts.QAreaSeries):
 
     def __init__(self):
@@ -225,8 +258,7 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
                right_x: int,
                upper_y: int,
                lower_y: int,
-               intensity: int,
-               is_mark: bool = False) -> None:
+               intensity: int) -> None:
 
         self.upperSeries().replace(0, left_x, upper_y)
         self.upperSeries().replace(1, right_x, upper_y)
@@ -235,11 +267,6 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
 
         color = gradMng.convertValueToColor(intensity)
         self.setColor(color)
-
-        if is_mark:
-            pen = QPen(Qt.white)
-            pen.setWidth(1)
-            self.setPen(pen)
 
         self.__intensity = intensity
 
@@ -355,6 +382,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.chart().addAxis(axis_y, Qt.AlignLeft)
 
         self.__sts_bar = sts_bar
+        self.__framelist = []
 
     def reset_map(self, df: pd.DataFrame, thin_num: int):
 
@@ -448,7 +476,12 @@ class HeatMapChartView(HeatMapChartViewAbs):
         delta_y = rows_list[1] - rows_list[0]
         delta_x = cols_list[1] - cols_list[0]
 
+        for frame in self.__framelist:
+            self.chart().removeSeries(frame)
+        self.__framelist = []
+
         diff = df.size - len(self.chart().series())
+        print("-------------- diff:{}" .format(diff))
 
         self.__sts_bar.set_label_text("[2/3]")
         if 0 < diff:
@@ -471,6 +504,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.__sts_bar.set_label_text("[3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
         itr = 0
+        mark_list = []
         for upper_y, row in df.iterrows():
             lower_y = upper_y - delta_y
             for idx_num, x in enumerate(row):
@@ -478,14 +512,18 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 left_x = right_x - delta_x
                 block = self.chart().series()[itr]
                 if max_val <= x:
-                    is_mark = True
-                else:
-                    is_mark = False
-                block.update(left_x, right_x, upper_y, lower_y, x, is_mark)
+                    mark_list.append([left_x, right_x, upper_y, lower_y])
+                block.update(left_x, right_x, upper_y, lower_y, x)
                 itr = itr + 1
                 self.__sts_bar.set_bar_value(itr)
 
-        print("length: {}" .format(len(self.chart().series())))
+        for mark in mark_list:
+            frame = FrameLineSeries()
+            self.chart().addSeries(frame)
+            frame.attachAxis(self.chart().axes(Qt.Horizontal)[0])
+            frame.attachAxis(self.chart().axes(Qt.Vertical)[0])
+            frame.update(mark[0], mark[1], mark[2], mark[3])
+            self.__framelist.append(frame)
 
         #self.chart().createDefaultAxes()
         self.chart().axes(Qt.Horizontal)[0].setRange(cols_list[0]-delta_x, cols_list[-1])
