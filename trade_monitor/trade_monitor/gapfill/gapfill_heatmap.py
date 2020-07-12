@@ -22,6 +22,7 @@ from PySide2.QtCharts import QtCharts
 from trade_monitor import util as utl
 from trade_monitor.util import GradientManager
 from trade_monitor.util import INST_MSG_LIST
+from pyatspi import state
 
 COL_NAME_DATE = "date"
 COL_NAME_GPA_DIR = "gap dir"
@@ -174,6 +175,8 @@ class ColorMapLabel(QLabel):
 
 class HeatBlockSeries(QtCharts.QAreaSeries):
 
+    RGB8_MAX = 255
+
     def __init__(self):
 
         upper_series = QtCharts.QLineSeries()
@@ -184,6 +187,12 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         lower_series.append(0, 0)
 
         super().__init__(upper_series, lower_series)
+
+        callback = self.__on_hovered
+        self.hovered.connect(callback)
+
+        self.__frame_color = Qt.black
+        self.__frame_width = 1
 
         self.__upper_series = upper_series
         self.__lower_series = lower_series
@@ -206,20 +215,42 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         color = gradMng.convertValueToColor(intensity)
         self.setColor(color)
 
+        inv_r = self.RGB8_MAX - color.red()
+        inv_g = self.RGB8_MAX - color.green()
+        inv_b = self.RGB8_MAX - color.blue()
+
         if frame_color is not None:
+            frame_width = 2
             pen = QPen(frame_color)
-            pen.setWidth(2)
+            pen.setWidth(frame_width)
             self.setPen(pen)
+            self.__frame_color = frame_color
+            self.__frame_width = frame_width
         else:
-            pen = QPen(Qt.black)
-            pen.setWidth(1)
+            pen = QPen(self.__frame_color)
+            pen.setWidth(self.__frame_width)
             self.setPen(pen)
 
         self.__intensity = intensity
+        self.__brush_color_off = color
+        self.__brush_color_on = QColor(inv_r, inv_g, inv_b)
 
     def update_color(self):
         color = gradMng.convertValueToColor(self.__intensity)
         self.setColor(color)
+        inv_r = self.RGB8_MAX - color.red()
+        inv_g = self.RGB8_MAX - color.green()
+        inv_b = self.RGB8_MAX - color.blue()
+
+        self.__brush_color_off = color
+        self.__brush_color_on = QColor(inv_r, inv_g, inv_b)
+
+    def __on_hovered(self, point, state):
+
+        if state:
+            self.setColor(self.__brush_color_on)
+        else:
+            self.setColor(self.__brush_color_off)
 
 
 class HeatMapChartViewAbs(QtCharts.QChartView):
@@ -291,20 +322,21 @@ class HeatMapChartView(HeatMapChartViewAbs):
     def __init__(self, parent, sts_bar):
         super().__init__(parent)
 
-        self.chart().setTitle('Simple Area Chart')
+        self.chart().setTitle('Profit and Loss Heat Map')
 
         # X Axis Settings
         axis_x = QtCharts.QValueAxis()
         axis_x.setTickCount(2)
-        axis_x.setTitleText("Value")
+        axis_x.setTitleText("Loss cut Range Threshold [pips]")
         # axis_x.setFormat("h:mm")
         axis_x.setLabelsAngle(0)
+
         #axis_x.setRange(-10.0, 10.0)
 
         # Y Axis Settings
         axis_y = QtCharts.QValueAxis()
         axis_y.setTickCount(2)
-        axis_y.setTitleText("Value")
+        axis_y.setTitleText("Gap Range Threshold [pips]")
         # axis_y.setFormat("h:mm")
         axis_y.setLabelsAngle(0)
         #axis_y.setRange(-10.0, 10.0)
@@ -328,7 +360,22 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
-        print("---------- mouseMoveEvent ----------")
+        print("---------- HeatMapChartView:mouseMoveEvent ----------")
+        # print("frameSize(this): {}" .format(self.frameSize()))
+        # print("frameSize(parent): {}" .format(self.parent().frameSize()))
+
+    """
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        print("----- HeatMapChartView:mousePressEvent ------")
+        if self.__is_zoom:
+            self.__is_zoom = False
+            fs = self.parent().frameSize()
+        else:
+            self.__is_zoom = True
+            fs = self.parent().frameSize() / 5.0
+        self.resize(fs)
+    """
 
     def __thin_out_map(self, df: pd.DataFrame, thin_num: int):
 
@@ -707,7 +754,7 @@ class GapFillHeatMap(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        print("------------------ resizeEvent --------------------")
+        print("----- GapFillHeatMap:resizeEvent ------")
         fs = self.__ui.widget_HeatMap.frameSize()
         self.__chart_view.resize(fs)
         fs = self.__ui.widget_ColorMap.frameSize()
