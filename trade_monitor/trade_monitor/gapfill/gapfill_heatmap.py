@@ -11,18 +11,18 @@ from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QSizePolicy
 from PySide2.QtWidgets import QGraphicsRectItem
 from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from PySide2.QtWidgets import QLabel, QProgressBar, QStatusBar
-from PySide2.QtCore import Qt, QFile, QSizeF, QPointF, QRectF, QSize, QMargins
+from PySide2.QtCore import Qt, QFile, QSizeF, QPointF, QRectF, QRect, QSize, QMargins
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtDataVisualization import QtDataVisualization
 from PySide2.QtGui import QVector3D, QGuiApplication, QPixmap, QBrush, QIcon
 from PySide2.QtGui import QPalette, QColor, QFont, QPen, QPainter, QPainterPath
-from PySide2.QtGui import QLinearGradient, QGradient, QImage
+from PySide2.QtGui import QLinearGradient, QGradient, QImage, QFontMetrics
 from PySide2.QtCharts import QtCharts
 
+from trade_monitor.abstract import CalloutChartAbs
 from trade_monitor import util as utl
 from trade_monitor.util import GradientManager
 from trade_monitor.util import INST_MSG_LIST
-from pyatspi import state
 
 COL_NAME_DATE = "date"
 COL_NAME_GPA_DIR = "gap dir"
@@ -41,6 +41,7 @@ pd.set_option('display.max_columns', 1000)
 # pd.set_option('display.max_rows', 1000)
 
 gradMng = GradientManager()
+
 
 def gen_sample_gapdata():
 
@@ -74,6 +75,56 @@ def gen_sample_gapdata():
     inst_id = 0
 
     return df, inst_id
+
+
+class Callout(CalloutChartAbs):
+
+    def __init__(self, parent: QtCharts.QChart = None):
+        super().__init__(parent)
+
+    def setChart(self, parent: QtCharts.QChart):
+        self._chart = parent
+
+    def setText(self, text: str):
+
+        metrics = QFontMetrics(self._chart.font())
+        self._textRect = QRectF(metrics.boundingRect(QRect(0, 0, 0, 0),
+                                                     Qt.AlignLeft,
+                                                     text))
+        dx = 5
+        dy = 5
+        self._textRect.translate(dx, dy)
+        self.prepareGeometryChange()
+        self._rect = self._textRect.adjusted(-dx, -dy, dx, dy)
+        self._text = text
+
+    def updateGeometry(self, point: QPointF):
+        #print("--- updateGeometry ---")
+        self.prepareGeometryChange()
+        anchor = self._chart.mapToPosition(point)
+        self.setPos(anchor + QPointF(15, -50))
+        self._anchor = anchor
+
+    def paint(self,
+              painter: QPainter,
+              option: QStyleOptionGraphicsItem,
+              widget: QWidget):
+        #print("--- paint ---")
+        path = QPainterPath()
+        path.addRoundedRect(self._rect, 5, 5)   # 丸みを帯びた長方形の角を規定
+
+        # 枠を描写
+        painter.setBrush(Qt.white)    # 図形の塗りつぶし
+        painter.setPen(QPen(Qt.black))
+        painter.drawPath(path)
+
+        # 文字を描写
+        painter.setPen(QPen(QColor(Qt.blue)))
+        painter.drawText(self._textRect, self._text)
+
+
+callout = Callout()
+callout.setZValue(0)
 
 
 class StatusBar():
@@ -191,9 +242,6 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         callback = self.__on_hovered
         self.hovered.connect(callback)
 
-        self.__frame_color = Qt.black
-        self.__frame_width = 1
-
         self.__upper_series = upper_series
         self.__lower_series = lower_series
         self.__intensity = 0
@@ -224,16 +272,16 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
             pen = QPen(frame_color)
             pen.setWidth(frame_width)
             self.setPen(pen)
-            self.__frame_color = frame_color
-            self.__frame_width = frame_width
         else:
-            pen = QPen(self.__frame_color)
-            pen.setWidth(self.__frame_width)
+            pen = QPen(Qt.black)
+            pen.setWidth(1)
             self.setPen(pen)
 
         self.__intensity = intensity
         self.__brush_color_off = color
         self.__brush_color_on = QColor(inv_r, inv_g, inv_b)
+        self.__center = QPointF((right_x + left_x) / 2,
+                                (upper_y + lower_y) / 2)
 
     def update_color(self):
         color = gradMng.convertValueToColor(self.__intensity)
@@ -245,10 +293,12 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         self.__brush_color_off = color
         self.__brush_color_on = QColor(inv_r, inv_g, inv_b)
 
-    def __on_hovered(self, point, state):
-
+    def __on_hovered(self, point: QPointF, state: bool):
         if state:
             self.setColor(self.__brush_color_on)
+            callout.setText("Test")
+            callout.updateGeometry(self.__center)
+            callout.show()
         else:
             self.setColor(self.__brush_color_off)
 
@@ -344,6 +394,10 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.chart().addAxis(axis_x, Qt.AlignBottom)
         self.chart().addAxis(axis_y, Qt.AlignLeft)
 
+        self.__callout = Callout(self.chart())
+        callout.setChart(self.chart())
+        self.scene().addItem(callout)
+
         self.__sts_bar = sts_bar
         self.__framelist = []
 
@@ -360,9 +414,23 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
-        print("---------- HeatMapChartView:mouseMoveEvent ----------")
+        # print("---------- HeatMapChartView:mouseMoveEvent ----------")
         # print("frameSize(this): {}" .format(self.frameSize()))
         # print("frameSize(parent): {}" .format(self.parent().frameSize()))
+
+        flag1 = self.chart().plotArea().contains(event.pos())
+        flag2 = 0 < len(self.chart().series())
+        if (flag1 and flag2):
+            """
+            self.__callout.setZValue(0)
+            self.__callout.setText("Test")
+            self.__callout.updateGeometry(event.pos())
+            self.__callout.show()
+            """
+            pass
+        else:
+            callout.hide()
+
 
     """
     def mousePressEvent(self, event):
@@ -493,13 +561,13 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 else:
                     block = self.chart().series()[itr]
                     block.set_block(left_x, right_x, upper_y, lower_y, x)
-                    itr = itr + 1
+                    itr += 1
                     self.__sts_bar.set_bar_value(itr)
 
         for m in mark_list:
             block = self.chart().series()[itr]
             block.set_block(m[0], m[1], m[2], m[3], m[4], Qt.white)
-            itr = itr + 1
+            itr += 1
             self.__sts_bar.set_bar_value(itr)
 
         #self.chart().createDefaultAxes()

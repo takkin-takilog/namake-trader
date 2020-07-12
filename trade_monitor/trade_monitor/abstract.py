@@ -23,6 +23,7 @@ class CalloutChartAbs(QGraphicsItem):
         raise NotImplementedError()
 
     def boundingRect(self) -> QRectF:
+        #print("--- boundingRect ---")
         from_parent = self.mapFromParent(self._anchor)
         anchor = QPointF(from_parent)
         rect = QRectF()
