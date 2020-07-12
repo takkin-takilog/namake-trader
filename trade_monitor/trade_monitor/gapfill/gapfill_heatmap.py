@@ -199,38 +199,6 @@ class ColorMapLabel(QLabel):
         self.setPixmap(pm)
 
 
-class FrameLineSeries(QtCharts.QAreaSeries):
-
-    def __init__(self):
-
-        upper_series = QtCharts.QLineSeries()
-        lower_series = QtCharts.QLineSeries()
-        upper_series.append(0, 0)
-        upper_series.append(0, 0)
-        lower_series.append(0, 0)
-        lower_series.append(0, 0)
-
-        super().__init__(upper_series, lower_series)
-
-        self.__upper_series = upper_series
-        self.__lower_series = lower_series
-
-    def update(self,
-               left_x: int,
-               right_x: int,
-               upper_y: int,
-               lower_y: int) -> None:
-
-        self.upperSeries().replace(0, left_x, upper_y)
-        self.upperSeries().replace(1, right_x, upper_y)
-        self.lowerSeries().replace(0, left_x, lower_y)
-        self.lowerSeries().replace(1, right_x, lower_y)
-
-        self.setColor(QColor(0, 0, 0, 0))
-        pen = QPen(Qt.white)
-        pen.setWidth(2)
-        self.setPen(pen)
-
 class HeatBlockSeries(QtCharts.QAreaSeries):
 
     def __init__(self):
@@ -244,21 +212,18 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
 
         super().__init__(upper_series, lower_series)
 
-        pen = QPen(Qt.black)
-        pen.setWidth(1)
-        self.setPen(pen)
-        # self.setPen(Qt.NoPen)
-
         self.__upper_series = upper_series
         self.__lower_series = lower_series
         self.__intensity = 0
 
-    def update(self,
-               left_x: int,
-               right_x: int,
-               upper_y: int,
-               lower_y: int,
-               intensity: int) -> None:
+    def set_block(self,
+                  left_x: int,
+                  right_x: int,
+                  upper_y: int,
+                  lower_y: int,
+                  intensity: int,
+                  frame_color: QColor = None
+                  ) -> None:
 
         self.upperSeries().replace(0, left_x, upper_y)
         self.upperSeries().replace(1, right_x, upper_y)
@@ -268,27 +233,20 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         color = gradMng.convertValueToColor(intensity)
         self.setColor(color)
 
-        self.__intensity = intensity
+        if frame_color is not None:
+            pen = QPen(frame_color)
+            pen.setWidth(2)
+            self.setPen(pen)
+        else:
+            pen = QPen(Qt.black)
+            pen.setWidth(1)
+            self.setPen(pen)
 
-    def update_heat_value(self, intensity: int) -> None:
         self.__intensity = intensity
-
-        # brush = QBrush()
-        # self.setBrush(brush)
 
     def update_color(self):
         color = gradMng.convertValueToColor(self.__intensity)
         self.setColor(color)
-
-        """
-        pmp = QPainter(QPixmap(1, 256))
-        pmp.setBrush(QBrush(grad))
-        pmp.setPen(Qt.NoPen)
-        pmp.drawRect(0, 0, 1, 256)
-        """
-
-        # brush = QBrush()
-        # self.setBrush(brush)
 
 
 class HeatMapChartViewAbs(QtCharts.QChartView):
@@ -510,20 +468,19 @@ class HeatMapChartView(HeatMapChartViewAbs):
             for idx_num, x in enumerate(row):
                 right_x = cols_list[idx_num]
                 left_x = right_x - delta_x
-                block = self.chart().series()[itr]
                 if max_val <= x:
-                    mark_list.append([left_x, right_x, upper_y, lower_y])
-                block.update(left_x, right_x, upper_y, lower_y, x)
-                itr = itr + 1
-                self.__sts_bar.set_bar_value(itr)
+                    mark_list.append([left_x, right_x, upper_y, lower_y, x])
+                else:
+                    block = self.chart().series()[itr]
+                    block.set_block(left_x, right_x, upper_y, lower_y, x)
+                    itr = itr + 1
+                    self.__sts_bar.set_bar_value(itr)
 
-        for mark in mark_list:
-            frame = FrameLineSeries()
-            self.chart().addSeries(frame)
-            frame.attachAxis(self.chart().axes(Qt.Horizontal)[0])
-            frame.attachAxis(self.chart().axes(Qt.Vertical)[0])
-            frame.update(mark[0], mark[1], mark[2], mark[3])
-            self.__framelist.append(frame)
+        for m in mark_list:
+            block = self.chart().series()[itr]
+            block.set_block(m[0], m[1], m[2], m[3], m[4], Qt.white)
+            itr = itr + 1
+            self.__sts_bar.set_bar_value(itr)
 
         #self.chart().createDefaultAxes()
         self.chart().axes(Qt.Horizontal)[0].setRange(cols_list[0]-delta_x, cols_list[-1])
