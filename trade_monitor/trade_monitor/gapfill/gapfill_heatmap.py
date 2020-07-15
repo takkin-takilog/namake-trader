@@ -11,6 +11,7 @@ from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QSizePolicy
 from PySide2.QtWidgets import QGraphicsRectItem
 from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from PySide2.QtWidgets import QLabel, QProgressBar, QStatusBar
+from PySide2.QtWidgets import QGraphicsDropShadowEffect
 from PySide2.QtCore import Qt, QFile, QSizeF, QPointF, QRectF, QRect, QSize, QMargins
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtDataVisualization import QtDataVisualization
@@ -101,8 +102,28 @@ class Callout(CalloutChartAbs):
     def updateGeometry(self, point: QPointF):
         #print("--- updateGeometry ---")
         self.prepareGeometryChange()
+
+        center = self._chart.plotArea().center()
+
+        print("center:{}" .format(center))
+
         anchor = self._chart.mapToPosition(point)
-        self.setPos(anchor + QPointF(15, -50))
+        print("point:{}" .format(anchor))
+        if center.x() < anchor.x():
+            if center.y() < anchor.y():
+                self.setPos(anchor + QPointF(-15, -50))
+                print("右下")
+            else:
+                self.setPos(anchor + QPointF(-15, 50))
+                print("右上")
+        else:
+            if center.y() < anchor.y():
+                self.setPos(anchor + QPointF(15, -50))
+                print("左下")
+            else:
+                self.setPos(anchor + QPointF(15, 50))
+                print("左上")
+
         self._anchor = anchor
 
     def paint(self,
@@ -111,7 +132,7 @@ class Callout(CalloutChartAbs):
               widget: QWidget):
         #print("--- paint ---")
         path = QPainterPath()
-        path.addRoundedRect(self._rect, 5, 5)   # 丸みを帯びた長方形の角を規定
+        path.addRoundedRect(self._rect, 1, 1)   # 丸みを帯びた長方形の角を規定
 
         # 枠を描写
         painter.setBrush(Qt.white)    # 図形の塗りつぶし
@@ -188,10 +209,10 @@ class ColorMapLabel(QLabel):
         frame_size = self.__frame_size
 
         tmp = frame_size.height() * self.__margin_topbottom
-        tb_margin = math.floor(tmp + 0.5)
+        tb_margin = utl.roundi(tmp)
 
         tmp = frame_size.width() * self.__margin_leftright
-        lr_margin = math.floor(tmp + 0.5)
+        lr_margin = utl.roundi(tmp)
 
         height = frame_size.height() - (tb_margin * 2)
         width = frame_size.width() - (lr_margin * 2)
@@ -209,8 +230,8 @@ class ColorMapLabel(QLabel):
         pmp.setPen(Qt.NoPen)
         pmp.drawRect(rect)
 
-        stpl = math.floor(height / self.__div + 0.5)
-        stpi = math.floor((self.__max_abs * 2) / self.__div + 0.5)
+        stpl = utl.roundi(height / self.__div)
+        stpi = utl.roundi(self.__max_abs * 2 / self.__div)
         for i in range(0, self.__div + 1, 1):
             y_pos = i * stpl + tb_margin
             y_val = -i * stpi + self.__max_abs
@@ -282,6 +303,10 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         self.__brush_color_on = QColor(inv_r, inv_g, inv_b)
         self.__center = QPointF((right_x + left_x) / 2,
                                 (upper_y + lower_y) / 2)
+        self.__left_x = left_x
+        self.__right_x = right_x
+        self.__lower_y = lower_y
+        self.__upper_y = upper_y
 
     def update_color(self):
         color = gradMng.convertValueToColor(self.__intensity)
@@ -296,7 +321,11 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
     def __on_hovered(self, point: QPointF, state: bool):
         if state:
             self.setColor(self.__brush_color_on)
-            callout.setText("Test")
+
+            text = f"Gap Range th: {self.__left_x} - {self.__right_x}\n"\
+                f"Max Open Range Th: {self.__lower_y} - {self.__upper_y}"
+
+            callout.setText(text)
             callout.updateGeometry(self.__center)
             callout.show()
         else:
@@ -397,6 +426,10 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.__callout = Callout(self.chart())
         callout.setChart(self.chart())
         self.scene().addItem(callout)
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setOffset(0, 4)
+        shadow.setBlurRadius(8)
+        callout.setGraphicsEffect(shadow)
 
         self.__sts_bar = sts_bar
         self.__framelist = []
@@ -669,7 +702,7 @@ class GapFillHeatMap(QMainWindow):
         lsb = math.pow(10, decimal_digit)
 
         margin = 5
-        max_open_pips_max = math.floor(max_open_price_max * lsb + 0.5) + margin
+        max_open_pips_max = utl.roundi(max_open_price_max * lsb) + margin
         # print("---------- max_open_pips_max: {}" .format(max_open_pips_max))
         hmap_col = [COL_NAME_DATE] + list(range(1, max_open_pips_max + 1))
         # print("---------- hmap_col: {}" .format(hmap_col))
@@ -681,12 +714,12 @@ class GapFillHeatMap(QMainWindow):
                                            df_valid[COL_NAME_GPA_PRICE_REAL]):
 
             if is_succ:
-                max_open_pips = math.floor(mop * lsb + 0.5)
+                max_open_pips = utl.roundi(mop * lsb)
             else:
                 max_open_pips = max_open_pips_max
 
             row_left = list(range(-1, -max_open_pips-1, -1))
-            gap_pips = math.floor(gpr * lsb + 0.5)
+            gap_pips = utl.roundi(gpr * lsb)
 
             row_right = [gap_pips] * (max_open_pips_max - max_open_pips)
             roslist.append([date] + row_left + row_right)
@@ -728,7 +761,7 @@ class GapFillHeatMap(QMainWindow):
         lsb = math.pow(10, decimal_digit)
 
         margin = 5
-        gap_pips_max = math.floor(gap_price_real_max * lsb + 0.5) + margin
+        gap_pips_max = utl.roundi(gap_price_real_max * lsb) + margin
         # print("---------- gap_pips_max: {}" .format(gap_pips_max))
 
         # print("---------- column: {}" .format(df_htbl.columns))
@@ -736,7 +769,7 @@ class GapFillHeatMap(QMainWindow):
         df_mst = pd.DataFrame()
         for date, htbl in df_htbl.iterrows():
             gap_price = df_param.loc[date][COL_NAME_GPA_PRICE_REAL]
-            gap_pips = math.floor(gap_price * lsb + 0.5)
+            gap_pips = utl.roundi(gap_price * lsb)
             collist = [htbl.to_list()] * (gap_pips_max - gap_pips)
             # print("---------- collist: {}" .format(len(collist)))
             gpt_col = list(range(gap_pips + 1, gap_pips_max + 1))

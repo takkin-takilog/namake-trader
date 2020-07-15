@@ -209,3 +209,13 @@ def limit(val, min_val, max_val):
         ret_val = val
 
     return ret_val
+
+
+def roundi(a: float):
+
+    if 0 < a:
+        ans = int(a + 0.5)
+    else:
+        ans = int(a - 0.5)
+
+    return ans
