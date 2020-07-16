@@ -104,25 +104,28 @@ class Callout(CalloutChartAbs):
         self.prepareGeometryChange()
 
         center = self._chart.plotArea().center()
-
-        print("center:{}" .format(center))
-
         anchor = self._chart.mapToPosition(point)
-        print("point:{}" .format(anchor))
+        pos_x = anchor.x() - self._rect.width() / 2
+        pos_y = anchor.y() - self._rect.height() / 2
+
+        ofs_x = 100
+        ofs_y = 100
         if center.x() < anchor.x():
             if center.y() < anchor.y():
-                self.setPos(anchor + QPointF(-15, -50))
-                print("右下")
+                anchor.setX(pos_x - ofs_x)
+                anchor.setY(pos_y - ofs_y)
             else:
-                self.setPos(anchor + QPointF(-15, 50))
-                print("右上")
+                anchor.setX(pos_x - ofs_x)
+                anchor.setY(pos_y + ofs_y)
         else:
             if center.y() < anchor.y():
-                self.setPos(anchor + QPointF(15, -50))
-                print("左下")
+                anchor.setX(pos_x + ofs_x)
+                anchor.setY(pos_y - ofs_y)
             else:
-                self.setPos(anchor + QPointF(15, 50))
-                print("左上")
+                anchor.setX(pos_x + ofs_x)
+                anchor.setY(pos_y + ofs_y)
+
+        self.setPos(anchor)
 
         self._anchor = anchor
 
@@ -322,12 +325,12 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         if state:
             self.setColor(self.__brush_color_on)
 
-            text = f"Gap Range th: {self.__left_x} - {self.__right_x}\n"\
-                f"Max Open Range Th: {self.__lower_y} - {self.__upper_y}"
+            text = f"・Profit or Loss: {self.__intensity}\n"\
+                f"・Gap Range th: {self.__left_x} - {self.__right_x}\n"\
+                f"・Max Open Range Th: {self.__lower_y} - {self.__upper_y}"
 
             callout.setText(text)
             callout.updateGeometry(self.__center)
-            callout.show()
         else:
             self.setColor(self.__brush_color_off)
 
@@ -450,17 +453,10 @@ class HeatMapChartView(HeatMapChartViewAbs):
         # print("---------- HeatMapChartView:mouseMoveEvent ----------")
         # print("frameSize(this): {}" .format(self.frameSize()))
         # print("frameSize(parent): {}" .format(self.parent().frameSize()))
-
         flag1 = self.chart().plotArea().contains(event.pos())
         flag2 = 0 < len(self.chart().series())
         if (flag1 and flag2):
-            """
-            self.__callout.setZValue(0)
-            self.__callout.setText("Test")
-            self.__callout.updateGeometry(event.pos())
-            self.__callout.show()
-            """
-            pass
+            callout.show()
         else:
             callout.hide()
 
