@@ -444,7 +444,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.__sts_bar = sts_bar
         self.__thin_num = 0
 
-    def reset_map(self, df: pd.DataFrame, thin_num: int):
+    def rebuild_hmap(self, df: pd.DataFrame, thin_num: int):
 
         df_s = df.sort_values(df.index.name, ascending=True)
 
@@ -453,12 +453,12 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         self.__thin_num = thin_num
 
-    def update_map(self, df: pd.DataFrame):
+    def update_hmap(self, df: pd.DataFrame):
 
         df_s = df.sort_values(df.index.name, ascending=True)
 
         df_t = self.__thin_out_map(df_s, self.__thin_num)
-        self.__update_map(df_t)
+        self.__update_hmap(df_t)
 
     def update_color(self):
         for block in self.chart().series():
@@ -574,7 +574,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.__sts_bar.set_label_text("[2/3]")
         time_start = time.time()
         if 0 < diff:
-            print("===== 0 < diff =====")
+            # print("===== 0 < diff =====")
             self.__sts_bar.set_bar_range(0, diff)
             ax_h = chart.axes(Qt.Horizontal)[0]
             ax_v = chart.axes(Qt.Vertical)[0]
@@ -583,14 +583,14 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 chart.addSeries(block)
                 block.attachAxis(ax_h)
                 block.attachAxis(ax_v)
-                self.__sts_bar.set_bar_value(i+1)
+                self.__sts_bar.set_bar_value(i + 1)
         elif diff < 0:
-            print("===== diff < 0 =====")
+            # print("===== diff < 0 =====")
             self.__sts_bar.set_bar_range(0, -diff)
             for i in range(-diff):
                 srlist = chart.series()
                 chart.removeSeries(srlist[-1])
-                self.__sts_bar.set_bar_value(i+1)
+                self.__sts_bar.set_bar_value(i + 1)
 
         elapsed_time = time.time() - time_start
         print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
@@ -627,7 +627,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         ax_v = chart.axes(Qt.Vertical)[0]
         ax_v.setRange(rows_list[0] - delta_y, rows_list[-1])
 
-    def __update_map(self, df: pd.DataFrame):
+    def __update_hmap(self, df: pd.DataFrame):
 
         self.__sts_bar.set_label_text("[3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
@@ -638,6 +638,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 srlist[itr].set_intensity(x)
                 itr += 1
                 self.__sts_bar.set_bar_value(itr)
+
 
 class GapFillHeatMap(QMainWindow):
 
@@ -712,9 +713,6 @@ class GapFillHeatMap(QMainWindow):
         callback = self.__on_scrollBarDate_changed
         ui.scrollBar_Date.valueChanged.connect(callback)
 
-        # ----- Config Window -----
-        self.__confwin = None
-
         self.__ui = ui
         self.__chart_view = chart_view
         self.__color_map = color_map
@@ -727,14 +725,43 @@ class GapFillHeatMap(QMainWindow):
         print("spinBoxDateStep_value: {}" .format(value))
         maxval = self.__ui.spinBox_DateStep.maximum()
         self.__ui.scrollBar_Date.setMaximum(maxval - value)
+        self.__ui.scrollBar_Date.setValue(maxval - value)
 
     def __on_scrollBarDate_changed(self, value):
         print("scrollBarDate_value: {}" .format(value))
-        self.__chart_view.update_map(self.__df_hmap)
+        if self.__ui.pushButton_AutoUpdate.isChecked():
+            self.__update_hmap(self.__df_hmap)
+
+    def __update_hmap(self, df_hmap: pd.DataFrame):
+        df_hmap_new = self.__remake_df_hmap(df_hmap)
+        self.__chart_view.update_hmap(df_hmap_new)
+
+    def __remake_df_hmap(self, df_hmap: pd.DataFrame):
+
+        df_hmap_new = df_hmap
+
+        return df_hmap_new
+
+    def __on_pushButtonGenHMap_clicked(self):
+        # 以下はテストコード
+        """
+        print("--------------- start --------------------")
+        val = self.__ui.spinBox_ThinOut.value()
+        print("----- {} ----" .format(val))
+        df, inst_idx = gen_sample_dataframe()
+        print("--------------- df comp --------------------")
+        """
+        self.__ui.pushButton_AutoUpdate.setChecked(False)
+        self.rebuild_hmap(self.__df_hmap)
+
+        step_val = len(self.__df_param)
+        self.__ui.spinBox_DateStep.setValue(step_val)
+        self.__ui.spinBox_DateStep.setMaximum(step_val)
+        self.__ui.scrollBar_Date.setMaximum(0)
 
     def __on_pushButton_test_clicked(self):
-        df, inst_idx = gen_sample_gapdata()
-        self.set_gapfill_param(df, inst_idx)
+        df_param, inst_idx = gen_sample_gapdata()
+        self.set_gapfill_param(df_param, inst_idx)
 
     def set_gapfill_param(self, df_param: pd.DataFrame, inst_idx):
         df_valid = df_param[df_param[COL_NAME_VALID_FLAG]]
@@ -843,37 +870,20 @@ class GapFillHeatMap(QMainWindow):
         self.__chart_view.update_color()
         self.__color_map.update_color_scale()
 
-    def __on_pushButtonGenHMap_clicked(self):
-        # 以下はテストコード
-        """
-        print("--------------- start --------------------")
-        val = self.__ui.spinBox_ThinOut.value()
-        print("----- {} ----" .format(val))
-        df, inst_idx = gen_sample_dataframe()
-        print("--------------- df comp --------------------")
-        """
-        self.reset_map(self.__df_hmap)
-
-        step_val = len(self.__df_param)
-        self.__ui.spinBox_DateStep.setValue(step_val)
-        self.__ui.spinBox_DateStep.setMaximum(step_val)
-        self.__ui.scrollBar_Date.setMaximum(0)
-
     def __on_spinBoxThinOut_changed(self, i):
         # print("========= __on_spinBoxThinOut_changed =========")
-        self.__update_map_size_txt(self.__df_hmap, i)
+        self.__update_hmap_size_txt(self.__df_hmap, i)
 
-    def __update_map_size_txt(self, df_hmap, thinout):
+    def __update_hmap_size_txt(self, df_hmap, thinout):
         row_size = df_hmap.shape[0] // thinout
         col_size = df_hmap.shape[1] // thinout
         txt = "行数：" + str(row_size) + "\n列数：" + str(col_size)
         self.__ui.label_Roughness.setText(txt)
 
-    def reset_map(self, df: pd.DataFrame):
+    def rebuild_hmap(self, df: pd.DataFrame):
 
         thin_num = self.__ui.spinBox_ThinOut.value()
-        self.__chart_view.reset_map(df, thin_num)
-        # print("--------------- reset_map comp --------------------")
+        self.__chart_view.rebuild_hmap(df, thin_num)
         self.__color_map.update_intensity_range()
 
     def __load_ui(self, parent):
