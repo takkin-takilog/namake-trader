@@ -311,6 +311,11 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         self.__lower_y = lower_y
         self.__upper_y = upper_y
 
+    def set_intensity(self, intensity: int):
+        color = gradMng.convertValueToColor(intensity)
+        self.setColor(color)
+        self.__intensity = intensity
+
     def update_color(self):
         color = gradMng.convertValueToColor(self.__intensity)
         self.setColor(color)
@@ -435,7 +440,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         callout.setGraphicsEffect(shadow)
 
         self.__sts_bar = sts_bar
-        self.__framelist = []
+        self.__thin_num = 0
 
     def reset_map(self, df: pd.DataFrame, thin_num: int):
 
@@ -443,6 +448,15 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         df_t = self.__thin_out_map(df_s, thin_num)
         self.__draw_map(df_t)
+
+        self.__thin_num = thin_num
+
+    def update_map(self, df: pd.DataFrame):
+
+        df_s = df.sort_values(df.index.name, ascending=True)
+
+        df_t = self.__thin_out_map(df_s, self.__thin_num)
+        self.__update_map(df_t)
 
     def update_color(self):
         for block in self.chart().series():
@@ -551,10 +565,6 @@ class HeatMapChartView(HeatMapChartViewAbs):
         delta_y = rows_list[1] - rows_list[0]
         delta_x = cols_list[1] - cols_list[0]
 
-        for frame in self.__framelist:
-            self.chart().removeSeries(frame)
-        self.__framelist = []
-
         diff = df.size - len(self.chart().series())
         # print("-------------- diff:{}" .format(diff))
 
@@ -579,34 +589,48 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.__sts_bar.set_label_text("[3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
         itr = 0
-        mark_list = []
+        # mark_list = []
         for upper_y, row in df.iterrows():
             lower_y = upper_y - delta_y
             for idx_num, x in enumerate(row):
                 right_x = cols_list[idx_num]
                 left_x = right_x - delta_x
+                """
                 if max_val <= x:
                     mark_list.append([left_x, right_x, upper_y, lower_y, x])
                 else:
-                    block = self.chart().series()[itr]
-                    block.set_block(left_x, right_x, upper_y, lower_y, x)
-                    itr += 1
-                    self.__sts_bar.set_bar_value(itr)
+                """
+                block = self.chart().series()[itr]
+                block.set_block(left_x, right_x, upper_y, lower_y, x)
+                itr += 1
+                self.__sts_bar.set_bar_value(itr)
 
+        """
         for m in mark_list:
             block = self.chart().series()[itr]
             block.set_block(m[0], m[1], m[2], m[3], m[4], Qt.white)
             itr += 1
             self.__sts_bar.set_bar_value(itr)
+        """
 
         #self.chart().createDefaultAxes()
-        self.chart().axes(Qt.Horizontal)[0].setRange(cols_list[0]-delta_x, cols_list[-1])
-        self.chart().axes(Qt.Vertical)[0].setRange(rows_list[0]-delta_y, rows_list[-1])
+        self.chart().axes(Qt.Horizontal)[0].setRange(
+            cols_list[0] - delta_x, cols_list[-1])
+        self.chart().axes(Qt.Vertical)[0].setRange(
+            rows_list[0] - delta_y, rows_list[-1])
 
-    """
-    def update(self):
-        super().update()
-    """
+    def __update_map(self, df: pd.DataFrame):
+
+        self.__sts_bar.set_label_text("[3/3]")
+        self.__sts_bar.set_bar_range(0, df.size)
+        itr = 0
+        # mark_list = []
+        for _, row in df.iterrows():
+            for x in row:
+                block = self.chart().series()[itr]
+                block.set_intensity(x)
+                itr += 1
+                self.__sts_bar.set_bar_value(itr)
 
 
 class GapFillHeatMap(QMainWindow):
@@ -619,7 +643,7 @@ class GapFillHeatMap(QMainWindow):
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
 
-        self.setWindowTitle('Qt DataVisualization 3D Bars')
+        self.setWindowTitle("Gap-Fill Heat Map")
 
         """
         # set status bar
@@ -637,23 +661,25 @@ class GapFillHeatMap(QMainWindow):
                                       sts_bar)
 
         # Color
+        icon_w = 24
+        icon_h = 100
         grGtoR = QLinearGradient()
         grGtoR.setColorAt(1.0, Qt.darkGreen)
         grGtoR.setColorAt(0.5, Qt.yellow)
         grGtoR.setColorAt(0.2, Qt.red)
         grGtoR.setColorAt(0.0, Qt.darkRed)
-        icon = GradientManager.generateIcon(grGtoR, 24, 100)
+        icon = GradientManager.generateIcon(grGtoR, icon_w, icon_h)
         ui.pushButton_gradientGtoRPB.setIcon(icon)
-        ui.pushButton_gradientGtoRPB.setIconSize(QSize(24, 100))
+        ui.pushButton_gradientGtoRPB.setIconSize(QSize(icon_w, icon_h))
 
         grBtoY = QLinearGradient()
         grBtoY.setColorAt(1.0, Qt.black)
         grBtoY.setColorAt(0.67, Qt.blue)
         grBtoY.setColorAt(0.33, Qt.red)
         grBtoY.setColorAt(0.0, Qt.yellow)
-        icon = GradientManager.generateIcon(grBtoY, 24, 100)
+        icon = GradientManager.generateIcon(grBtoY, icon_w, icon_h)
         ui.pushButton_gradientBtoYPB.setIcon(icon)
-        ui.pushButton_gradientBtoYPB.setIconSize(QSize(24, 100))
+        ui.pushButton_gradientBtoYPB.setIconSize(QSize(icon_w, icon_h))
 
         callback = self.__on_gradientBtoYPB_clicked
         ui.pushButton_gradientBtoYPB.clicked.connect(callback)
@@ -664,8 +690,8 @@ class GapFillHeatMap(QMainWindow):
         gradMng.setGradient(grBtoY)
         color_map = ColorMapLabel(ui.widget_ColorMap)
 
-        callback = self.__on_pushButton_clicked
-        ui.pushButton.clicked.connect(callback)
+        callback = self.__on_pushButtonGenHMap_clicked
+        ui.pushButton_genHMap.clicked.connect(callback)
 
         callback = self.__on_spinBoxThinOut_changed
         ui.spinBox_ThinOut.valueChanged.connect(callback)
@@ -674,6 +700,15 @@ class GapFillHeatMap(QMainWindow):
         callback = self.__on_pushButton_test_clicked
         ui.pushButton_test.clicked.connect(callback)
 
+        callback = self.__on_spinBoxDateStep_changed
+        ui.spinBox_DateStep.valueChanged.connect(callback)
+
+        callback = self.__on_scrollBarDate_changed
+        ui.scrollBar_Date.valueChanged.connect(callback)
+
+        # ----- Config Window -----
+        self.__confwin = None
+
         self.__ui = ui
         self.__chart_view = chart_view
         self.__color_map = color_map
@@ -681,6 +716,15 @@ class GapFillHeatMap(QMainWindow):
 
         self.__df_param = pd.DataFrame()
         self.__df_htbl = pd.DataFrame()
+
+    def __on_spinBoxDateStep_changed(self, value):
+        print("spinBoxDateStep_value: {}" .format(value))
+        maxval = self.__ui.spinBox_DateStep.maximum()
+        self.__ui.scrollBar_Date.setMaximum(maxval - value)
+
+    def __on_scrollBarDate_changed(self, value):
+        print("scrollBarDate_value: {}" .format(value))
+        self.__chart_view.update_map(self.__df_hmap)
 
     def __on_pushButton_test_clicked(self):
         df, inst_idx = gen_sample_gapdata()
@@ -708,7 +752,6 @@ class GapFillHeatMap(QMainWindow):
                                            df_valid[COL_NAME_SUCCESS_FLAG],
                                            df_valid[COL_NAME_MAX_OPEN_RANGE],
                                            df_valid[COL_NAME_GPA_PRICE_REAL]):
-
             if is_succ:
                 max_open_pips = utl.roundi(mop * lsb)
             else:
@@ -719,21 +762,10 @@ class GapFillHeatMap(QMainWindow):
 
             row_right = [gap_pips] * (max_open_pips_max - max_open_pips)
             roslist.append([date] + row_left + row_right)
-            # print("^^^^^^^^^^ {} ^^^^^^^^^^" .format(date))
-            # print([date] + row_left + row_right)
 
-        # print("----- len(roslist):{} -----" .format(len(roslist)))
-        # print("----- len(hmap_col):{} -----" .format(len(hmap_col)))
         df_htbl = pd.DataFrame(roslist, columns=hmap_col)
         df_htbl.set_index(COL_NAME_DATE, inplace=True)
-
-        # print("--- df_htbl ---")
-        # print(df_htbl)
-
         df_hmap = self.__make_hmap(df_param, df_htbl, inst_idx)
-
-        # print("########## Heat Map ##################")
-        # print(df_hmap)
 
         lenmax = max(df_hmap.shape)
         thinout = (lenmax // 100) + 1
@@ -805,7 +837,7 @@ class GapFillHeatMap(QMainWindow):
         self.__chart_view.update_color()
         self.__color_map.update_color_scale()
 
-    def __on_pushButton_clicked(self):
+    def __on_pushButtonGenHMap_clicked(self):
         # 以下はテストコード
         """
         print("--------------- start --------------------")
@@ -815,6 +847,11 @@ class GapFillHeatMap(QMainWindow):
         print("--------------- df comp --------------------")
         """
         self.reset_map(self.__df_hmap)
+
+        step_val = len(self.__df_param)
+        self.__ui.spinBox_DateStep.setValue(step_val)
+        self.__ui.spinBox_DateStep.setMaximum(step_val)
+        self.__ui.scrollBar_Date.setMaximum(0)
 
     def __on_spinBoxThinOut_changed(self, i):
         # print("========= __on_spinBoxThinOut_changed =========")
@@ -865,9 +902,6 @@ if __name__ == "__main__":
     app = QApplication([])
 
     widget = GapFillHeatMap()
-    #widget.set_data(df)
-
-
     widget.show()
     widget.init_resize()
 
