@@ -125,15 +125,15 @@ class HeatMapManager():
         return df_new
 
     def tuned_hmap(self):
-        print("----- date_step:{} -----" .format(self.__date_step))
-        print("----- date_pos:{} -----" .format(self.__date_pos))
-
-        print("--- Date ---")
-        print(self.__df_param.index)
-
         start = self.__date_pos
         end = self.__date_pos + self.__date_step
-        print(self.__df_param.index[start:end])
+        date_list = self.__df_param.index[start:end].tolist()
+        df_hmap_mst = self.__df_hmap_mst.loc[(date_list), :]
+
+        df_hmap = df_hmap_mst.sum(level=COL_GPA_PRICE_TH)
+        df_hmap = pd.concat([df_hmap, self.__df_hmap_zero]).sum(level=0)
+        df_hmap.sort_index(inplace=True)
+        print(df_hmap)
 
         return self.decimate_hmap(self.__decimate_value)
 
