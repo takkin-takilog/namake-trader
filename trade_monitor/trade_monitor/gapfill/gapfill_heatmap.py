@@ -25,6 +25,8 @@ from trade_monitor import util as utl
 from trade_monitor.util import GradientManager
 from trade_monitor.util import INST_MSG_LIST
 
+import time
+
 COL_NAME_DATE = "date"
 COL_NAME_GPA_DIR = "gap dir"
 COL_NAME_GPA_CLOSE_PRICE = "gap close price"
@@ -565,31 +567,39 @@ class HeatMapChartView(HeatMapChartViewAbs):
         delta_y = rows_list[1] - rows_list[0]
         delta_x = cols_list[1] - cols_list[0]
 
-        diff = df.size - len(self.chart().series())
+        chart = self.chart()
+        diff = df.size - len(chart.series())
         # print("-------------- diff:{}" .format(diff))
 
         self.__sts_bar.set_label_text("[2/3]")
+        time_start = time.time()
         if 0 < diff:
-            # print("===== 0 < diff =====")
+            print("===== 0 < diff =====")
             self.__sts_bar.set_bar_range(0, diff)
+            ax_h = chart.axes(Qt.Horizontal)[0]
+            ax_v = chart.axes(Qt.Vertical)[0]
             for i in range(diff):
                 block = HeatBlockSeries()
-                self.chart().addSeries(block)
-                block.attachAxis(self.chart().axes(Qt.Horizontal)[0])
-                block.attachAxis(self.chart().axes(Qt.Vertical)[0])
+                chart.addSeries(block)
+                block.attachAxis(ax_h)
+                block.attachAxis(ax_v)
                 self.__sts_bar.set_bar_value(i+1)
         elif diff < 0:
-            # print("===== diff < 0 =====")
+            print("===== diff < 0 =====")
             self.__sts_bar.set_bar_range(0, -diff)
             for i in range(-diff):
-                sr = self.chart().series()[-1]
-                self.chart().removeSeries(sr)
+                srlist = chart.series()
+                chart.removeSeries(srlist[-1])
                 self.__sts_bar.set_bar_value(i+1)
+
+        elapsed_time = time.time() - time_start
+        print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
 
         self.__sts_bar.set_label_text("[3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
         itr = 0
         # mark_list = []
+        blklist = chart.series()
         for upper_y, row in df.iterrows():
             lower_y = upper_y - delta_y
             for idx_num, x in enumerate(row):
@@ -600,8 +610,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
                     mark_list.append([left_x, right_x, upper_y, lower_y, x])
                 else:
                 """
-                block = self.chart().series()[itr]
-                block.set_block(left_x, right_x, upper_y, lower_y, x)
+                blklist[itr].set_block(left_x, right_x, upper_y, lower_y, x)
                 itr += 1
                 self.__sts_bar.set_bar_value(itr)
 
@@ -613,25 +622,22 @@ class HeatMapChartView(HeatMapChartViewAbs):
             self.__sts_bar.set_bar_value(itr)
         """
 
-        #self.chart().createDefaultAxes()
-        self.chart().axes(Qt.Horizontal)[0].setRange(
-            cols_list[0] - delta_x, cols_list[-1])
-        self.chart().axes(Qt.Vertical)[0].setRange(
-            rows_list[0] - delta_y, rows_list[-1])
+        ax_h = chart.axes(Qt.Horizontal)[0]
+        ax_h.setRange(cols_list[0] - delta_x, cols_list[-1])
+        ax_v = chart.axes(Qt.Vertical)[0]
+        ax_v.setRange(rows_list[0] - delta_y, rows_list[-1])
 
     def __update_map(self, df: pd.DataFrame):
 
         self.__sts_bar.set_label_text("[3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
         itr = 0
-        # mark_list = []
+        srlist = self.chart().series()
         for _, row in df.iterrows():
             for x in row:
-                block = self.chart().series()[itr]
-                block.set_intensity(x)
+                srlist[itr].set_intensity(x)
                 itr += 1
                 self.__sts_bar.set_bar_value(itr)
-
 
 class GapFillHeatMap(QMainWindow):
 
