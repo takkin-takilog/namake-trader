@@ -71,6 +71,9 @@ class HeatMapManager():
         self.__df_hmap_zero = df_hmap_zero
         self.__decimate_value = 0
 
+        self.__date_step = 0
+        self.__date_pos = 0
+
     def decimate_hmap(self, deci: int):
 
         if deci < 2:
@@ -122,6 +125,15 @@ class HeatMapManager():
         return df_new
 
     def tuned_hmap(self):
+        print("----- date_step:{} -----" .format(self.__date_step))
+        print("----- date_pos:{} -----" .format(self.__date_pos))
+
+        print("--- Date ---")
+        print(self.__df_param.index)
+
+        start = self.__date_pos
+        end = self.__date_pos + self.__date_step
+        print(self.__df_param.index[start:end])
 
         return self.decimate_hmap(self.__decimate_value)
 
@@ -161,3 +173,19 @@ class HeatMapManager():
     @property
     def param_len(self):
         return len(self.__df_param)
+
+    @property
+    def date_step(self):
+        return self.__date_step
+
+    @date_step.setter
+    def date_step(self, value):
+        self.__date_step = value
+
+    @property
+    def date_pos(self):
+        return self.__date_pos
+
+    @date_pos.setter
+    def date_pos(self, value):
+        self.__date_pos = value

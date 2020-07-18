@@ -656,13 +656,14 @@ class GapFillHeatMap(QMainWindow):
         self.__color_map = color_map
 
     def __on_spinBoxDateStep_changed(self, value):
-        print("spinBoxDateStep_value: {}" .format(value))
         maxval = self.__ui.spinBox_DateStep.maximum()
         self.__ui.scrollBar_Date.setMaximum(maxval - value)
         self.__ui.scrollBar_Date.setValue(maxval - value)
 
+        self.__hmapmng.date_step = value
+
     def __on_scrollBarDate_changed(self, value):
-        print("scrollBarDate_value: {}" .format(value))
+        self.__hmapmng.date_pos = value
         if self.__ui.pushButton_AutoUpdate.isChecked():
             self.__update_hmap()
 
@@ -691,6 +692,8 @@ class GapFillHeatMap(QMainWindow):
         self.__ui.spinBox_DateStep.setValue(step_val)
         self.__ui.spinBox_DateStep.setMaximum(step_val)
         self.__ui.scrollBar_Date.setMaximum(0)
+
+        self.__hmapmng.date_step = step_val
 
     def __on_pushButton_test_clicked(self):
         df_param, inst_idx = gen_sample_gapdata()
