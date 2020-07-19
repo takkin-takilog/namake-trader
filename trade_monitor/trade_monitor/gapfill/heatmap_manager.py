@@ -74,17 +74,48 @@ class HeatMapManager():
         self.__date_step = 0
         self.__date_pos = 0
 
+        print("---set_param")
+        print(self.__df_hmap.shape)
+
     def decimate_hmap(self, deci: int):
 
+        df_new = self.__decimate_hmap(self.__df_hmap, deci)
+        self.__df_hmap_deci = df_new
+        self.__decimate_value = deci
+
+        return df_new
+
+    def tuned_hmap(self):
+        start = self.__date_pos
+        end = self.__date_pos + self.__date_step
+        print("----- tuned_hmap -----")
+        print("date_step: {}" .format(self.__date_step))
+        print("start:{}, end:{}" .format(start, end))
+        date_list = self.__df_param.index[start:end].tolist()
+        df_hmap_mst = self.__df_hmap_mst.loc[(date_list), :]
+        print("df_hmap_mst.shape:{}" .format(df_hmap_mst.shape))
+
+        df_hmap = df_hmap_mst.sum(level=COL_GPA_PRICE_TH)
+        df_hmap = pd.concat([df_hmap, self.__df_hmap_zero]).sum(level=0)
+        df_hmap.sort_index(inplace=True)
+        print("df_hmap.shape:{}" .format(df_hmap.shape))
+
+        deci = self.__decimate_value
+        print("deci:{}" .format(deci))
+        df_new = self.__decimate_hmap(df_hmap, deci)
+        self.__df_hmap_deci = df_new
+
+        return df_new
+
+    def __decimate_hmap(self, df_hmap: pd.DataFrame, deci: int):
+
         if deci < 2:
-            return self.__df_hmap
+            return df_hmap
 
-        df = self.__df_hmap
-
-        col_min = df.columns[0]
-        col_max = df.columns[-1]
-        row_min = df.index[0]
-        row_max = df.index[-1]
+        col_min = df_hmap.columns[0]
+        col_max = df_hmap.columns[-1]
+        row_min = df_hmap.index[0]
+        row_max = df_hmap.index[-1]
 
         rng_y = list(range(((row_min - 1) // deci) * deci + deci,
                            row_max + deci,
@@ -110,7 +141,7 @@ class HeatMapManager():
                 str_x = utl.limit(str_x, col_min, col_max)
                 end_x = utl.limit(x, col_min, col_max) + 1
                 x_rng = range(str_x,  end_x, 1)
-                new_x_list.append(df.loc[y_rng][x_rng].max().max())
+                new_x_list.append(df_hmap.loc[y_rng][x_rng].max().max())
                 cnt = cnt + 1
                 self.__sts_bar.set_bar_value(cnt)
             new_y_map.append(new_x_list)
@@ -120,22 +151,7 @@ class HeatMapManager():
         df_new = pd.DataFrame(new_y_map, columns=columns)
         df_new.set_index(idx, inplace=True)
 
-        self.__decimate_value = deci
-
         return df_new
-
-    def tuned_hmap(self):
-        start = self.__date_pos
-        end = self.__date_pos + self.__date_step
-        date_list = self.__df_param.index[start:end].tolist()
-        df_hmap_mst = self.__df_hmap_mst.loc[(date_list), :]
-
-        df_hmap = df_hmap_mst.sum(level=COL_GPA_PRICE_TH)
-        df_hmap = pd.concat([df_hmap, self.__df_hmap_zero]).sum(level=0)
-        df_hmap.sort_index(inplace=True)
-        print(df_hmap)
-
-        return self.decimate_hmap(self.__decimate_value)
 
     def __make_hmap(self,
                     df_param: pd.DataFrame,
@@ -168,7 +184,7 @@ class HeatMapManager():
 
     @property
     def shape(self):
-        return self.__df_hmap.shape
+        return self.__df_hmap_zero.shape
 
     @property
     def param_len(self):
@@ -181,6 +197,7 @@ class HeatMapManager():
     @date_step.setter
     def date_step(self, value):
         self.__date_step = value
+        print("date_step: {}" .format(value))
 
     @property
     def date_pos(self):

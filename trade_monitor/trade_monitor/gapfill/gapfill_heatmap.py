@@ -316,12 +316,14 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         self.__upper_y = upper_y
 
     def set_intensity(self, intensity: int):
-        color = gradMng.convertValueToColor(intensity)
-        self.setColor(color)
+        self.__update_color(intensity)
         self.__intensity = intensity
 
     def update_color(self):
-        color = gradMng.convertValueToColor(self.__intensity)
+        self.__update_color(self.__intensity)
+
+    def __update_color(self, intensity: int):
+        color = gradMng.convertValueToColor(intensity)
         self.setColor(color)
         inv_r = self.RGB8_MAX - color.red()
         inv_g = self.RGB8_MAX - color.green()
@@ -656,11 +658,10 @@ class GapFillHeatMap(QMainWindow):
         self.__color_map = color_map
 
     def __on_spinBoxDateStep_changed(self, value):
+        self.__hmapmng.date_step = value
         maxval = self.__ui.spinBox_DateStep.maximum()
         self.__ui.scrollBar_Date.setMaximum(maxval - value)
-        self.__ui.scrollBar_Date.setValue(maxval - value)
-
-        self.__hmapmng.date_step = value
+        #self.__ui.scrollBar_Date.setValue(maxval - value)
 
     def __on_scrollBarDate_changed(self, value):
         self.__hmapmng.date_pos = value
