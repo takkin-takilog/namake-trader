@@ -11,7 +11,7 @@ from rclpy.node import Node
 from rclpy.client import Client
 from std_msgs.msg import String, Bool
 from trade_manager_msgs.srv import CandlesMntSrv
-from trade_monitor.gapfill.gap_fill_ui import GapFillUi
+from trade_monitor.gapfill.gapfill_ui import GapFillUi
 from trade_monitor.main_ui import MainUi
 from trade_monitor import util as utl
 from trade_monitor.util import INST_MSG_LIST

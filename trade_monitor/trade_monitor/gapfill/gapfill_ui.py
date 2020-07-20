@@ -38,7 +38,7 @@ from trade_monitor.util import (COL_NAME_TIME,
 
 from trade_monitor.gapfill.gapfill_heatmap import GapFillHeatMap
 
-from trade_monitor.gapfill.gapfill_heatmap import (COL_NAME_DATE,
+from trade_monitor.gapfill.heatmap_manager import (COL_NAME_DATE,
                                                    COL_NAME_GPA_DIR,
                                                    COL_NAME_GPA_CLOSE_PRICE,
                                                    COL_NAME_GPA_OPEN_PRICE,
