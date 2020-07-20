@@ -645,6 +645,9 @@ class GapFillHeatMap(QMainWindow):
         callback = self.__on_pushButton_test_clicked
         ui.pushButton_test.clicked.connect(callback)
 
+        callback = self.__on_pushButtonAutoUpdate_toggled
+        ui.pushButton_AutoUpdate.toggled.connect(callback)
+
         callback = self.__on_spinBoxDateStep_changed
         ui.spinBox_DateStep.valueChanged.connect(callback)
 
@@ -657,11 +660,14 @@ class GapFillHeatMap(QMainWindow):
         self.__chart_view = chart_view
         self.__color_map = color_map
 
+    def __on_pushButtonAutoUpdate_toggled(self, checked: bool):
+        if checked:
+            self.__update_hmap()
+
     def __on_spinBoxDateStep_changed(self, value):
         self.__hmapmng.date_step = value
         maxval = self.__ui.spinBox_DateStep.maximum()
         self.__ui.scrollBar_Date.setMaximum(maxval - value)
-        #self.__ui.scrollBar_Date.setValue(maxval - value)
 
     def __on_scrollBarDate_changed(self, value):
         self.__hmapmng.date_pos = value
@@ -671,6 +677,7 @@ class GapFillHeatMap(QMainWindow):
     def __update_hmap(self):
         df = self.__hmapmng.tuned_hmap()
         self.__chart_view.update_hmap(df)
+        self.__update_date_list()
 
     def __on_pushButtonGenHMap_clicked(self):
         # 以下はテストコード
@@ -693,8 +700,15 @@ class GapFillHeatMap(QMainWindow):
         self.__ui.spinBox_DateStep.setValue(step_val)
         self.__ui.spinBox_DateStep.setMaximum(step_val)
         self.__ui.scrollBar_Date.setMaximum(0)
+        self.__update_date_list()
 
         self.__hmapmng.date_step = step_val
+
+    def __update_date_list(self):
+        text = ""
+        for date in self.__hmapmng.date_list:
+            text += date + "\n"
+        self.__ui.plainTextEdit_DateList.setPlainText(text)
 
     def __on_pushButton_test_clicked(self):
         df_param, inst_idx = gen_sample_gapdata()

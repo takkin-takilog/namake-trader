@@ -63,12 +63,16 @@ class HeatMapManager():
         df_hmap_zero = pd.DataFrame(index=df_hmap.index,
                                     columns=df_hmap.columns).fillna(0)
 
+        date_list = df_param.index.tolist()
+
         self.__df_param = df_param
         self.__df_htbl = df_htbl
         self.__inst_idx = inst_idx
         self.__df_hmap_mst = df_hmap_mst
         self.__df_hmap = df_hmap
+        self.__df_hmap_deci = df_hmap
         self.__df_hmap_zero = df_hmap_zero
+        self.__date_list = date_list
         self.__decimate_value = 0
 
         self.__date_step = 0
@@ -82,6 +86,7 @@ class HeatMapManager():
         df_new = self.__decimate_hmap(self.__df_hmap, deci)
         self.__df_hmap_deci = df_new
         self.__decimate_value = deci
+        self.__date_list = self.__df_param.index.tolist()
 
         return df_new
 
@@ -104,6 +109,7 @@ class HeatMapManager():
         print("deci:{}" .format(deci))
         df_new = self.__decimate_hmap(df_hmap, deci)
         self.__df_hmap_deci = df_new
+        self.__date_list = date_list
 
         return df_new
 
@@ -181,6 +187,10 @@ class HeatMapManager():
             df_mst = pd.concat([df_mst, df])
 
         return df_mst
+
+    @property
+    def date_list(self):
+        return self.__date_list
 
     @property
     def shape(self):
