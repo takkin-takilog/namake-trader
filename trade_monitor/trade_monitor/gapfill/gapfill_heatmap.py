@@ -648,11 +648,19 @@ class GapFillHeatMap(QMainWindow):
         callback = self.__on_pushButtonAutoUpdate_toggled
         ui.pushButton_AutoUpdate.toggled.connect(callback)
 
+        # ---------- Date Range ----------
         callback = self.__on_spinBoxDateStep_changed
         ui.spinBox_DateStep.valueChanged.connect(callback)
 
         callback = self.__on_scrollBarDate_changed
         ui.scrollBar_Date.valueChanged.connect(callback)
+        # ---------- Gap Direction ----------
+        callback = self.__on_radioButtonGapDirAll_clicked
+        ui.radioButton_GapDirAll.clicked.connect(callback)
+        callback = self.__on_radioButtonGapDirUp_clicked
+        ui.radioButton_GpaDirUp.clicked.connect(callback)
+        callback = self.__on_radioButtonGapDirDown_clicked
+        ui.radioButton_GapDirLo.clicked.connect(callback)
 
         self.__hmapmng = HeatMapManager(sts_bar)
 
@@ -660,19 +668,62 @@ class GapFillHeatMap(QMainWindow):
         self.__chart_view = chart_view
         self.__color_map = color_map
 
+        self.__is_chart_updatable = True
+
     def __on_pushButtonAutoUpdate_toggled(self, checked: bool):
         if checked:
             self.__update_hmap()
 
     def __on_spinBoxDateStep_changed(self, value):
-        self.__hmapmng.date_step = value
-        maxval = self.__ui.spinBox_DateStep.maximum()
-        self.__ui.scrollBar_Date.setMaximum(maxval - value)
+        print("__on_spinBoxDateStep_changed")
+        if self.__is_chart_updatable:
+            self.__hmapmng.date_step = value
+            maxval = self.__ui.spinBox_DateStep.maximum()
+            self.__ui.scrollBar_Date.setMaximum(maxval - value)
+            if self.__ui.pushButton_AutoUpdate.isChecked():
+                self.__update_hmap()
 
     def __on_scrollBarDate_changed(self, value):
-        self.__hmapmng.date_pos = value
+        print("__on_scrollBarDate_changed")
+        if self.__is_chart_updatable:
+            self.__hmapmng.date_pos = value
+            if self.__ui.pushButton_AutoUpdate.isChecked():
+                self.__update_hmap()
+
+    def __on_radioButtonGapDirAll_clicked(self):
+        print("radioButtonGapDirAll_clicked")
+        self.__hmapmng.switch_dir_all()
+        self.__update_status()
         if self.__ui.pushButton_AutoUpdate.isChecked():
             self.__update_hmap()
+
+    def __on_radioButtonGapDirUp_clicked(self):
+        print("on_radioButtonGapDirUp_clicked")
+        self.__hmapmng.switch_dir_up()
+        self.__update_status()
+        if self.__ui.pushButton_AutoUpdate.isChecked():
+            self.__update_hmap()
+
+    def __on_radioButtonGapDirDown_clicked(self):
+        print("on_radioButtonGapDirLo_clicked")
+        self.__hmapmng.switch_dir_down()
+        self.__update_status()
+        if self.__ui.pushButton_AutoUpdate.isChecked():
+            self.__update_hmap()
+
+    def __update_status(self):
+        self.__is_chart_updatable = False
+        date_pos = self.__hmapmng.date_pos
+        date_step = self.__hmapmng.date_step
+        data_len = self.__hmapmng.data_len
+        print("date_pos[{}], date_step[{}], data_len[{}]" .format(
+            date_pos, date_step, data_len))
+        self.__ui.spinBox_DateStep.setMaximum(data_len)
+        self.__ui.spinBox_DateStep.setValue(date_step)
+        self.__ui.scrollBar_Date.setMaximum(data_len - date_step)
+        self.__ui.scrollBar_Date.setValue(date_pos)
+        self.__update_date_list()
+        self.__is_chart_updatable = True
 
     def __update_hmap(self):
         df = self.__hmapmng.tuned_hmap()
@@ -691,18 +742,14 @@ class GapFillHeatMap(QMainWindow):
         self.__ui.pushButton_AutoUpdate.setChecked(False)
 
         deci = self.__ui.spinBox_ThinOut.value()
-        df = self.__hmapmng.decimate_hmap(deci)
+        df = self.__hmapmng.reset_hmap(deci)
 
         self.__chart_view.rebuild_hmap(df)
         self.__color_map.update_intensity_range()
 
-        step_val = self.__hmapmng.param_len
-        self.__ui.spinBox_DateStep.setValue(step_val)
-        self.__ui.spinBox_DateStep.setMaximum(step_val)
-        self.__ui.scrollBar_Date.setMaximum(0)
-        self.__update_date_list()
+        self.__update_status()
 
-        self.__hmapmng.date_step = step_val
+        self.__ui.radioButton_GapDirAll.setChecked(True)
 
     def __update_date_list(self):
         text = ""

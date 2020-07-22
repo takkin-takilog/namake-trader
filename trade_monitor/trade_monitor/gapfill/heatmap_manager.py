@@ -2,6 +2,7 @@ import math
 import pandas as pd
 from trade_monitor.util import INST_MSG_LIST
 from trade_monitor import util as utl
+from trade_apl_msgs.msg import GapFillMsg
 
 COL_NAME_DATE = "date"
 COL_NAME_GPA_DIR = "gap dir"
@@ -19,6 +20,10 @@ COL_GPA_PRICE_TH = "gap price thresh"
 
 
 class HeatMapManager():
+
+    GAP_DIR_ALL = 1
+    GAP_DIR_UP = 2
+    GAP_DIR_DOWN = 3
 
     def __init__(self, sts_bar):
         self.__sts_bar = sts_bar
@@ -65,24 +70,27 @@ class HeatMapManager():
 
         date_list = df_param.index.tolist()
 
+        self.__df_param_mst = df_param
         self.__df_param = df_param
         self.__df_htbl = df_htbl
         self.__inst_idx = inst_idx
-        self.__df_hmap_mst = df_hmap_mst
+        self.__df_hmap_base = df_hmap_mst
+        self.__df_hmap_mst = df_hmap
         self.__df_hmap = df_hmap
         self.__df_hmap_deci = df_hmap
         self.__df_hmap_zero = df_hmap_zero
         self.__date_list = date_list
         self.__decimate_value = 0
 
-        self.__date_step = 0
+        self.__date_step = len(df_param)
         self.__date_pos = 0
+        self.__gap_dir = self.GAP_DIR_ALL
 
-        print("---set_param")
-        print(self.__df_hmap.shape)
+    def reset_hmap(self, deci: int):
+        self.__df_param = self.__df_param_mst
+        self.__df_hmap = self.__df_hmap_mst
 
-    def decimate_hmap(self, deci: int):
-
+        self.__date_step = len(self.__df_param)
         df_new = self.__decimate_hmap(self.__df_hmap, deci)
         self.__df_hmap_deci = df_new
         self.__decimate_value = deci
@@ -97,7 +105,7 @@ class HeatMapManager():
         print("date_step: {}" .format(self.__date_step))
         print("start:{}, end:{}" .format(start, end))
         date_list = self.__df_param.index[start:end].tolist()
-        df_hmap_mst = self.__df_hmap_mst.loc[(date_list), :]
+        df_hmap_mst = self.__df_hmap_base.loc[(date_list), :]
         print("df_hmap_mst.shape:{}" .format(df_hmap_mst.shape))
 
         df_hmap = df_hmap_mst.sum(level=COL_GPA_PRICE_TH)
@@ -112,6 +120,35 @@ class HeatMapManager():
         self.__date_list = date_list
 
         return df_new
+
+    def switch_dir_all(self):
+        self.__gap_dir = self.GAP_DIR_ALL
+        self.__update_param()
+
+    def switch_dir_up(self):
+        self.__gap_dir = self.GAP_DIR_UP
+        self.__update_param()
+
+    def switch_dir_down(self):
+        self.__gap_dir = self.GAP_DIR_DOWN
+        self.__update_param()
+
+    def __update_param(self):
+
+        df = self.__df_param_mst
+
+        if self.__gap_dir == self.GAP_DIR_UP:
+            df_param = df[df[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_UP]
+        elif self.__gap_dir == self.GAP_DIR_DOWN:
+            df_param = df[df[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_DOWN]
+        else:
+            df_param = df
+
+        self.__date_pos = 0
+        if len(df_param) < self.__date_step:
+            self.__date_step = len(df_param)
+
+        self.__df_param = df_param
 
     def __decimate_hmap(self, df_hmap: pd.DataFrame, deci: int):
 
@@ -197,7 +234,7 @@ class HeatMapManager():
         return self.__df_hmap_zero.shape
 
     @property
-    def param_len(self):
+    def data_len(self):
         return len(self.__df_param)
 
     @property
