@@ -670,6 +670,19 @@ class GapFillHeatMap(QMainWindow):
 
         self.__is_chart_updatable = True
 
+    def set_param(self,
+                  inst_idx: int,
+                  df_param: pd.DataFrame):
+
+        self.__hmapmng.set_param(df_param, inst_idx)
+
+        shape = self.__hmapmng.shape
+        lenmax = max(shape)
+        val = (lenmax // 100) + 1
+
+        self.__ui.spinBox_ThinOut.setValue(val)
+
+
     def __on_pushButtonAutoUpdate_toggled(self, checked: bool):
         if checked:
             self.__update_hmap()

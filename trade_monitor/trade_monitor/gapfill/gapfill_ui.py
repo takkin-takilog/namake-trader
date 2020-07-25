@@ -176,7 +176,7 @@ class GapFillUi():
         self.__chart_curr = chart_curr
         self.__qstd_itm_mdl = qstd_itm_mdl
 
-        self.__inst_id = INST_MSG_LIST[0].msg_id
+        # self.__inst_id = INST_MSG_LIST[0].msg_id
         self.__ui = ui
         self.__node = node
         self.__logger = logger
@@ -282,6 +282,9 @@ class GapFillUi():
 
     def __on_gapfill_heatmap_clicked(self):
         self.__logger.debug("gapfill_heatmap_clicked")
+
+        inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
+        self.__widget_htmap.set_param(inst_idx, self.__df_param)
 
         self.__widget_htmap.show()
 
