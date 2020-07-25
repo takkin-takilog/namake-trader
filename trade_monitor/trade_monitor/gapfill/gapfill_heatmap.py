@@ -513,7 +513,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         diff = df.size - len(chart.series())
         # print("-------------- diff:{}" .format(diff))
 
-        self.__sts_bar.set_label_text("[2/3]")
+        self.__sts_bar.set_label_text("Generating Heat Map : [2/3]")
         if 0 < diff:
             # print("===== 0 < diff =====")
             self.__sts_bar.set_bar_range(0, diff)
@@ -533,7 +533,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 chart.removeSeries(srlist[-1])
                 self.__sts_bar.set_bar_value(i + 1)
 
-        self.__sts_bar.set_label_text("[3/3]")
+        self.__sts_bar.set_label_text("Generating Heat Map : [3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
         itr = 0
         # mark_list = []
@@ -567,7 +567,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
     def __update_hmap(self, df: pd.DataFrame):
 
-        self.__sts_bar.set_label_text("[3/3]")
+        self.__sts_bar.set_label_text("Generating Heat Map : [3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
         itr = 0
         srlist = self.chart().series()
@@ -582,7 +582,7 @@ class GapFillHeatMap(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        # self.setAttribute(Qt.WA_DeleteOnClose)
 
         ui = self.__load_ui(parent)
         self.setCentralWidget(ui)
@@ -641,10 +641,6 @@ class GapFillHeatMap(QMainWindow):
         callback = self.__on_spinBoxThinOut_changed
         ui.spinBox_ThinOut.valueChanged.connect(callback)
 
-        # ----- test -----
-        callback = self.__on_pushButton_test_clicked
-        ui.pushButton_test.clicked.connect(callback)
-
         callback = self.__on_pushButtonAutoUpdate_toggled
         ui.pushButton_AutoUpdate.toggled.connect(callback)
 
@@ -678,10 +674,9 @@ class GapFillHeatMap(QMainWindow):
 
         shape = self.__hmapmng.shape
         lenmax = max(shape)
-        val = (lenmax // 100) + 1
+        val = math.ceil(lenmax / 100)
 
         self.__ui.spinBox_ThinOut.setValue(val)
-
 
     def __on_pushButtonAutoUpdate_toggled(self, checked: bool):
         if checked:
@@ -744,14 +739,7 @@ class GapFillHeatMap(QMainWindow):
         self.__update_date_list()
 
     def __on_pushButtonGenHMap_clicked(self):
-        # 以下はテストコード
-        """
-        print("--------------- start --------------------")
-        val = self.__ui.spinBox_ThinOut.value()
-        print("----- {} ----" .format(val))
-        df, inst_idx = gen_sample_dataframe()
-        print("--------------- df comp --------------------")
-        """
+
         self.__ui.pushButton_AutoUpdate.setChecked(False)
 
         deci = self.__ui.spinBox_ThinOut.value()
@@ -769,17 +757,6 @@ class GapFillHeatMap(QMainWindow):
         for date in self.__hmapmng.date_list:
             text += date + "\n"
         self.__ui.plainTextEdit_DateList.setPlainText(text)
-
-    def __on_pushButton_test_clicked(self):
-        df_param, inst_idx = gen_sample_gapdata()
-
-        self.__hmapmng.set_param(df_param, inst_idx)
-
-        shape = self.__hmapmng.shape
-        lenmax = max(shape)
-        val = (lenmax // 100) + 1
-
-        self.__ui.spinBox_ThinOut.setValue(val)
 
     def __on_gradientBtoYPB_clicked(self):
         grBtoY = QLinearGradient(0, 0, 0, 100)
@@ -806,9 +783,10 @@ class GapFillHeatMap(QMainWindow):
     def __on_spinBoxThinOut_changed(self, thinout):
         # print("========= __on_spinBoxThinOut_changed =========")
         shape = self.__hmapmng.shape
-        row_size = shape[0] // thinout
-        col_size = shape[1] // thinout
-        txt = "行数：" + str(row_size) + "\n列数：" + str(col_size)
+
+        row_len = math.ceil(shape[0] / thinout)
+        col_len = math.ceil(shape[1] / thinout)
+        txt = "rows len: " + str(row_len) + "\ncols len: " + str(col_len)
         self.__ui.label_Roughness.setText(txt)
 
     def __load_ui(self, parent):
@@ -842,7 +820,10 @@ if __name__ == "__main__":
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication([])
 
+    df_param, inst_idx = gen_sample_gapdata()
+
     widget = GapFillHeatMap()
+    widget.set_param(inst_idx, df_param)
     widget.show()
     widget.init_resize()
 

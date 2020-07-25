@@ -62,8 +62,13 @@ class HeatMapManager():
         df_htbl = pd.DataFrame(roslist, columns=hmap_col)
         df_htbl.set_index(COL_NAME_DATE, inplace=True)
 
-        df_hmap_mst = self.__make_hmap(df_param, df_htbl, inst_idx)
-        df_hmap = df_hmap_mst.sum(level=COL_GPA_PRICE_TH).sort_index()
+        df_hmap_base = self.__make_basemap(df_param, df_htbl, inst_idx)
+        df_hmap = df_hmap_base.sum(level=COL_GPA_PRICE_TH).sort_index()
+
+        zero_idx = list(range(1, df_hmap.index[0]))
+        df_tmp = pd.DataFrame(index=zero_idx,
+                              columns=df_hmap.columns).fillna(0)
+        df_hmap = pd.concat([df_tmp, df_hmap])
 
         df_hmap_zero = pd.DataFrame(index=df_hmap.index,
                                     columns=df_hmap.columns).fillna(0)
@@ -74,7 +79,7 @@ class HeatMapManager():
         self.__df_param = df_param
         self.__df_htbl = df_htbl
         self.__inst_idx = inst_idx
-        self.__df_hmap_base = df_hmap_mst
+        self.__df_hmap_base = df_hmap_base
         self.__df_hmap_mst = df_hmap
         self.__df_hmap = df_hmap
         self.__df_hmap_deci = df_hmap
@@ -168,7 +173,7 @@ class HeatMapManager():
                            col_max + deci,
                            deci))
 
-        self.__sts_bar.set_label_text("[1/3]")
+        self.__sts_bar.set_label_text("Generating Heat Map : [1/3]")
         self.__sts_bar.set_bar_range(0, len(rng_y) * len(rng_x))
 
         new_y_map = []
@@ -196,11 +201,11 @@ class HeatMapManager():
 
         return df_new
 
-    def __make_hmap(self,
-                    df_param: pd.DataFrame,
-                    df_htbl: pd.DataFrame,
-                    inst_idx: int
-                    ):
+    def __make_basemap(self,
+                       df_param: pd.DataFrame,
+                       df_htbl: pd.DataFrame,
+                       inst_idx: int
+                       ):
 
         gap_price_real_max = df_param[COL_NAME_GPA_PRICE_REAL].max()
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
@@ -209,7 +214,7 @@ class HeatMapManager():
         margin = 5
         gap_pips_max = utl.roundi(gap_price_real_max * lsb) + margin
 
-        df_mst = pd.DataFrame()
+        df_base = pd.DataFrame()
         for date, htbl in df_htbl.iterrows():
             gap_price = df_param.loc[date][COL_NAME_GPA_PRICE_REAL]
             gap_pips = utl.roundi(gap_price * lsb)
@@ -221,9 +226,9 @@ class HeatMapManager():
             df[COL_GPA_PRICE_TH] = gpt_col
             df[COL_NAME_DATE] = date
             df.set_index([COL_NAME_DATE, COL_GPA_PRICE_TH], inplace=True)
-            df_mst = pd.concat([df_mst, df])
+            df_base = pd.concat([df_base, df])
 
-        return df_mst
+        return df_base
 
     @property
     def date_list(self):

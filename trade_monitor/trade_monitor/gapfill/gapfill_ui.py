@@ -285,8 +285,8 @@ class GapFillUi():
 
         inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
         self.__widget_htmap.set_param(inst_idx, self.__df_param)
-
         self.__widget_htmap.show()
+        self.__widget_htmap.init_resize()
 
     def __on_selection_gapfill_changed(self, selected, deselected):
 

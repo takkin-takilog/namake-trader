@@ -188,13 +188,6 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="QPushButton" name="pushButton_test">
-        <property name="text">
-         <string>test</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <spacer name="verticalSpacer">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -216,13 +209,13 @@
          </size>
         </property>
         <property name="title">
-         <string>データ粒度</string>
+         <string>Decimate Config</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
           <widget class="QLabel" name="label">
            <property name="text">
-            <string>間引き数：</string>
+            <string>Decimate:</string>
            </property>
           </widget>
          </item>
@@ -242,8 +235,8 @@
          <item>
           <widget class="QLabel" name="label_Roughness">
            <property name="text">
-            <string>行数：
-列数：</string>
+            <string>rows len:
+cols len:</string>
            </property>
           </widget>
          </item>
