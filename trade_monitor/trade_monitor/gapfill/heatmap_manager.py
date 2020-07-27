@@ -39,9 +39,7 @@ class HeatMapManager():
 
         margin = 5
         max_open_pips_max = utl.roundi(max_open_price_max * lsb) + margin
-        # print("---------- max_open_pips_max: {}" .format(max_open_pips_max))
         hmap_col = [COL_NAME_DATE] + list(range(1, max_open_pips_max + 1))
-        # print("---------- hmap_col: {}" .format(hmap_col))
 
         roslist = []
         for date, is_succ, mop, gpr in zip(df_valid.index,
@@ -77,8 +75,6 @@ class HeatMapManager():
 
         self.__df_param_mst = df_valid
         self.__df_param = df_valid
-        self.__df_htbl = df_htbl
-        self.__inst_idx = inst_idx
         self.__df_hmap_base = df_hmap_base
         self.__df_hmap_mst = df_hmap
         self.__df_hmap = df_hmap
@@ -106,20 +102,14 @@ class HeatMapManager():
     def tuned_hmap(self):
         start = self.__date_pos
         end = self.__date_pos + self.__date_step
-        print("----- tuned_hmap -----")
-        print("date_step: {}" .format(self.__date_step))
-        print("start:{}, end:{}" .format(start, end))
         date_list = self.__df_param.index[start:end].tolist()
         df_hmap_mst = self.__df_hmap_base.loc[(date_list), :]
-        print("df_hmap_mst.shape:{}" .format(df_hmap_mst.shape))
 
         df_hmap = df_hmap_mst.sum(level=COL_GPA_PRICE_TH)
         df_hmap = pd.concat([df_hmap, self.__df_hmap_zero]).sum(level=0)
         df_hmap.sort_index(inplace=True)
-        print("df_hmap.shape:{}" .format(df_hmap.shape))
 
         deci = self.__decimate_value
-        print("deci:{}" .format(deci))
         df_new = self.__decimate_hmap(df_hmap, deci)
         self.__df_hmap_deci = df_new
         self.__date_list = date_list
@@ -249,7 +239,6 @@ class HeatMapManager():
     @date_step.setter
     def date_step(self, value):
         self.__date_step = value
-        print("date_step: {}" .format(value))
 
     @property
     def date_pos(self):

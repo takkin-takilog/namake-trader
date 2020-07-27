@@ -124,6 +124,8 @@ class GapFillUi():
                            ASK_COLUMNS,
                            BID_COLUMNS]
 
+    DRAW_CANDLE_COUNT = 50
+
     def __init__(self, ui, node, cli_cdl) -> None:
 
         utl.remove_all_items_of_comboBox(ui.comboBox_spread_prev)
@@ -177,13 +179,16 @@ class GapFillUi():
 
         self.__ui = ui
         self.__node = node
-        self.__logger = logger
         self.__srv_cli = srv_cli
         self.__cli_cdl = cli_cdl
         self.__end_hour = 9
-        self.__decimal_digit = INST_MSG_LIST[0].decimal_digit
         self.__is_update = False
         self.__df_param = pd.DataFrame()
+        self.__sr_gf = pd.Series()
+        self.__df_prev = pd.DataFrame()
+        self.__df_curr = pd.DataFrame()
+
+        self.__logger = logger
 
     def __on_fetch_gapfill_clicked(self):
 
@@ -341,10 +346,10 @@ class GapFillUi():
         df_curr = df.loc[:, GapFillUi.ALL_COLUMNS]
 
         th = df_prev.index[-1] - dt.timedelta(days=1)
-        df_prev = df_prev[df_prev.index < th].tail(50)
+        df_prev = df_prev[df_prev.index < th].tail(self.DRAW_CANDLE_COUNT)
 
         th = df_curr.index[-1] - dt.timedelta(days=1)
-        df_curr = df_curr[th < df_curr.index].head(50)
+        df_curr = df_curr[th < df_curr.index].head(self.DRAW_CANDLE_COUNT)
 
         max_prev = df_prev[COL_NAME_ASK_HI].max()
         min_prev = df_prev[COL_NAME_BID_LO].min()
@@ -359,11 +364,13 @@ class GapFillUi():
         self.__chart_curr.set_max_y(max_y)
         self.__chart_curr.set_min_y(min_y)
 
+        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+
         idx = self.__ui.comboBox_spread_prev.currentIndex()
-        self.__update_prev_chart(idx, df_prev, sr_gf, self.__decimal_digit)
+        self.__update_prev_chart(idx, df_prev, sr_gf, decimal_digit)
 
         idx = self.__ui.comboBox_spread_curr.currentIndex()
-        self.__update_curr_chart(idx, df_curr, sr_gf, self.__decimal_digit)
+        self.__update_curr_chart(idx, df_curr, sr_gf, decimal_digit)
 
         self.__sr_gf = sr_gf
         self.__df_prev = df_prev
@@ -378,14 +385,18 @@ class GapFillUi():
     def __combobox_spread_prev_changed(self, idx):
 
         if self.__is_update:
+            inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
+            decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
             self.__update_prev_chart(idx, self.__df_prev, self.__sr_gf,
-                                     self.__decimal_digit)
+                                     decimal_digit)
 
     def __combobox_spread_curr_changed(self, idx):
 
         if self.__is_update:
+            inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
+            decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
             self.__update_curr_chart(idx, self.__df_curr, self.__sr_gf,
-                                     self.__decimal_digit)
+                                     decimal_digit)
 
     def __update_prev_chart(self, idx, df, sr_gf, decimal_digit):
 
