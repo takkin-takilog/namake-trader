@@ -103,9 +103,9 @@ class HeatMapManager():
         start = self.__date_pos
         end = self.__date_pos + self.__date_step
         date_list = self.__df_param.index[start:end].tolist()
-        df_hmap_mst = self.__df_hmap_base.loc[(date_list), :]
+        df_hmap_base = self.__df_hmap_base.loc[(date_list), :]
 
-        df_hmap = df_hmap_mst.sum(level=COL_GPA_PRICE_TH)
+        df_hmap = df_hmap_base.sum(level=COL_GPA_PRICE_TH)
         df_hmap = pd.concat([df_hmap, self.__df_hmap_zero]).sum(level=0)
         df_hmap.sort_index(inplace=True)
 
@@ -217,6 +217,7 @@ class HeatMapManager():
             df[COL_NAME_DATE] = date
             df.set_index([COL_NAME_DATE, COL_GPA_PRICE_TH], inplace=True)
             df_base = pd.concat([df_base, df])
+            print(df_base.shape)
 
         return df_base
 
