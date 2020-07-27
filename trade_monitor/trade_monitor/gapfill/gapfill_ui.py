@@ -153,7 +153,6 @@ class GapFillUi():
 
         # set header
         qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
-        #ui.tableView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
         header = ui.treeView_gapfill.header()
@@ -176,7 +175,6 @@ class GapFillUi():
         self.__chart_curr = chart_curr
         self.__qstd_itm_mdl = qstd_itm_mdl
 
-        # self.__inst_id = INST_MSG_LIST[0].msg_id
         self.__ui = ui
         self.__node = node
         self.__logger = logger
@@ -253,8 +251,6 @@ class GapFillUi():
 
         df_param = pd.DataFrame(data, columns=columns)
         self.__df_param = df_param.set_index(COL_NAME_DATE)
-
-        self.__widget_htmap.set_gapfill_param(self.__df_param, inst_idx)
 
         # Heat map data
         self.__hmap_range_start = rsp.heatmap_range_start

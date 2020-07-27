@@ -2,84 +2,24 @@ import sys
 import os
 import math
 import pandas as pd
-import numpy as np
-from decimal import Decimal, ROUND_HALF_UP
+from abc import ABCMeta
 
-from abc import ABCMeta, abstractmethod
-
-from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QSizePolicy
-from PySide2.QtWidgets import QGraphicsRectItem
-from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
-from PySide2.QtWidgets import QLabel, QProgressBar, QStatusBar
+from PySide2.QtWidgets import QApplication, QMainWindow, QSizePolicy
+from PySide2.QtWidgets import QStyleOptionGraphicsItem
+from PySide2.QtWidgets import QLabel, QProgressBar, QWidget
 from PySide2.QtWidgets import QGraphicsDropShadowEffect
-from PySide2.QtCore import Qt, QFile, QSizeF, QPointF, QRectF, QRect, QSize, QMargins
+from PySide2.QtCore import Qt, QFile, QPointF, QRectF, QRect, QSize
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtDataVisualization import QtDataVisualization
-from PySide2.QtGui import QVector3D, QGuiApplication, QPixmap, QBrush, QIcon
-from PySide2.QtGui import QPalette, QColor, QFont, QPen, QPainter, QPainterPath
-from PySide2.QtGui import QLinearGradient, QGradient, QImage, QFontMetrics
+from PySide2.QtGui import QColor, QPen, QPainter, QPainterPath, QPixmap
+from PySide2.QtGui import QLinearGradient, QFontMetrics
 from PySide2.QtCharts import QtCharts
 
 from trade_monitor.abstract import CalloutChartAbs
 from trade_monitor import util as utl
 from trade_monitor.util import GradientManager
-from trade_monitor.util import INST_MSG_LIST
 from trade_monitor.gapfill.heatmap_manager import HeatMapManager
 
-import time
-
-pd.set_option('display.max_columns', 1000)
-# pd.set_option('display.max_rows', 1000)
-
 gradMng = GradientManager()
-
-
-def gen_sample_gapdata():
-
-    COL_NAME_DATE = "date"
-    COL_NAME_GPA_DIR = "gap dir"
-    COL_NAME_GPA_CLOSE_PRICE = "gap close price"
-    COL_NAME_GPA_OPEN_PRICE = "gap open price"
-    COL_NAME_GPA_PRICE_MID = "gap price(mid)"
-    COL_NAME_GPA_PRICE_REAL = "gap price(real)"
-    COL_NAME_VALID_FLAG = "valid flag"
-    COL_NAME_SUCCESS_FLAG = "success flag"
-    COL_NAME_GAP_FILLED_TIME = "gap filled time"
-    COL_NAME_MAX_OPEN_RANGE = "max open range"
-    COL_NAME_END_CLOSE_PRICE = "end close price"
-
-    COL_GPA_PRICE_TH = "gap price thresh"
-
-    datalist = [
-        ["2020-04-06", 0, 108.528, 108.382004, 0.145996, 0.096001, True, True, "7:00:00", 0.112999, 108.976997],
-        ["2020-04-13", 0, 108.464996, 108.403, 0.061996, 0.011993, True, True, "6:50:00", 0.100006, 108.167],
-        ["2020-04-27", 1, 107.503006, 107.574005, 0.070999, 0.020996, True, True, "7:00:00", 0.125999, 107.556999],
-        ["2020-05-11", 0, 106.639999, 106.539993, 0.100006, 0.050003, True, True, "6:40:00", 0.133995, 106.950996],
-        ["2020-05-18", 1, 107.074501, 107.114502, 0.040001, 0.002502, True, False, "", 0.228996, 107.178001],
-        ["2020-06-01", 0, 107.820999, 107.720001, 0.100998, 0.087997, True, True, "9:10:00", 0.094002, 107.744003],
-        ["2020-06-22", 0, 106.891006, 106.772995, 0.118011, 0.068008, True, True, "9:20:00", 0.099998, 106.864998],
-        ["2020-06-29", 0, 107.218994, 107.160004, 0.05899, 0.008995, True, True, "8:50:00", 0.148003, 107.266998],
-    ]
-    columns = [
-        COL_NAME_DATE,
-        COL_NAME_GPA_DIR,
-        COL_NAME_GPA_CLOSE_PRICE,
-        COL_NAME_GPA_OPEN_PRICE,
-        COL_NAME_GPA_PRICE_MID,
-        COL_NAME_GPA_PRICE_REAL,
-        COL_NAME_VALID_FLAG,
-        COL_NAME_SUCCESS_FLAG,
-        COL_NAME_GAP_FILLED_TIME,
-        COL_NAME_MAX_OPEN_RANGE,
-        COL_NAME_END_CLOSE_PRICE
-    ]
-
-    df = pd.DataFrame(datalist, columns=columns)
-    df.set_index("date", inplace=True)
-
-    inst_id = 0
-
-    return df, inst_id
 
 
 class Callout(CalloutChartAbs):
@@ -104,7 +44,6 @@ class Callout(CalloutChartAbs):
         self._text = text
 
     def updateGeometry(self, point: QPointF):
-        #print("--- updateGeometry ---")
         self.prepareGeometryChange()
 
         center = self._chart.plotArea().center()
@@ -137,16 +76,13 @@ class Callout(CalloutChartAbs):
               painter: QPainter,
               option: QStyleOptionGraphicsItem,
               widget: QWidget):
-        #print("--- paint ---")
         path = QPainterPath()
-        path.addRoundedRect(self._rect, 1, 1)   # 丸みを帯びた長方形の角を規定
+        path.addRoundedRect(self._rect, 1, 1)
 
-        # 枠を描写
-        painter.setBrush(Qt.white)    # 図形の塗りつぶし
+        painter.setBrush(Qt.white)
         painter.setPen(QPen(Qt.black))
         painter.drawPath(path)
 
-        # 文字を描写
         painter.setPen(QPen(QColor(Qt.blue)))
         painter.drawText(self._textRect, self._text)
 
@@ -223,7 +159,6 @@ class ColorMapLabel(QLabel):
 
         height = frame_size.height() - (tb_margin * 2)
         width = frame_size.width() - (lr_margin * 2)
-        # print("height: {}" .format(height))
 
         rect = QRectF(0, tb_margin, width, height)
 
@@ -242,7 +177,6 @@ class ColorMapLabel(QLabel):
         for i in range(0, self.__div + 1, 1):
             y_pos = i * stpl + tb_margin
             y_val = -i * stpi + self.__max_abs
-            # print(y_pos)
             pmp.setPen(Qt.lightGray)
             pmp.drawLine(0, y_pos, width, y_pos)
             pmp.setPen(Qt.black)
@@ -362,12 +296,7 @@ class HeatMapChartViewAbs(QtCharts.QChartView):
         font = QFont("Sans Serif", )
         font.setPixelSize(18)
         chart.setTitleFont(font)
-        """
 
-        # chart.setTitle("Temperature in Celcius For Device:")
-        #chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
-
-        """
         palette = QPalette()
         palette.setColor(QPalette.Text, Qt.red)
         chart.setPalette(palette)
@@ -394,21 +323,6 @@ class HeatMapChartViewAbs(QtCharts.QChartView):
 
         self.setChart(chart)
 
-        """
-        self.setChart(chart)
-        self.setParent(widget)
-        self.resize(widget.frameSize())
-
-        self._chart = chart
-        self._widget = widget
-        """
-
-    """
-    @abstractmethod
-    def update(self):
-        raise NotImplementedError()
-    """
-
 
 class HeatMapChartView(HeatMapChartViewAbs):
 
@@ -421,18 +335,13 @@ class HeatMapChartView(HeatMapChartViewAbs):
         axis_x = QtCharts.QValueAxis()
         axis_x.setTickCount(2)
         axis_x.setTitleText("Loss cut Range Threshold [pips]")
-        # axis_x.setFormat("h:mm")
         axis_x.setLabelsAngle(0)
-
-        #axis_x.setRange(-10.0, 10.0)
 
         # Y Axis Settings
         axis_y = QtCharts.QValueAxis()
         axis_y.setTickCount(2)
         axis_y.setTitleText("Gap Range Threshold [pips]")
-        # axis_y.setFormat("h:mm")
         axis_y.setLabelsAngle(0)
-        #axis_y.setRange(-10.0, 10.0)
 
         self.chart().addAxis(axis_x, Qt.AlignBottom)
         self.chart().addAxis(axis_y, Qt.AlignLeft)
@@ -461,9 +370,6 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
-        # print("---------- HeatMapChartView:mouseMoveEvent ----------")
-        # print("frameSize(this): {}" .format(self.frameSize()))
-        # print("frameSize(parent): {}" .format(self.parent().frameSize()))
         flag1 = self.chart().plotArea().contains(event.pos())
         flag2 = 0 < len(self.chart().series())
         if (flag1 and flag2):
@@ -471,25 +377,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         else:
             callout.hide()
 
-
-    """
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        print("----- HeatMapChartView:mousePressEvent ------")
-        if self.__is_zoom:
-            self.__is_zoom = False
-            fs = self.parent().frameSize()
-        else:
-            self.__is_zoom = True
-            fs = self.parent().frameSize() / 5.0
-        self.resize(fs)
-    """
-
-
     def __draw_map(self, df: pd.DataFrame):
-
-        # print("---------- draw_map ----------")
-        # print(df)
 
         max_val = df.max().max()
         min_val = df.min().min()
@@ -497,25 +385,17 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         gradMng.updateColorTable(intensity_max_abs)
 
-        # decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-        # lsb = math.pow(10, -decimal_digit)
-
         rows_list = [n for n in df.index.to_list()]
         cols_list = [n for n in df.columns.to_list()]
-
-        # print("rows_list: {}" .format(rows_list))
-        # print("cols_list: {}" .format(cols_list))
 
         delta_y = rows_list[1] - rows_list[0]
         delta_x = cols_list[1] - cols_list[0]
 
         chart = self.chart()
         diff = df.size - len(chart.series())
-        # print("-------------- diff:{}" .format(diff))
 
         self.__sts_bar.set_label_text("Generating Heat Map : [2/3]")
         if 0 < diff:
-            # print("===== 0 < diff =====")
             self.__sts_bar.set_bar_range(0, diff)
             ax_h = chart.axes(Qt.Horizontal)[0]
             ax_v = chart.axes(Qt.Vertical)[0]
@@ -526,7 +406,6 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 block.attachAxis(ax_v)
                 self.__sts_bar.set_bar_value(i + 1)
         elif diff < 0:
-            # print("===== diff < 0 =====")
             self.__sts_bar.set_bar_range(0, -diff)
             for i in range(-diff):
                 srlist = chart.series()
@@ -536,29 +415,15 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.__sts_bar.set_label_text("Generating Heat Map : [3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
         itr = 0
-        # mark_list = []
         blklist = chart.series()
         for upper_y, row in df.iterrows():
             lower_y = upper_y - delta_y
             for idx_num, x in enumerate(row):
                 right_x = cols_list[idx_num]
                 left_x = right_x - delta_x
-                """
-                if max_val <= x:
-                    mark_list.append([left_x, right_x, upper_y, lower_y, x])
-                else:
-                """
                 blklist[itr].set_block(left_x, right_x, upper_y, lower_y, x)
                 itr += 1
                 self.__sts_bar.set_bar_value(itr)
-
-        """
-        for m in mark_list:
-            block = self.chart().series()[itr]
-            block.set_block(m[0], m[1], m[2], m[3], m[4], Qt.white)
-            itr += 1
-            self.__sts_bar.set_bar_value(itr)
-        """
 
         ax_h = chart.axes(Qt.Horizontal)[0]
         ax_h.setRange(cols_list[0] - delta_x, cols_list[-1])
@@ -582,7 +447,6 @@ class GapFillHeatMap(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        # self.setAttribute(Qt.WA_DeleteOnClose)
 
         ui = self.__load_ui(parent)
         self.setCentralWidget(ui)
@@ -590,20 +454,8 @@ class GapFillHeatMap(QMainWindow):
 
         self.setWindowTitle("Gap-Fill Heat Map")
 
-        """
-        # set status bar
-        # sts_label = QLabel()
-        sts_prog_bar = QProgressBar()
-        # sts_label.setText("Status Label")
-        sts_prog_bar.setTextVisible(True)
-        # ui.statusbar.addPermanentWidget(sts_label)
-        ui.statusbar.addPermanentWidget(sts_prog_bar, 1)
-        """
-
         sts_bar = StatusBar(ui.statusbar)
-
-        chart_view = HeatMapChartView(ui.widget_HeatMap,
-                                      sts_bar)
+        chart_view = HeatMapChartView(ui.widget_HeatMap, sts_bar)
 
         # Color
         icon_w = 24
@@ -638,8 +490,8 @@ class GapFillHeatMap(QMainWindow):
         callback = self.__on_pushButtonGenHMap_clicked
         ui.pushButton_genHMap.clicked.connect(callback)
 
-        callback = self.__on_spinBoxThinOut_changed
-        ui.spinBox_ThinOut.valueChanged.connect(callback)
+        callback = self.__on_spinBoxDecim_changed
+        ui.spinBox_Decim.valueChanged.connect(callback)
 
         callback = self.__on_pushButtonAutoUpdate_toggled
         ui.pushButton_AutoUpdate.toggled.connect(callback)
@@ -676,14 +528,13 @@ class GapFillHeatMap(QMainWindow):
         lenmax = max(shape)
         val = math.ceil(lenmax / 100)
 
-        self.__ui.spinBox_ThinOut.setValue(val)
+        self.__ui.spinBox_Decim.setValue(val)
 
     def __on_pushButtonAutoUpdate_toggled(self, checked: bool):
         if checked:
             self.__update_hmap()
 
     def __on_spinBoxDateStep_changed(self, value):
-        print("__on_spinBoxDateStep_changed")
         if self.__is_chart_updatable:
             self.__hmapmng.date_step = value
             maxval = self.__ui.spinBox_DateStep.maximum()
@@ -692,28 +543,24 @@ class GapFillHeatMap(QMainWindow):
                 self.__update_hmap()
 
     def __on_scrollBarDate_changed(self, value):
-        print("__on_scrollBarDate_changed")
         if self.__is_chart_updatable:
             self.__hmapmng.date_pos = value
             if self.__ui.pushButton_AutoUpdate.isChecked():
                 self.__update_hmap()
 
     def __on_radioButtonGapDirAll_clicked(self):
-        print("radioButtonGapDirAll_clicked")
         self.__hmapmng.switch_dir_all()
         self.__update_status()
         if self.__ui.pushButton_AutoUpdate.isChecked():
             self.__update_hmap()
 
     def __on_radioButtonGapDirUp_clicked(self):
-        print("on_radioButtonGapDirUp_clicked")
         self.__hmapmng.switch_dir_up()
         self.__update_status()
         if self.__ui.pushButton_AutoUpdate.isChecked():
             self.__update_hmap()
 
     def __on_radioButtonGapDirDown_clicked(self):
-        print("on_radioButtonGapDirLo_clicked")
         self.__hmapmng.switch_dir_down()
         self.__update_status()
         if self.__ui.pushButton_AutoUpdate.isChecked():
@@ -724,8 +571,6 @@ class GapFillHeatMap(QMainWindow):
         date_pos = self.__hmapmng.date_pos
         date_step = self.__hmapmng.date_step
         data_len = self.__hmapmng.data_len
-        print("date_pos[{}], date_step[{}], data_len[{}]" .format(
-            date_pos, date_step, data_len))
         self.__ui.spinBox_DateStep.setMaximum(data_len)
         self.__ui.spinBox_DateStep.setValue(date_step)
         self.__ui.scrollBar_Date.setMaximum(data_len - date_step)
@@ -742,7 +587,7 @@ class GapFillHeatMap(QMainWindow):
 
         self.__ui.pushButton_AutoUpdate.setChecked(False)
 
-        deci = self.__ui.spinBox_ThinOut.value()
+        deci = self.__ui.spinBox_Decim.value()
         df = self.__hmapmng.reset_hmap(deci)
 
         self.__chart_view.rebuild_hmap(df)
@@ -780,12 +625,11 @@ class GapFillHeatMap(QMainWindow):
         self.__chart_view.update_color()
         self.__color_map.update_color_scale()
 
-    def __on_spinBoxThinOut_changed(self, thinout):
-        # print("========= __on_spinBoxThinOut_changed =========")
+    def __on_spinBoxDecim_changed(self, decim):
         shape = self.__hmapmng.shape
 
-        row_len = math.ceil(shape[0] / thinout)
-        col_len = math.ceil(shape[1] / thinout)
+        row_len = math.ceil(shape[0] / decim)
+        col_len = math.ceil(shape[1] / decim)
         txt = "rows len: " + str(row_len) + "\ncols len: " + str(col_len)
         self.__ui.label_Roughness.setText(txt)
 
@@ -807,7 +651,6 @@ class GapFillHeatMap(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        print("----- GapFillHeatMap:resizeEvent ------")
         fs = self.__ui.widget_HeatMap.frameSize()
         self.__chart_view.resize(fs)
         fs = self.__ui.widget_ColorMap.frameSize()
@@ -815,6 +658,59 @@ class GapFillHeatMap(QMainWindow):
 
 
 if __name__ == "__main__":
+
+    def gen_sample_gapdata():
+
+        COL_NAME_DATE = "date"
+        COL_NAME_GPA_DIR = "gap dir"
+        COL_NAME_GPA_CLOSE_PRICE = "gap close price"
+        COL_NAME_GPA_OPEN_PRICE = "gap open price"
+        COL_NAME_GPA_PRICE_MID = "gap price(mid)"
+        COL_NAME_GPA_PRICE_REAL = "gap price(real)"
+        COL_NAME_VALID_FLAG = "valid flag"
+        COL_NAME_SUCCESS_FLAG = "success flag"
+        COL_NAME_GAP_FILLED_TIME = "gap filled time"
+        COL_NAME_MAX_OPEN_RANGE = "max open range"
+        COL_NAME_END_CLOSE_PRICE = "end close price"
+
+        datalist = [
+            ["2020-04-06", 0, 108.528, 108.382004, 0.145996, 0.096001,
+                True, True, "7:00:00", 0.112999, 108.976997],
+            ["2020-04-13", 0, 108.464996, 108.403, 0.061996,
+                0.011993, True, True, "6:50:00", 0.100006, 108.167],
+            ["2020-04-27", 1, 107.503006, 107.574005, 0.070999,
+                0.020996, False, True, "7:00:00", 0.125999, 107.556999],
+            ["2020-05-11", 0, 106.639999, 106.539993, 0.100006,
+                0.050003, True, True, "6:40:00", 0.133995, 106.950996],
+            ["2020-05-18", 1, 107.074501, 107.114502, 0.040001,
+                0.002502, True, False, "", 0.228996, 107.178001],
+            ["2020-06-01", 0, 107.820999, 107.720001, 0.100998,
+                0.087997, True, True, "9:10:00", 0.094002, 107.744003],
+            ["2020-06-22", 0, 106.891006, 106.772995, 0.118011,
+                0.068008, False, True, "9:20:00", 0.099998, 106.864998],
+            ["2020-06-29", 0, 107.218994, 107.160004, 0.05899,
+                0.008995, True, True, "8:50:00", 0.148003, 107.266998],
+        ]
+        columns = [
+            COL_NAME_DATE,
+            COL_NAME_GPA_DIR,
+            COL_NAME_GPA_CLOSE_PRICE,
+            COL_NAME_GPA_OPEN_PRICE,
+            COL_NAME_GPA_PRICE_MID,
+            COL_NAME_GPA_PRICE_REAL,
+            COL_NAME_VALID_FLAG,
+            COL_NAME_SUCCESS_FLAG,
+            COL_NAME_GAP_FILLED_TIME,
+            COL_NAME_MAX_OPEN_RANGE,
+            COL_NAME_END_CLOSE_PRICE
+        ]
+
+        df = pd.DataFrame(datalist, columns=columns)
+        df.set_index("date", inplace=True)
+
+        inst_id = 0
+
+        return df, inst_id
 
     from PySide2.QtCore import QCoreApplication
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)

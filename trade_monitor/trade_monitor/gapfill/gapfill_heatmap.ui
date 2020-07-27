@@ -220,7 +220,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QSpinBox" name="spinBox_ThinOut">
+          <widget class="QSpinBox" name="spinBox_Decim">
            <property name="minimum">
             <number>1</number>
            </property>

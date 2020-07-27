@@ -62,7 +62,7 @@ class HeatMapManager():
         df_htbl = pd.DataFrame(roslist, columns=hmap_col)
         df_htbl.set_index(COL_NAME_DATE, inplace=True)
 
-        df_hmap_base = self.__make_basemap(df_param, df_htbl, inst_idx)
+        df_hmap_base = self.__make_basemap(df_valid, df_htbl, inst_idx)
         df_hmap = df_hmap_base.sum(level=COL_GPA_PRICE_TH).sort_index()
 
         zero_idx = list(range(1, df_hmap.index[0]))
@@ -73,10 +73,10 @@ class HeatMapManager():
         df_hmap_zero = pd.DataFrame(index=df_hmap.index,
                                     columns=df_hmap.columns).fillna(0)
 
-        date_list = df_param.index.tolist()
+        date_list = df_valid.index.tolist()
 
-        self.__df_param_mst = df_param
-        self.__df_param = df_param
+        self.__df_param_mst = df_valid
+        self.__df_param = df_valid
         self.__df_htbl = df_htbl
         self.__inst_idx = inst_idx
         self.__df_hmap_base = df_hmap_base
@@ -87,7 +87,7 @@ class HeatMapManager():
         self.__date_list = date_list
         self.__decimate_value = 0
 
-        self.__date_step = len(df_param)
+        self.__date_step = len(df_valid)
         self.__date_pos = 0
         self.__gap_dir = self.GAP_DIR_ALL
 
@@ -207,7 +207,8 @@ class HeatMapManager():
                        inst_idx: int
                        ):
 
-        gap_price_real_max = df_param[COL_NAME_GPA_PRICE_REAL].max()
+        label = COL_NAME_GPA_PRICE_MID
+        gap_price_real_max = df_param[label].max()
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
         lsb = math.pow(10, decimal_digit)
 
@@ -216,10 +217,9 @@ class HeatMapManager():
 
         df_base = pd.DataFrame()
         for date, htbl in df_htbl.iterrows():
-            gap_price = df_param.loc[date][COL_NAME_GPA_PRICE_REAL]
-            gap_pips = utl.roundi(gap_price * lsb)
-            collist = [htbl.to_list()] * (gap_pips_max - gap_pips)
-            gpt_col = list(range(gap_pips + 1, gap_pips_max + 1))
+            gap_pips = utl.roundi(df_param.loc[date][label] * lsb)
+            collist = [htbl.to_list()] * (gap_pips_max - (gap_pips - 1))
+            gpt_col = list(range(gap_pips, gap_pips_max + 1))
 
             df = pd.DataFrame(collist,
                               columns=df_htbl.columns)
