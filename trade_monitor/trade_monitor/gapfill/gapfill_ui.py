@@ -4,7 +4,7 @@ import numpy as np
 
 from PySide2.QtWidgets import QHeaderView
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtCore import QItemSelectionModel, Qt
+from PySide2.QtCore import QItemSelectionModel
 
 import rclpy
 
