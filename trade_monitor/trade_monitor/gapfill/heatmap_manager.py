@@ -25,6 +25,8 @@ class HeatMapManager():
     GAP_DIR_UP = 2
     GAP_DIR_DOWN = 3
 
+    GAP_UPPER_LIMIT = 500   # pips
+
     def __init__(self, sts_bar):
         self.__sts_bar = sts_bar
 
@@ -32,10 +34,16 @@ class HeatMapManager():
 
         df_valid = df_param[df_param[COL_NAME_VALID_FLAG]]
 
-        max_open_price_max = df_valid[COL_NAME_MAX_OPEN_RANGE].max()
-
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
         lsb = math.pow(10, decimal_digit)
+
+        gap_upper_limit = self.GAP_UPPER_LIMIT / lsb
+        flg = df_valid[COL_NAME_GPA_PRICE_MID] < gap_upper_limit
+        df_valid = df_valid[flg]
+
+        flg = df_valid[COL_NAME_SUCCESS_FLAG]
+        df_succ = df_valid[flg]
+        max_open_price_max = df_succ[COL_NAME_MAX_OPEN_RANGE].max()
 
         margin = 5
         max_open_pips_max = utl.roundi(max_open_price_max * lsb) + margin
@@ -202,7 +210,7 @@ class HeatMapManager():
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
         lsb = math.pow(10, decimal_digit)
 
-        margin = 5
+        margin = 10
         gap_pips_max = utl.roundi(gap_price_real_max * lsb) + margin
 
         df_base = pd.DataFrame()
