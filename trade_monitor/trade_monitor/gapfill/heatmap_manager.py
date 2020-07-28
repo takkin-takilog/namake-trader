@@ -225,7 +225,6 @@ class HeatMapManager():
             df[COL_NAME_DATE] = date
             df.set_index([COL_NAME_DATE, COL_GPA_PRICE_TH], inplace=True)
             df_base = pd.concat([df_base, df])
-            print(df_base.shape)
 
         return df_base
 

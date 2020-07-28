@@ -148,19 +148,13 @@ class GradientManager():
         self.__intensityMin = min_
         self.__image = image
 
-        """
-        print("w:{}, h:{}" .format(image.width(), image.height()))
-        for i in range(self.__RBG_MAX + 1):
-            print("[{}]:{}" .format(i, image.pixelColor(0, i)))
-        """
-
     def convertValueToColor(self, value) -> QColor:
         calcf = self.__slope * value + self.__intercept
+        calcf = self.__limit_rgb(calcf)
         return self.__image.pixelColor(0, calcf)
 
     def convertValueToIntensity(self, value):
         calcf = self.__slope * value + self.__intercept
-        print("calcf: {}" .format(calcf))
         return int(calcf)
 
     def setRect(self, rect: QRectF):
@@ -169,6 +163,17 @@ class GradientManager():
 
     def getGradient(self) -> QLinearGradient:
         return self.__grad
+
+    def __limit_rgb(self, val_in: float):
+
+        if self.__RBG_MAX < val_in:
+            val_out = self.__RBG_MAX
+        elif val_in < 0:
+            val_out = 0
+        else:
+            val_out = val_in
+
+        return val_out
 
 
 INST_MSG_LIST = [

@@ -379,11 +379,13 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
     def __draw_map(self, df: pd.DataFrame):
 
-        max_val = df.max().max()
+        """
         min_val = df.min().min()
+        max_val = df.max().max()
         intensity_max_abs = max(abs(max_val), abs(min_val))
-
-        gradMng.updateColorTable(intensity_max_abs)
+        """
+        intensity_max = df.max().max()
+        gradMng.updateColorTable(intensity_max)
 
         rows_list = [n for n in df.index.to_list()]
         cols_list = [n for n in df.columns.to_list()]
@@ -431,6 +433,11 @@ class HeatMapChartView(HeatMapChartViewAbs):
         ax_v.setRange(rows_list[0] - delta_y, rows_list[-1])
 
     def __update_hmap(self, df: pd.DataFrame):
+
+        intensity_max = df.max().max()
+        if intensity_max < 1:
+            intensity_max = abs(df.min().min())
+        gradMng.updateColorTable(intensity_max)
 
         self.__sts_bar.set_label_text("Generating Heat Map : [3/3]")
         self.__sts_bar.set_bar_range(0, df.size)
@@ -582,6 +589,7 @@ class GapFillHeatMap(QMainWindow):
         df = self.__hmapmng.tuned_hmap()
         self.__chart_view.update_hmap(df)
         self.__update_date_list()
+        self.__color_map.update_intensity_range()
 
     def __on_pushButtonGenHMap_clicked(self):
 
