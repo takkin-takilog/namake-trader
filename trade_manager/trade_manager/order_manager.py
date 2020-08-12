@@ -2,6 +2,7 @@ from typing import TypeVar
 import datetime as dt
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.task import Future
 from rclpy.client import Client
 from std_msgs.msg import Bool
@@ -309,31 +310,38 @@ class OrderManager(Node):
         TPCNM_POLLING = "polling"
 
         # Declare publisher and subscriber
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
+        
         msg_type = MarketOrderRequest
         topic = TPCNM_MARKET_ORDER_REQUEST
         callback = self.__on_recv_market_order_request
         self.__sub_mrk_req = self.create_subscription(msg_type,
                                                       topic,
-                                                      callback)
+                                                      callback,
+                                                      qos_profile)
         msg_type = LimitOrderRequest
         topic = TPCNM_LIMIT_ORDER_REQUEST
         callback = self.__on_recv_limit_order_request
         self.__sub_lim_req = self.create_subscription(msg_type,
                                                       topic,
-                                                      callback)
+                                                      callback,
+                                                      qos_profile)
         msg_type = StopOrderRequest
         topic = TPCNM_STOP_ORDER_REQUEST
         callback = self.__on_recv_stop_order_request
         self.__sub_stp_req = self.create_subscription(msg_type,
                                                       topic,
-                                                      callback)
+                                                      callback,
+                                                      qos_profile)
 
         msg_type = Bool
         topic = TPCNM_POLLING
         callback = self.__on_recv_polling
         self.__sub_stp_req = self.create_subscription(msg_type,
                                                       topic,
-                                                      callback)
+                                                      callback,
+                                                      qos_profile)
 
         # Create service client "OrderCreate"
         srv_type = OrderCreateSrv

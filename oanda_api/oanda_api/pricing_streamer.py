@@ -1,6 +1,7 @@
 from typing import TypeVar
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from std_msgs.msg import Bool, String
 from api_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
@@ -55,14 +56,18 @@ class PricingStreamer(Node):
 
         # Declare publisher and subscriber
         self.__pub_dict = {}
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
         for inst_name in inst_name_list:
             suffix = inst_name.replace("_", "").lower()
-            pub = self.create_publisher(Pricing, TPCNM_PRICING + suffix)
+            pub = self.create_publisher(Pricing, TPCNM_PRICING + suffix, qos_profile)
             self.__pub_dict[inst_name] = pub.publish
-        self.__pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT)
+        self.__pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT, qos_profile)
 
-        self.__sub_act = self.create_subscription(Bool, TPCNM_ACT_FLG,
-                                                  self.__on_recv_act_flg)
+        self.__sub_act = self.create_subscription(Bool,
+                                                  TPCNM_ACT_FLG,
+                                                  self.__on_recv_act_flg,
+                                                  qos_profile)
 
     def background(self) -> None:
         if self.__act_flg:

@@ -8,6 +8,7 @@ from PySide2.QtUiTools import QUiLoader
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from std_msgs.msg import String, Bool
 from trade_manager_msgs.srv import CandlesMntSrv
@@ -51,13 +52,15 @@ class GuiMonitor(QMainWindow):
         ui.tabWidget.currentChanged.connect(self.__on_tab_changed)
 
         # --------------- initialize ROS ---------------
-        node = rclpy.create_node('gui_monitor')
+        node = rclpy.create_node("gui_monitor")
         self.logger = node.get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
         self.sub = node.create_subscription(String,
-                                            'chatter',
-                                            self.listener_callback)
+                                            "chatter",
+                                            self.listener_callback,
+                                            qos_profile)
 
         # Create service client "CandlesMonitor"
         srv_type = CandlesMntSrv
@@ -67,7 +70,9 @@ class GuiMonitor(QMainWindow):
         # Create publisher "Alive"
         msg_type = Bool
         topic = "alive"
-        pub_alive = node.create_publisher(msg_type, topic)
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
+        pub_alive = node.create_publisher(msg_type, topic, qos_profile)
 
         self.__ui = ui
         self.__node = node

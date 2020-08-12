@@ -4,6 +4,7 @@ import pandas as pd
 import time
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from rclpy.publisher import Publisher
 from rclpy.task import Future
@@ -384,7 +385,9 @@ class CandlestickManager(Node):
         # Create publisher "HistoricalCandles"
         msg_type = HistoricalCandles
         topic = "historical_candles"
-        pub_hc = self.create_publisher(msg_type, topic)
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
+        pub_hc = self.create_publisher(msg_type, topic, qos_profile)
 
         # initialize "data_map"
         self.__init_data_map(cli_cdl, pub_hc)
