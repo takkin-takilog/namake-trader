@@ -325,9 +325,11 @@ class CandlesData():
             self.__logger.debug("df_prov:%s" % (df_prov.index.tolist()))
 
             if not df_comp.empty:
+                # "df_comp" deal with FIFO
                 self.__df_comp = self.__df_comp.append(df_comp)
-                #dftmp = self.__df_comp.append(df_comp)
-                #self.__df_comp = dftmp.groupby(dftmp.index).last()
+                droplist = self.__df_comp.index[range(0, len(df_comp))]
+                self.__df_comp.drop(droplist, inplace = True)                
+
             if not df_prov.empty:
                 self.__df_prov = df_prov
             else:
