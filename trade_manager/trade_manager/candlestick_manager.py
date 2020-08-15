@@ -212,7 +212,7 @@ class CandlesData():
             target_time = dt_now - self.__next_update_time - self.MARGIN_SEC
             if self.__interval < target_time:
 
-                #dt_from = self.__next_update_time
+                # dt_from = self.__next_update_time
                 dt_from = self.__df_comp.index[-1] + self.__interval
                 dt_to = dt_now
 
@@ -227,7 +227,8 @@ class CandlesData():
                 self.__update_df(df)
                 self.__next_update_time += self.__interval
                 self.__future = None
-                self.__logger.debug("update<last_update_time>:%s" % (self.__next_update_time))
+                self.__logger.debug("update<last_update_time>:%s" %
+                                    (self.__next_update_time))
             else:
                 if time.monotonic() >= self.__timeout_end:
                     self.__future = None
@@ -328,7 +329,7 @@ class CandlesData():
                 # "df_comp" deal with FIFO
                 self.__df_comp = self.__df_comp.append(df_comp)
                 droplist = self.__df_comp.index[range(0, len(df_comp))]
-                self.__df_comp.drop(droplist, inplace = True)                
+                self.__df_comp.drop(droplist, inplace=True)
 
             if not df_prov.empty:
                 self.__df_prov = df_prov
@@ -368,7 +369,9 @@ class CandlestickManager(Node):
         self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         self.__inst_id_list = [InstApi.INST_USD_JPY]
-        self.__gran_id_list = [GranApi.GRAN_D, GranApi.GRAN_H4, GranApi.GRAN_H1,
+        self.__gran_id_list = [GranApi.GRAN_D,
+                               GranApi.GRAN_H4,
+                               GranApi.GRAN_H1,
                                GranApi.GRAN_M10]
 
         # Create service server "CandlesMonitor"
@@ -426,7 +429,8 @@ class CandlestickManager(Node):
             gran_dict = {}
             for gran_id in self.__gran_id_list:
                 data_length = self.DATA_LENGTH_DICT[gran_id]
-                obj = CandlesData(self, cli, pub, inst_id, gran_id, data_length)
+                obj = CandlesData(self, cli, pub, inst_id,
+                                  gran_id, data_length)
                 tmp = {gran_id: obj}
                 gran_dict.update(tmp)
             tmp = {inst_id: gran_dict}
