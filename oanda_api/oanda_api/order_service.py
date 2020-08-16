@@ -118,17 +118,16 @@ class OrderService(ServiceAbs):
                                req: SrvTypeRequest,
                                rsp: SrvTypeResponse
                                ) -> SrvTypeResponse:
-        self._logger.debug("========== Service[order_create]:Start ==========")
-        self._logger.debug("<Request>")
-        self._logger.debug(
-            "- ordertype_msg.type:[%d]" % (req.ordertype_msg.type))
-        self._logger.debug("- price:[%f]" % (req.price))
-        self._logger.debug(
-            "- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
-        self._logger.debug("- units:[%d]" % (req.units))
-        self._logger.debug(
-            "- take_profit_price:[%f]" % (req.take_profit_price))
-        self._logger.debug("- stop_loss_price:[%f]" % (req.stop_loss_price))
+        logger = self._logger
+
+        logger.debug("========== Service[order_create]:Start ==========")
+        logger.debug("<Request>")
+        logger.debug("- ordertype_msg.type:[%d]" % (req.ordertype_msg.type))
+        logger.debug("- price:[%f]" % (req.price))
+        logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
+        logger.debug("- units:[%d]" % (req.units))
+        logger.debug("- take_profit_price:[%f]" % (req.take_profit_price))
+        logger.debug("- stop_loss_price:[%f]" % (req.stop_loss_price))
         dbg_tm_start = dt.datetime.now()
 
         data = self.__make_data_for_order_create(req)
@@ -137,15 +136,13 @@ class OrderService(ServiceAbs):
         rsp = self.__update_order_create_response(apirsp, rsp)
 
         dbg_tm_end = dt.datetime.now()
-        self._logger.debug("<Response>")
-        self._logger.debug("- result:[%r]" % (rsp.result))
-        self._logger.debug(
-            "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        self._logger.debug("- id(Trade or Order):[%d]" % (rsp.id))
-        self._logger.debug("[Performance]")
-        self._logger.debug(
-            "- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
-        self._logger.debug("========== Service[order_create]:End ==========")
+        logger.debug("<Response>")
+        logger.debug("- result:[%r]" % (rsp.result))
+        logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+        logger.debug("- id(Trade or Order):[%d]" % (rsp.id))
+        logger.debug("[Performance]")
+        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        logger.debug("========== Service[order_create]:End ==========")
 
         return rsp
 
@@ -153,10 +150,11 @@ class OrderService(ServiceAbs):
                                 req: SrvTypeRequest,
                                 rsp: SrvTypeResponse
                                 ) -> SrvTypeResponse:
-        self._logger.debug(
-            "========== Service[trade_details]:Start ==========")
-        self._logger.debug("<Request>")
-        self._logger.debug("- trade_id:[%d]" % (req.trade_id))
+        logger = self._logger
+
+        logger.debug("========== Service[trade_details]:Start ==========")
+        logger.debug("<Request>")
+        logger.debug("- trade_id:[%d]" % (req.trade_id))
         dbg_tm_start = dt.datetime.now()
 
         ep = TradeDetails(accountID=self.__account_number,
@@ -165,30 +163,24 @@ class OrderService(ServiceAbs):
         rsp = self.__update_trade_details_response(apirsp, rsp)
 
         dbg_tm_end = dt.datetime.now()
-        self._logger.debug("<Response>")
-        self._logger.debug("- result:[%r]" % (rsp.result))
-        self._logger.debug(
-            "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        self._logger.debug("- contract_price:[%f]" % (rsp.contract_price))
-        self._logger.debug(
-            "- trade_state_msg.state:[%d]" % (rsp.trade_state_msg.state))
-        self._logger.debug("- current_units:[%d]" % (rsp.current_units))
-        self._logger.debug("- realized_pl:[%f]" % (rsp.realized_pl))
-        self._logger.debug("- unrealized_pl:[%f]" % (rsp.unrealized_pl))
-        self._logger.debug("- open_time:[%s]" % (rsp.open_time))
-        self._logger.debug(
-            "- profit_order_msg.price:[%f]" % (rsp.profit_order_msg.price))
-        self._logger.debug("- profit_order_msg.order_state_msg.state:[%d]" % (
-            rsp.profit_order_msg.order_state_msg.state))
-        self._logger.debug(
-            "- loss_order_msg.price:[%f]" % (rsp.loss_order_msg.price))
-        self._logger.debug(
-            "- loss_order_msg.order_state_msg.state:[%d]"
-            % (rsp.loss_order_msg.order_state_msg.state))
-        self._logger.debug("[Performance]")
-        self._logger.debug(
-            "- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
-        self._logger.debug("========== Service[trade_details]:End ==========")
+        logger.debug("<Response>")
+        logger.debug("- result:[%r]" % (rsp.result))
+        logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+        logger.debug("- contract_price:[%f]" % (rsp.contract_price))
+        logger.debug("- trade_state_msg.state:[%d]" % (rsp.trade_state_msg.state))
+        logger.debug("- current_units:[%d]" % (rsp.current_units))
+        logger.debug("- realized_pl:[%f]" % (rsp.realized_pl))
+        logger.debug("- unrealized_pl:[%f]" % (rsp.unrealized_pl))
+        logger.debug("- open_time:[%s]" % (rsp.open_time))
+        logger.debug("- profit_order_msg.price:[%f]" % (rsp.profit_order_msg.price))
+        logger.debug("- profit_order_msg.order_state_msg.state:[%d]"
+                     % (rsp.profit_order_msg.order_state_msg.state))
+        logger.debug("- loss_order_msg.price:[%f]" % (rsp.loss_order_msg.price))
+        logger.debug("- loss_order_msg.order_state_msg.state:[%d]"
+                     % (rsp.loss_order_msg.order_state_msg.state))
+        logger.debug("[Performance]")
+        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        logger.debug("========== Service[trade_details]:End ==========")
 
         return rsp
 
@@ -196,12 +188,13 @@ class OrderService(ServiceAbs):
                               req: SrvTypeRequest,
                               rsp: SrvTypeResponse
                               ) -> SrvTypeResponse:
-        self._logger.debug("========== Service[trade_crcdo]:Start ==========")
-        self._logger.debug("<Request>")
-        self._logger.debug("- trade_id:[%d]" % (req.trade_id))
-        self._logger.debug(
-            "- take_profit_price:[%f]" % (req.take_profit_price))
-        self._logger.debug("- stop_loss_price:[%f]" % (req.stop_loss_price))
+        logger = self._logger
+
+        logger.debug("========== Service[trade_crcdo]:Start ==========")
+        logger.debug("<Request>")
+        logger.debug("- trade_id:[%d]" % (req.trade_id))
+        logger.debug("- take_profit_price:[%f]" % (req.take_profit_price))
+        logger.debug("- stop_loss_price:[%f]" % (req.stop_loss_price))
         dbg_tm_start = dt.datetime.now()
 
         data = self.__make_data_for_trade_crcdo(req)
@@ -211,17 +204,14 @@ class OrderService(ServiceAbs):
         rsp = self.__update_trade_crcdo_response(apirsp, rsp)
 
         dbg_tm_end = dt.datetime.now()
-        self._logger.debug("<Response>")
-        self._logger.debug("- result:[%r]" % (rsp.result))
-        self._logger.debug(
-            "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        self._logger.debug(
-            "- take_profit_price:[%f]" % (rsp.take_profit_price))
-        self._logger.debug("- stop_loss_price:[%f]" % (rsp.stop_loss_price))
-        self._logger.debug("[Performance]")
-        self._logger.debug(
-            "- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
-        self._logger.debug("========== Service[trade_crcdo]:End ==========")
+        logger.debug("<Response>")
+        logger.debug("- result:[%r]" % (rsp.result))
+        logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+        logger.debug("- take_profit_price:[%f]" % (rsp.take_profit_price))
+        logger.debug("- stop_loss_price:[%f]" % (rsp.stop_loss_price))
+        logger.debug("[Performance]")
+        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        logger.debug("========== Service[trade_crcdo]:End ==========")
 
         return rsp
 
@@ -229,9 +219,11 @@ class OrderService(ServiceAbs):
                               req: SrvTypeRequest,
                               rsp: SrvTypeResponse
                               ) -> SrvTypeResponse:
-        self._logger.debug("========== Service[trade_close]:Start ==========")
-        self._logger.debug("<Request>")
-        self._logger.debug("- trade_id:[%d]" % (req.trade_id))
+        logger = self._logger
+
+        logger.debug("========== Service[trade_close]:Start ==========")
+        logger.debug("<Request>")
+        logger.debug("- trade_id:[%d]" % (req.trade_id))
         dbg_tm_start = dt.datetime.now()
 
         ep = TradeClose(accountID=self.__account_number, tradeID=req.trade_id)
@@ -239,21 +231,18 @@ class OrderService(ServiceAbs):
         rsp = self.__update_trade_close_response(apirsp, rsp)
 
         dbg_tm_end = dt.datetime.now()
-        self._logger.debug("<Response>")
-        self._logger.debug("- result:[%r]" % (rsp.result))
-        self._logger.debug(
-            "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        self._logger.debug(
-            "- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
-        self._logger.debug("- time:[%s]" % (req.time))
-        self._logger.debug("- units:[%d]" % (req.units))
-        self._logger.debug("- price:[%f]" % (req.price))
-        self._logger.debug("- realized_pl:[%f]" % (req.realized_pl))
-        self._logger.debug("- half_spread_cost:[%f]" % (req.half_spread_cost))
-        self._logger.debug("[Performance]")
-        self._logger.debug(
-            "- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
-        self._logger.debug("========== Service[trade_close]:End ==========")
+        logger.debug("<Response>")
+        logger.debug("- result:[%r]" % (rsp.result))
+        logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+        logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
+        logger.debug("- time:[%s]" % (req.time))
+        logger.debug("- units:[%d]" % (req.units))
+        logger.debug("- price:[%f]" % (req.price))
+        logger.debug("- realized_pl:[%f]" % (req.realized_pl))
+        logger.debug("- half_spread_cost:[%f]" % (req.half_spread_cost))
+        logger.debug("[Performance]")
+        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        logger.debug("========== Service[trade_close]:End ==========")
 
         return rsp
 
@@ -261,10 +250,11 @@ class OrderService(ServiceAbs):
                                 req: SrvTypeRequest,
                                 rsp: SrvTypeResponse
                                 ) -> SrvTypeResponse:
-        self._logger.debug(
-            "========== Service[order_details]:Start ==========")
-        self._logger.debug("<Request>")
-        self._logger.debug("- order_id:[%d]" % (req.order_id))
+        logger = self._logger
+
+        logger.debug("========== Service[order_details]:Start ==========")
+        logger.debug("<Request>")
+        logger.debug("- order_id:[%d]" % (req.order_id))
         dbg_tm_start = dt.datetime.now()
 
         ep = OrderDetails(accountID=self.__account_number,
@@ -273,28 +263,20 @@ class OrderService(ServiceAbs):
         rsp = self.__update_order_details_response(apirsp, rsp)
 
         dbg_tm_end = dt.datetime.now()
-        self._logger.debug("<Response>")
-        self._logger.debug("- result:[%r]" % (rsp.result))
-        self._logger.debug(
-            "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        self._logger.debug(
-            "- ordertype_msg.type:[%s]" % (req.ordertype_msg.type))
-        self._logger.debug(
-            "- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
-        self._logger.debug("- units:[%d]" % (req.units))
-        self._logger.debug("- price:[%f]" % (req.price))
-        self._logger.debug(
-            "- order_state_msg.state:[%d]" % (req.order_state_msg.state))
-        self._logger.debug("- open_trade_id:[%d]" % (req.open_trade_id))
-        self._logger.debug(
-            "- take_profit_pn_fill_price:[%f]"
-            % (req.take_profit_pn_fill_price))
-        self._logger.debug(
-            "- stop_loss_on_fill_price:[%f]" % (req.stop_loss_on_fill_price))
-        self._logger.debug("[Performance]")
-        self._logger.debug(
-            "- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
-        self._logger.debug("========== Service[order_details]:End ==========")
+        logger.debug("<Response>")
+        logger.debug("- result:[%r]" % (rsp.result))
+        logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+        logger.debug("- ordertype_msg.type:[%s]" % (req.ordertype_msg.type))
+        logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
+        logger.debug("- units:[%d]" % (req.units))
+        logger.debug("- price:[%f]" % (req.price))
+        logger.debug("- order_state_msg.state:[%d]" % (req.order_state_msg.state))
+        logger.debug("- open_trade_id:[%d]" % (req.open_trade_id))
+        logger.debug("- take_profit_pn_fill_price:[%f]" % (req.take_profit_pn_fill_price))
+        logger.debug("- stop_loss_on_fill_price:[%f]" % (req.stop_loss_on_fill_price))
+        logger.debug("[Performance]")
+        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        logger.debug("========== Service[order_details]:End ==========")
 
         return rsp
 
@@ -302,9 +284,11 @@ class OrderService(ServiceAbs):
                                req: SrvTypeRequest,
                                rsp: SrvTypeResponse
                                ) -> SrvTypeResponse:
-        self._logger.debug("========== Service[order_cancel]:Start ==========")
-        self._logger.debug("<Request>")
-        self._logger.debug("- order_id:[%d]" % (req.order_id))
+        logger = self._logger
+
+        logger.debug("========== Service[order_cancel]:Start ==========")
+        logger.debug("<Request>")
+        logger.debug("- order_id:[%d]" % (req.order_id))
         dbg_tm_start = dt.datetime.now()
 
         ep = OrderCancel(accountID=self.__account_number,
@@ -313,21 +297,18 @@ class OrderService(ServiceAbs):
         rsp = self.__update_order_cancel_response(apirsp, rsp)
 
         dbg_tm_end = dt.datetime.now()
-        self._logger.debug("<Response>")
-        self._logger.debug("- result:[%r]" % (rsp.result))
-        self._logger.debug(
-            "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        self._logger.debug("[Performance]")
-        self._logger.debug(
-            "- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
-        self._logger.debug("========== Service[order_cancel]:End ==========")
+        logger.debug("<Response>")
+        logger.debug("- result:[%r]" % (rsp.result))
+        logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+        logger.debug("[Performance]")
+        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        logger.debug("========== Service[order_cancel]:End ==========")
 
         return rsp
 
     def __make_data_for_order_create(self,
                                      req: SrvTypeRequest,
                                      ) -> JsonFmt:
-
         data = {
             "order": {
                 "type": ORDER_TYP_DICT[req.ordertype_msg.type],
@@ -364,7 +345,6 @@ class OrderService(ServiceAbs):
     def __make_data_for_trade_crcdo(self,
                                     req: SrvTypeRequest,
                                     ) -> JsonFmt:
-
         data = {
             "takeProfit": {
                 "price": req.take_profit_price,
@@ -382,11 +362,11 @@ class OrderService(ServiceAbs):
                                        apirsp: ApiRsp,
                                        rsp: SrvTypeResponse
                                        ) -> SrvTypeResponse:
-
-        self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
-
         rsp.result = False
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+
+            self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
+
             if "orderFillTransaction" in apirsp.keys():
                 data_oft = apirsp["orderFillTransaction"]
                 data_to = data_oft["tradeOpened"]
@@ -411,11 +391,11 @@ class OrderService(ServiceAbs):
                                         apirsp: ApiRsp,
                                         rsp: SrvTypeResponse
                                         ) -> SrvTypeResponse:
-
-        self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
-
         rsp.result = False
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+
+            self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
+
             if "trade" in apirsp.keys():
                 data_trd = apirsp["trade"]
                 rsp.contract_price = float(data_trd["price"])
@@ -441,11 +421,11 @@ class OrderService(ServiceAbs):
                                       apirsp: ApiRsp,
                                       rsp: SrvTypeResponse
                                       ) -> SrvTypeResponse:
-
-        self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
-
         rsp.result = False
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+
+            self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
+
             if (("takeProfitOrderTransaction" in apirsp.keys())
                     and ("stopLossOrderTransaction" in apirsp.keys())):
                 data_tpot = apirsp["takeProfitOrderTransaction"]
@@ -462,11 +442,11 @@ class OrderService(ServiceAbs):
                                       apirsp: ApiRsp,
                                       rsp: SrvTypeResponse
                                       ) -> SrvTypeResponse:
-
-        self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
-
         rsp.result = False
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+
+            self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
+
             if "orderFillTransaction" in apirsp.keys():
                 data_oft = apirsp["orderFillTransaction"]
                 rsp.inst_msg.instrument_id = INST_NAME_DICT[data_oft["instrument"]]
@@ -486,11 +466,11 @@ class OrderService(ServiceAbs):
                                         apirsp: ApiRsp,
                                         rsp: SrvTypeResponse
                                         ) -> SrvTypeResponse:
-
-        self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
-
         rsp.result = False
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+
+            self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
+
             if "order" in apirsp.keys():
                 data_ord = apirsp["order"]
                 rsp.ordertype_msg.type = ORDER_TYP_NAME_DICT[data_ord["type"]]
@@ -516,11 +496,11 @@ class OrderService(ServiceAbs):
                                        apirsp: ApiRsp,
                                        rsp: SrvTypeResponse
                                        ) -> SrvTypeResponse:
-
-        self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
-
         rsp.result = False
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
+
+            self._logger.debug("%s" % (json.dumps(apirsp, indent=2)))
+
             if "orderCancelTransaction" in apirsp.keys():
                 rsp.result = True
             else:

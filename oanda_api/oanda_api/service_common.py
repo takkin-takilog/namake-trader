@@ -70,9 +70,11 @@ class ServiceAbs(Node):
         try:
             apirsp = self.__api.request(endpoint)
         except ConnectionError as err:
+            self._logger.error("!!!!!!!!!! ConnectionError !!!!!!!!!!")
             self._logger.error("%s" % err)
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
         except V20Error as err:
+            self._logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
             self._logger.error("%s" % err)
             rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
 

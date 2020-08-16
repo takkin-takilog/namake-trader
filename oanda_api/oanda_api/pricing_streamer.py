@@ -39,9 +39,9 @@ class PricingStreamer(Node):
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
         inst_id_list = self.get_parameter(PRMNM_INSTRUMENT_ID).value
-        self.__logger.debug("[OANDA]Account Number:%s" % account_number)
-        self.__logger.debug("[OANDA]Access Token:%s" % access_token)
-        self.__logger.debug("[OANDA]Instruments:%s" % inst_id_list)
+        self.__logger.debug("[Param]Account Number:[%s]" % account_number)
+        self.__logger.debug("[Param]Access Token:[%s]" % access_token)
+        self.__logger.debug("[Param]Instruments:[%s]" % inst_id_list)
 
         inst_name_list = []
         for inst_id in inst_id_list:
@@ -60,10 +60,13 @@ class PricingStreamer(Node):
                                  reliability=QoSReliabilityPolicy.RELIABLE)
         for inst_name in inst_name_list:
             suffix = inst_name.replace("_", "").lower()
-            pub = self.create_publisher(Pricing, TPCNM_PRICING + suffix, qos_profile)
+            pub = self.create_publisher(Pricing,
+                                        TPCNM_PRICING + suffix,
+                                        qos_profile)
             self.__pub_dict[inst_name] = pub.publish
-        self.__pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT, qos_profile)
-
+        self.__pub_hb = self.create_publisher(String,
+                                              TPCNM_HEARTBEAT,
+                                              qos_profile)
         self.__sub_act = self.create_subscription(Bool,
                                                   TPCNM_ACT_FLG,
                                                   self.__on_recv_act_flg,
@@ -128,7 +131,8 @@ class PricingStreamer(Node):
                         self.__pub_hb.publish(msg)
 
         except V20Error as e:
-            self.__logger.error("V20Error: %s" % e)
+            self._logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
+            self.__logger.error("%s" % e)
         except StreamTerminated as e:
             self.__logger.debug("Stream Terminated: %s" % e)
 
