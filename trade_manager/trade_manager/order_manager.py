@@ -312,7 +312,7 @@ class OrderManager(Node):
         # Declare publisher and subscriber
         qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
                                  reliability=QoSReliabilityPolicy.RELIABLE)
-        
+
         msg_type = MarketOrderRequest
         topic = TPCNM_MARKET_ORDER_REQUEST
         callback = self.__on_recv_market_order_request

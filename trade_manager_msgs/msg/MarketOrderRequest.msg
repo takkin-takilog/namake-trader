@@ -23,5 +23,5 @@ float32 take_profit_price
 float32 stop_loss_price
 
 # The valid period of the settlement order.
-# If want to set indefinite period, set to "None"
+# If want to set indefinite period, set blank as "".
 string valid_period_settlement
