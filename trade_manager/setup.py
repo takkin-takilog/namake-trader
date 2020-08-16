@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'order_manager_exe = ' + package_name + '.order_manager:main',
+            'candlestick_manager_exe = ' + package_name + '.candlestick_manager:main',
         ],
     },
 )

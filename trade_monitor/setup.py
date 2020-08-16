@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'oanda_api'
+package_name = 'trade_monitor'
 
 setup(
     name=package_name,
@@ -20,9 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'pricing_streamer_exe = ' + package_name + '.pricing_streamer:main',
-            'order_service_exe = ' + package_name + '.order_service:main',
-            'candlestick_service_exe = ' + package_name + '.candlestick_service:main',
+            'gui_monitor_exe = ' + package_name + '.gui_monitor:main',
         ],
     },
 )

@@ -1,22 +1,21 @@
+from typing import TypeVar
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from std_msgs.msg import Bool, String
-from api_msgs.msg import PriceBucket, Pricing, Instrument
+from api_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error, StreamTerminated
+from oanda_api.service_common import INST_ID_DICT
+
+MsgType = TypeVar("MsgType")
 
 
 class PricingStreamer(Node):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("pricing_streamer")
-
-        INST_NAME_DICT = {
-            Instrument.INST_USD_JPY: "USD_JPY",
-            Instrument.INST_EUR_JPY: "EUR_JPY",
-            Instrument.INST_EUR_USD: "EUR_USD",
-        }
 
         # Set logger lebel
         self.__logger = super().get_logger()
@@ -46,7 +45,7 @@ class PricingStreamer(Node):
 
         inst_name_list = []
         for inst_id in inst_id_list:
-            inst_name = INST_NAME_DICT[inst_id]
+            inst_name = INST_ID_DICT[inst_id]
             inst_name_list.append(inst_name)
 
         self.__api = API(access_token=access_token)
@@ -57,26 +56,30 @@ class PricingStreamer(Node):
 
         # Declare publisher and subscriber
         self.__pub_dict = {}
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
         for inst_name in inst_name_list:
             suffix = inst_name.replace("_", "").lower()
-            pub = self.create_publisher(Pricing, TPCNM_PRICING + suffix)
+            pub = self.create_publisher(Pricing, TPCNM_PRICING + suffix, qos_profile)
             self.__pub_dict[inst_name] = pub.publish
-        self.__pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT)
+        self.__pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT, qos_profile)
 
-        self.__sub_act = self.create_subscription(Bool, TPCNM_ACT_FLG,
-                                                  self.__on_recv_act_flg)
+        self.__sub_act = self.create_subscription(Bool,
+                                                  TPCNM_ACT_FLG,
+                                                  self.__on_recv_act_flg,
+                                                  qos_profile)
 
-    def background(self):
+    def background(self) -> None:
         if self.__act_flg:
             self.__request()
 
-    def __on_recv_act_flg(self, msg):
+    def __on_recv_act_flg(self, msg: MsgType) -> None:
         if msg.data:
             self.__act_flg = True
         else:
             self.__act_flg = False
 
-    def __request(self):
+    def __request(self) -> None:
         TYPE = "type"
         TYP_PRICE = "PRICE"
         TYP_HB = "HEARTBEAT"
@@ -128,9 +131,6 @@ class PricingStreamer(Node):
             self.__logger.error("V20Error: %s" % e)
         except StreamTerminated as e:
             self.__logger.debug("Stream Terminated: %s" % e)
-
-    def __handler(self, func, msg):
-        func(msg)
 
 
 def main(args=None):
