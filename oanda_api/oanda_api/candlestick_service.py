@@ -1,6 +1,7 @@
 from typing import TypeVar
 import datetime as dt
 import rclpy
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 import oandapyV20.endpoints.instruments as instruments
 from api_msgs.msg import Granularity, Candle
 from api_msgs.msg import FailReasonCode as frc
@@ -49,7 +50,10 @@ class CandlestickService(ServiceAbs):
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        self._logger.debug("[OANDA]Account Number:%s" % account_number)
+        self._logger.debug("[Param]Account Number:[%s]" % (account_number))
+
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
 
         # Create service server "Candles"
         srv_type = CandlesSrv
@@ -57,7 +61,8 @@ class CandlestickService(ServiceAbs):
         callback = self.__on_recv_candles
         self.__candles_srv = self.create_service(srv_type,
                                                  srv_name,
-                                                 callback)
+                                                 callback,
+                                                 qos_profile=qos_profile)
 
         self.__account_number = account_number
 
@@ -66,7 +71,15 @@ class CandlestickService(ServiceAbs):
                           rsp: SrvTypeResponse
                           ) -> SrvTypeResponse:
 
-        self._logger.debug("----- fetch candlestick start -----")
+        self._logger.debug("========== Service[candles]:Start ==========")
+        self._logger.debug("<Request>")
+        self._logger.debug(
+            "- gran_msg.granularity_id:[%d]" % (req.gran_msg.granularity_id))
+        self._logger.debug(
+            "- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
+        self._logger.debug("- dt_from:[%s]" % (req.dt_from))
+        self._logger.debug("- dt_to:[%s]" % (req.dt_to))
+
         dbg_tm_start = dt.datetime.now()
 
         rsp.result = False
@@ -75,6 +88,17 @@ class CandlestickService(ServiceAbs):
         rsp = self.__check_consistency(req, rsp)
         if rsp.frc_msg.reason_code != frc.REASON_UNSET:
             rsp.result = False
+            dbg_tm_end = dt.datetime.now()
+            self._logger.debug("<Response>")
+            self._logger.debug("- result:[%r]" % (rsp.result))
+            self._logger.debug(
+                "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+            self._logger.debug(
+                "- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+            self._logger.debug("[Performance]")
+            self._logger.debug(
+                "- Response Time:[%s]" % (dbg_tm_end - dbg_tm_start))
+            self._logger.debug("========== Service[candles]:End ==========")
             return rsp
 
         gran_id = req.gran_msg.granularity_id
@@ -104,9 +128,9 @@ class CandlestickService(ServiceAbs):
                 tmpdt = dt_to
             to_ = tmpdt
 
-            self._logger.debug("----- fetch Canclestick -----")
-            self._logger.debug("from:%s" % from_)
-            self._logger.debug("to:  %s" % to_)
+            self._logger.debug("----- Service[candles]:fetch -----")
+            self._logger.debug("- from:[%s]" % from_)
+            self._logger.debug("- to:  [%s]" % to_)
 
             params = {
                 "from": (from_ - self.TMDLT).strftime(self.DT_FMT),
@@ -149,9 +173,17 @@ class CandlestickService(ServiceAbs):
             rsp.result = False
 
         dbg_tm_end = dt.datetime.now()
-        self._logger.debug("----- fetch candlestick end -----")
-        self._logger.debug("----- fetched time [%s] -----"
-                           % (dbg_tm_end - dbg_tm_start))
+
+        self._logger.debug("<Response>")
+        self._logger.debug("- result:[%r]" % (rsp.result))
+        self._logger.debug(
+            "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+        self._logger.debug(
+            "- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+        self._logger.debug("[Performance]")
+        self._logger.debug(
+            "- Response Time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        self._logger.debug("========== Service[candles]:End ==========")
 
         return rsp
 

@@ -56,7 +56,7 @@ class ServiceAbs(Node):
         # Declare parameter
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        self._logger.debug("[OANDA]Access Token:%s" % access_token)
+        self._logger.debug("[Param]Access Token:[%s]" % (access_token))
 
         self.__api = API(access_token=access_token)
 
