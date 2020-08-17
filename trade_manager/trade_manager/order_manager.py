@@ -342,38 +342,48 @@ class OrderManager(Node):
                                                       callback,
                                                       qos_profile)
 
-        # Create service client "OrderCreate"
-        srv_type = OrderCreateSrv
-        srv_name = "order_create"
-        self.__cli_ordcre = self.__create_service_client(srv_type, srv_name)
+        try:
+            # Create service client "OrderCreate"
+            srv_type = OrderCreateSrv
+            srv_name = "order_create"
+            self.__cli_ordcre = self.__create_service_client(srv_type,
+                                                             srv_name)
 
-        # Create service client "TradeDetails"
-        srv_type = TradeDetailsSrv
-        srv_name = "trade_details"
-        self.__cli_tradet = self.__create_service_client(srv_type, srv_name)
+            # Create service client "TradeDetails"
+            srv_type = TradeDetailsSrv
+            srv_name = "trade_details"
+            self.__cli_tradet = self.__create_service_client(srv_type,
+                                                             srv_name)
 
-        # Create service client "TradeCRCDO"
-        srv_type = TradeCRCDOSrv
-        srv_name = "trade_crcdo"
-        self.__cli_tracrc = self.__create_service_client(srv_type, srv_name)
+            # Create service client "TradeCRCDO"
+            srv_type = TradeCRCDOSrv
+            srv_name = "trade_crcdo"
+            self.__cli_tracrc = self.__create_service_client(srv_type,
+                                                             srv_name)
 
-        # Create service client "TradeClose"
-        srv_type = TradeCloseSrv
-        srv_name = "trade_close"
-        self.__cli_tracls = self.__create_service_client(srv_type, srv_name)
+            # Create service client "TradeClose"
+            srv_type = TradeCloseSrv
+            srv_name = "trade_close"
+            self.__cli_tracls = self.__create_service_client(srv_type,
+                                                             srv_name)
 
-        # Create service client "OrderDetails"
-        srv_type = OrderDetailsSrv
-        srv_name = "order_details"
-        self.__cli_orddet = self.__create_service_client(srv_type, srv_name)
+            # Create service client "OrderDetails"
+            srv_type = OrderDetailsSrv
+            srv_name = "order_details"
+            self.__cli_orddet = self.__create_service_client(srv_type,
+                                                             srv_name)
 
-        # Create service client "OrderCancel"
-        srv_type = OrderCancelSrv
-        srv_name = "order_cancel"
-        self.__cli_ordcnc = self.__create_service_client(srv_type, srv_name)
+            # Create service client "OrderCancel"
+            srv_type = OrderCancelSrv
+            srv_name = "order_cancel"
+            self.__cli_ordcnc = self.__create_service_client(srv_type,
+                                                             srv_name)
+        except RuntimeError as err:
+            self.__logger.error(err)
+            self.destroy_node()
+            rclpy.shutdown()
 
         self.__ordlist = []
-
         self.__timer_1sec = self.create_timer(1.0, self.__on_timeout_1sec)
 
     def __on_timeout_1sec(self) -> None:
@@ -438,9 +448,10 @@ class OrderManager(Node):
         # Create service client
         cli = self.create_client(srv_type, srv_name)
         # Wait for a service server
-        ready = cli.wait_for_service(timeout_sec=3.0)
-        if not ready:
-            raise RuntimeError("Wait for service timed out")
+        while not cli.wait_for_service(timeout_sec=1.0):
+            if not rclpy.ok():
+                raise RuntimeError("Interrupted while waiting for service.")
+            self.__logger.info("Waiting for [%s] service..." % (srv_name))
         return cli
 
     def __on_subs_market_order_request(self, msg: MsgType) -> None:

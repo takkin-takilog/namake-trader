@@ -389,10 +389,15 @@ class CandlestickManager(Node):
                                                      srv_name,
                                                      callback)
 
-        # Create service client "Candles"
-        srv_type = CandlesSrv
-        srv_name = "candles"
-        cli_cdl = self.__create_service_client(srv_type, srv_name)
+        try:
+            # Create service client "Candles"
+            srv_type = CandlesSrv
+            srv_name = "candles"
+            cli_cdl = self.__create_service_client(srv_type, srv_name)
+        except RuntimeError as err:
+            self.__logger.error(err)
+            self.destroy_node()
+            rclpy.shutdown()
 
         # Create publisher "HistoricalCandles"
         msg_type = HistoricalCandles
@@ -469,7 +474,9 @@ class CandlestickManager(Node):
         cli = self.create_client(srv_type, srv_name)
         # Wait for a service server
         while not cli.wait_for_service(timeout_sec=1.0):
-            self.__logger.info("Waiting for \"" + srv_name + "\" service...")
+            if not rclpy.ok():
+                raise RuntimeError("Interrupted while waiting for service.")
+            self.__logger.info("Waiting for [%s] service..." % (srv_name))
         return cli
 
     def __on_recv_candlesnt_mnt(self,
