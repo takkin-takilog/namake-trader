@@ -1,7 +1,6 @@
 from typing import TypeVar
 import datetime as dt
 import rclpy
-from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 import oandapyV20.endpoints.instruments as instruments
 from api_msgs.msg import Granularity, Candle
 from api_msgs.msg import FailReasonCode as frc
@@ -52,17 +51,13 @@ class CandlestickService(ServiceAbs):
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         self._logger.debug("[Param]Account Number:[%s]" % (account_number))
 
-        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
-                                 reliability=QoSReliabilityPolicy.RELIABLE)
-
         # Create service server "Candles"
         srv_type = CandlesSrv
         srv_name = "candles"
         callback = self.__on_recv_candles
         self.__candles_srv = self.create_service(srv_type,
                                                  srv_name,
-                                                 callback,
-                                                 qos_profile=qos_profile)
+                                                 callback)
 
         self.__account_number = account_number
 
@@ -73,10 +68,8 @@ class CandlestickService(ServiceAbs):
 
         self._logger.debug("========== Service[candles]:Start ==========")
         self._logger.debug("<Request>")
-        self._logger.debug(
-            "- gran_msg.granularity_id:[%d]" % (req.gran_msg.granularity_id))
-        self._logger.debug(
-            "- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
+        self._logger.debug("- gran_msg.granularity_id:[%d]" % (req.gran_msg.granularity_id))
+        self._logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
         self._logger.debug("- dt_from:[%s]" % (req.dt_from))
         self._logger.debug("- dt_to:[%s]" % (req.dt_to))
 
@@ -91,13 +84,10 @@ class CandlestickService(ServiceAbs):
             dbg_tm_end = dt.datetime.now()
             self._logger.debug("<Response>")
             self._logger.debug("- result:[%r]" % (rsp.result))
-            self._logger.debug(
-                "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-            self._logger.debug(
-                "- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+            self._logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+            self._logger.debug("- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
             self._logger.debug("[Performance]")
-            self._logger.debug(
-                "- Response Time:[%s]" % (dbg_tm_end - dbg_tm_start))
+            self._logger.debug("- Response Time:[%s]" % (dbg_tm_end - dbg_tm_start))
             self._logger.debug("========== Service[candles]:End ==========")
             return rsp
 
@@ -176,13 +166,10 @@ class CandlestickService(ServiceAbs):
 
         self._logger.debug("<Response>")
         self._logger.debug("- result:[%r]" % (rsp.result))
-        self._logger.debug(
-            "- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        self._logger.debug(
-            "- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+        self._logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
+        self._logger.debug("- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
         self._logger.debug("[Performance]")
-        self._logger.debug(
-            "- Response Time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        self._logger.debug("- Response Time:[%s]" % (dbg_tm_end - dbg_tm_start))
         self._logger.debug("========== Service[candles]:End ==========")
 
         return rsp
@@ -198,7 +185,10 @@ class CandlestickService(ServiceAbs):
 
         if (dt_to < dt_from) or (dt_now < dt_from):
             rsp.frc_msg.reason_code = frc.REASON_ARG_ERR
-
+            self.__logger.error("!!!!!!!!!! Argument Error !!!!!!!!!!")
+            self.__logger.error("- dt_to:[%s]" % (dt_to))
+            self.__logger.error("- dt_from:[%s]" % (dt_from))
+            self.__logger.error("- dt_now:[%s]" % (dt_now))
         return rsp
 
     def __update_response(self,

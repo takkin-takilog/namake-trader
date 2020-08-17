@@ -2,7 +2,6 @@ from typing import TypeVar, Dict
 import datetime as dt
 import json
 import rclpy
-from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
 from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
@@ -60,57 +59,48 @@ class OrderService(ServiceAbs):
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         self._logger.debug("[Param]Account Number:[%s]" % account_number)
 
-        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
-                                 reliability=QoSReliabilityPolicy.RELIABLE)
-
         # Create service server "OrderCreate"
         srv_type = OrderCreateSrv
         srv_name = "order_create"
         callback = self.__on_recv_order_create
         self.order_create_srv = self.create_service(srv_type,
                                                     srv_name,
-                                                    callback,
-                                                    qos_profile=qos_profile)
+                                                    callback)
         # Create service server "TradeDetails"
         srv_type = TradeDetailsSrv
         srv_name = "trade_details"
         callback = self.__on_recv_trade_details
         self.trade_details_srv = self.create_service(srv_type,
                                                      srv_name,
-                                                     callback,
-                                                     qos_profile=qos_profile)
+                                                     callback)
         # Create service server "TradeCRCDO"
         srv_type = TradeCRCDOSrv
         srv_name = "trade_crcdo"
         callback = self.__on_recv_trade_crcdo
         self.trade_crcdo_srv = self.create_service(srv_type,
                                                    srv_name,
-                                                   callback,
-                                                   qos_profile=qos_profile)
+                                                   callback)
         # Create service server "TradeClose"
         srv_type = TradeCloseSrv
         srv_name = "trade_close"
         callback = self.__on_recv_trade_close
         self.trade_close_srv = self.create_service(srv_type,
                                                    srv_name,
-                                                   callback,
-                                                   qos_profile=qos_profile)
+                                                   callback)
         # Create service server "OrderDetails"
         srv_type = OrderDetailsSrv
         srv_name = "order_details"
         callback = self.__on_recv_order_details
         self.order_details_srv = self.create_service(srv_type,
                                                      srv_name,
-                                                     callback,
-                                                     qos_profile=qos_profile)
+                                                     callback)
         # Create service server "OrderCancel"
         srv_type = OrderCancelSrv
         srv_name = "order_cancel"
         callback = self.__on_recv_order_cancel
         self.order_cancel_srv = self.create_service(srv_type,
                                                     srv_name,
-                                                    callback,
-                                                    qos_profile=qos_profile)
+                                                    callback)
 
         self.__account_number = account_number
 

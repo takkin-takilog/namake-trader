@@ -21,8 +21,6 @@ from trade_manager_msgs.msg import Granularity as GranTm
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
-# pd.set_option('display.max_rows', 500)
-
 
 class CandlesData():
 
@@ -81,8 +79,8 @@ class CandlesData():
         minunit = self.DT_LSB_DICT[gran_id]
         self.__logger = node.get_logger()
 
-        self.__logger.info("===== Create CandlesData object")
-        self.__logger.info("inst_id:[%d], gran_id:[%d]" % (inst_id, gran_id))
+        self.__logger.debug("----- Create CandlesData:Start -----")
+        self.__logger.debug("- inst_id:[%d], gran_id:[%d]" % (inst_id, gran_id))
 
         dt_now = dt.datetime.now()
         dt_from = dt_now - minunit * data_length
@@ -97,55 +95,64 @@ class CandlesData():
         self.__inst_id = inst_id
         self.__gran_id = gran_id
 
-        future = self.__request_async(dt_from, dt_to)
-        rclpy.spin_until_future_complete(node, future)
+        cnt = 0
+        is_comp = False
+        while cnt < 3:
+            future = self.__request_async(dt_from, dt_to)
+            rclpy.spin_until_future_complete(node, future)
 
-        assert future.result() is not None, "ROSServiceError:Time Out"
+            if future.done() and future.result() is not None:
+                is_comp = True
+                break
+            cnt += 1
 
-        df = self.__get_df_from_future(future)
+        if not is_comp:
+            self.__logger.error("!!!!!!!!!! ROS Service Error !!!!!!!!!!")
+            self.__logger.error("Service Name:[candles]")
+        else:
+            df = self.__get_df_from_future(future)
 
-        assert not df.empty, "ROSServiceError"
+            df_comp = df[(df[self.COL_NAME_COMP])]
+            df_prov = df[~(df[self.COL_NAME_COMP])]
 
-        df_comp = df[(df[self.COL_NAME_COMP])]
-        df_prov = df[~(df[self.COL_NAME_COMP])]
+            # publish
+            msg = HistoricalCandles()
+            msg.gran_msg.granularity_id = gran_id
+            msg.inst_msg.instrument_id = inst_id
+            msg.cndl_msg_list = []
+            for time, sr in df_comp.iterrows():
+                cnd = Candle()
+                cnd.ask_o = sr[self.COL_NAME_ASK_OP]
+                cnd.ask_h = sr[self.COL_NAME_ASK_HI]
+                cnd.ask_l = sr[self.COL_NAME_ASK_LO]
+                cnd.ask_c = sr[self.COL_NAME_ASK_CL]
+                cnd.bid_o = sr[self.COL_NAME_BID_OP]
+                cnd.bid_h = sr[self.COL_NAME_BID_HI]
+                cnd.bid_l = sr[self.COL_NAME_BID_LO]
+                cnd.bid_c = sr[self.COL_NAME_BID_CL]
+                cnd.mid_o = sr[self.COL_NAME_MID_OP]
+                cnd.mid_h = sr[self.COL_NAME_MID_HI]
+                cnd.mid_l = sr[self.COL_NAME_MID_LO]
+                cnd.mid_c = sr[self.COL_NAME_MID_CL]
+                cnd.half_spread_cost_o = sr[self.COL_NAME_HSC_OP]
+                cnd.half_spread_cost_h = sr[self.COL_NAME_HSC_HI]
+                cnd.half_spread_cost_l = sr[self.COL_NAME_HSC_LO]
+                cnd.half_spread_cost_c = sr[self.COL_NAME_HSC_CL]
+                cnd.time = time.strftime(self.DT_FMT)
+                cnd.is_complete = sr[self.COL_NAME_COMP]
+                msg.cndl_msg_list.append(cnd)
+            pub.publish(msg)
 
-        # publish
-        msg = HistoricalCandles()
-        msg.gran_msg.granularity_id = gran_id
-        msg.inst_msg.instrument_id = inst_id
-        msg.cndl_msg_list = []
-        for time, sr in df_comp.iterrows():
-            cnd = Candle()
-            cnd.ask_o = sr[self.COL_NAME_ASK_OP]
-            cnd.ask_h = sr[self.COL_NAME_ASK_HI]
-            cnd.ask_l = sr[self.COL_NAME_ASK_LO]
-            cnd.ask_c = sr[self.COL_NAME_ASK_CL]
-            cnd.bid_o = sr[self.COL_NAME_BID_OP]
-            cnd.bid_h = sr[self.COL_NAME_BID_HI]
-            cnd.bid_l = sr[self.COL_NAME_BID_LO]
-            cnd.bid_c = sr[self.COL_NAME_BID_CL]
-            cnd.mid_o = sr[self.COL_NAME_MID_OP]
-            cnd.mid_h = sr[self.COL_NAME_MID_HI]
-            cnd.mid_l = sr[self.COL_NAME_MID_LO]
-            cnd.mid_c = sr[self.COL_NAME_MID_CL]
-            cnd.half_spread_cost_o = sr[self.COL_NAME_HSC_OP]
-            cnd.half_spread_cost_h = sr[self.COL_NAME_HSC_HI]
-            cnd.half_spread_cost_l = sr[self.COL_NAME_HSC_LO]
-            cnd.half_spread_cost_c = sr[self.COL_NAME_HSC_CL]
-            cnd.time = time.strftime(self.DT_FMT)
-            cnd.is_complete = sr[self.COL_NAME_COMP]
-            msg.cndl_msg_list.append(cnd)
-        pub.publish(msg)
+            self.__interval = interval
+            self.__next_update_time = self.__get_next_update_time(gran_id, dt_now)
+            self.__df_comp = df_comp
+            self.__df_prov = df_prov
+            self.__future = None
+            self.__timeout_end = 0.0
+            self.__pub = pub
 
-        self.__interval = interval
-        self.__next_update_time = self.__get_next_update_time(gran_id, dt_now)
-        self.__df_comp = df_comp
-        self.__df_prov = df_prov
-        self.__future = None
-        self.__timeout_end = 0.0
-        self.__pub = pub
-
-        self.__logger.debug("last_update_time:%s" % (self.__next_update_time))
+            self.__logger.debug("- last_update_time:[%s]" % (self.__next_update_time))
+            self.__logger.debug("----- Create CandlesData:End -----")
 
     def __get_next_update_time(self,
                                gran_id: int,
@@ -428,9 +435,8 @@ class CandlestickManager(Node):
         for inst_id in self.__inst_id_list:
             gran_dict = {}
             for gran_id in self.__gran_id_list:
-                data_length = self.DATA_LENGTH_DICT[gran_id]
-                obj = CandlesData(self, cli, pub, inst_id,
-                                  gran_id, data_length)
+                data_len = self.DATA_LENGTH_DICT[gran_id]
+                obj = CandlesData(self, cli, pub, inst_id, gran_id, data_len)
                 tmp = {gran_id: obj}
                 gran_dict.update(tmp)
             tmp = {inst_id: gran_dict}
@@ -470,6 +476,15 @@ class CandlestickManager(Node):
                                 req: SrvTypeRequest,
                                 rsp: SrvTypeResponse
                                 ) -> SrvTypeResponse:
+        logger = self._logger
+
+        logger.debug("========== Service[candles_monitor]:Start ==========")
+        logger.debug("<Request>")
+        logger.debug("- gran_msg.granularity_id:[%d]" % (req.gran_msg.granularity_id))
+        logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
+        logger.debug("- dt_from:[%s]" % (req.dt_from))
+        logger.debug("- dt_to:[%s]" % (req.dt_to))
+        dbg_tm_start = dt.datetime.now()
 
         DT_FMT = CandlesData.DT_FMT
         INF = "inf"
@@ -506,6 +521,13 @@ class CandlestickManager(Node):
                 msg.time = time.strftime(DT_FMT)
                 msg.is_complete = sr[CandlesData.COL_NAME_COMP]
                 rsp.cndl_msg_list.append(msg)
+
+        dbg_tm_end = dt.datetime.now()
+        logger.debug("<Response>")
+        logger.debug("- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+        logger.debug("[Performance]")
+        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        logger.debug("========== Service[order_create]:End ==========")
 
         return rsp
 

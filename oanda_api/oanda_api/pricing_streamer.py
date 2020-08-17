@@ -131,7 +131,7 @@ class PricingStreamer(Node):
                         self.__pub_hb.publish(msg)
 
         except V20Error as e:
-            self._logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
+            self.__logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
             self.__logger.error("%s" % e)
         except StreamTerminated as e:
             self.__logger.debug("Stream Terminated: %s" % e)
