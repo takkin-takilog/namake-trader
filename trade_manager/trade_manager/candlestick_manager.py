@@ -25,23 +25,23 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 class CandlesData():
 
     DT_LSB_DICT = {
-        GranTm.GRAN_M1: dt.timedelta(minutes=1),  # 1 minute
-        GranTm.GRAN_M2: dt.timedelta(minutes=2),  # 2 minutes
-        GranTm.GRAN_M3: dt.timedelta(minutes=3),  # 3 minutes
-        GranTm.GRAN_M4: dt.timedelta(minutes=4),  # 4 minutes
-        GranTm.GRAN_M5: dt.timedelta(minutes=5),  # 5 minutes
+        GranTm.GRAN_M1: dt.timedelta(minutes=1),    # 1 minute
+        GranTm.GRAN_M2: dt.timedelta(minutes=2),    # 2 minutes
+        GranTm.GRAN_M3: dt.timedelta(minutes=3),    # 3 minutes
+        GranTm.GRAN_M4: dt.timedelta(minutes=4),    # 4 minutes
+        GranTm.GRAN_M5: dt.timedelta(minutes=5),    # 5 minutes
         GranTm.GRAN_M10: dt.timedelta(minutes=10),  # 10 minutes
         GranTm.GRAN_M15: dt.timedelta(minutes=15),  # 15 minutes
         GranTm.GRAN_M30: dt.timedelta(minutes=30),  # 30 minutes
-        GranTm.GRAN_H1: dt.timedelta(hours=1),  # 1 hour
-        GranTm.GRAN_H2: dt.timedelta(hours=2),  # 2 hours
-        GranTm.GRAN_H3: dt.timedelta(hours=3),  # 3 hours
-        GranTm.GRAN_H4: dt.timedelta(hours=4),  # 4 hours
-        GranTm.GRAN_H6: dt.timedelta(hours=6),  # 6 hours
-        GranTm.GRAN_H8: dt.timedelta(hours=8),  # 8 hours
-        GranTm.GRAN_H12: dt.timedelta(hours=12),  # 12 hours
-        GranTm.GRAN_D: dt.timedelta(days=1),  # 1 Day
-        GranTm.GRAN_W: dt.timedelta(weeks=1),  # 1 Week
+        GranTm.GRAN_H1: dt.timedelta(hours=1),      # 1 hour
+        GranTm.GRAN_H2: dt.timedelta(hours=2),      # 2 hours
+        GranTm.GRAN_H3: dt.timedelta(hours=3),      # 3 hours
+        GranTm.GRAN_H4: dt.timedelta(hours=4),      # 4 hours
+        GranTm.GRAN_H6: dt.timedelta(hours=6),      # 6 hours
+        GranTm.GRAN_H8: dt.timedelta(hours=8),      # 8 hours
+        GranTm.GRAN_H12: dt.timedelta(hours=12),    # 12 hours
+        GranTm.GRAN_D: dt.timedelta(days=1),        # 1 Day
+        GranTm.GRAN_W: dt.timedelta(weeks=1),       # 1 Week
     }
 
     COL_NAME_TIME = "time"
@@ -234,8 +234,11 @@ class CandlesData():
                 self.__update_df(df)
                 self.__next_update_time += self.__interval
                 self.__future = None
-                self.__logger.debug("update<last_update_time>:%s" %
-                                    (self.__next_update_time))
+
+                self.__logger.debug("<Update> inst_id:[%d], gran_id:[%d] last_update_time:[%s]"
+                                    % (self.__inst_id, self.__gran_id, self.__next_update_time))
+                self.__logger.debug("- df_comp:%s" % (self.__df_comp.index.tolist()))
+                self.__logger.debug("- df_prov:%s" % (self.__df_prov.index.tolist()))
             else:
                 if time.monotonic() >= self.__timeout_end:
                     self.__future = None
@@ -329,9 +332,6 @@ class CandlesData():
             df_comp = df[(df[self.COL_NAME_COMP])]
             df_prov = df[~(df[self.COL_NAME_COMP])]
 
-            self.__logger.debug("df_comp:%s" % (df_comp.index.tolist()))
-            self.__logger.debug("df_prov:%s" % (df_prov.index.tolist()))
-
             if not df_comp.empty:
                 # "df_comp" deal with FIFO
                 self.__df_comp = self.__df_comp.append(df_comp)
@@ -347,23 +347,23 @@ class CandlesData():
 class CandlestickManager(Node):
 
     DATA_LENGTH_DICT = {
-        GranApi.GRAN_M1: 60 * 24 * 10,  # 10 Days
-        GranApi.GRAN_M2: 30 * 24 * 10,  # 10 Days
-        GranApi.GRAN_M3: 20 * 24 * 10,  # 10 Days
-        GranApi.GRAN_M4: 15 * 24 * 10,  # 10 Days
-        GranApi.GRAN_M5: 12 * 24 * 10,  # 10 Days
+        GranApi.GRAN_M1: 60 * 24 * 10,   # 10 Days
+        GranApi.GRAN_M2: 30 * 24 * 10,   # 10 Days
+        GranApi.GRAN_M3: 20 * 24 * 10,   # 10 Days
+        GranApi.GRAN_M4: 15 * 24 * 10,   # 10 Days
+        GranApi.GRAN_M5: 12 * 24 * 10,   # 10 Days
         GranApi.GRAN_M10: 6 * 24 * 100,  # 1 Year
-        GranApi.GRAN_M15: 4 * 24 * 10,  # 10 Days
-        GranApi.GRAN_M30: 2 * 24 * 10,  # 10 Days
-        GranApi.GRAN_H1: 24 * 30,  # 1 Months
-        GranApi.GRAN_H2: 12 * 30,  # 1 Months
-        GranApi.GRAN_H3: 8 * 30,  # 1 Months
-        GranApi.GRAN_H4: 6 * 30,  # 1 Months
-        GranApi.GRAN_H6: 4 * 30,  # 1 Months
-        GranApi.GRAN_H8: 3 * 30 * 3,  # 3 Months
-        GranApi.GRAN_H12: 2 * 30 * 3,  # 3 Months
-        GranApi.GRAN_D: 365,  # 1 Year
-        GranApi.GRAN_W: 4 * 12,  # 1 Year
+        GranApi.GRAN_M15: 4 * 24 * 10,   # 10 Days
+        GranApi.GRAN_M30: 2 * 24 * 10,   # 10 Days
+        GranApi.GRAN_H1: 24 * 30,        # 1 Months
+        GranApi.GRAN_H2: 12 * 30,        # 1 Months
+        GranApi.GRAN_H3: 8 * 30,         # 1 Months
+        GranApi.GRAN_H4: 6 * 30,         # 1 Months
+        GranApi.GRAN_H6: 4 * 30,         # 1 Months
+        GranApi.GRAN_H8: 3 * 30 * 3,     # 3 Months
+        GranApi.GRAN_H12: 2 * 30 * 3,    # 3 Months
+        GranApi.GRAN_D: 365,             # 1 Year
+        GranApi.GRAN_W: 4 * 12,          # 1 Year
     }
 
     DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"

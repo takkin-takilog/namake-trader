@@ -16,7 +16,7 @@ from api_msgs.msg import OrderType as OrderTypeMsg
 from api_msgs.msg import OrderState as OrderStateMsg
 from api_msgs.msg import TradeState as TradeStateMsg
 
-MsgType = TypeVar('MsgType')
+MsgType = TypeVar("MsgType")
 
 _DT_FMT = "%Y-%m-%d %H:%M:%S.%f"
 
@@ -179,8 +179,7 @@ class OrderState(object):
                         if self.__dt_new is not None:
                             dt_now = dt.datetime.now()
                             if self.__dt_new < dt_now:
-                                self.__logger.debug(
-                                    "[order_details]datetime over")
+                                self.__logger.debug("[order_details]datetime over")
                                 # change state: 3 -> 4
                                 self.__logger.debug("[change state: 3 -> 4]")
                                 self.__sts = self.STS_NEW_ORD_CNC_REQ
@@ -315,21 +314,21 @@ class OrderManager(Node):
 
         msg_type = MarketOrderRequest
         topic = TPCNM_MARKET_ORDER_REQUEST
-        callback = self.__on_recv_market_order_request
+        callback = self.__on_subs_market_order_request
         self.__sub_mrk_req = self.create_subscription(msg_type,
                                                       topic,
                                                       callback,
                                                       qos_profile)
         msg_type = LimitOrderRequest
         topic = TPCNM_LIMIT_ORDER_REQUEST
-        callback = self.__on_recv_limit_order_request
+        callback = self.__on_subs_limit_order_request
         self.__sub_lim_req = self.create_subscription(msg_type,
                                                       topic,
                                                       callback,
                                                       qos_profile)
         msg_type = StopOrderRequest
         topic = TPCNM_STOP_ORDER_REQUEST
-        callback = self.__on_recv_stop_order_request
+        callback = self.__on_subs_stop_order_request
         self.__sub_stp_req = self.create_subscription(msg_type,
                                                       topic,
                                                       callback,
@@ -444,9 +443,18 @@ class OrderManager(Node):
             raise RuntimeError("Wait for service timed out")
         return cli
 
-    def __on_recv_market_order_request(self, msg: MsgType) -> None:
+    def __on_subs_market_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(_DT_FMT)
-        self.__logger.debug("[Topic Rcv]<Market>Start: %s" % (dt_now))
+        logger = self._logger
+        logger.debug("========== Topic[market_order_request]:Start ==========")
+        logger.debug("- req_id:[%d]" % (msg.req_id))
+        logger.debug("- instrument_id:[%d]" % (msg.instrument_id))
+        logger.debug("- units:[%d]" % (msg.units))
+        logger.debug("- take_profit_price:[%f]" % (msg.take_profit_price))
+        logger.debug("- stop_loss_price:[%f]" % (msg.stop_loss_price))
+        logger.debug("- valid_period_settlement:[%s]" % (msg.valid_period_settlement))
+        logger.debug("[Performance]")
+        logger.debug("- request time:[%s]" % (dt_now))
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_MARKET
@@ -457,12 +465,23 @@ class OrderManager(Node):
         future = self.__cli_ordcre.call_async(req)
 
         order_typ = OrderState.ORDER_TYP_MARKET
-        obj = OrderState(order_typ, msg, future, self.__logger)
+        obj = OrderState(order_typ, msg, future, logger)
         self.__ordlist.append(obj)
 
-    def __on_recv_limit_order_request(self, msg: MsgType) -> None:
+    def __on_subs_limit_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(_DT_FMT)
-        self.__logger.debug("[Topic Rcv]<Limit>Start: %s" % (dt_now))
+        logger = self._logger
+        logger.debug("========== Topic[limit_order_request]:Start ==========")
+        logger.debug("- req_id:[%d]" % (msg.req_id))
+        logger.debug("- instrument_id:[%d]" % (msg.instrument_id))
+        logger.debug("- units:[%d]" % (msg.units))
+        logger.debug("- price:[%f]" % (msg.price))
+        logger.debug("- valid_period_new:[%s]" % (msg.valid_period_new))
+        logger.debug("- take_profit_price:[%f]" % (msg.take_profit_price))
+        logger.debug("- stop_loss_price:[%f]" % (msg.stop_loss_price))
+        logger.debug("- valid_period_settlement:[%s]" % (msg.valid_period_settlement))
+        logger.debug("[Performance]")
+        logger.debug("- request time:[%s]" % (dt_now))
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_LIMIT
@@ -474,12 +493,23 @@ class OrderManager(Node):
         future = self.__cli_ordcre.call_async(req)
 
         order_typ = OrderState.ORDER_TYP_LIMIT
-        obj = OrderState(order_typ, msg, future, self.__logger)
+        obj = OrderState(order_typ, msg, future, logger)
         self.__ordlist.append(obj)
 
-    def __on_recv_stop_order_request(self, msg: MsgType) -> None:
+    def __on_subs_stop_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(_DT_FMT)
-        self.__logger.debug("[Topic Rcv]<Stop>Start: %s" % (dt_now))
+        logger = self._logger
+        logger.debug("========== Topic[stop_order_request]:Start ==========")
+        logger.debug("- req_id:[%d]" % (msg.req_id))
+        logger.debug("- instrument_id:[%d]" % (msg.instrument_id))
+        logger.debug("- units:[%d]" % (msg.units))
+        logger.debug("- price:[%f]" % (msg.price))
+        logger.debug("- valid_period_new:[%s]" % (msg.valid_period_new))
+        logger.debug("- take_profit_price:[%f]" % (msg.take_profit_price))
+        logger.debug("- stop_loss_price:[%f]" % (msg.stop_loss_price))
+        logger.debug("- valid_period_settlement:[%s]" % (msg.valid_period_settlement))
+        logger.debug("[Performance]")
+        logger.debug("- request time:[%s]" % (dt_now))
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_STOP
@@ -491,11 +521,12 @@ class OrderManager(Node):
         future = self.__cli_ordcre.call_async(req)
 
         order_typ = OrderState.ORDER_TYP_STOP
-        obj = OrderState(order_typ, msg, future, self.__logger)
+        obj = OrderState(order_typ, msg, future, logger)
         self.__ordlist.append(obj)
 
     def __on_recv_polling(self, msg: MsgType) -> None:
-        self.__logger.debug("[Topic Rcv]<Polling>")
+        logger = self._logger
+        logger.debug("========== Topic[polling]:Start ==========")
         if msg.data is True:
             self.__update_state(True)
 
