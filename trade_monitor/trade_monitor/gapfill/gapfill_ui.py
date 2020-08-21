@@ -200,7 +200,7 @@ class GapFillUi():
 
         # fetch Gap-fill data
         req = GapFillMntSrv.Request()
-        req.inst_msg.instrument_id = INST_MSG_LIST[inst_idx].msg_id
+        req.inst_msg.inst_id = INST_MSG_LIST[inst_idx].msg_id
 
         future = self.__srv_cli.call_async(req)
         rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
@@ -302,8 +302,8 @@ class GapFillUi():
         dt_to = trg_date + dt.timedelta(hours=12)
 
         req = CandlesMntSrv.Request()
-        req.gran_msg.granularity_id = gran_id
-        req.inst_msg.instrument_id = INST_MSG_LIST[inst_idx].msg_id
+        req.gran_msg.gran_id = gran_id
+        req.inst_msg.inst_id = INST_MSG_LIST[inst_idx].msg_id
         req.dt_from = dt_from.strftime(DT_FMT)
         req.dt_to = dt_to.strftime(DT_FMT)
 

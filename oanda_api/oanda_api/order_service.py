@@ -1,6 +1,7 @@
 from typing import TypeVar, Dict
 import datetime as dt
 import json
+from decimal import Decimal, ROUND_HALF_UP
 import rclpy
 from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
 from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
@@ -10,7 +11,7 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
 from api_msgs.msg import OrderType, OrderState, TradeState
 from api_msgs.msg import FailReasonCode as frc
 from oanda_api.service_common import ServiceAbs
-from oanda_api.service_common import INST_ID_DICT
+from oanda_api.service_common import INST_ID_DICT, MIN_UNIT_DICT
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -114,7 +115,7 @@ class OrderService(ServiceAbs):
         logger.debug("<Request>")
         logger.debug("- ordertype_msg.type:[%d]" % (req.ordertype_msg.type))
         logger.debug("- price:[%f]" % (req.price))
-        logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
+        logger.debug("- inst_msg.inst_id:[%d]" % (req.inst_msg.inst_id))
         logger.debug("- units:[%d]" % (req.units))
         logger.debug("- take_profit_price:[%f]" % (req.take_profit_price))
         logger.debug("- stop_loss_price:[%f]" % (req.stop_loss_price))
@@ -183,6 +184,7 @@ class OrderService(ServiceAbs):
         logger.debug("========== Service[trade_crcdo]:Start ==========")
         logger.debug("<Request>")
         logger.debug("- trade_id:[%d]" % (req.trade_id))
+        logger.debug("- inst_msg.inst_id:[%d]" % (req.inst_msg.inst_id))
         logger.debug("- take_profit_price:[%f]" % (req.take_profit_price))
         logger.debug("- stop_loss_price:[%f]" % (req.stop_loss_price))
         dbg_tm_start = dt.datetime.now()
@@ -224,12 +226,12 @@ class OrderService(ServiceAbs):
         logger.debug("<Response>")
         logger.debug("- result:[%r]" % (rsp.result))
         logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
-        logger.debug("- time:[%s]" % (req.time))
-        logger.debug("- units:[%d]" % (req.units))
-        logger.debug("- price:[%f]" % (req.price))
-        logger.debug("- realized_pl:[%f]" % (req.realized_pl))
-        logger.debug("- half_spread_cost:[%f]" % (req.half_spread_cost))
+        logger.debug("- inst_msg.inst_id:[%d]" % (rsp.inst_msg.inst_id))
+        logger.debug("- time:[%s]" % (rsp.time))
+        logger.debug("- units:[%d]" % (rsp.units))
+        logger.debug("- price:[%f]" % (rsp.price))
+        logger.debug("- realized_pl:[%f]" % (rsp.realized_pl))
+        logger.debug("- half_spread_cost:[%f]" % (rsp.half_spread_cost))
         logger.debug("[Performance]")
         logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
         logger.debug("========== Service[trade_close]:End ==========")
@@ -256,14 +258,14 @@ class OrderService(ServiceAbs):
         logger.debug("<Response>")
         logger.debug("- result:[%r]" % (rsp.result))
         logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        logger.debug("- ordertype_msg.type:[%s]" % (req.ordertype_msg.type))
-        logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
-        logger.debug("- units:[%d]" % (req.units))
-        logger.debug("- price:[%f]" % (req.price))
-        logger.debug("- order_state_msg.state:[%d]" % (req.order_state_msg.state))
-        logger.debug("- open_trade_id:[%d]" % (req.open_trade_id))
-        logger.debug("- take_profit_pn_fill_price:[%f]" % (req.take_profit_pn_fill_price))
-        logger.debug("- stop_loss_on_fill_price:[%f]" % (req.stop_loss_on_fill_price))
+        logger.debug("- ordertype_msg.type:[%s]" % (rsp.ordertype_msg.type))
+        logger.debug("- inst_msg.inst_id:[%d]" % (rsp.inst_msg.inst_id))
+        logger.debug("- units:[%d]" % (rsp.units))
+        logger.debug("- price:[%f]" % (rsp.price))
+        logger.debug("- order_state_msg.state:[%d]" % (rsp.order_state_msg.state))
+        logger.debug("- open_trade_id:[%d]" % (rsp.open_trade_id))
+        logger.debug("- take_profit_pn_fill_price:[%f]" % (rsp.take_profit_pn_fill_price))
+        logger.debug("- stop_loss_on_fill_price:[%f]" % (rsp.stop_loss_on_fill_price))
         logger.debug("[Performance]")
         logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
         logger.debug("========== Service[order_details]:End ==========")
@@ -307,25 +309,27 @@ class OrderService(ServiceAbs):
 
         data_order = data["order"]
 
+        min_unit = MIN_UNIT_DICT[req.inst_msg.inst_id]
+
         if ((req.ordertype_msg.type == OrderType.TYP_LIMIT)
                 or (req.ordertype_msg.type == OrderType.TYP_STOP)):
             tmp = {
-                "price": req.price,
+                "price": self.__fit_unit(req.price, min_unit),
                 "timeInForce": "GTC",
             }
             data_order.update(tmp)
 
         tmp = {
-            "instrument": INST_ID_DICT[req.inst_msg.instrument_id],
+            "instrument": INST_ID_DICT[req.inst_msg.inst_id],
             "units": req.units,
             "positionFill": "DEFAULT",
             "takeProfitOnFill": {
                 "timeInForce": "GTC",
-                "price": req.take_profit_price
+                "price": self.__fit_unit(req.take_profit_price, min_unit)
             },
             "stopLossOnFill": {
                 "timeInForce": "GTC",
-                "price": req.stop_loss_price
+                "price": self.__fit_unit(req.stop_loss_price, min_unit)
             },
         }
         data_order.update(tmp)
@@ -335,13 +339,15 @@ class OrderService(ServiceAbs):
     def __make_data_for_trade_crcdo(self,
                                     req: SrvTypeRequest,
                                     ) -> JsonFmt:
+
+        min_unit = MIN_UNIT_DICT[req.inst_msg.inst_id]
         data = {
             "takeProfit": {
-                "price": req.take_profit_price,
+                "price": self.__fit_unit(req.take_profit_price, min_unit),
                 "timeInForce": "GTC",
             },
             "stopLoss": {
-                "price": req.stop_loss_price,
+                "price": self.__fit_unit(req.stop_loss_price, min_unit),
                 "timeInForce": "GTC",
             },
         }
@@ -439,7 +445,7 @@ class OrderService(ServiceAbs):
 
             if "orderFillTransaction" in apirsp.keys():
                 data_oft = apirsp["orderFillTransaction"]
-                rsp.inst_msg.instrument_id = INST_NAME_DICT[data_oft["instrument"]]
+                rsp.inst_msg.inst_id = INST_NAME_DICT[data_oft["instrument"]]
                 rsp.time = data_oft["time"]
                 data_tc = data_oft["tradesClosed"][0]
                 rsp.units = int(data_tc["units"])
@@ -464,7 +470,7 @@ class OrderService(ServiceAbs):
             if "order" in apirsp.keys():
                 data_ord = apirsp["order"]
                 rsp.ordertype_msg.type = ORDER_TYP_NAME_DICT[data_ord["type"]]
-                rsp.inst_msg.instrument_id = INST_NAME_DICT[data_ord["instrument"]]
+                rsp.inst_msg.inst_id = INST_NAME_DICT[data_ord["instrument"]]
                 rsp.units = int(data_ord["units"])
                 rsp.price = float(data_ord["price"])
                 rsp.order_state_msg.state = ORDER_STS_DICT[data_ord["state"]]
@@ -497,6 +503,11 @@ class OrderService(ServiceAbs):
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
 
         return rsp
+
+    def __fit_unit(self, value: float, min_unit: str):
+        tmp = Decimal(str(value)).quantize(Decimal(min_unit),
+                                           rounding=ROUND_HALF_UP)
+        return str(tmp)
 
 
 def main(args=None):

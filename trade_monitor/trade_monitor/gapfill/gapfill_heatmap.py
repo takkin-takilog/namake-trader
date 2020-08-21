@@ -385,6 +385,9 @@ class HeatMapChartView(HeatMapChartViewAbs):
         intensity_max_abs = max(abs(max_val), abs(min_val))
         """
         intensity_max = df.max().max()
+        if intensity_max < 1:
+            intensity_max = abs(df.min().min())
+
         gradMng.updateColorTable(intensity_max)
 
         rows_list = [n for n in df.index.to_list()]
@@ -437,6 +440,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         intensity_max = df.max().max()
         if intensity_max < 1:
             intensity_max = abs(df.min().min())
+
         gradMng.updateColorTable(intensity_max)
 
         self.__sts_bar.set_label_text("Generating Heat Map : [3/3]")

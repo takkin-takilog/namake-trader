@@ -9,7 +9,7 @@ int32 INST_EUR_USD=3	# EUR/USD
 int32 req_id
 
 # The instrument ID.
-int32 instrument_id
+int32 inst_id
 
 # The number of units to open order for.
 # If positive value is set, it is a "buy" direction,
@@ -23,6 +23,6 @@ float32 take_profit_price
 float32 stop_loss_price
 
 # The valid period of the settlement order.
-# Format is "%Y-%m-%dT%H:%M:00.000000000Z"
+# Format is "%Y-%m-%d %H:%M:%S.%f".
 # If want to set indefinite period, set blank as "".
 string valid_period_settlement

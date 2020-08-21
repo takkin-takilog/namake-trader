@@ -117,8 +117,8 @@ class CandlesData():
 
             # publish
             msg = HistoricalCandles()
-            msg.gran_msg.granularity_id = gran_id
-            msg.inst_msg.instrument_id = inst_id
+            msg.gran_msg.gran_id = gran_id
+            msg.inst_msg.inst_id = inst_id
             msg.cndl_msg_list = []
             for time, sr in df_comp.iterrows():
                 cnd = Candle()
@@ -237,8 +237,6 @@ class CandlesData():
 
                 self.__logger.debug("<Update> inst_id:[%d], gran_id:[%d] last_update_time:[%s]"
                                     % (self.__inst_id, self.__gran_id, self.__next_update_time))
-                self.__logger.debug("- df_comp:%s" % (self.__df_comp.index.tolist()))
-                self.__logger.debug("- df_prov:%s" % (self.__df_prov.index.tolist()))
             else:
                 if time.monotonic() >= self.__timeout_end:
                     self.__future = None
@@ -250,8 +248,8 @@ class CandlesData():
 
         req = CandlesSrv.Request()
 
-        req.inst_msg.instrument_id = self.__inst_id
-        req.gran_msg.granularity_id = self.__gran_id
+        req.inst_msg.inst_id = self.__inst_id
+        req.gran_msg.gran_id = self.__gran_id
 
         req.dt_from = dt_from.strftime(self.DT_FMT)
         req.dt_to = dt_to.strftime(self.DT_FMT)
@@ -342,6 +340,9 @@ class CandlesData():
                 self.__df_prov = df_prov
             else:
                 self.__df_prov = self.__df_prov[:0]  # All data delete
+
+            self.__logger.debug("- df_comp:%s" % (df_comp.index.tolist()))
+            self.__logger.debug("- df_prov:%s" % (df_prov.index.tolist()))
 
 
 class CandlestickManager(Node):
@@ -487,8 +488,8 @@ class CandlestickManager(Node):
 
         logger.debug("========== Service[candles_monitor]:Start ==========")
         logger.debug("<Request>")
-        logger.debug("- gran_msg.granularity_id:[%d]" % (req.gran_msg.granularity_id))
-        logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
+        logger.debug("- gran_msg.gran_id:[%d]" % (req.gran_msg.gran_id))
+        logger.debug("- inst_msg.inst_id:[%d]" % (req.inst_msg.inst_id))
         logger.debug("- dt_from:[%s]" % (req.dt_from))
         logger.debug("- dt_to:[%s]" % (req.dt_to))
         dbg_tm_start = dt.datetime.now()
@@ -504,8 +505,8 @@ class CandlestickManager(Node):
         if req.dt_to != INF:
             dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
 
-        df = self.__get_dataframe(req.inst_msg.instrument_id,
-                                  req.gran_msg.granularity_id,
+        df = self.__get_dataframe(req.inst_msg.inst_id,
+                                  req.gran_msg.gran_id,
                                   dt_from,
                                   dt_to)
 

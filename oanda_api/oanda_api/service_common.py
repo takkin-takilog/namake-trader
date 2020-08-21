@@ -19,6 +19,12 @@ INST_ID_DICT = {
     Instrument.INST_EUR_USD: "EUR_USD",
 }
 
+MIN_UNIT_DICT = {
+    Instrument.INST_USD_JPY: "0.001",
+    Instrument.INST_EUR_JPY: "0.001",
+    Instrument.INST_EUR_USD: "0.00001",
+}
+
 GRAN_ID_DICT = {
     Granularity.GRAN_M1: "M1",  # 1 minute
     Granularity.GRAN_M2: "M2",  # 2 minutes

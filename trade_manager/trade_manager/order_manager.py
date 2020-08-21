@@ -55,7 +55,7 @@ class OrderState(object):
         self.__order_id = 0
         self.__trade_id = 0
 
-        self.__inst_id = msg.instrument_id
+        self.__inst_id = msg.inst_id
         self.__units = msg.units
 
         if not order_typ == self.ORDER_TYP_MARKET:
@@ -459,7 +459,7 @@ class OrderManager(Node):
         logger = self._logger
         logger.debug("========== Topic[market_order_request]:Start ==========")
         logger.debug("- req_id:[%d]" % (msg.req_id))
-        logger.debug("- instrument_id:[%d]" % (msg.instrument_id))
+        logger.debug("- inst_id:[%d]" % (msg.inst_id))
         logger.debug("- units:[%d]" % (msg.units))
         logger.debug("- take_profit_price:[%f]" % (msg.take_profit_price))
         logger.debug("- stop_loss_price:[%f]" % (msg.stop_loss_price))
@@ -469,7 +469,7 @@ class OrderManager(Node):
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_MARKET
-        req.inst_msg.instrument_id = msg.instrument_id
+        req.inst_msg.inst_id = msg.inst_id
         req.units = msg.units
         req.take_profit_price = msg.take_profit_price
         req.stop_loss_price = msg.stop_loss_price
@@ -484,7 +484,7 @@ class OrderManager(Node):
         logger = self._logger
         logger.debug("========== Topic[limit_order_request]:Start ==========")
         logger.debug("- req_id:[%d]" % (msg.req_id))
-        logger.debug("- instrument_id:[%d]" % (msg.instrument_id))
+        logger.debug("- inst_id:[%d]" % (msg.inst_id))
         logger.debug("- units:[%d]" % (msg.units))
         logger.debug("- price:[%f]" % (msg.price))
         logger.debug("- valid_period_new:[%s]" % (msg.valid_period_new))
@@ -496,7 +496,7 @@ class OrderManager(Node):
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_LIMIT
-        req.inst_msg.instrument_id = msg.instrument_id
+        req.inst_msg.inst_id = msg.inst_id
         req.units = msg.units
         req.price = msg.price
         req.take_profit_price = msg.take_profit_price
@@ -512,7 +512,7 @@ class OrderManager(Node):
         logger = self._logger
         logger.debug("========== Topic[stop_order_request]:Start ==========")
         logger.debug("- req_id:[%d]" % (msg.req_id))
-        logger.debug("- instrument_id:[%d]" % (msg.instrument_id))
+        logger.debug("- inst_id:[%d]" % (msg.inst_id))
         logger.debug("- units:[%d]" % (msg.units))
         logger.debug("- price:[%f]" % (msg.price))
         logger.debug("- valid_period_new:[%s]" % (msg.valid_period_new))
@@ -524,7 +524,7 @@ class OrderManager(Node):
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_STOP
-        req.inst_msg.instrument_id = msg.instrument_id
+        req.inst_msg.inst_id = msg.inst_id
         req.units = msg.units
         req.price = msg.price
         req.take_profit_price = msg.take_profit_price

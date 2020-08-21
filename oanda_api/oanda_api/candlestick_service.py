@@ -68,8 +68,8 @@ class CandlestickService(ServiceAbs):
 
         self._logger.debug("========== Service[candles]:Start ==========")
         self._logger.debug("<Request>")
-        self._logger.debug("- gran_msg.granularity_id:[%d]" % (req.gran_msg.granularity_id))
-        self._logger.debug("- inst_msg.instrument_id:[%d]" % (req.inst_msg.instrument_id))
+        self._logger.debug("- gran_msg.gran_id:[%d]" % (req.gran_msg.gran_id))
+        self._logger.debug("- inst_msg.inst_id:[%d]" % (req.inst_msg.inst_id))
         self._logger.debug("- dt_from:[%s]" % (req.dt_from))
         self._logger.debug("- dt_to:[%s]" % (req.dt_to))
 
@@ -91,7 +91,7 @@ class CandlestickService(ServiceAbs):
             self._logger.debug("========== Service[candles]:End ==========")
             return rsp
 
-        gran_id = req.gran_msg.granularity_id
+        gran_id = req.gran_msg.gran_id
         minunit = self.DT_OFT_DICT[gran_id]
         dt_from = dt.datetime.strptime(req.dt_from, self.DT_FMT)
         dt_to = dt.datetime.strptime(req.dt_to, self.DT_FMT)
@@ -104,7 +104,7 @@ class CandlestickService(ServiceAbs):
             dt_from = dtnow - dt.timedelta(seconds=1)
 
         gran = GRAN_ID_DICT[gran_id]
-        inst = INST_ID_DICT[req.inst_msg.instrument_id]
+        inst = INST_ID_DICT[req.inst_msg.inst_id]
         tmpdt = dt_from
         from_ = dt_from
         tmplist = []

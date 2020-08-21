@@ -6,6 +6,9 @@
 # The ID of the Trade that was opened.
 int32 trade_id
 
+# Instrument to open the order on.
+api_msgs/Instrument inst_msg
+
 # The take profit price.
 float32 take_profit_price
 

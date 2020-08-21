@@ -24,4 +24,4 @@ int32 GRAN_D=501    # 1 Day
 int32 GRAN_W=601    # 1 Week
 
 # The granularity ID.
-int32 granularity_id
+int32 gran_id

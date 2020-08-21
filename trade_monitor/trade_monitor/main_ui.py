@@ -64,8 +64,8 @@ class MainUi():
         gran_id = GRAN_MSG_LIST[gran_idx].msg_id
 
         req = CandlesMntSrv.Request()
-        req.gran_msg.granularity_id = gran_id
-        req.inst_msg.instrument_id = inst_id
+        req.gran_msg.gran_id = gran_id
+        req.inst_msg.inst_id = inst_id
         req.dt_from = dt_from.strftime(DT_FMT)
         req.dt_to = dt_to.strftime(DT_FMT)
 
