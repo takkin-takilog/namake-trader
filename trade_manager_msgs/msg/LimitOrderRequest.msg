@@ -20,6 +20,7 @@ int32 units
 float32 price
 
 # The valid period of the new order.
+# Format is "%Y-%m-%dT%H:%M:00.000000000Z"
 # If want to set indefinite period, set blank as "".
 string valid_period_new
 
@@ -30,5 +31,6 @@ float32 take_profit_price
 float32 stop_loss_price
 
 # The valid period of the settlement order.
+# Format is "%Y-%m-%dT%H:%M:00.000000000Z"
 # If want to set indefinite period, set blank as "".
 string valid_period_settlement
