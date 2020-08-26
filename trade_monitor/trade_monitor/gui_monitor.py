@@ -31,6 +31,7 @@ class GuiMonitor(QMainWindow):
 
         # set comboBox of Instrument
         utl.remove_all_items_of_comboBox(ui.comboBox_inst_main)
+        utl.remove_all_items_of_comboBox(ui.comboBox_inst_gapfill)
         for obj in INST_MSG_LIST:
             ui.comboBox_inst_main.addItem(obj.text)
             ui.comboBox_inst_gapfill.addItem(obj.text)

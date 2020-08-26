@@ -4,16 +4,14 @@ import pandas as pd
 import time
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
-from rclpy.publisher import Publisher
 from rclpy.task import Future
 from api_msgs.srv import CandlesSrv
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
 from trade_manager_msgs.srv import CandlesMntSrv
+from trade_manager_msgs.srv import HistoricalCandlesSrv
 from trade_manager_msgs.msg import Candle
-from trade_manager_msgs.msg import HistoricalCandles
 from trade_manager_msgs.msg import CandleMnt
 from trade_manager_msgs.msg import Instrument as InstTm
 from trade_manager_msgs.msg import Granularity as GranTm
@@ -70,7 +68,6 @@ class CandlesData():
     def __init__(self,
                  node: Node,
                  srv_cli: Client,
-                 pub: Publisher,
                  inst_id: InstTm,
                  gran_id: GranTm,
                  data_length: int
@@ -115,41 +112,12 @@ class CandlesData():
             df_comp = df[(df[self.COL_NAME_COMP])]
             df_prov = df[~(df[self.COL_NAME_COMP])]
 
-            # publish
-            msg = HistoricalCandles()
-            msg.gran_msg.gran_id = gran_id
-            msg.inst_msg.inst_id = inst_id
-            msg.cndl_msg_list = []
-            for time, sr in df_comp.iterrows():
-                cnd = Candle()
-                cnd.ask_o = sr[self.COL_NAME_ASK_OP]
-                cnd.ask_h = sr[self.COL_NAME_ASK_HI]
-                cnd.ask_l = sr[self.COL_NAME_ASK_LO]
-                cnd.ask_c = sr[self.COL_NAME_ASK_CL]
-                cnd.bid_o = sr[self.COL_NAME_BID_OP]
-                cnd.bid_h = sr[self.COL_NAME_BID_HI]
-                cnd.bid_l = sr[self.COL_NAME_BID_LO]
-                cnd.bid_c = sr[self.COL_NAME_BID_CL]
-                cnd.mid_o = sr[self.COL_NAME_MID_OP]
-                cnd.mid_h = sr[self.COL_NAME_MID_HI]
-                cnd.mid_l = sr[self.COL_NAME_MID_LO]
-                cnd.mid_c = sr[self.COL_NAME_MID_CL]
-                cnd.half_spread_cost_o = sr[self.COL_NAME_HSC_OP]
-                cnd.half_spread_cost_h = sr[self.COL_NAME_HSC_HI]
-                cnd.half_spread_cost_l = sr[self.COL_NAME_HSC_LO]
-                cnd.half_spread_cost_c = sr[self.COL_NAME_HSC_CL]
-                cnd.time = time.strftime(self.DT_FMT)
-                cnd.is_complete = sr[self.COL_NAME_COMP]
-                msg.cndl_msg_list.append(cnd)
-            pub.publish(msg)
-
             self.__interval = interval
             self.__next_update_time = self.__get_next_update_time(gran_id, dt_now)
             self.__df_comp = df_comp
             self.__df_prov = df_prov
             self.__future = None
             self.__timeout_end = 0.0
-            self.__pub = pub
 
             self.__logger.debug("- last_update_time:[%s]" % (self.__next_update_time))
             self.__logger.debug("----- Create CandlesData:End -----")
@@ -347,6 +315,19 @@ class CandlesData():
 
 class CandlestickManager(Node):
 
+    INST_ID_LIST = [
+        InstApi.INST_USD_JPY,
+        InstApi.INST_EUR_JPY,
+        InstApi.INST_EUR_USD,
+    ]
+
+    GRAN_ID_LIST = [
+        GranApi.GRAN_D,
+        GranApi.GRAN_H4,
+        GranApi.GRAN_H1,
+        GranApi.GRAN_M10
+    ]
+
     DATA_LENGTH_DICT = {
         GranApi.GRAN_M1: 60 * 24 * 10,   # 10 Days
         GranApi.GRAN_M2: 30 * 24 * 10,   # 10 Days
@@ -376,12 +357,6 @@ class CandlestickManager(Node):
         self.__logger = super().get_logger()
         self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
-        self.__inst_id_list = [InstApi.INST_USD_JPY]
-        self.__gran_id_list = [GranApi.GRAN_D,
-                               GranApi.GRAN_H4,
-                               GranApi.GRAN_H1,
-                               GranApi.GRAN_M10]
-
         # Create service server "CandlesMonitor"
         srv_type = CandlesMntSrv
         srv_name = "candles_monitor"
@@ -400,22 +375,22 @@ class CandlestickManager(Node):
             self.destroy_node()
             rclpy.shutdown()
 
-        # Create publisher "HistoricalCandles"
-        msg_type = HistoricalCandles
-        topic = "historical_candles"
-        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
-                                 reliability=QoSReliabilityPolicy.RELIABLE)
-        pub_hc = self.create_publisher(msg_type, topic, qos_profile)
-
         # initialize "data_map"
-        self.__init_data_map(cli_cdl, pub_hc)
+        self.__init_data_map(cli_cdl)
+
+        # Create service server "HistoricalCandles"
+        srv_type = HistoricalCandlesSrv
+        srv_name = "historical_candles"
+        callback = self.__on_recv_historical_candles
+        self.__hc_srv = self.create_service(srv_type,
+                                            srv_name,
+                                            callback)
 
         # Timer(1s)
         self.__timer_1s = self.create_timer(timer_period_sec=1.0,
                                             callback=self.__on_timeout_1s)
 
         self.__cli_cdl = cli_cdl
-        self.__pub_hc = pub_hc
 
         """
         dt_from = dt.datetime(2020, 5, 1)
@@ -435,14 +410,14 @@ class CandlestickManager(Node):
         print(df)
         """
 
-    def __init_data_map(self, cli: Client, pub: Publisher) -> None:
+    def __init_data_map(self, cli: Client) -> None:
 
         obj_map_dict = {}
-        for inst_id in self.__inst_id_list:
+        for inst_id in self.INST_ID_LIST:
             gran_dict = {}
-            for gran_id in self.__gran_id_list:
+            for gran_id in self.GRAN_ID_LIST:
                 data_len = self.DATA_LENGTH_DICT[gran_id]
-                obj = CandlesData(self, cli, pub, inst_id, gran_id, data_len)
+                obj = CandlesData(self, cli, inst_id, gran_id, data_len)
                 tmp = {gran_id: obj}
                 gran_dict.update(tmp)
             tmp = {inst_id: gran_dict}
@@ -479,6 +454,66 @@ class CandlestickManager(Node):
                 raise RuntimeError("Interrupted while waiting for service.")
             self.__logger.info("Waiting for [%s] service..." % (srv_name))
         return cli
+
+    def __on_recv_historical_candles(self,
+                                     req: SrvTypeRequest,
+                                     rsp: SrvTypeResponse
+                                     ) -> SrvTypeResponse:
+        logger = self._logger
+
+        logger.debug("========== Service[historical_candles]:Start ==========")
+        logger.debug("<Request>")
+        logger.debug("- gran_msg.gran_id:[%d]" % (req.gran_msg.gran_id))
+        logger.debug("- inst_msg.inst_id:[%d]" % (req.inst_msg.inst_id))
+        logger.debug("- dt_from:[%s]" % (req.dt_from))
+        logger.debug("- dt_to:[%s]" % (req.dt_to))
+        dbg_tm_start = dt.datetime.now()
+
+        DT_FMT = CandlesData.DT_FMT
+
+        if req.dt_from == "":
+            dt_from = None
+        else:
+            dt_from = dt.datetime.strptime(req.dt_from, DT_FMT)
+
+        if req.dt_to == "":
+            dt_to = None
+        else:
+            dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
+
+        df = self.__get_dataframe(req.inst_msg.inst_id,
+                                  req.gran_msg.gran_id,
+                                  dt_from,
+                                  dt_to)
+
+        rsp.cndl_msg_list = []
+        if not df.empty:
+            for time, sr in df.iterrows():
+                msg = Candle()
+                msg.ask_o = sr[CandlesData.COL_NAME_ASK_OP]
+                msg.ask_h = sr[CandlesData.COL_NAME_ASK_HI]
+                msg.ask_l = sr[CandlesData.COL_NAME_ASK_LO]
+                msg.ask_c = sr[CandlesData.COL_NAME_ASK_CL]
+                msg.mid_o = sr[CandlesData.COL_NAME_MID_OP]
+                msg.mid_h = sr[CandlesData.COL_NAME_MID_HI]
+                msg.mid_l = sr[CandlesData.COL_NAME_MID_LO]
+                msg.mid_c = sr[CandlesData.COL_NAME_MID_CL]
+                msg.bid_o = sr[CandlesData.COL_NAME_BID_OP]
+                msg.bid_h = sr[CandlesData.COL_NAME_BID_HI]
+                msg.bid_l = sr[CandlesData.COL_NAME_BID_LO]
+                msg.bid_c = sr[CandlesData.COL_NAME_BID_CL]
+                msg.time = time.strftime(DT_FMT)
+                msg.is_complete = sr[CandlesData.COL_NAME_COMP]
+                rsp.cndl_msg_list.append(msg)
+
+        dbg_tm_end = dt.datetime.now()
+        logger.debug("<Response>")
+        logger.debug("- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+        logger.debug("[Performance]")
+        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
+        logger.debug("========== Service[historical_candles]:End ==========")
+
+        return rsp
 
     def __on_recv_candlesnt_mnt(self,
                                 req: SrvTypeRequest,
@@ -541,8 +576,8 @@ class CandlestickManager(Node):
 
     def __on_timeout_1s(self) -> None:
 
-        for inst_id in self.__inst_id_list:
-            for gran_id in self.__gran_id_list:
+        for inst_id in self.INST_ID_LIST:
+            for gran_id in self.GRAN_ID_LIST:
                 obj = self.__obj_map_dict[inst_id][gran_id]
                 obj.update_not_complete_data()
 
