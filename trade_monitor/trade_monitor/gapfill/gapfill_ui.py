@@ -257,6 +257,7 @@ class GapFillUi():
         df_param = pd.DataFrame(data, columns=columns)
         self.__df_param = df_param.set_index(COL_NAME_DATE)
 
+        """
         # Heat map data
         self.__hmap_range_start = rsp.heatmap_range_start
         self.__hmap_range_end = rsp.heatmap_range_end
@@ -273,6 +274,7 @@ class GapFillUi():
             data.append(idx + heatmapmsg.data_list.tolist())
         df_hmap = pd.DataFrame(data, columns=columns)
         self.__df_hmap = df_hmap.set_index(hm_idx)
+        """
 
         header = self.__ui.treeView_gapfill.header()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
