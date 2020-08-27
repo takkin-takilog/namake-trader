@@ -336,7 +336,7 @@ class OrderManager(Node):
 
         msg_type = Bool
         topic = TPCNM_POLLING
-        callback = self.__on_recv_polling
+        callback = self.__on_subs_polling
         self.__sub_stp_req = self.create_subscription(msg_type,
                                                       topic,
                                                       callback,
@@ -535,7 +535,7 @@ class OrderManager(Node):
         obj = OrderState(order_typ, msg, future, logger)
         self.__ordlist.append(obj)
 
-    def __on_recv_polling(self, msg: MsgType) -> None:
+    def __on_subs_polling(self, msg: MsgType) -> None:
         logger = self._logger
         logger.debug("========== Topic[polling]:Start ==========")
         if msg.data is True:

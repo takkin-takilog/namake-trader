@@ -530,14 +530,15 @@ class CandlestickManager(Node):
         dbg_tm_start = dt.datetime.now()
 
         DT_FMT = CandlesData.DT_FMT
-        INF = "inf"
 
-        dt_from = None
-        if req.dt_from != INF:
+        if req.dt_from == "":
+            dt_from = None
+        else:
             dt_from = dt.datetime.strptime(req.dt_from, DT_FMT)
 
-        dt_to = None
-        if req.dt_to != INF:
+        if req.dt_to == "":
+            dt_to = None
+        else:
             dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
 
         df = self.__get_dataframe(req.inst_msg.inst_id,

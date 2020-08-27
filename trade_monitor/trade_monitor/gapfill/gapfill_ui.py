@@ -293,90 +293,92 @@ class GapFillUi():
 
     def __on_selection_gapfill_changed(self, selected, deselected):
 
-        gran_id = Gran.GRAN_M10
-        inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
-        model_index = selected.at(0).indexes()[0]
-        trg_date_str = self.__qstd_itm_mdl.item(model_index.row()).text()
-        self.__logger.debug("target_date: " + trg_date_str)
-        trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
+        qisr0 = selected.at(0)
 
-        dt_from = trg_date - dt.timedelta(days=2)
-        dt_to = trg_date + dt.timedelta(hours=12)
+        if qisr0 is not None:
+            model_index = qisr0.indexes()[0]
+            trg_date_str = self.__qstd_itm_mdl.item(model_index.row()).text()
+            self.__logger.debug("target_date: " + trg_date_str)
+            trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
 
-        req = CandlesMntSrv.Request()
-        req.gran_msg.gran_id = gran_id
-        req.inst_msg.inst_id = INST_MSG_LIST[inst_idx].msg_id
-        req.dt_from = dt_from.strftime(DT_FMT)
-        req.dt_to = dt_to.strftime(DT_FMT)
+            dt_from = trg_date - dt.timedelta(days=2)
+            dt_to = trg_date + dt.timedelta(hours=12)
 
-        self.__logger.debug("dt_from: " + req.dt_from)
-        self.__logger.debug("dt_to: " + req.dt_to)
+            inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
+            req = CandlesMntSrv.Request()
+            req.gran_msg.gran_id = Gran.GRAN_M10
+            req.inst_msg.inst_id = INST_MSG_LIST[inst_idx].msg_id
+            req.dt_from = dt_from.strftime(DT_FMT)
+            req.dt_to = dt_to.strftime(DT_FMT)
 
-        future = self.__cli_cdl.call_async(req)
-        rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
+            self.__logger.debug("dt_from: " + req.dt_from)
+            self.__logger.debug("dt_to: " + req.dt_to)
 
-        flg = future.done() and future.result() is not None
-        assert flg, "initial fetch [Day Candle] failed!"
+            future = self.__cli_cdl.call_async(req)
+            rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
 
-        data = []
-        rsp = future.result()
-        for cndl_msg in rsp.cndl_msg_list:
-            dt_ = dt.datetime.strptime(cndl_msg.time, DT_FMT)
-            data.append([dt_,
-                         cndl_msg.ask_o,
-                         cndl_msg.ask_h,
-                         cndl_msg.ask_l,
-                         cndl_msg.ask_c,
-                         cndl_msg.mid_o,
-                         cndl_msg.mid_h,
-                         cndl_msg.mid_l,
-                         cndl_msg.mid_c,
-                         cndl_msg.bid_o,
-                         cndl_msg.bid_h,
-                         cndl_msg.bid_l,
-                         cndl_msg.bid_c,
-                         cndl_msg.is_complete
-                         ])
+            flg = future.done() and future.result() is not None
+            assert flg, "initial fetch [Day Candle] failed!"
 
-        df = pd.DataFrame(data)
-        df.columns = CANDLE_COL_NAME_LIST
-        df = df.set_index(COL_NAME_TIME)
+            data = []
+            rsp = future.result()
+            for cndl_msg in rsp.cndl_msg_list:
+                dt_ = dt.datetime.strptime(cndl_msg.time, DT_FMT)
+                data.append([dt_,
+                             cndl_msg.ask_o,
+                             cndl_msg.ask_h,
+                             cndl_msg.ask_l,
+                             cndl_msg.ask_c,
+                             cndl_msg.mid_o,
+                             cndl_msg.mid_h,
+                             cndl_msg.mid_l,
+                             cndl_msg.mid_c,
+                             cndl_msg.bid_o,
+                             cndl_msg.bid_h,
+                             cndl_msg.bid_l,
+                             cndl_msg.bid_c,
+                             cndl_msg.is_complete
+                             ])
 
-        sr_gf = self.__df_param.loc[trg_date_str]
+            df = pd.DataFrame(data)
+            df.columns = CANDLE_COL_NAME_LIST
+            df = df.set_index(COL_NAME_TIME)
 
-        df_prev = df.loc[:, GapFillUi.ALL_COLUMNS]
-        df_curr = df.loc[:, GapFillUi.ALL_COLUMNS]
+            sr_gf = self.__df_param.loc[trg_date_str]
 
-        th = df_prev.index[-1] - dt.timedelta(days=1)
-        df_prev = df_prev[df_prev.index < th].tail(self.DRAW_CANDLE_COUNT)
+            df_prev = df.loc[:, GapFillUi.ALL_COLUMNS]
+            df_curr = df.loc[:, GapFillUi.ALL_COLUMNS]
 
-        th = df_curr.index[-1] - dt.timedelta(days=1)
-        df_curr = df_curr[th < df_curr.index].head(self.DRAW_CANDLE_COUNT)
+            th = df_prev.index[-1] - dt.timedelta(days=1)
+            df_prev = df_prev[df_prev.index < th].tail(self.DRAW_CANDLE_COUNT)
 
-        max_prev = df_prev[COL_NAME_ASK_HI].max()
-        min_prev = df_prev[COL_NAME_BID_LO].min()
-        max_curr = df_curr[COL_NAME_ASK_HI].max()
-        min_curr = df_curr[COL_NAME_BID_LO].min()
+            th = df_curr.index[-1] - dt.timedelta(days=1)
+            df_curr = df_curr[th < df_curr.index].head(self.DRAW_CANDLE_COUNT)
 
-        max_y = max(max_prev, max_curr)
-        min_y = min(min_prev, min_curr)
+            max_prev = df_prev[COL_NAME_ASK_HI].max()
+            min_prev = df_prev[COL_NAME_BID_LO].min()
+            max_curr = df_curr[COL_NAME_ASK_HI].max()
+            min_curr = df_curr[COL_NAME_BID_LO].min()
 
-        self.__chart_prev.set_max_y(max_y)
-        self.__chart_prev.set_min_y(min_y)
-        self.__chart_curr.set_max_y(max_y)
-        self.__chart_curr.set_min_y(min_y)
+            max_y = max(max_prev, max_curr)
+            min_y = min(min_prev, min_curr)
 
-        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+            self.__chart_prev.set_max_y(max_y)
+            self.__chart_prev.set_min_y(min_y)
+            self.__chart_curr.set_max_y(max_y)
+            self.__chart_curr.set_min_y(min_y)
 
-        idx = self.__ui.comboBox_spread_prev.currentIndex()
-        self.__update_prev_chart(idx, df_prev, sr_gf, decimal_digit)
+            decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
 
-        idx = self.__ui.comboBox_spread_curr.currentIndex()
-        self.__update_curr_chart(idx, df_curr, sr_gf, decimal_digit)
+            idx = self.__ui.comboBox_spread_prev.currentIndex()
+            self.__update_prev_chart(idx, df_prev, sr_gf, decimal_digit)
 
-        self.__sr_gf = sr_gf
-        self.__df_prev = df_prev
-        self.__df_curr = df_curr
+            idx = self.__ui.comboBox_spread_curr.currentIndex()
+            self.__update_curr_chart(idx, df_curr, sr_gf, decimal_digit)
+
+            self.__sr_gf = sr_gf
+            self.__df_prev = df_prev
+            self.__df_curr = df_curr
 
     def resize_chart_widget(self):
         fs = self.__ui.widget_chart_gapfill_prev.frameSize()
