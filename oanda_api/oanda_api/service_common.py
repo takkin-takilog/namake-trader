@@ -13,11 +13,13 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 ApiRsp = TypeVar("ApiRsp")
 EndPoint = TypeVar("EndPoint")
 
+"""
 INST_ID_DICT = {
     Instrument.INST_USD_JPY: "USD_JPY",
     Instrument.INST_EUR_JPY: "EUR_JPY",
     Instrument.INST_EUR_USD: "EUR_USD",
 }
+"""
 
 MIN_UNIT_DICT = {
     Instrument.INST_USD_JPY: "0.001",
