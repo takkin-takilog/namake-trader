@@ -7,6 +7,7 @@ from api_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error, StreamTerminated
+from oanda_api.service_common import INST_ID_DICT
 
 MsgType = TypeVar("MsgType")
 
@@ -22,7 +23,7 @@ class PricingStreamer(Node):
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
         PRMNM_ACCESS_TOKEN = "access_token"
-        PRMNM_INST_NAME_LIST = "inst_name_list"
+        PRMNM_INSTRUMENT_ID = "instrument_id"
         TPCNM_PRICING = "pricing_"
         TPCNM_HEARTBEAT = "heart_beat"
         TPCNM_ACT_FLG = "activate_flag"
@@ -30,17 +31,22 @@ class PricingStreamer(Node):
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
-        self.declare_parameter(PRMNM_INST_NAME_LIST)
+        self.declare_parameter(PRMNM_INSTRUMENT_ID)
 
         # Initialize
         self.__act_flg = True
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        inst_name_list = self.get_parameter(PRMNM_INST_NAME_LIST).value
+        inst_id_list = self.get_parameter(PRMNM_INSTRUMENT_ID).value
         self.__logger.debug("[Param]Account Number:[%s]" % account_number)
         self.__logger.debug("[Param]Access Token:[%s]" % access_token)
-        self.__logger.debug("[Param]Instruments:[%s]" % inst_name_list)
+        self.__logger.debug("[Param]Instruments:[%s]" % inst_id_list)
+
+        inst_name_list = []
+        for inst_id in inst_id_list:
+            inst_name = INST_ID_DICT[inst_id]
+            inst_name_list.append(inst_name)
 
         self.__api = API(access_token=access_token)
 

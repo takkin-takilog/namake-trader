@@ -6,7 +6,7 @@ from api_msgs.msg import Granularity, Candle
 from api_msgs.msg import FailReasonCode as frc
 from api_msgs.srv import CandlesSrv
 from oanda_api.service_common import ServiceAbs
-from oanda_api.service_common import GRAN_ID_DICT
+from oanda_api.service_common import INST_ID_DICT, GRAN_ID_DICT
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -44,16 +44,12 @@ class CandlestickService(ServiceAbs):
         super().__init__("candlestick_service")
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
-        PRMNM_INST_NAME_LIST = "inst_name_list"
 
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
-        self.declare_parameter(PRMNM_INST_NAME_LIST)
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        inst_name_list = self.get_parameter(PRMNM_INST_NAME_LIST).value
         self._logger.debug("[Param]Account Number:[%s]" % (account_number))
-        self._logger.debug("[Param]Instruments:[%s]" % inst_name_list)
 
         # Create service server "Candles"
         srv_type = CandlesSrv
@@ -64,7 +60,6 @@ class CandlestickService(ServiceAbs):
                                                  callback)
 
         self.__account_number = account_number
-        self.__inst_name_list = inst_name_list
 
     def __on_recv_candles(self,
                           req: SrvTypeRequest,
@@ -109,7 +104,7 @@ class CandlestickService(ServiceAbs):
             dt_from = dtnow - dt.timedelta(seconds=1)
 
         gran = GRAN_ID_DICT[gran_id]
-        inst = self.__inst_name_list[req.inst_msg.inst_id]
+        inst = INST_ID_DICT[req.inst_msg.inst_id]
         tmpdt = dt_from
         from_ = dt_from
         tmplist = []

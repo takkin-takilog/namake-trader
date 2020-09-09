@@ -11,7 +11,7 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
 from api_msgs.msg import OrderType, OrderState, TradeState
 from api_msgs.msg import FailReasonCode as frc
 from oanda_api.service_common import ServiceAbs
-from oanda_api.service_common import MIN_UNIT_DICT
+from oanda_api.service_common import INST_ID_DICT, MIN_UNIT_DICT
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -30,6 +30,8 @@ ORDER_TYP_DICT = {
 }
 
 ORDER_TYP_NAME_DICT = inverse_dict(ORDER_TYP_DICT)
+
+INST_NAME_DICT = inverse_dict(INST_ID_DICT)
 
 ORDER_STS_DICT = {
     "PENDING": OrderState.STS_PENDING,
@@ -51,16 +53,12 @@ class OrderService(ServiceAbs):
         super().__init__("order_service")
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
-        PRMNM_INST_NAME_LIST = "inst_name_list"
 
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
-        self.declare_parameter(PRMNM_INST_NAME_LIST)
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        inst_name_list = self.get_parameter(PRMNM_INST_NAME_LIST).value
         self._logger.debug("[Param]Account Number:[%s]" % account_number)
-        self._logger.debug("[Param]Instruments:[%s]" % inst_name_list)
 
         # Create service server "OrderCreate"
         srv_type = OrderCreateSrv
@@ -106,7 +104,6 @@ class OrderService(ServiceAbs):
                                                     callback)
 
         self.__account_number = account_number
-        self.__inst_name_list = inst_name_list
 
     def __on_recv_order_create(self,
                                req: SrvTypeRequest,
@@ -323,7 +320,7 @@ class OrderService(ServiceAbs):
             data_order.update(tmp)
 
         tmp = {
-            "instrument": self.__inst_name_list[req.inst_msg.inst_id],
+            "instrument": INST_ID_DICT[req.inst_msg.inst_id],
             "units": req.units,
             "positionFill": "DEFAULT",
             "takeProfitOnFill": {
@@ -448,8 +445,7 @@ class OrderService(ServiceAbs):
 
             if "orderFillTransaction" in apirsp.keys():
                 data_oft = apirsp["orderFillTransaction"]
-                idx = self.__inst_name_list.index(data_oft["instrument"])
-                rsp.inst_msg.inst_id = idx
+                rsp.inst_msg.inst_id = INST_NAME_DICT[data_oft["instrument"]]
                 rsp.time = data_oft["time"]
                 data_tc = data_oft["tradesClosed"][0]
                 rsp.units = int(data_tc["units"])
@@ -474,8 +470,7 @@ class OrderService(ServiceAbs):
             if "order" in apirsp.keys():
                 data_ord = apirsp["order"]
                 rsp.ordertype_msg.type = ORDER_TYP_NAME_DICT[data_ord["type"]]
-                idx = self.__inst_name_list.index(data_ord["instrument"])
-                rsp.inst_msg.inst_id = idx
+                rsp.inst_msg.inst_id = INST_NAME_DICT[data_ord["instrument"]]
                 rsp.units = int(data_ord["units"])
                 rsp.price = float(data_ord["price"])
                 rsp.order_state_msg.state = ORDER_STS_DICT[data_ord["state"]]
