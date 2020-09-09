@@ -11,7 +11,7 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
 from api_msgs.msg import OrderType, OrderState, TradeState
 from api_msgs.msg import FailReasonCode as frc
 from oanda_api.service_common import ServiceAbs
-from oanda_api.service_common import INST_ID_DICT, MIN_UNIT_DICT
+from oanda_api.service_common import INST_DICT
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -30,8 +30,6 @@ ORDER_TYP_DICT = {
 }
 
 ORDER_TYP_NAME_DICT = inverse_dict(ORDER_TYP_DICT)
-
-INST_NAME_DICT = inverse_dict(INST_ID_DICT)
 
 ORDER_STS_DICT = {
     "PENDING": OrderState.STS_PENDING,
@@ -309,7 +307,7 @@ class OrderService(ServiceAbs):
 
         data_order = data["order"]
 
-        min_unit = MIN_UNIT_DICT[req.inst_msg.inst_id]
+        min_unit = INST_DICT[req.inst_msg.inst_id].min_unit
 
         if ((req.ordertype_msg.type == OrderType.TYP_LIMIT)
                 or (req.ordertype_msg.type == OrderType.TYP_STOP)):
@@ -320,7 +318,7 @@ class OrderService(ServiceAbs):
             data_order.update(tmp)
 
         tmp = {
-            "instrument": INST_ID_DICT[req.inst_msg.inst_id],
+            "instrument": INST_DICT[req.inst_msg.inst_id].name,
             "units": req.units,
             "positionFill": "DEFAULT",
             "takeProfitOnFill": {
@@ -340,7 +338,7 @@ class OrderService(ServiceAbs):
                                     req: SrvTypeRequest,
                                     ) -> JsonFmt:
 
-        min_unit = MIN_UNIT_DICT[req.inst_msg.inst_id]
+        min_unit = INST_DICT[req.inst_msg.inst_id].min_unit
         data = {
             "takeProfit": {
                 "price": self.__fit_unit(req.take_profit_price, min_unit),
@@ -445,7 +443,8 @@ class OrderService(ServiceAbs):
 
             if "orderFillTransaction" in apirsp.keys():
                 data_oft = apirsp["orderFillTransaction"]
-                rsp.inst_msg.inst_id = INST_NAME_DICT[data_oft["instrument"]]
+                inst_id = self.get_inst_id_from_name(data_oft["instrument"])
+                rsp.inst_msg.inst_id = inst_id
                 rsp.time = data_oft["time"]
                 data_tc = data_oft["tradesClosed"][0]
                 rsp.units = int(data_tc["units"])
@@ -470,7 +469,8 @@ class OrderService(ServiceAbs):
             if "order" in apirsp.keys():
                 data_ord = apirsp["order"]
                 rsp.ordertype_msg.type = ORDER_TYP_NAME_DICT[data_ord["type"]]
-                rsp.inst_msg.inst_id = INST_NAME_DICT[data_ord["instrument"]]
+                inst_id = self.get_inst_id_from_name(data_ord["instrument"])
+                rsp.inst_msg.inst_id = inst_id
                 rsp.units = int(data_ord["units"])
                 rsp.price = float(data_ord["price"])
                 rsp.order_state_msg.state = ORDER_STS_DICT[data_ord["state"]]
@@ -508,6 +508,15 @@ class OrderService(ServiceAbs):
         tmp = Decimal(str(value)).quantize(Decimal(min_unit),
                                            rounding=ROUND_HALF_UP)
         return str(tmp)
+
+    def get_inst_id_from_name(self, name):
+
+        inst_id = -1
+        for k, v in INST_DICT.items():
+            if v.name == name:
+                inst_id = k
+                break
+        return inst_id
 
 
 def main(args=None):

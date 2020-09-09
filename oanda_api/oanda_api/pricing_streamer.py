@@ -7,7 +7,7 @@ from api_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error, StreamTerminated
-from oanda_api.service_common import INST_ID_DICT
+from oanda_api.service_common import INST_DICT
 
 MsgType = TypeVar("MsgType")
 
@@ -45,7 +45,7 @@ class PricingStreamer(Node):
 
         inst_name_list = []
         for inst_id in inst_id_list:
-            inst_name = INST_ID_DICT[inst_id]
+            inst_name = INST_DICT[inst_id].name
             inst_name_list.append(inst_name)
 
         self.__api = API(access_token=access_token)

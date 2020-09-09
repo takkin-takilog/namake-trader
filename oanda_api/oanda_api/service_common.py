@@ -1,5 +1,6 @@
 from typing import TypeVar
 from typing import Tuple
+import datetime as dt
 import rclpy
 from rclpy.node import Node
 from oandapyV20 import API
@@ -13,36 +14,67 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 ApiRsp = TypeVar("ApiRsp")
 EndPoint = TypeVar("EndPoint")
 
-INST_ID_DICT = {
-    Instrument.INST_USD_JPY: "USD_JPY",
-    Instrument.INST_EUR_JPY: "EUR_JPY",
-    Instrument.INST_EUR_USD: "EUR_USD",
+
+class InstInfo():
+
+    def __init__(self,
+                 name: str,
+                 min_unit: str
+                 ) -> None:
+        self.__name = name
+        self.__min_unit = min_unit
+
+    @property
+    def name(self) -> str:
+        return self.__name
+
+    @property
+    def min_unit(self) -> str:
+        return self.__min_unit
+
+
+class GranInfo():
+
+    def __init__(self,
+                 name: str,
+                 timedelta: dt.timedelta
+                 ) -> None:
+        self.__name = name
+        self.__timedelta = timedelta
+
+    @property
+    def name(self) -> str:
+        return self.__name
+
+    @property
+    def timedelta(self) -> dt.timedelta:
+        return self.__timedelta
+
+
+INST_DICT = {
+    Instrument.INST_USD_JPY: InstInfo("USD_JPY", "0.001"),
+    Instrument.INST_EUR_JPY: InstInfo("EUR_JPY", "0.001"),
+    Instrument.INST_EUR_USD: InstInfo("EUR_USD", "0.00001")
 }
 
-MIN_UNIT_DICT = {
-    Instrument.INST_USD_JPY: "0.001",
-    Instrument.INST_EUR_JPY: "0.001",
-    Instrument.INST_EUR_USD: "0.00001",
-}
-
-GRAN_ID_DICT = {
-    Granularity.GRAN_M1: "M1",  # 1 minute
-    Granularity.GRAN_M2: "M2",  # 2 minutes
-    Granularity.GRAN_M3: "M3",  # 3 minutes
-    Granularity.GRAN_M4: "M4",  # 4 minutes
-    Granularity.GRAN_M5: "M5",  # 5 minutes
-    Granularity.GRAN_M10: "M10",  # 10 minutes
-    Granularity.GRAN_M15: "M15",  # 15 minutes
-    Granularity.GRAN_M30: "M30",  # 30 minutes
-    Granularity.GRAN_H1: "H1",  # 1 hour
-    Granularity.GRAN_H2: "H2",  # 2 hours
-    Granularity.GRAN_H3: "H3",  # 3 hours
-    Granularity.GRAN_H4: "H4",  # 4 hours
-    Granularity.GRAN_H6: "H6",  # 6 hours
-    Granularity.GRAN_H8: "H8",  # 8 hours
-    Granularity.GRAN_H12: "H12",  # 12 hours
-    Granularity.GRAN_D: "D",  # 1 Day
-    Granularity.GRAN_W: "W",  # 1 Week
+GRAN_DICT = {
+    Granularity.GRAN_M1: GranInfo("M1", dt.timedelta(minutes=1)),
+    Granularity.GRAN_M2: GranInfo("M2", dt.timedelta(minutes=2)),
+    Granularity.GRAN_M3: GranInfo("M3", dt.timedelta(minutes=3)),
+    Granularity.GRAN_M4: GranInfo("M4", dt.timedelta(minutes=4)),
+    Granularity.GRAN_M5: GranInfo("M5", dt.timedelta(minutes=5)),
+    Granularity.GRAN_M10: GranInfo("M10", dt.timedelta(minutes=10)),
+    Granularity.GRAN_M15: GranInfo("M15", dt.timedelta(minutes=15)),
+    Granularity.GRAN_M30: GranInfo("M30", dt.timedelta(minutes=30)),
+    Granularity.GRAN_H1: GranInfo("H1", dt.timedelta(hours=1)),
+    Granularity.GRAN_H2: GranInfo("H2", dt.timedelta(hours=2)),
+    Granularity.GRAN_H3: GranInfo("H3", dt.timedelta(hours=3)),
+    Granularity.GRAN_H4: GranInfo("H4", dt.timedelta(hours=4)),
+    Granularity.GRAN_H6: GranInfo("H6", dt.timedelta(hours=6)),
+    Granularity.GRAN_H8: GranInfo("H8", dt.timedelta(hours=8)),
+    Granularity.GRAN_H12: GranInfo("H12", dt.timedelta(hours=12)),
+    Granularity.GRAN_D: GranInfo("D", dt.timedelta(days=1)),
+    Granularity.GRAN_W: GranInfo("W", dt.timedelta(weeks=1))
 }
 
 

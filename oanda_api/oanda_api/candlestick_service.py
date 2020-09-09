@@ -2,11 +2,11 @@ from typing import TypeVar
 import datetime as dt
 import rclpy
 import oandapyV20.endpoints.instruments as instruments
-from api_msgs.msg import Granularity, Candle
+from api_msgs.msg import Candle
 from api_msgs.msg import FailReasonCode as frc
 from api_msgs.srv import CandlesSrv
 from oanda_api.service_common import ServiceAbs
-from oanda_api.service_common import INST_ID_DICT, GRAN_ID_DICT
+from oanda_api.service_common import INST_DICT, GRAN_DICT
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -14,26 +14,6 @@ ApiRsp = TypeVar("ApiRsp")
 
 
 class CandlestickService(ServiceAbs):
-
-    DT_OFT_DICT = {
-        Granularity.GRAN_M1: dt.timedelta(minutes=1),    # 1 minute
-        Granularity.GRAN_M2: dt.timedelta(minutes=2),    # 2 minutes
-        Granularity.GRAN_M3: dt.timedelta(minutes=3),    # 3 minutes
-        Granularity.GRAN_M4: dt.timedelta(minutes=4),    # 4 minutes
-        Granularity.GRAN_M5: dt.timedelta(minutes=5),    # 5 minutes
-        Granularity.GRAN_M10: dt.timedelta(minutes=10),  # 10 minutes
-        Granularity.GRAN_M15: dt.timedelta(minutes=15),  # 15 minutes
-        Granularity.GRAN_M30: dt.timedelta(minutes=30),  # 30 minutes
-        Granularity.GRAN_H1: dt.timedelta(hours=1),      # 1 hour
-        Granularity.GRAN_H2: dt.timedelta(hours=2),      # 2 hours
-        Granularity.GRAN_H3: dt.timedelta(hours=3),      # 3 hours
-        Granularity.GRAN_H4: dt.timedelta(hours=4),      # 4 hours
-        Granularity.GRAN_H6: dt.timedelta(hours=6),      # 6 hours
-        Granularity.GRAN_H8: dt.timedelta(hours=8),      # 8 hours
-        Granularity.GRAN_H12: dt.timedelta(hours=12),    # 12 hours
-        Granularity.GRAN_D: dt.timedelta(days=1),        # 1 Day
-        Granularity.GRAN_W: dt.timedelta(weeks=1),       # 1 Week
-    }
 
     MAX_SIZE = 4999
     # MAX_SIZE = 10    # For test
@@ -92,7 +72,7 @@ class CandlestickService(ServiceAbs):
             return rsp
 
         gran_id = req.gran_msg.gran_id
-        minunit = self.DT_OFT_DICT[gran_id]
+        minunit = GRAN_DICT[gran_id].timedelta
         dt_from = dt.datetime.strptime(req.dt_from, self.DT_FMT)
         dt_to = dt.datetime.strptime(req.dt_to, self.DT_FMT)
         dt_to = dt_to + minunit
@@ -103,8 +83,8 @@ class CandlestickService(ServiceAbs):
         if dtnow - minunit < dt_from:
             dt_from = dtnow - dt.timedelta(seconds=1)
 
-        gran = GRAN_ID_DICT[gran_id]
-        inst = INST_ID_DICT[req.inst_msg.inst_id]
+        gran = GRAN_DICT[gran_id].name
+        inst = INST_DICT[req.inst_msg.inst_id].name
         tmpdt = dt_from
         from_ = dt_from
         tmplist = []
