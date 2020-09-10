@@ -23,7 +23,7 @@ class PricingStreamer(Node):
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
         PRMNM_ACCESS_TOKEN = "access_token"
-        PRMNM_INSTRUMENT_ID = "instrument_id"
+        PRMNM_INST_ID_LIST = "instrument_id_list"
         TPCNM_PRICING = "pricing_"
         TPCNM_HEARTBEAT = "heart_beat"
         TPCNM_ACT_FLG = "activate_flag"
@@ -31,14 +31,14 @@ class PricingStreamer(Node):
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
-        self.declare_parameter(PRMNM_INSTRUMENT_ID)
+        self.declare_parameter(PRMNM_INST_ID_LIST)
 
         # Initialize
         self.__act_flg = True
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        inst_id_list = self.get_parameter(PRMNM_INSTRUMENT_ID).value
+        inst_id_list = self.get_parameter(PRMNM_INST_ID_LIST).value
         self.__logger.debug("[Param]Account Number:[%s]" % account_number)
         self.__logger.debug("[Param]Access Token:[%s]" % access_token)
         self.__logger.debug("[Param]Instruments:[%s]" % inst_id_list)
