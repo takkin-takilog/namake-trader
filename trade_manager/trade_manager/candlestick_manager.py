@@ -315,39 +315,6 @@ class CandlesData():
 
 class CandlestickManager(Node):
 
-    INST_ID_LIST = [
-        InstApi.INST_USD_JPY,
-        InstApi.INST_EUR_JPY,
-        InstApi.INST_EUR_USD,
-    ]
-
-    GRAN_ID_LIST = [
-        GranApi.GRAN_D,
-        GranApi.GRAN_H4,
-        GranApi.GRAN_H1,
-        GranApi.GRAN_M10
-    ]
-
-    DATA_LENGTH_DICT = {
-        GranApi.GRAN_M1: 60 * 24 * 10,   # 10 Days
-        GranApi.GRAN_M2: 30 * 24 * 10,   # 10 Days
-        GranApi.GRAN_M3: 20 * 24 * 10,   # 10 Days
-        GranApi.GRAN_M4: 15 * 24 * 10,   # 10 Days
-        GranApi.GRAN_M5: 12 * 24 * 10,   # 10 Days
-        GranApi.GRAN_M10: 6 * 24 * 100,  # 1 Year
-        GranApi.GRAN_M15: 4 * 24 * 10,   # 10 Days
-        GranApi.GRAN_M30: 2 * 24 * 10,   # 10 Days
-        GranApi.GRAN_H1: 24 * 30,        # 1 Months
-        GranApi.GRAN_H2: 12 * 30,        # 1 Months
-        GranApi.GRAN_H3: 8 * 30,         # 1 Months
-        GranApi.GRAN_H4: 6 * 30,         # 1 Months
-        GranApi.GRAN_H6: 4 * 30,         # 1 Months
-        GranApi.GRAN_H8: 3 * 30 * 3,     # 3 Months
-        GranApi.GRAN_H12: 2 * 30 * 3,    # 3 Months
-        GranApi.GRAN_D: 365,             # 1 Year
-        GranApi.GRAN_W: 4 * 12,          # 1 Year
-    }
-
     DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
 
     def __init__(self) -> None:
@@ -356,6 +323,231 @@ class CandlestickManager(Node):
         # Set logger lebel
         self.__logger = super().get_logger()
         self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+
+        ENA_INST = "enable_instrument."
+        PRMNM_ENA_INST_USDJPY = ENA_INST + "usdjpy"
+        PRMNM_ENA_INST_EURJPY = ENA_INST + "eurjpy"
+        PRMNM_ENA_INST_EURUSD = ENA_INST + "eurusd"
+
+        ENA_GRAN = "enable_granularity."
+        PRMNM_ENA_GRAN_M1 = ENA_GRAN + "m1"
+        PRMNM_ENA_GRAN_M2 = ENA_GRAN + "m2"
+        PRMNM_ENA_GRAN_M3 = ENA_GRAN + "m3"
+        PRMNM_ENA_GRAN_M4 = ENA_GRAN + "m4"
+        PRMNM_ENA_GRAN_M5 = ENA_GRAN + "m5"
+        PRMNM_ENA_GRAN_M10 = ENA_GRAN + "m10"
+        PRMNM_ENA_GRAN_M15 = ENA_GRAN + "m15"
+        PRMNM_ENA_GRAN_M30 = ENA_GRAN + "m30"
+        PRMNM_ENA_GRAN_H1 = ENA_GRAN + "h1"
+        PRMNM_ENA_GRAN_H2 = ENA_GRAN + "h2"
+        PRMNM_ENA_GRAN_H3 = ENA_GRAN + "h3"
+        PRMNM_ENA_GRAN_H4 = ENA_GRAN + "h4"
+        PRMNM_ENA_GRAN_H6 = ENA_GRAN + "h6"
+        PRMNM_ENA_GRAN_H8 = ENA_GRAN + "h8"
+        PRMNM_ENA_GRAN_H12 = ENA_GRAN + "h12"
+        PRMNM_ENA_GRAN_D = ENA_GRAN + "d"
+        PRMNM_ENA_GRAN_W = ENA_GRAN + "w"
+
+        GRAN_HIST = "historical_data_length."
+        PRMNM_LENG_M1 = GRAN_HIST + "m1"
+        PRMNM_LENG_M2 = GRAN_HIST + "m2"
+        PRMNM_LENG_M3 = GRAN_HIST + "m3"
+        PRMNM_LENG_M4 = GRAN_HIST + "m4"
+        PRMNM_LENG_M5 = GRAN_HIST + "m5"
+        PRMNM_LENG_M10 = GRAN_HIST + "m10"
+        PRMNM_LENG_M15 = GRAN_HIST + "m15"
+        PRMNM_LENG_M30 = GRAN_HIST + "m30"
+        PRMNM_LENG_H1 = GRAN_HIST + "h1"
+        PRMNM_LENG_H2 = GRAN_HIST + "h2"
+        PRMNM_LENG_H3 = GRAN_HIST + "h3"
+        PRMNM_LENG_H4 = GRAN_HIST + "h4"
+        PRMNM_LENG_H6 = GRAN_HIST + "h6"
+        PRMNM_LENG_H8 = GRAN_HIST + "h8"
+        PRMNM_LENG_H12 = GRAN_HIST + "h12"
+        PRMNM_LENG_D = GRAN_HIST + "d"
+        PRMNM_LENG_W = GRAN_HIST + "w"
+
+        # Declare parameter
+        self.declare_parameter(PRMNM_ENA_INST_USDJPY)
+        self.declare_parameter(PRMNM_ENA_INST_EURJPY)
+        self.declare_parameter(PRMNM_ENA_INST_EURUSD)
+        self.declare_parameter(PRMNM_ENA_GRAN_M1)
+        self.declare_parameter(PRMNM_ENA_GRAN_M2)
+        self.declare_parameter(PRMNM_ENA_GRAN_M3)
+        self.declare_parameter(PRMNM_ENA_GRAN_M4)
+        self.declare_parameter(PRMNM_ENA_GRAN_M5)
+        self.declare_parameter(PRMNM_ENA_GRAN_M10)
+        self.declare_parameter(PRMNM_ENA_GRAN_M15)
+        self.declare_parameter(PRMNM_ENA_GRAN_M30)
+        self.declare_parameter(PRMNM_ENA_GRAN_H1)
+        self.declare_parameter(PRMNM_ENA_GRAN_H2)
+        self.declare_parameter(PRMNM_ENA_GRAN_H3)
+        self.declare_parameter(PRMNM_ENA_GRAN_H4)
+        self.declare_parameter(PRMNM_ENA_GRAN_H6)
+        self.declare_parameter(PRMNM_ENA_GRAN_H8)
+        self.declare_parameter(PRMNM_ENA_GRAN_H12)
+        self.declare_parameter(PRMNM_ENA_GRAN_D)
+        self.declare_parameter(PRMNM_ENA_GRAN_W)
+        self.declare_parameter(PRMNM_LENG_M1)
+        self.declare_parameter(PRMNM_LENG_M2)
+        self.declare_parameter(PRMNM_LENG_M3)
+        self.declare_parameter(PRMNM_LENG_M4)
+        self.declare_parameter(PRMNM_LENG_M5)
+        self.declare_parameter(PRMNM_LENG_M10)
+        self.declare_parameter(PRMNM_LENG_M15)
+        self.declare_parameter(PRMNM_LENG_M30)
+        self.declare_parameter(PRMNM_LENG_H1)
+        self.declare_parameter(PRMNM_LENG_H2)
+        self.declare_parameter(PRMNM_LENG_H3)
+        self.declare_parameter(PRMNM_LENG_H4)
+        self.declare_parameter(PRMNM_LENG_H6)
+        self.declare_parameter(PRMNM_LENG_H8)
+        self.declare_parameter(PRMNM_LENG_H12)
+        self.declare_parameter(PRMNM_LENG_D)
+        self.declare_parameter(PRMNM_LENG_W)
+
+        ena_inst_usdjpy = self.get_parameter(PRMNM_ENA_INST_USDJPY).value
+        ena_inst_eurjpy = self.get_parameter(PRMNM_ENA_INST_EURJPY).value
+        ena_inst_eurusd = self.get_parameter(PRMNM_ENA_INST_EURUSD).value
+        ena_gran_m1 = self.get_parameter(PRMNM_ENA_GRAN_M1).value
+        ena_gran_m2 = self.get_parameter(PRMNM_ENA_GRAN_M2).value
+        ena_gran_m3 = self.get_parameter(PRMNM_ENA_GRAN_M3).value
+        ena_gran_m4 = self.get_parameter(PRMNM_ENA_GRAN_M4).value
+        ena_gran_m5 = self.get_parameter(PRMNM_ENA_GRAN_M5).value
+        ena_gran_m10 = self.get_parameter(PRMNM_ENA_GRAN_M10).value
+        ena_gran_m15 = self.get_parameter(PRMNM_ENA_GRAN_M15).value
+        ena_gran_m30 = self.get_parameter(PRMNM_ENA_GRAN_M30).value
+        ena_gran_h1 = self.get_parameter(PRMNM_ENA_GRAN_H1).value
+        ena_gran_h2 = self.get_parameter(PRMNM_ENA_GRAN_H2).value
+        ena_gran_h3 = self.get_parameter(PRMNM_ENA_GRAN_H3).value
+        ena_gran_h4 = self.get_parameter(PRMNM_ENA_GRAN_H4).value
+        ena_gran_h6 = self.get_parameter(PRMNM_ENA_GRAN_H6).value
+        ena_gran_h8 = self.get_parameter(PRMNM_ENA_GRAN_H8).value
+        ena_gran_h12 = self.get_parameter(PRMNM_ENA_GRAN_H12).value
+        ena_gran_d = self.get_parameter(PRMNM_ENA_GRAN_D).value
+        ena_gran_w = self.get_parameter(PRMNM_ENA_GRAN_W).value
+        leng_m1 = self.get_parameter(PRMNM_LENG_M1).value
+        leng_m2 = self.get_parameter(PRMNM_LENG_M2).value
+        leng_m3 = self.get_parameter(PRMNM_LENG_M3).value
+        leng_m4 = self.get_parameter(PRMNM_LENG_M4).value
+        leng_m5 = self.get_parameter(PRMNM_LENG_M5).value
+        leng_m10 = self.get_parameter(PRMNM_LENG_M10).value
+        leng_m15 = self.get_parameter(PRMNM_LENG_M15).value
+        leng_m30 = self.get_parameter(PRMNM_LENG_M30).value
+        leng_h1 = self.get_parameter(PRMNM_LENG_H1).value
+        leng_h2 = self.get_parameter(PRMNM_LENG_H2).value
+        leng_h3 = self.get_parameter(PRMNM_LENG_H3).value
+        leng_h4 = self.get_parameter(PRMNM_LENG_H4).value
+        leng_h6 = self.get_parameter(PRMNM_LENG_H6).value
+        leng_h8 = self.get_parameter(PRMNM_LENG_H8).value
+        leng_h12 = self.get_parameter(PRMNM_LENG_H12).value
+        leng_d = self.get_parameter(PRMNM_LENG_D).value
+        leng_w = self.get_parameter(PRMNM_LENG_W).value
+
+        self.__logger.debug("[Param]Enable instrument:")
+        self.__logger.debug("        USD/JPY:[{}]" .format(ena_inst_usdjpy))
+        self.__logger.debug("        EUR/JPY:[{}]" .format(ena_inst_eurjpy))
+        self.__logger.debug("        EUR/USD:[{}]" .format(ena_inst_eurusd))
+        self.__logger.debug("[Param]Enable granularity:")
+        self.__logger.debug("        M1: [{}]" .format(ena_gran_m1))
+        self.__logger.debug("        M2: [{}]" .format(ena_gran_m2))
+        self.__logger.debug("        M3: [{}]" .format(ena_gran_m3))
+        self.__logger.debug("        M4: [{}]" .format(ena_gran_m4))
+        self.__logger.debug("        M5: [{}]" .format(ena_gran_m5))
+        self.__logger.debug("        M10:[{}]" .format(ena_gran_m10))
+        self.__logger.debug("        M15:[{}]" .format(ena_gran_m15))
+        self.__logger.debug("        M30:[{}]" .format(ena_gran_m30))
+        self.__logger.debug("        H1: [{}]" .format(ena_gran_h1))
+        self.__logger.debug("        H2: [{}]" .format(ena_gran_h2))
+        self.__logger.debug("        H3: [{}]" .format(ena_gran_h3))
+        self.__logger.debug("        H4: [{}]" .format(ena_gran_h4))
+        self.__logger.debug("        H6: [{}]" .format(ena_gran_h6))
+        self.__logger.debug("        H8: [{}]" .format(ena_gran_h8))
+        self.__logger.debug("        H12:[{}]" .format(ena_gran_h12))
+        self.__logger.debug("        D:  [{}]" .format(ena_gran_d))
+        self.__logger.debug("        W:  [{}]" .format(ena_gran_w))
+        self.__logger.debug("[Param]Historical data length:")
+        self.__logger.debug("        M1: [{}]" .format(leng_m1))
+        self.__logger.debug("        M2: [{}]" .format(leng_m2))
+        self.__logger.debug("        M3: [{}]" .format(leng_m3))
+        self.__logger.debug("        M4: [{}]" .format(leng_m4))
+        self.__logger.debug("        M5: [{}]" .format(leng_m5))
+        self.__logger.debug("        M10:[{}]" .format(leng_m10))
+        self.__logger.debug("        M15:[{}]" .format(leng_m15))
+        self.__logger.debug("        M30:[{}]" .format(leng_m30))
+        self.__logger.debug("        H1: [{}]" .format(leng_h1))
+        self.__logger.debug("        H2: [{}]" .format(leng_h2))
+        self.__logger.debug("        H3: [{}]" .format(leng_h3))
+        self.__logger.debug("        H4: [{}]" .format(leng_h4))
+        self.__logger.debug("        H6: [{}]" .format(leng_h6))
+        self.__logger.debug("        H8: [{}]" .format(leng_h8))
+        self.__logger.debug("        H12:[{}]" .format(leng_h12))
+        self.__logger.debug("        D:  [{}]" .format(leng_d))
+        self.__logger.debug("        W:  [{}]" .format(leng_w))
+
+        DATA_LENGTH_DICT = {
+            GranApi.GRAN_M1: leng_m1,
+            GranApi.GRAN_M2: leng_m2,
+            GranApi.GRAN_M3: leng_m3,
+            GranApi.GRAN_M4: leng_m4,
+            GranApi.GRAN_M5: leng_m5,
+            GranApi.GRAN_M10: leng_m10,
+            GranApi.GRAN_M15: leng_m15,
+            GranApi.GRAN_M30: leng_m30,
+            GranApi.GRAN_H1: leng_h1,
+            GranApi.GRAN_H2: leng_h2,
+            GranApi.GRAN_H3: leng_h3,
+            GranApi.GRAN_H4: leng_h4,
+            GranApi.GRAN_H6: leng_h6,
+            GranApi.GRAN_H8: leng_h8,
+            GranApi.GRAN_H12: leng_h12,
+            GranApi.GRAN_D: leng_d,
+            GranApi.GRAN_W: leng_w,
+        }
+
+        INST_ID_LIST = []
+        if ena_inst_usdjpy:
+            INST_ID_LIST.append(InstApi.INST_USD_JPY)
+        if ena_inst_eurjpy:
+            INST_ID_LIST.append(InstApi.INST_EUR_JPY)
+        if ena_inst_eurusd:
+            INST_ID_LIST.append(InstApi.INST_EUR_USD)
+
+        GRAN_ID_LIST = []
+        if ena_gran_m1:
+            GRAN_ID_LIST.append(GranApi.GRAN_M1)
+        if ena_gran_m2:
+            GRAN_ID_LIST.append(GranApi.GRAN_M2)
+        if ena_gran_m3:
+            GRAN_ID_LIST.append(GranApi.GRAN_M3)
+        if ena_gran_m4:
+            GRAN_ID_LIST.append(GranApi.GRAN_M4)
+        if ena_gran_m5:
+            GRAN_ID_LIST.append(GranApi.GRAN_M5)
+        if ena_gran_m10:
+            GRAN_ID_LIST.append(GranApi.GRAN_M10)
+        if ena_gran_m15:
+            GRAN_ID_LIST.append(GranApi.GRAN_M15)
+        if ena_gran_m30:
+            GRAN_ID_LIST.append(GranApi.GRAN_M30)
+        if ena_gran_h1:
+            GRAN_ID_LIST.append(GranApi.GRAN_H1)
+        if ena_gran_h2:
+            GRAN_ID_LIST.append(GranApi.GRAN_H2)
+        if ena_gran_h3:
+            GRAN_ID_LIST.append(GranApi.GRAN_H3)
+        if ena_gran_h4:
+            GRAN_ID_LIST.append(GranApi.GRAN_H4)
+        if ena_gran_h6:
+            GRAN_ID_LIST.append(GranApi.GRAN_H6)
+        if ena_gran_h8:
+            GRAN_ID_LIST.append(GranApi.GRAN_H8)
+        if ena_gran_h12:
+            GRAN_ID_LIST.append(GranApi.GRAN_H12)
+        if ena_gran_d:
+            GRAN_ID_LIST.append(GranApi.GRAN_D)
+        if ena_gran_w:
+            GRAN_ID_LIST.append(GranApi.GRAN_W)
 
         # Create service server "CandlesMonitor"
         srv_type = CandlesMntSrv
@@ -376,7 +568,19 @@ class CandlestickManager(Node):
             rclpy.shutdown()
 
         # initialize "data_map"
-        self.__init_data_map(cli_cdl)
+        obj_map_dict = {}
+        for inst_id in INST_ID_LIST:
+            gran_dict = {}
+            for gran_id in GRAN_ID_LIST:
+                data_len = DATA_LENGTH_DICT[gran_id]
+                obj = CandlesData(self, cli_cdl, inst_id, gran_id, data_len)
+                tmp = {gran_id: obj}
+                gran_dict.update(tmp)
+            tmp = {inst_id: gran_dict}
+            obj_map_dict.update(tmp)
+
+        # type: Dict[InstrumentMnt][GranularityMnt]
+        self.__obj_map_dict = obj_map_dict
 
         # Create service server "HistoricalCandles"
         srv_type = HistoricalCandlesSrv
@@ -409,22 +613,6 @@ class CandlestickManager(Node):
         df = self.get_dataframe(InstApi.INST_USD_JPY, GranApi.GRAN_D)
         print(df)
         """
-
-    def __init_data_map(self, cli: Client) -> None:
-
-        obj_map_dict = {}
-        for inst_id in self.INST_ID_LIST:
-            gran_dict = {}
-            for gran_id in self.GRAN_ID_LIST:
-                data_len = self.DATA_LENGTH_DICT[gran_id]
-                obj = CandlesData(self, cli, inst_id, gran_id, data_len)
-                tmp = {gran_id: obj}
-                gran_dict.update(tmp)
-            tmp = {inst_id: gran_dict}
-            obj_map_dict.update(tmp)
-
-        # type: Dict[InstrumentMnt][GranularityMnt]
-        self.__obj_map_dict = obj_map_dict
 
     def __get_dataframe(self,
                         inst_id: InstApi,
@@ -577,9 +765,8 @@ class CandlestickManager(Node):
 
     def __on_timeout_1s(self) -> None:
 
-        for inst_id in self.INST_ID_LIST:
-            for gran_id in self.GRAN_ID_LIST:
-                obj = self.__obj_map_dict[inst_id][gran_id]
+        for gran_dict in self.__obj_map_dict.values():
+            for obj in gran_dict.values():
                 obj.update_not_complete_data()
 
 
