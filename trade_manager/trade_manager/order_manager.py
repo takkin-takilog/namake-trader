@@ -139,9 +139,8 @@ class OrderState(object):
                         self.__logger.debug("[change state: 1 -> 2]")
                         self.__sts = self.STS_NEW_ORD_PENDING
                 else:
-                    self.__logger.error(
-                        "Service <order_create> request Failed!"
-                        "[reason code:%d]" % rsp.frc_msg.reason_code)
+                    self.__logger.error("Service <order_create> request Failed!")
+                    self.__logger.error("  [reason code:{}]".format(rsp.frc_msg.reason_code))
                     # change state: 1 -> Abnormal End
                     self.__sts = self.STS_ABN_END
 
@@ -194,9 +193,8 @@ class OrderState(object):
                     else:
                         pass
                 else:
-                    self.__logger.error(
-                        "Service <order_details> request Failed!"
-                        "[reason code:%d]" % rsp.frc_msg.reason_code)
+                    self.__logger.error("Service <order_details> request Failed!")
+                    self.__logger.error("  [reason code:{}]".format(rsp.frc_msg.reason_code))
                     # change state: 1 -> Abnormal End
                     self.__sts = self.STS_ABN_END
 
@@ -215,9 +213,8 @@ class OrderState(object):
                     self.__logger.debug("[change state: 4 -> END]")
                     self.__sts = self.STS_NOR_END
                 else:
-                    self.__logger.error(
-                        "Service <order_cancel> request Failed!"
-                        "[reason code:%d]" % rsp.frc_msg.reason_code)
+                    self.__logger.error("Service <order_cancel> request Failed!")
+                    self.__logger.error("  [reason code:{}]".format(rsp.frc_msg.reason_code))
                     # change state: 4 -> Abnormal End
                     self.__sts = self.STS_ABN_END
 
@@ -266,9 +263,8 @@ class OrderState(object):
                         self.__logger.debug("[change state: 6 -> 5]")
                         self.__sts = self.STS_SET_ORD_PENDING
                 else:
-                    self.__logger.error(
-                        "Service <trade_details> request Failed!"
-                        "[reason code:%d]" % rsp.frc_msg.reason_code)
+                    self.__logger.error("Service <trade_details> request Failed!")
+                    self.__logger.error("  [reason code:{}]".format(rsp.frc_msg.reason_code))
                     # change state: 6 -> Abnormal End
                     self.__sts = self.STS_ABN_END
 
@@ -278,7 +274,7 @@ class OrderState(object):
             rsp = self.__future.result()
             if rsp is None:
                 self.__logger.error("Error while calling service of node."
-                                    "[trade_close(]")
+                                    "[trade_close]")
                 # change state: 7 -> Abnormal End
                 self.__sts = self.STS_ABN_END
             else:
@@ -287,9 +283,8 @@ class OrderState(object):
                     self.__logger.debug("[change state: 7 -> END]")
                     self.__sts = self.STS_NOR_END
                 else:
-                    self.__logger.error(
-                        "Service <trade_close> request Failed!"
-                        "[reason code:%d]" % rsp.frc_msg.reason_code)
+                    self.__logger.error("Service <trade_close> request Failed!")
+                    self.__logger.error("  [reason code:{}]".format(rsp.frc_msg.reason_code))
                     # change state: 7 -> Abnormal End
                     self.__sts = self.STS_ABN_END
 
@@ -403,11 +398,11 @@ class OrderManager(Node):
             """
             dt_now = dt.datetime.now().strftime(_DT_FMT)
             self.__logger.debug("========== chack! ==========")
-            self.__logger.debug("----- Time: %s" % dt_now)
-            self.__logger.debug("----- ReqID: %d -----" % order.request_id)
-            self.__logger.debug("      State: %d" % order.state)
-            self.__logger.debug("      OrderID: %d" % order.order_id)
-            self.__logger.debug("      TradeID: %d" % order.trade_id)
+            self.__logger.debug("----- Time: {}".format(dt_now))
+            self.__logger.debug("----- ReqID: {} -----".format(order.request_id))
+            self.__logger.debug("      State: {}".format(order.state))
+            self.__logger.debug("      OrderID: {}".format(order.order_id))
+            self.__logger.debug("      TradeID: {}".format(order.trade_id))
             """
 
         # remove end state
@@ -451,21 +446,21 @@ class OrderManager(Node):
         while not cli.wait_for_service(timeout_sec=1.0):
             if not rclpy.ok():
                 raise RuntimeError("Interrupted while waiting for service.")
-            self.__logger.info("Waiting for [%s] service..." % (srv_name))
+            self.__logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
     def __on_subs_market_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(_DT_FMT)
         logger = self._logger
-        logger.debug("========== Topic[market_order_request]:Start ==========")
-        logger.debug("- req_id:[%d]" % (msg.req_id))
-        logger.debug("- inst_id:[%d]" % (msg.inst_id))
-        logger.debug("- units:[%d]" % (msg.units))
-        logger.debug("- take_profit_price:[%f]" % (msg.take_profit_price))
-        logger.debug("- stop_loss_price:[%f]" % (msg.stop_loss_price))
-        logger.debug("- valid_period_settlement:[%s]" % (msg.valid_period_settlement))
+        logger.debug("{:=^50}".format(" Topic[market_order_request]:Start "))
+        logger.debug("  - req_id:[{}]".format(msg.req_id))
+        logger.debug("  - inst_id:[{}]".format(msg.inst_id))
+        logger.debug("  - units:[{}]".format(msg.units))
+        logger.debug("  - take_profit_price:[{}]".format(msg.take_profit_price))
+        logger.debug("  - stop_loss_price:[{}]".format(msg.stop_loss_price))
+        logger.debug("  - valid_period_settlement:[{}]".format(msg.valid_period_settlement))
         logger.debug("[Performance]")
-        logger.debug("- request time:[%s]" % (dt_now))
+        logger.debug("  - request time:[{}]".format(dt_now))
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_MARKET
@@ -482,17 +477,17 @@ class OrderManager(Node):
     def __on_subs_limit_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(_DT_FMT)
         logger = self._logger
-        logger.debug("========== Topic[limit_order_request]:Start ==========")
-        logger.debug("- req_id:[%d]" % (msg.req_id))
-        logger.debug("- inst_id:[%d]" % (msg.inst_id))
-        logger.debug("- units:[%d]" % (msg.units))
-        logger.debug("- price:[%f]" % (msg.price))
-        logger.debug("- valid_period_new:[%s]" % (msg.valid_period_new))
-        logger.debug("- take_profit_price:[%f]" % (msg.take_profit_price))
-        logger.debug("- stop_loss_price:[%f]" % (msg.stop_loss_price))
-        logger.debug("- valid_period_settlement:[%s]" % (msg.valid_period_settlement))
+        logger.debug("{:=^50}".format(" Topic[limit_order_request]:Start "))
+        logger.debug("  - req_id:[{}]".format(msg.req_id))
+        logger.debug("  - inst_id:[{}]".format(msg.inst_id))
+        logger.debug("  - units:[{}]".format(msg.units))
+        logger.debug("  - price:[{}]".format(msg.price))
+        logger.debug("  - valid_period_new:[{}]".format(msg.valid_period_new))
+        logger.debug("  - take_profit_price:[{}]".format(msg.take_profit_price))
+        logger.debug("  - stop_loss_price:[{}]".format(msg.stop_loss_price))
+        logger.debug("  - valid_period_settlement:[{}]".format(msg.valid_period_settlement))
         logger.debug("[Performance]")
-        logger.debug("- request time:[%s]" % (dt_now))
+        logger.debug("  - request time:[{}]".format(dt_now))
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_LIMIT
@@ -510,17 +505,17 @@ class OrderManager(Node):
     def __on_subs_stop_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(_DT_FMT)
         logger = self._logger
-        logger.debug("========== Topic[stop_order_request]:Start ==========")
-        logger.debug("- req_id:[%d]" % (msg.req_id))
-        logger.debug("- inst_id:[%d]" % (msg.inst_id))
-        logger.debug("- units:[%d]" % (msg.units))
-        logger.debug("- price:[%f]" % (msg.price))
-        logger.debug("- valid_period_new:[%s]" % (msg.valid_period_new))
-        logger.debug("- take_profit_price:[%f]" % (msg.take_profit_price))
-        logger.debug("- stop_loss_price:[%f]" % (msg.stop_loss_price))
-        logger.debug("- valid_period_settlement:[%s]" % (msg.valid_period_settlement))
+        logger.debug("{:=^50}".format(" Topic[stop_order_request]:Start "))
+        logger.debug("  - req_id:[{}]".format(msg.req_id))
+        logger.debug("  - inst_id:[{}]".format(msg.inst_id))
+        logger.debug("  - units:[{}]".format(msg.units))
+        logger.debug("  - price:[{}]".format(msg.price))
+        logger.debug("  - valid_period_new:[{}]".format(msg.valid_period_new))
+        logger.debug("  - take_profit_price:[{}]".format(msg.take_profit_price))
+        logger.debug("  - stop_loss_price:[{}]".format(msg.stop_loss_price))
+        logger.debug("  - valid_period_settlement:[{}]".format(msg.valid_period_settlement))
         logger.debug("[Performance]")
-        logger.debug("- request time:[%s]" % (dt_now))
+        logger.debug("  - request time:[{}]".format(dt_now))
 
         req = OrderCreateSrv.Request()
         req.ordertype_msg.type = OrderTypeMsg.TYP_STOP
@@ -537,7 +532,7 @@ class OrderManager(Node):
 
     def __on_subs_polling(self, msg: MsgType) -> None:
         logger = self._logger
-        logger.debug("========== Topic[polling]:Start ==========")
+        logger.debug("{:=^50}".format(" Topic[polling]:Start "))
         if msg.data is True:
             self.__update_state(True)
 

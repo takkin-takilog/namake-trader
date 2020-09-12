@@ -29,7 +29,7 @@ class CandlestickService(ServiceAbs):
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
 
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        self._logger.debug("[Param]Account Number:[%s]" % (account_number))
+        self._logger.debug("[Param]Account Number:[{}]".format(account_number))
 
         # Create service server "Candles"
         srv_type = CandlesSrv
@@ -46,12 +46,12 @@ class CandlestickService(ServiceAbs):
                           rsp: SrvTypeResponse
                           ) -> SrvTypeResponse:
 
-        self._logger.debug("========== Service[candles]:Start ==========")
+        self._logger.debug("{:=^50}".format(" Service[candles]:Start "))
         self._logger.debug("<Request>")
-        self._logger.debug("- gran_msg.gran_id:[%d]" % (req.gran_msg.gran_id))
-        self._logger.debug("- inst_msg.inst_id:[%d]" % (req.inst_msg.inst_id))
-        self._logger.debug("- dt_from:[%s]" % (req.dt_from))
-        self._logger.debug("- dt_to:[%s]" % (req.dt_to))
+        self._logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
+        self._logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
+        self._logger.debug("  - dt_from:[{}]".format(req.dt_from))
+        self._logger.debug("  - dt_to:[{}]".format(req.dt_to))
 
         dbg_tm_start = dt.datetime.now()
 
@@ -63,12 +63,12 @@ class CandlestickService(ServiceAbs):
             rsp.result = False
             dbg_tm_end = dt.datetime.now()
             self._logger.debug("<Response>")
-            self._logger.debug("- result:[%r]" % (rsp.result))
-            self._logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-            self._logger.debug("- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+            self._logger.debug("  - result:[{}]".format(rsp.result))
+            self._logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
+            self._logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
             self._logger.debug("[Performance]")
-            self._logger.debug("- Response Time:[%s]" % (dbg_tm_end - dbg_tm_start))
-            self._logger.debug("========== Service[candles]:End ==========")
+            self._logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
+            self._logger.debug("{:=^50}".format(" Service[candles]:End "))
             return rsp
 
         gran_id = req.gran_msg.gran_id
@@ -98,9 +98,9 @@ class CandlestickService(ServiceAbs):
                 tmpdt = dt_to
             to_ = tmpdt
 
-            self._logger.debug("----- Service[candles]:fetch -----")
-            self._logger.debug("- from:[%s]" % from_)
-            self._logger.debug("- to:  [%s]" % to_)
+            self._logger.debug("{:-^40}".format(" Service[candles]:fetch "))
+            self._logger.debug("  - from:[{}]".format(from_))
+            self._logger.debug("  - to:  [{}]".format(to_))
 
             params = {
                 "from": (from_ - self.TMDLT).strftime(self.DT_FMT),
@@ -145,12 +145,12 @@ class CandlestickService(ServiceAbs):
         dbg_tm_end = dt.datetime.now()
 
         self._logger.debug("<Response>")
-        self._logger.debug("- result:[%r]" % (rsp.result))
-        self._logger.debug("- frc_msg.reason_code:[%d]" % (rsp.frc_msg.reason_code))
-        self._logger.debug("- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+        self._logger.debug("  - result:[{}]".format(rsp.result))
+        self._logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
+        self._logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
         self._logger.debug("[Performance]")
-        self._logger.debug("- Response Time:[%s]" % (dbg_tm_end - dbg_tm_start))
-        self._logger.debug("========== Service[candles]:End ==========")
+        self._logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        self._logger.debug("{:=^50}".format(" Service[candles]:End "))
 
         return rsp
 
@@ -166,9 +166,9 @@ class CandlestickService(ServiceAbs):
         if (dt_to < dt_from) or (dt_now < dt_from):
             rsp.frc_msg.reason_code = frc.REASON_ARG_ERR
             self.__logger.error("!!!!!!!!!! Argument Error !!!!!!!!!!")
-            self.__logger.error("- dt_to:[%s]" % (dt_to))
-            self.__logger.error("- dt_from:[%s]" % (dt_from))
-            self.__logger.error("- dt_now:[%s]" % (dt_now))
+            self.__logger.error("  - dt_to:[{}]".format(dt_to))
+            self.__logger.error("  - dt_from:[{}]".format(dt_from))
+            self.__logger.error("  - dt_now:[{}]".format(dt_now))
         return rsp
 
     def __update_response(self,

@@ -39,9 +39,9 @@ class PricingStreamer(Node):
         account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
         inst_id_list = self.get_parameter(PRMNM_INST_ID_LIST).value
-        self.__logger.debug("[Param]Account Number:[%s]" % account_number)
-        self.__logger.debug("[Param]Access Token:[%s]" % access_token)
-        self.__logger.debug("[Param]Instruments:[%s]" % inst_id_list)
+        self.__logger.debug("[Param]Account Number:[{}]".format(account_number))
+        self.__logger.debug("[Param]Access Token:[{}]".format(access_token))
+        self.__logger.debug("[Param]Instruments:[{}]".format(inst_id_list))
 
         inst_name_list = []
         for inst_id in inst_id_list:
@@ -133,9 +133,9 @@ class PricingStreamer(Node):
 
         except V20Error as e:
             self.__logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
-            self.__logger.error("%s" % e)
+            self.__logger.error("{}".format(e))
         except StreamTerminated as e:
-            self.__logger.debug("Stream Terminated: %s" % e)
+            self.__logger.debug("Stream Terminated: {}".format(e))
 
 
 def main(args=None):

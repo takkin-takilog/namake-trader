@@ -94,7 +94,7 @@ class ServiceAbs(Node):
         # Declare parameter
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        self._logger.debug("[Param]Access Token:[%s]" % (access_token))
+        self._logger.debug("[Param]Access Token:[{}]".format(access_token))
 
         self.__api = API(access_token=access_token)
 
@@ -109,11 +109,11 @@ class ServiceAbs(Node):
             apirsp = self.__api.request(endpoint)
         except ConnectionError as err:
             self._logger.error("!!!!!!!!!! ConnectionError !!!!!!!!!!")
-            self._logger.error("%s" % err)
+            self._logger.error("{}".format(err))
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
         except V20Error as err:
             self._logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
-            self._logger.error("%s" % err)
+            self._logger.error("{}".format(err))
             rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
 
         return apirsp, rsp

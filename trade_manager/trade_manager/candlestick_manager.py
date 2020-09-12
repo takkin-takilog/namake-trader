@@ -76,8 +76,9 @@ class CandlesData():
         minunit = self.DT_LSB_DICT[gran_id]
         self.__logger = node.get_logger()
 
-        self.__logger.debug("----- Create CandlesData:Start -----")
-        self.__logger.debug("- inst_id:[%d], gran_id:[%d]" % (inst_id, gran_id))
+        self.__logger.debug("{:-^40}".format(" Create CandlesData:Start "))
+        self.__logger.debug("  - inst_id:[{}]".format(inst_id))
+        self.__logger.debug("  - gran_id:[{}]".format(gran_id))
 
         dt_now = dt.datetime.now()
         dt_from = dt_now - minunit * data_length
@@ -119,8 +120,8 @@ class CandlesData():
             self.__future = None
             self.__timeout_end = 0.0
 
-            self.__logger.debug("- last_update_time:[%s]" % (self.__next_update_time))
-            self.__logger.debug("----- Create CandlesData:End -----")
+            self.__logger.debug("  - last_update_time:[{}]".format(self.__next_update_time))
+            self.__logger.debug("{:-^40}".format(" Create CandlesData:End "))
 
     def __get_next_update_time(self,
                                gran_id: int,
@@ -181,8 +182,8 @@ class CandlesData():
 
             dt_now = dt.datetime.now()
             """
-            self.__logger.debug("[%s]update_not_complete_data[inst:%d][gran:%d]" % (
-                dt_now, self.__inst_id, self.__gran_id))
+            self.__logger.debug("[{}]update_not_complete_data[inst:{}][gran:{}]"
+                                .format(dt_now, self.__inst_id, self.__gran_id))
             """
             target_time = dt_now - self.__next_update_time - self.MARGIN_SEC
             if self.__interval < target_time:
@@ -203,8 +204,8 @@ class CandlesData():
                 self.__next_update_time += self.__interval
                 self.__future = None
 
-                self.__logger.debug("<Update> inst_id:[%d], gran_id:[%d] last_update_time:[%s]"
-                                    % (self.__inst_id, self.__gran_id, self.__next_update_time))
+                self.__logger.debug("<Update> inst_id:[{}], gran_id:[{}] last_update_time:[{}]"
+                                    .format(self.__inst_id, self.__gran_id, self.__next_update_time))
             else:
                 if time.monotonic() >= self.__timeout_end:
                     self.__future = None
@@ -309,8 +310,8 @@ class CandlesData():
             else:
                 self.__df_prov = self.__df_prov[:0]  # All data delete
 
-            self.__logger.debug("- df_comp:%s" % (df_comp.index.tolist()))
-            self.__logger.debug("- df_prov:%s" % (df_prov.index.tolist()))
+            self.__logger.debug("  - df_comp:[{}]".format(df_comp.index.tolist()))
+            self.__logger.debug("  - df_prov:[{}]".format(df_prov.index.tolist()))
 
 
 class CandlestickManager(Node):
@@ -445,45 +446,45 @@ class CandlestickManager(Node):
         leng_w = self.get_parameter(PRMNM_LENG_W).value
 
         self.__logger.debug("[Param]Enable instrument:")
-        self.__logger.debug("        USD/JPY:[{}]" .format(ena_inst_usdjpy))
-        self.__logger.debug("        EUR/JPY:[{}]" .format(ena_inst_eurjpy))
-        self.__logger.debug("        EUR/USD:[{}]" .format(ena_inst_eurusd))
+        self.__logger.debug("        USD/JPY:[{}]".format(ena_inst_usdjpy))
+        self.__logger.debug("        EUR/JPY:[{}]".format(ena_inst_eurjpy))
+        self.__logger.debug("        EUR/USD:[{}]".format(ena_inst_eurusd))
         self.__logger.debug("[Param]Enable granularity:")
-        self.__logger.debug("        M1: [{}]" .format(ena_gran_m1))
-        self.__logger.debug("        M2: [{}]" .format(ena_gran_m2))
-        self.__logger.debug("        M3: [{}]" .format(ena_gran_m3))
-        self.__logger.debug("        M4: [{}]" .format(ena_gran_m4))
-        self.__logger.debug("        M5: [{}]" .format(ena_gran_m5))
-        self.__logger.debug("        M10:[{}]" .format(ena_gran_m10))
-        self.__logger.debug("        M15:[{}]" .format(ena_gran_m15))
-        self.__logger.debug("        M30:[{}]" .format(ena_gran_m30))
-        self.__logger.debug("        H1: [{}]" .format(ena_gran_h1))
-        self.__logger.debug("        H2: [{}]" .format(ena_gran_h2))
-        self.__logger.debug("        H3: [{}]" .format(ena_gran_h3))
-        self.__logger.debug("        H4: [{}]" .format(ena_gran_h4))
-        self.__logger.debug("        H6: [{}]" .format(ena_gran_h6))
-        self.__logger.debug("        H8: [{}]" .format(ena_gran_h8))
-        self.__logger.debug("        H12:[{}]" .format(ena_gran_h12))
-        self.__logger.debug("        D:  [{}]" .format(ena_gran_d))
-        self.__logger.debug("        W:  [{}]" .format(ena_gran_w))
+        self.__logger.debug("        M1: [{}]".format(ena_gran_m1))
+        self.__logger.debug("        M2: [{}]".format(ena_gran_m2))
+        self.__logger.debug("        M3: [{}]".format(ena_gran_m3))
+        self.__logger.debug("        M4: [{}]".format(ena_gran_m4))
+        self.__logger.debug("        M5: [{}]".format(ena_gran_m5))
+        self.__logger.debug("        M10:[{}]".format(ena_gran_m10))
+        self.__logger.debug("        M15:[{}]".format(ena_gran_m15))
+        self.__logger.debug("        M30:[{}]".format(ena_gran_m30))
+        self.__logger.debug("        H1: [{}]".format(ena_gran_h1))
+        self.__logger.debug("        H2: [{}]".format(ena_gran_h2))
+        self.__logger.debug("        H3: [{}]".format(ena_gran_h3))
+        self.__logger.debug("        H4: [{}]".format(ena_gran_h4))
+        self.__logger.debug("        H6: [{}]".format(ena_gran_h6))
+        self.__logger.debug("        H8: [{}]".format(ena_gran_h8))
+        self.__logger.debug("        H12:[{}]".format(ena_gran_h12))
+        self.__logger.debug("        D:  [{}]".format(ena_gran_d))
+        self.__logger.debug("        W:  [{}]".format(ena_gran_w))
         self.__logger.debug("[Param]Historical data length:")
-        self.__logger.debug("        M1: [{}]" .format(leng_m1))
-        self.__logger.debug("        M2: [{}]" .format(leng_m2))
-        self.__logger.debug("        M3: [{}]" .format(leng_m3))
-        self.__logger.debug("        M4: [{}]" .format(leng_m4))
-        self.__logger.debug("        M5: [{}]" .format(leng_m5))
-        self.__logger.debug("        M10:[{}]" .format(leng_m10))
-        self.__logger.debug("        M15:[{}]" .format(leng_m15))
-        self.__logger.debug("        M30:[{}]" .format(leng_m30))
-        self.__logger.debug("        H1: [{}]" .format(leng_h1))
-        self.__logger.debug("        H2: [{}]" .format(leng_h2))
-        self.__logger.debug("        H3: [{}]" .format(leng_h3))
-        self.__logger.debug("        H4: [{}]" .format(leng_h4))
-        self.__logger.debug("        H6: [{}]" .format(leng_h6))
-        self.__logger.debug("        H8: [{}]" .format(leng_h8))
-        self.__logger.debug("        H12:[{}]" .format(leng_h12))
-        self.__logger.debug("        D:  [{}]" .format(leng_d))
-        self.__logger.debug("        W:  [{}]" .format(leng_w))
+        self.__logger.debug("        M1: [{}]".format(leng_m1))
+        self.__logger.debug("        M2: [{}]".format(leng_m2))
+        self.__logger.debug("        M3: [{}]".format(leng_m3))
+        self.__logger.debug("        M4: [{}]".format(leng_m4))
+        self.__logger.debug("        M5: [{}]".format(leng_m5))
+        self.__logger.debug("        M10:[{}]".format(leng_m10))
+        self.__logger.debug("        M15:[{}]".format(leng_m15))
+        self.__logger.debug("        M30:[{}]".format(leng_m30))
+        self.__logger.debug("        H1: [{}]".format(leng_h1))
+        self.__logger.debug("        H2: [{}]".format(leng_h2))
+        self.__logger.debug("        H3: [{}]".format(leng_h3))
+        self.__logger.debug("        H4: [{}]".format(leng_h4))
+        self.__logger.debug("        H6: [{}]".format(leng_h6))
+        self.__logger.debug("        H8: [{}]".format(leng_h8))
+        self.__logger.debug("        H12:[{}]".format(leng_h12))
+        self.__logger.debug("        D:  [{}]".format(leng_d))
+        self.__logger.debug("        W:  [{}]".format(leng_w))
 
         DATA_LENGTH_DICT = {
             GranApi.GRAN_M1: leng_m1,
@@ -640,7 +641,7 @@ class CandlestickManager(Node):
         while not cli.wait_for_service(timeout_sec=1.0):
             if not rclpy.ok():
                 raise RuntimeError("Interrupted while waiting for service.")
-            self.__logger.info("Waiting for [%s] service..." % (srv_name))
+            self.__logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
     def __on_recv_historical_candles(self,
@@ -649,12 +650,12 @@ class CandlestickManager(Node):
                                      ) -> SrvTypeResponse:
         logger = self._logger
 
-        logger.debug("========== Service[historical_candles]:Start ==========")
+        logger.debug("{:=^50}".format(" Service[historical_candles]:Start "))
         logger.debug("<Request>")
-        logger.debug("- gran_msg.gran_id:[%d]" % (req.gran_msg.gran_id))
-        logger.debug("- inst_msg.inst_id:[%d]" % (req.inst_msg.inst_id))
-        logger.debug("- dt_from:[%s]" % (req.dt_from))
-        logger.debug("- dt_to:[%s]" % (req.dt_to))
+        logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
+        logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
+        logger.debug("  - dt_from:[{}]".format(req.dt_from))
+        logger.debug("  - dt_to:[{}]".format(req.dt_to))
         dbg_tm_start = dt.datetime.now()
 
         DT_FMT = CandlesData.DT_FMT
@@ -696,10 +697,10 @@ class CandlestickManager(Node):
 
         dbg_tm_end = dt.datetime.now()
         logger.debug("<Response>")
-        logger.debug("- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+        logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
         logger.debug("[Performance]")
-        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
-        logger.debug("========== Service[historical_candles]:End ==========")
+        logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        logger.debug("{:=^50}".format(" Service[historical_candles]:End "))
 
         return rsp
 
@@ -709,12 +710,12 @@ class CandlestickManager(Node):
                                 ) -> SrvTypeResponse:
         logger = self._logger
 
-        logger.debug("========== Service[candles_monitor]:Start ==========")
+        logger.debug("{:=^50}".format(" Service[candles_monitor]:Start "))
         logger.debug("<Request>")
-        logger.debug("- gran_msg.gran_id:[%d]" % (req.gran_msg.gran_id))
-        logger.debug("- inst_msg.inst_id:[%d]" % (req.inst_msg.inst_id))
-        logger.debug("- dt_from:[%s]" % (req.dt_from))
-        logger.debug("- dt_to:[%s]" % (req.dt_to))
+        logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
+        logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
+        logger.debug("  - dt_from:[{}]".format(req.dt_from))
+        logger.debug("  - dt_to:[{}]".format(req.dt_to))
         dbg_tm_start = dt.datetime.now()
 
         DT_FMT = CandlesData.DT_FMT
@@ -756,10 +757,10 @@ class CandlestickManager(Node):
 
         dbg_tm_end = dt.datetime.now()
         logger.debug("<Response>")
-        logger.debug("- cndl_msg_list(length):[%d]" % (len(rsp.cndl_msg_list)))
+        logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
         logger.debug("[Performance]")
-        logger.debug("- Response time:[%s]" % (dbg_tm_end - dbg_tm_start))
-        logger.debug("========== Service[order_create]:End ==========")
+        logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        logger.debug("{:=^50}".format(" Service[order_create]:End "))
 
         return rsp
 
