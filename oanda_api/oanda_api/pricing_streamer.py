@@ -3,7 +3,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from std_msgs.msg import Bool, String
-from api_msgs.msg import PriceBucket, Pricing
+from api_msgs.msg import PriceBucket, Pricing, Instrument
 from oandapyV20 import API
 from oandapyV20.endpoints.pricing import PricingStream
 from oandapyV20.exceptions import V20Error, StreamTerminated
@@ -18,12 +18,16 @@ class PricingStreamer(Node):
         super().__init__("pricing_streamer")
 
         # Set logger lebel
-        self.__logger = super().get_logger()
-        self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+        logger = super().get_logger()
+        logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         PRMNM_ACCOUNT_NUMBER = "account_number"
         PRMNM_ACCESS_TOKEN = "access_token"
-        PRMNM_INST_ID_LIST = "instrument_id_list"
+        ENA_INST = "enable_instrument."
+        PRMNM_ENA_INST_USDJPY = ENA_INST + "usdjpy"
+        PRMNM_ENA_INST_EURJPY = ENA_INST + "eurjpy"
+        PRMNM_ENA_INST_EURUSD = ENA_INST + "eurusd"
+
         TPCNM_PRICING = "pricing_"
         TPCNM_HEARTBEAT = "heart_beat"
         TPCNM_ACT_FLG = "activate_flag"
@@ -31,21 +35,35 @@ class PricingStreamer(Node):
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
-        self.declare_parameter(PRMNM_INST_ID_LIST)
+        self.declare_parameter(PRMNM_ENA_INST_USDJPY)
+        self.declare_parameter(PRMNM_ENA_INST_EURJPY)
+        self.declare_parameter(PRMNM_ENA_INST_EURUSD)
+
+        account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
+        access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
+        ena_inst_usdjpy = self.get_parameter(PRMNM_ENA_INST_USDJPY).value
+        ena_inst_eurjpy = self.get_parameter(PRMNM_ENA_INST_EURJPY).value
+        ena_inst_eurusd = self.get_parameter(PRMNM_ENA_INST_EURUSD).value
+
+        logger.debug("[Param]Account Number:[{}]".format(account_number))
+        logger.debug("[Param]Access Token:[{}]".format(access_token))
+        logger.debug("[Param]Enable instrument:")
+        logger.debug("        USD/JPY:[{}]".format(ena_inst_usdjpy))
+        logger.debug("        EUR/JPY:[{}]".format(ena_inst_eurjpy))
+        logger.debug("        EUR/USD:[{}]".format(ena_inst_eurusd))
 
         # Initialize
         self.__act_flg = True
 
-        account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        inst_id_list = self.get_parameter(PRMNM_INST_ID_LIST).value
-        self.__logger.debug("[Param]Account Number:[{}]".format(account_number))
-        self.__logger.debug("[Param]Access Token:[{}]".format(access_token))
-        self.__logger.debug("[Param]Instruments:[{}]".format(inst_id_list))
-
         inst_name_list = []
-        for inst_id in inst_id_list:
-            inst_name = INST_DICT[inst_id].name
+        if ena_inst_usdjpy:
+            inst_name = INST_DICT[Instrument.INST_USD_JPY].name
+            inst_name_list.append(inst_name)
+        if ena_inst_eurjpy:
+            inst_name = INST_DICT[Instrument.INST_EUR_JPY].name
+            inst_name_list.append(inst_name)
+        if ena_inst_eurusd:
+            inst_name = INST_DICT[Instrument.INST_EUR_USD].name
             inst_name_list.append(inst_name)
 
         self.__api = API(access_token=access_token)
@@ -72,6 +90,8 @@ class PricingStreamer(Node):
                                                   TPCNM_ACT_FLG,
                                                   callback,
                                                   qos_profile)
+
+        self.__logger = logger
 
     def background(self) -> None:
         if self.__act_flg:
