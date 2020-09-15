@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'pricing_streamer_exe = ' + package_name + '.pricing_streamer:main',
+            'pricing_stream_exe = ' + package_name + '.pricing_stream:main',
             'order_service_exe = ' + package_name + '.order_service:main',
             'candlestick_service_exe = ' + package_name + '.candlestick_service:main',
         ],

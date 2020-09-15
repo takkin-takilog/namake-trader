@@ -5,17 +5,17 @@ from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from std_msgs.msg import Bool, String
 from api_msgs.msg import PriceBucket, Pricing, Instrument
 from oandapyV20 import API
-from oandapyV20.endpoints.pricing import PricingStream
+from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error, StreamTerminated
 from oanda_api.service_common import INST_DICT
 
 MsgType = TypeVar("MsgType")
 
 
-class PricingStreamer(Node):
+class PricingStreamPublisher(Node):
 
     def __init__(self) -> None:
-        super().__init__("pricing_streamer")
+        super().__init__("pricing_stream")
 
         # Set logger lebel
         logger = super().get_logger()
@@ -28,7 +28,9 @@ class PricingStreamer(Node):
         PRMNM_ENA_INST_EURJPY = ENA_INST + "eurjpy"
         PRMNM_ENA_INST_EURUSD = ENA_INST + "eurusd"
 
-        TPCNM_PRICING = "pricing_"
+        TPCNM_PRICING_USDJPY = "pricing_usdjpy"
+        TPCNM_PRICING_EURJPY = "pricing_eurjpy"
+        TPCNM_PRICING_EURUSD = "pricing_eurusd"
         TPCNM_HEARTBEAT = "heart_beat"
         TPCNM_ACT_FLG = "activate_flag"
 
@@ -52,44 +54,50 @@ class PricingStreamer(Node):
         logger.debug("        EUR/JPY:[{}]".format(ena_inst_eurjpy))
         logger.debug("        EUR/USD:[{}]".format(ena_inst_eurusd))
 
-        # Initialize
-        self.__act_flg = True
-
+        # Declare publisher and subscriber
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
         inst_name_list = []
+        self.__pub_dict = {}
         if ena_inst_usdjpy:
             inst_name = INST_DICT[Instrument.INST_USD_JPY].name
+            pub = self.create_publisher(Pricing,
+                                        TPCNM_PRICING_USDJPY,
+                                        qos_profile)
+            self.__pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
         if ena_inst_eurjpy:
             inst_name = INST_DICT[Instrument.INST_EUR_JPY].name
+            pub = self.create_publisher(Pricing,
+                                        TPCNM_PRICING_EURJPY,
+                                        qos_profile)
+            self.__pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
         if ena_inst_eurusd:
             inst_name = INST_DICT[Instrument.INST_EUR_USD].name
-            inst_name_list.append(inst_name)
-
-        self.__api = API(access_token=access_token)
-
-        instruments = ",".join(inst_name_list)
-        params = {"instruments": instruments}
-        self.__ps = PricingStream(account_number, params)
-
-        # Declare publisher and subscriber
-        self.__pub_dict = {}
-        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
-                                 reliability=QoSReliabilityPolicy.RELIABLE)
-        for inst_name in inst_name_list:
-            suffix = inst_name.replace("_", "").lower()
             pub = self.create_publisher(Pricing,
-                                        TPCNM_PRICING + suffix,
+                                        TPCNM_PRICING_EURUSD,
                                         qos_profile)
             self.__pub_dict[inst_name] = pub.publish
+            inst_name_list.append(inst_name)
+
         self.__pub_hb = self.create_publisher(String,
                                               TPCNM_HEARTBEAT,
                                               qos_profile)
+
         callback = self.__on_subs_act_flg
         self.__sub_act = self.create_subscription(Bool,
                                                   TPCNM_ACT_FLG,
                                                   callback,
                                                   qos_profile)
+
+        # Initialize
+        self.__act_flg = True
+        self.__api = API(access_token=access_token)
+
+        instruments = ",".join(inst_name_list)
+        params = {"instruments": instruments}
+        self.__ps = pr.PricingStream(account_number, params)
 
         self.__logger = logger
 
@@ -160,7 +168,7 @@ class PricingStreamer(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    stream_api = PricingStreamer()
+    stream_api = PricingStreamPublisher()
 
     try:
         while rclpy.ok():
