@@ -12,10 +12,10 @@ from oanda_api.service_common import INST_DICT
 MsgType = TypeVar("MsgType")
 
 
-class PricingStreamPublisher(Node):
+class PricingPublisher(Node):
 
     def __init__(self) -> None:
-        super().__init__("pricing_stream")
+        super().__init__("pricing")
 
         # Set logger lebel
         logger = super().get_logger()
@@ -31,7 +31,6 @@ class PricingStreamPublisher(Node):
         TPCNM_PRICING_USDJPY = "pricing_usdjpy"
         TPCNM_PRICING_EURJPY = "pricing_eurjpy"
         TPCNM_PRICING_EURUSD = "pricing_eurusd"
-        TPCNM_HEARTBEAT = "heart_beat"
         TPCNM_ACT_FLG = "activate_flag"
 
         # Declare parameter
@@ -81,10 +80,6 @@ class PricingStreamPublisher(Node):
             self.__pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
 
-        self.__pub_hb = self.create_publisher(String,
-                                              TPCNM_HEARTBEAT,
-                                              qos_profile)
-
         callback = self.__on_subs_act_flg
         self.__sub_act = self.create_subscription(Bool,
                                                   TPCNM_ACT_FLG,
@@ -97,20 +92,20 @@ class PricingStreamPublisher(Node):
 
         instruments = ",".join(inst_name_list)
         params = {"instruments": instruments}
-        self.__pi = pr.PricingStream(account_number, params)
+        self.__pi = pr.PricingInfo(account_number, params)
 
         self.__logger = logger
 
     def background(self) -> None:
 
-        if self.__act_flg:
+        while self.__act_flg:
             try:
                 self.__request()
             except V20Error as e:
                 self.__logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
                 self.__logger.error("{}".format(e))
-            except StreamTerminated as e:
-                self.__logger.debug("Stream Terminated: {}".format(e))
+
+            rclpy.spin_once(self, timeout_sec=0)
 
     def __on_subs_act_flg(self, msg: MsgType) -> None:
         if msg.data:
@@ -120,50 +115,39 @@ class PricingStreamPublisher(Node):
 
     def __request(self) -> None:
 
-        for rsp in self.__api.request(self.__pi):
-
-            rclpy.spin_once(self, timeout_sec=0)
-            if not self.__act_flg:
-                self.__pi.terminate()
-
-            if "type" in rsp.keys():
-                typ = rsp["type"]
-                if typ == "PRICE":
-                    msg = Pricing()
-                    msg.time = rsp["time"]
-                    for bid in rsp["bids"]:
-                        pb = PriceBucket()
-                        pb.price = float(bid["price"])
-                        pb.liquidity = bid["liquidity"]
-                        msg.bids.append(pb)
-                    for ask in rsp["asks"]:
-                        pb = PriceBucket()
-                        pb.price = float(ask["price"])
-                        pb.liquidity = ask["liquidity"]
-                        msg.asks.append(pb)
-                    msg.closeout_bid = float(rsp["closeoutBid"])
-                    msg.closeout_ask = float(rsp["closeoutAsk"])
-                    msg.tradeable = rsp["tradeable"]
-                    # Publish topics
-                    self.__pub_dict[rsp["instrument"]](msg)
-
-                elif typ == "HEARTBEAT":
-                    msg = String()
-                    msg.data = rsp["time"]
-                    # Publish topics
-                    self.__pub_hb.publish(msg)
+        rsp = self.__api.request(self.__pi)
+        price_list = rsp["prices"]
+        for price in price_list:
+            if price["type"] == "PRICE":
+                msg = Pricing()
+                msg.time = price["time"]
+                for bid in price["bids"]:
+                    pb = PriceBucket()
+                    pb.price = float(bid["price"])
+                    pb.liquidity = bid["liquidity"]
+                    msg.bids.append(pb)
+                for ask in price["asks"]:
+                    pb = PriceBucket()
+                    pb.price = float(ask["price"])
+                    pb.liquidity = ask["liquidity"]
+                    msg.asks.append(pb)
+                msg.closeout_bid = float(price["closeoutBid"])
+                msg.closeout_ask = float(price["closeoutAsk"])
+                msg.tradeable = price["tradeable"]
+                # Publish topics
+                self.__pub_dict[price["instrument"]](msg)
 
 
 def main(args=None):
     rclpy.init(args=args)
-    stream_api = PricingStreamPublisher()
+    pricing_api = PricingPublisher()
 
     try:
         while rclpy.ok():
-            rclpy.spin_once(stream_api, timeout_sec=1.0)
-            stream_api.background()
+            rclpy.spin_once(pricing_api, timeout_sec=1.0)
+            pricing_api.background()
     except KeyboardInterrupt:
         pass
 
-    stream_api.destroy_node()
+    pricing_api.destroy_node()
     rclpy.shutdown()
