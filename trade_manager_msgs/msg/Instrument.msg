@@ -1,4 +1,4 @@
-# instrument Definitions.
+# instrument definitions for monitor.
 
 # instrument ID definition
 int32 INST_USD_JPY=1	# USD/JPY

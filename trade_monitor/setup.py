@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'trade_manager'
+package_name = 'trade_monitor'
 
 setup(
     name=package_name,
@@ -20,8 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'order_manager_exe = ' + package_name + '.order_manager:main',
-            'candlestick_manager_exe = ' + package_name + '.candlestick_manager:main',
+            'gui_monitor_exe = ' + package_name + '.gui_monitor:main',
         ],
     },
 )
