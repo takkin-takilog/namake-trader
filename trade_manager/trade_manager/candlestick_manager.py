@@ -575,10 +575,8 @@ class CandlestickManager(Node):
             for gran_id in GRAN_ID_LIST:
                 data_len = DATA_LENGTH_DICT[gran_id]
                 obj = CandlesData(self, cli_cdl, inst_id, gran_id, data_len)
-                tmp = {gran_id: obj}
-                gran_dict.update(tmp)
-            tmp = {inst_id: gran_dict}
-            obj_map_dict.update(tmp)
+                gran_dict[gran_id] = obj
+            obj_map_dict[inst_id] = gran_dict
 
         # type: Dict[InstrumentMnt][GranularityMnt]
         self.__obj_map_dict = obj_map_dict
