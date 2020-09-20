@@ -2,11 +2,11 @@ from typing import TypeVar
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool
 from api_msgs.msg import PriceBucket, Pricing, Instrument
 from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
-from oandapyV20.exceptions import V20Error, StreamTerminated
+from oandapyV20.exceptions import V20Error
 from oanda_api.service_common import INST_DICT
 
 MsgType = TypeVar("MsgType")
@@ -87,7 +87,7 @@ class PricingPublisher(Node):
                                                   qos_profile)
 
         # Initialize
-        self.__act_flg = True
+        self.__act_flg = False
         self.__api = API(access_token=access_token)
 
         instruments = ",".join(inst_name_list)
