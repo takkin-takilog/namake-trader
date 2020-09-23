@@ -271,8 +271,8 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
             self.setColor(self.__brush_color_on)
 
             text = f"・Profit or Loss: {self.__intensity}\n"\
-                f"・Gap Range th: {self.__left_x} - {self.__right_x}\n"\
-                f"・Max Open Range Th: {self.__lower_y} - {self.__upper_y}"
+                f"・Loss cut Range th: {self.__left_x} - {self.__right_x}\n"\
+                f"・Gap Range Th: {self.__lower_y} - {self.__upper_y}"
 
             callout.setText(text)
             callout.updateGeometry(self.__center)
