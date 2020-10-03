@@ -215,7 +215,6 @@ class GapFillUi():
 
         # fetch Gap-fill data
         req = GapFillMntSrv.Request()
-        req.inst_msg.inst_id = inst_msg.msg_id
 
         srv_cli = self.__srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
@@ -316,6 +315,7 @@ class GapFillUi():
         qisr0 = selected.at(0)
 
         if qisr0 is not None:
+
             model_index = qisr0.indexes()[0]
             trg_date_str = self.__qstd_itm_mdl.item(model_index.row()).text()
             self.__logger.debug("target_date: " + trg_date_str)
@@ -325,9 +325,11 @@ class GapFillUi():
             dt_to = trg_date + dt.timedelta(hours=12)
 
             inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
+            inst_msg = INST_MSG_LIST[inst_idx]
+
             req = CandlesMntSrv.Request()
             req.gran_msg.gran_id = Gran.GRAN_M10
-            req.inst_msg.inst_id = INST_MSG_LIST[inst_idx].msg_id
+            req.inst_msg.inst_id = inst_msg.msg_id
             req.dt_from = dt_from.strftime(DT_FMT)
             req.dt_to = dt_to.strftime(DT_FMT)
 
@@ -388,7 +390,7 @@ class GapFillUi():
             self.__chart_curr.set_max_y(max_y)
             self.__chart_curr.set_min_y(min_y)
 
-            decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+            decimal_digit = inst_msg.decimal_digit
 
             idx = self.__ui.comboBox_spread_prev.currentIndex()
             self.__update_prev_chart(idx, df_prev, sr_gf, decimal_digit)
