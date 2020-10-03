@@ -121,7 +121,7 @@ class OrderState(object):
             sts_aft = sts_bfr
 
         if not sts_bfr == sts_aft:
-            self.__logger.debug("<< Change state:[{}] -> [{}] >>".format(sts_bfr, sts_aft))
+            self.__logger.debug("Change state:[{}] -> [{}]".format(sts_bfr, sts_aft))
 
         self.__state = sts_aft
 
