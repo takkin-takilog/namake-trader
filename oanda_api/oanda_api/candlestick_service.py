@@ -5,7 +5,7 @@ import oandapyV20.endpoints.instruments as instruments
 from api_msgs.msg import Candle
 from api_msgs.msg import FailReasonCode as frc
 from api_msgs.srv import CandlesSrv
-from oanda_api.service_common import ServiceAbs
+from oanda_api.service_common import AbstractService
 from oanda_api.service_common import INST_DICT, GRAN_DICT
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
@@ -13,7 +13,7 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 ApiRsp = TypeVar("ApiRsp")
 
 
-class CandlestickService(ServiceAbs):
+class CandlestickService(AbstractService):
 
     _MAX_SIZE = 4999
     # _MAX_SIZE = 10    # For test

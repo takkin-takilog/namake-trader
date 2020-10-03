@@ -5,7 +5,7 @@ from PySide2.QtGui import QPalette, QColor, QFont, QPen, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient
 from PySide2.QtWidgets import QGraphicsLineItem
 from trade_manager_msgs.msg import Granularity as Gran
-from trade_monitor.abstract import CalloutChartAbs, CandlestickChartAbs
+from trade_monitor.abstract import AbstractCalloutChart, AbstractCandlestickChart
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 CALLOUT_DATE_COLOR = QColor(0, 204, 51)
@@ -144,7 +144,7 @@ class CandlestickChart(object):
         self._chartview.resize(frame_size)
 
 
-class CalloutDataTime(CalloutChartAbs):
+class CalloutDataTime(AbstractCalloutChart):
 
     def __init__(self, parent: QtCharts.QChart):
         super().__init__(parent)
@@ -177,7 +177,7 @@ class CalloutDataTime(CalloutChartAbs):
         painter.drawText(self._textRect, self._text)
 
 
-class CallouPrice(CalloutChartAbs):
+class CallouPrice(AbstractCalloutChart):
 
     def __init__(self, parent: QtCharts.QChart):
         super().__init__(parent)
@@ -210,7 +210,7 @@ class CallouPrice(CalloutChartAbs):
         painter.drawText(self._textRect, self._text)
 
 
-class CandlestickChartGapFillBase(CandlestickChartAbs):
+class CandlestickChartGapFillBase(AbstractCandlestickChart):
 
     def __init__(self, widget):
         super().__init__(widget)

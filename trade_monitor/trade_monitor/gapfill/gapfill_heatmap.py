@@ -14,7 +14,7 @@ from PySide2.QtGui import QColor, QPen, QPainter, QPainterPath, QPixmap
 from PySide2.QtGui import QLinearGradient, QFontMetrics
 from PySide2.QtCharts import QtCharts
 
-from trade_monitor.abstract import CalloutChartAbs
+from trade_monitor.abstract import AbstractCalloutChart
 from trade_monitor import util as utl
 from trade_monitor.util import GradientManager
 from trade_monitor.gapfill.heatmap_manager import HeatMapManager
@@ -22,7 +22,7 @@ from trade_monitor.gapfill.heatmap_manager import HeatMapManager
 gradMng = GradientManager()
 
 
-class Callout(CalloutChartAbs):
+class Callout(AbstractCalloutChart):
 
     def __init__(self, parent: QtCharts.QChart = None):
         super().__init__(parent)

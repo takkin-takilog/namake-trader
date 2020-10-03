@@ -10,7 +10,7 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           OrderDetailsSrv, OrderCancelSrv)
 from api_msgs.msg import OrderType, OrderState, TradeState
 from api_msgs.msg import FailReasonCode as frc
-from oanda_api.service_common import ServiceAbs
+from oanda_api.service_common import AbstractService
 from oanda_api.service_common import INST_DICT
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
@@ -45,7 +45,7 @@ _TRADE_STS_DICT = {
 }
 
 
-class OrderService(ServiceAbs):
+class OrderService(AbstractService):
 
     def __init__(self) -> None:
         super().__init__("order_service")
@@ -55,8 +55,8 @@ class OrderService(ServiceAbs):
         # Declare parameter
         self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
 
-        account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        self._logger.debug("[Param]Account Number:[{}]".format(account_number))
+        self._ACCOUNT_NUMBER = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
+        self._logger.debug("[Param]Account Number:[{}]".format(self._ACCOUNT_NUMBER))
 
         # Create service server "OrderCreate"
         srv_type = OrderCreateSrv
@@ -101,8 +101,6 @@ class OrderService(ServiceAbs):
                                                     srv_name,
                                                     callback)
 
-        self._account_number = account_number
-
     def _on_recv_order_create(self,
                               req: SrvTypeRequest,
                               rsp: SrvTypeResponse
@@ -120,7 +118,7 @@ class OrderService(ServiceAbs):
         dbg_tm_start = dt.datetime.now()
 
         data = self._make_data_for_order_create(req)
-        ep = OrderCreate(accountID=self._account_number, data=data)
+        ep = OrderCreate(accountID=self._ACCOUNT_NUMBER, data=data)
         apirsp, rsp = self._request_api(ep, rsp)
         rsp = self._update_order_create_response(apirsp, rsp)
 
@@ -146,7 +144,7 @@ class OrderService(ServiceAbs):
         logger.debug("  - trade_id:[{}]".format(req.trade_id))
         dbg_tm_start = dt.datetime.now()
 
-        ep = TradeDetails(accountID=self._account_number,
+        ep = TradeDetails(accountID=self._ACCOUNT_NUMBER,
                           tradeID=req.trade_id)
         apirsp, rsp = self._request_api(ep, rsp)
         rsp = self._update_trade_details_response(apirsp, rsp)
@@ -188,7 +186,7 @@ class OrderService(ServiceAbs):
         dbg_tm_start = dt.datetime.now()
 
         data = self._make_data_for_trade_crcdo(req)
-        ep = TradeCRCDO(accountID=self._account_number,
+        ep = TradeCRCDO(accountID=self._ACCOUNT_NUMBER,
                         tradeID=req.trade_id, data=data)
         apirsp, rsp = self._request_api(ep, rsp)
         rsp = self._update_trade_crcdo_response(apirsp, rsp)
@@ -216,7 +214,7 @@ class OrderService(ServiceAbs):
         logger.debug("  - trade_id:[{}]".format(req.trade_id))
         dbg_tm_start = dt.datetime.now()
 
-        ep = TradeClose(accountID=self._account_number, tradeID=req.trade_id)
+        ep = TradeClose(accountID=self._ACCOUNT_NUMBER, tradeID=req.trade_id)
         apirsp, rsp = self._request_api(ep, rsp)
         rsp = self._update_trade_close_response(apirsp, rsp)
 
@@ -247,7 +245,7 @@ class OrderService(ServiceAbs):
         logger.debug("  - order_id:[{}]".format(req.order_id))
         dbg_tm_start = dt.datetime.now()
 
-        ep = OrderDetails(accountID=self._account_number,
+        ep = OrderDetails(accountID=self._ACCOUNT_NUMBER,
                           orderID=req.order_id)
         apirsp, rsp = self._request_api(ep, rsp)
         rsp = self._update_order_details_response(apirsp, rsp)
@@ -281,7 +279,7 @@ class OrderService(ServiceAbs):
         logger.debug("  - order_id:[{}]".format(req.order_id))
         dbg_tm_start = dt.datetime.now()
 
-        ep = OrderCancel(accountID=self._account_number,
+        ep = OrderCancel(accountID=self._ACCOUNT_NUMBER,
                          orderID=req.order_id)
         apirsp, rsp = self._request_api(ep, rsp)
         rsp = self._update_order_cancel_response(apirsp, rsp)

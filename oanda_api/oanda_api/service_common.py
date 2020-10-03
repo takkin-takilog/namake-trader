@@ -79,7 +79,7 @@ GRAN_DICT = {
 }
 
 
-class ServiceAbs(Node, metaclass=ABCMeta):
+class AbstractService(Node, metaclass=ABCMeta):
 
     def __init__(self,
                  node_name: str
@@ -94,10 +94,10 @@ class ServiceAbs(Node, metaclass=ABCMeta):
 
         # Declare parameter
         self.declare_parameter(PRMNM_ACCESS_TOKEN)
-        access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        self._logger.debug("[Param]Access Token:[{}]".format(access_token))
+        ACCESS_TOKEN = self.get_parameter(PRMNM_ACCESS_TOKEN).value
+        self._logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
 
-        self._api = API(access_token=access_token)
+        self._api = API(access_token=ACCESS_TOKEN)
 
     def _request_api(self,
                      endpoint: EndPoint,

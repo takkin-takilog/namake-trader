@@ -6,8 +6,7 @@ from PySide2.QtGui import QPalette, QColor, QFont, QFontMetrics, QPainter
 from PySide2.QtGui import QLinearGradient
 
 
-class CalloutChartAbs(QGraphicsItem):
-    __metaclass__ = ABCMeta
+class AbstractCalloutChart(QGraphicsItem):
 
     def __init__(self, parent: QtCharts.QChart):
         super().__init__()
@@ -54,8 +53,7 @@ class CalloutChartAbs(QGraphicsItem):
         self._rect = self._textRect.adjusted(-dx, -dy, dx, dy)
 
 
-class CandlestickChartAbs(QtCharts.QChartView):
-    __metaclass__ = ABCMeta
+class AbstractCandlestickChart(QtCharts.QChartView):
 
     COL_NAME_OP = "open"
     COL_NAME_HI = "high"

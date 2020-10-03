@@ -406,147 +406,147 @@ class CandlestickManager(Node):
         self.declare_parameter(PRMNM_LENG_D)
         self.declare_parameter(PRMNM_LENG_W)
 
-        ena_inst_usdjpy = self.get_parameter(PRMNM_ENA_INST_USDJPY).value
-        ena_inst_eurjpy = self.get_parameter(PRMNM_ENA_INST_EURJPY).value
-        ena_inst_eurusd = self.get_parameter(PRMNM_ENA_INST_EURUSD).value
-        ena_gran_m1 = self.get_parameter(PRMNM_ENA_GRAN_M1).value
-        ena_gran_m2 = self.get_parameter(PRMNM_ENA_GRAN_M2).value
-        ena_gran_m3 = self.get_parameter(PRMNM_ENA_GRAN_M3).value
-        ena_gran_m4 = self.get_parameter(PRMNM_ENA_GRAN_M4).value
-        ena_gran_m5 = self.get_parameter(PRMNM_ENA_GRAN_M5).value
-        ena_gran_m10 = self.get_parameter(PRMNM_ENA_GRAN_M10).value
-        ena_gran_m15 = self.get_parameter(PRMNM_ENA_GRAN_M15).value
-        ena_gran_m30 = self.get_parameter(PRMNM_ENA_GRAN_M30).value
-        ena_gran_h1 = self.get_parameter(PRMNM_ENA_GRAN_H1).value
-        ena_gran_h2 = self.get_parameter(PRMNM_ENA_GRAN_H2).value
-        ena_gran_h3 = self.get_parameter(PRMNM_ENA_GRAN_H3).value
-        ena_gran_h4 = self.get_parameter(PRMNM_ENA_GRAN_H4).value
-        ena_gran_h6 = self.get_parameter(PRMNM_ENA_GRAN_H6).value
-        ena_gran_h8 = self.get_parameter(PRMNM_ENA_GRAN_H8).value
-        ena_gran_h12 = self.get_parameter(PRMNM_ENA_GRAN_H12).value
-        ena_gran_d = self.get_parameter(PRMNM_ENA_GRAN_D).value
-        ena_gran_w = self.get_parameter(PRMNM_ENA_GRAN_W).value
-        leng_m1 = self.get_parameter(PRMNM_LENG_M1).value
-        leng_m2 = self.get_parameter(PRMNM_LENG_M2).value
-        leng_m3 = self.get_parameter(PRMNM_LENG_M3).value
-        leng_m4 = self.get_parameter(PRMNM_LENG_M4).value
-        leng_m5 = self.get_parameter(PRMNM_LENG_M5).value
-        leng_m10 = self.get_parameter(PRMNM_LENG_M10).value
-        leng_m15 = self.get_parameter(PRMNM_LENG_M15).value
-        leng_m30 = self.get_parameter(PRMNM_LENG_M30).value
-        leng_h1 = self.get_parameter(PRMNM_LENG_H1).value
-        leng_h2 = self.get_parameter(PRMNM_LENG_H2).value
-        leng_h3 = self.get_parameter(PRMNM_LENG_H3).value
-        leng_h4 = self.get_parameter(PRMNM_LENG_H4).value
-        leng_h6 = self.get_parameter(PRMNM_LENG_H6).value
-        leng_h8 = self.get_parameter(PRMNM_LENG_H8).value
-        leng_h12 = self.get_parameter(PRMNM_LENG_H12).value
-        leng_d = self.get_parameter(PRMNM_LENG_D).value
-        leng_w = self.get_parameter(PRMNM_LENG_W).value
+        ENA_INST_USDJPY = self.get_parameter(PRMNM_ENA_INST_USDJPY).value
+        ENA_INST_EURJPY = self.get_parameter(PRMNM_ENA_INST_EURJPY).value
+        ENA_INST_EURUSD = self.get_parameter(PRMNM_ENA_INST_EURUSD).value
+        ENA_GRAN_M1 = self.get_parameter(PRMNM_ENA_GRAN_M1).value
+        ENA_GRAN_M2 = self.get_parameter(PRMNM_ENA_GRAN_M2).value
+        ENA_GRAN_M3 = self.get_parameter(PRMNM_ENA_GRAN_M3).value
+        ENA_GRAN_M4 = self.get_parameter(PRMNM_ENA_GRAN_M4).value
+        ENA_GRAN_M5 = self.get_parameter(PRMNM_ENA_GRAN_M5).value
+        ENA_GRAN_M10 = self.get_parameter(PRMNM_ENA_GRAN_M10).value
+        ENA_GRAN_M15 = self.get_parameter(PRMNM_ENA_GRAN_M15).value
+        ENA_GRAN_M30 = self.get_parameter(PRMNM_ENA_GRAN_M30).value
+        ENA_GRAN_H1 = self.get_parameter(PRMNM_ENA_GRAN_H1).value
+        ENA_GRAN_H2 = self.get_parameter(PRMNM_ENA_GRAN_H2).value
+        ENA_GRAN_H3 = self.get_parameter(PRMNM_ENA_GRAN_H3).value
+        ENA_GRAN_H4 = self.get_parameter(PRMNM_ENA_GRAN_H4).value
+        ENA_GRAN_H6 = self.get_parameter(PRMNM_ENA_GRAN_H6).value
+        ENA_GRAN_H8 = self.get_parameter(PRMNM_ENA_GRAN_H8).value
+        ENA_GRAN_H12 = self.get_parameter(PRMNM_ENA_GRAN_H12).value
+        ENA_GRAN_D = self.get_parameter(PRMNM_ENA_GRAN_D).value
+        ENA_GRAN_W = self.get_parameter(PRMNM_ENA_GRAN_W).value
+        LENG_M1 = self.get_parameter(PRMNM_LENG_M1).value
+        LENG_M2 = self.get_parameter(PRMNM_LENG_M2).value
+        LENG_M3 = self.get_parameter(PRMNM_LENG_M3).value
+        LENG_M4 = self.get_parameter(PRMNM_LENG_M4).value
+        LENG_M5 = self.get_parameter(PRMNM_LENG_M5).value
+        LENG_M10 = self.get_parameter(PRMNM_LENG_M10).value
+        LENG_M15 = self.get_parameter(PRMNM_LENG_M15).value
+        LENG_M30 = self.get_parameter(PRMNM_LENG_M30).value
+        LENG_H1 = self.get_parameter(PRMNM_LENG_H1).value
+        LENG_H2 = self.get_parameter(PRMNM_LENG_H2).value
+        LENG_H3 = self.get_parameter(PRMNM_LENG_H3).value
+        LENG_H4 = self.get_parameter(PRMNM_LENG_H4).value
+        LENG_H6 = self.get_parameter(PRMNM_LENG_H6).value
+        LENG_H8 = self.get_parameter(PRMNM_LENG_H8).value
+        LENG_H12 = self.get_parameter(PRMNM_LENG_H12).value
+        LENG_D = self.get_parameter(PRMNM_LENG_D).value
+        LENG_W = self.get_parameter(PRMNM_LENG_W).value
 
         self._logger.debug("[Param]Enable instrument:")
-        self._logger.debug("        USD/JPY:[{}]".format(ena_inst_usdjpy))
-        self._logger.debug("        EUR/JPY:[{}]".format(ena_inst_eurjpy))
-        self._logger.debug("        EUR/USD:[{}]".format(ena_inst_eurusd))
+        self._logger.debug("        USD/JPY:[{}]".format(ENA_INST_USDJPY))
+        self._logger.debug("        EUR/JPY:[{}]".format(ENA_INST_EURJPY))
+        self._logger.debug("        EUR/USD:[{}]".format(ENA_INST_EURUSD))
         self._logger.debug("[Param]Enable granularity:")
-        self._logger.debug("        M1: [{}]".format(ena_gran_m1))
-        self._logger.debug("        M2: [{}]".format(ena_gran_m2))
-        self._logger.debug("        M3: [{}]".format(ena_gran_m3))
-        self._logger.debug("        M4: [{}]".format(ena_gran_m4))
-        self._logger.debug("        M5: [{}]".format(ena_gran_m5))
-        self._logger.debug("        M10:[{}]".format(ena_gran_m10))
-        self._logger.debug("        M15:[{}]".format(ena_gran_m15))
-        self._logger.debug("        M30:[{}]".format(ena_gran_m30))
-        self._logger.debug("        H1: [{}]".format(ena_gran_h1))
-        self._logger.debug("        H2: [{}]".format(ena_gran_h2))
-        self._logger.debug("        H3: [{}]".format(ena_gran_h3))
-        self._logger.debug("        H4: [{}]".format(ena_gran_h4))
-        self._logger.debug("        H6: [{}]".format(ena_gran_h6))
-        self._logger.debug("        H8: [{}]".format(ena_gran_h8))
-        self._logger.debug("        H12:[{}]".format(ena_gran_h12))
-        self._logger.debug("        D:  [{}]".format(ena_gran_d))
-        self._logger.debug("        W:  [{}]".format(ena_gran_w))
+        self._logger.debug("        M1: [{}]".format(ENA_GRAN_M1))
+        self._logger.debug("        M2: [{}]".format(ENA_GRAN_M2))
+        self._logger.debug("        M3: [{}]".format(ENA_GRAN_M3))
+        self._logger.debug("        M4: [{}]".format(ENA_GRAN_M4))
+        self._logger.debug("        M5: [{}]".format(ENA_GRAN_M5))
+        self._logger.debug("        M10:[{}]".format(ENA_GRAN_M10))
+        self._logger.debug("        M15:[{}]".format(ENA_GRAN_M15))
+        self._logger.debug("        M30:[{}]".format(ENA_GRAN_M30))
+        self._logger.debug("        H1: [{}]".format(ENA_GRAN_H1))
+        self._logger.debug("        H2: [{}]".format(ENA_GRAN_H2))
+        self._logger.debug("        H3: [{}]".format(ENA_GRAN_H3))
+        self._logger.debug("        H4: [{}]".format(ENA_GRAN_H4))
+        self._logger.debug("        H6: [{}]".format(ENA_GRAN_H6))
+        self._logger.debug("        H8: [{}]".format(ENA_GRAN_H8))
+        self._logger.debug("        H12:[{}]".format(ENA_GRAN_H12))
+        self._logger.debug("        D:  [{}]".format(ENA_GRAN_D))
+        self._logger.debug("        W:  [{}]".format(ENA_GRAN_W))
         self._logger.debug("[Param]Historical data length:")
-        self._logger.debug("        M1: [{}]".format(leng_m1))
-        self._logger.debug("        M2: [{}]".format(leng_m2))
-        self._logger.debug("        M3: [{}]".format(leng_m3))
-        self._logger.debug("        M4: [{}]".format(leng_m4))
-        self._logger.debug("        M5: [{}]".format(leng_m5))
-        self._logger.debug("        M10:[{}]".format(leng_m10))
-        self._logger.debug("        M15:[{}]".format(leng_m15))
-        self._logger.debug("        M30:[{}]".format(leng_m30))
-        self._logger.debug("        H1: [{}]".format(leng_h1))
-        self._logger.debug("        H2: [{}]".format(leng_h2))
-        self._logger.debug("        H3: [{}]".format(leng_h3))
-        self._logger.debug("        H4: [{}]".format(leng_h4))
-        self._logger.debug("        H6: [{}]".format(leng_h6))
-        self._logger.debug("        H8: [{}]".format(leng_h8))
-        self._logger.debug("        H12:[{}]".format(leng_h12))
-        self._logger.debug("        D:  [{}]".format(leng_d))
-        self._logger.debug("        W:  [{}]".format(leng_w))
+        self._logger.debug("        M1: [{}]".format(LENG_M1))
+        self._logger.debug("        M2: [{}]".format(LENG_M2))
+        self._logger.debug("        M3: [{}]".format(LENG_M3))
+        self._logger.debug("        M4: [{}]".format(LENG_M4))
+        self._logger.debug("        M5: [{}]".format(LENG_M5))
+        self._logger.debug("        M10:[{}]".format(LENG_M10))
+        self._logger.debug("        M15:[{}]".format(LENG_M15))
+        self._logger.debug("        M30:[{}]".format(LENG_M30))
+        self._logger.debug("        H1: [{}]".format(LENG_H1))
+        self._logger.debug("        H2: [{}]".format(LENG_H2))
+        self._logger.debug("        H3: [{}]".format(LENG_H3))
+        self._logger.debug("        H4: [{}]".format(LENG_H4))
+        self._logger.debug("        H6: [{}]".format(LENG_H6))
+        self._logger.debug("        H8: [{}]".format(LENG_H8))
+        self._logger.debug("        H12:[{}]".format(LENG_H12))
+        self._logger.debug("        D:  [{}]".format(LENG_D))
+        self._logger.debug("        W:  [{}]".format(LENG_W))
 
         DATA_LENGTH_DICT = {
-            GranApi.GRAN_M1: leng_m1,
-            GranApi.GRAN_M2: leng_m2,
-            GranApi.GRAN_M3: leng_m3,
-            GranApi.GRAN_M4: leng_m4,
-            GranApi.GRAN_M5: leng_m5,
-            GranApi.GRAN_M10: leng_m10,
-            GranApi.GRAN_M15: leng_m15,
-            GranApi.GRAN_M30: leng_m30,
-            GranApi.GRAN_H1: leng_h1,
-            GranApi.GRAN_H2: leng_h2,
-            GranApi.GRAN_H3: leng_h3,
-            GranApi.GRAN_H4: leng_h4,
-            GranApi.GRAN_H6: leng_h6,
-            GranApi.GRAN_H8: leng_h8,
-            GranApi.GRAN_H12: leng_h12,
-            GranApi.GRAN_D: leng_d,
-            GranApi.GRAN_W: leng_w,
+            GranApi.GRAN_M1: LENG_M1,
+            GranApi.GRAN_M2: LENG_M2,
+            GranApi.GRAN_M3: LENG_M3,
+            GranApi.GRAN_M4: LENG_M4,
+            GranApi.GRAN_M5: LENG_M5,
+            GranApi.GRAN_M10: LENG_M10,
+            GranApi.GRAN_M15: LENG_M15,
+            GranApi.GRAN_M30: LENG_M30,
+            GranApi.GRAN_H1: LENG_H1,
+            GranApi.GRAN_H2: LENG_H2,
+            GranApi.GRAN_H3: LENG_H3,
+            GranApi.GRAN_H4: LENG_H4,
+            GranApi.GRAN_H6: LENG_H6,
+            GranApi.GRAN_H8: LENG_H8,
+            GranApi.GRAN_H12: LENG_H12,
+            GranApi.GRAN_D: LENG_D,
+            GranApi.GRAN_W: LENG_W,
         }
 
         INST_ID_LIST = []
-        if ena_inst_usdjpy:
+        if ENA_INST_USDJPY:
             INST_ID_LIST.append(InstApi.INST_USD_JPY)
-        if ena_inst_eurjpy:
+        if ENA_INST_EURJPY:
             INST_ID_LIST.append(InstApi.INST_EUR_JPY)
-        if ena_inst_eurusd:
+        if ENA_INST_EURUSD:
             INST_ID_LIST.append(InstApi.INST_EUR_USD)
 
         GRAN_ID_LIST = []
-        if ena_gran_m1:
+        if ENA_GRAN_M1:
             GRAN_ID_LIST.append(GranApi.GRAN_M1)
-        if ena_gran_m2:
+        if ENA_GRAN_M2:
             GRAN_ID_LIST.append(GranApi.GRAN_M2)
-        if ena_gran_m3:
+        if ENA_GRAN_M3:
             GRAN_ID_LIST.append(GranApi.GRAN_M3)
-        if ena_gran_m4:
+        if ENA_GRAN_M4:
             GRAN_ID_LIST.append(GranApi.GRAN_M4)
-        if ena_gran_m5:
+        if ENA_GRAN_M5:
             GRAN_ID_LIST.append(GranApi.GRAN_M5)
-        if ena_gran_m10:
+        if ENA_GRAN_M10:
             GRAN_ID_LIST.append(GranApi.GRAN_M10)
-        if ena_gran_m15:
+        if ENA_GRAN_M15:
             GRAN_ID_LIST.append(GranApi.GRAN_M15)
-        if ena_gran_m30:
+        if ENA_GRAN_M30:
             GRAN_ID_LIST.append(GranApi.GRAN_M30)
-        if ena_gran_h1:
+        if ENA_GRAN_H1:
             GRAN_ID_LIST.append(GranApi.GRAN_H1)
-        if ena_gran_h2:
+        if ENA_GRAN_H2:
             GRAN_ID_LIST.append(GranApi.GRAN_H2)
-        if ena_gran_h3:
+        if ENA_GRAN_H3:
             GRAN_ID_LIST.append(GranApi.GRAN_H3)
-        if ena_gran_h4:
+        if ENA_GRAN_H4:
             GRAN_ID_LIST.append(GranApi.GRAN_H4)
-        if ena_gran_h6:
+        if ENA_GRAN_H6:
             GRAN_ID_LIST.append(GranApi.GRAN_H6)
-        if ena_gran_h8:
+        if ENA_GRAN_H8:
             GRAN_ID_LIST.append(GranApi.GRAN_H8)
-        if ena_gran_h12:
+        if ENA_GRAN_H12:
             GRAN_ID_LIST.append(GranApi.GRAN_H12)
-        if ena_gran_d:
+        if ENA_GRAN_D:
             GRAN_ID_LIST.append(GranApi.GRAN_D)
-        if ena_gran_w:
+        if ENA_GRAN_W:
             GRAN_ID_LIST.append(GranApi.GRAN_W)
 
         # Create service server "CandlesMonitor"
