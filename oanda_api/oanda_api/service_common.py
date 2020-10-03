@@ -1,3 +1,4 @@
+from abc import ABCMeta
 from typing import TypeVar
 from typing import Tuple
 import datetime as dt
@@ -78,7 +79,7 @@ GRAN_DICT = {
 }
 
 
-class ServiceAbs(Node):
+class ServiceAbs(Node, metaclass=ABCMeta):
 
     def __init__(self,
                  node_name: str
@@ -96,7 +97,7 @@ class ServiceAbs(Node):
         access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
         self._logger.debug("[Param]Access Token:[{}]".format(access_token))
 
-        self.__api = API(access_token=access_token)
+        self._api = API(access_token=access_token)
 
     def _request_api(self,
                      endpoint: EndPoint,
@@ -106,7 +107,7 @@ class ServiceAbs(Node):
         rsp.frc_msg.reason_code = frc.REASON_UNSET
         apirsp = None
         try:
-            apirsp = self.__api.request(endpoint)
+            apirsp = self._api.request(endpoint)
         except ConnectionError as err:
             self._logger.error("!!!!!!!!!! ConnectionError !!!!!!!!!!")
             self._logger.error("{}".format(err))

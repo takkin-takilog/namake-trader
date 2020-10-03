@@ -15,36 +15,26 @@ ApiRsp = TypeVar("ApiRsp")
 
 class CandlestickService(ServiceAbs):
 
-    MAX_SIZE = 4999
-    # MAX_SIZE = 10    # For test
-    TMDLT = dt.timedelta(hours=9)
-    DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+    _MAX_SIZE = 4999
+    # _MAX_SIZE = 10    # For test
+    _TMDLT = dt.timedelta(hours=9)
+    _DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
 
     def __init__(self) -> None:
         super().__init__("candlestick_service")
 
-        PRMNM_ACCOUNT_NUMBER = "account_number"
-
-        # Declare parameter
-        self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
-
-        account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        self._logger.debug("[Param]Account Number:[{}]".format(account_number))
-
         # Create service server "Candles"
         srv_type = CandlesSrv
         srv_name = "candles"
-        callback = self.__on_recv_candles
-        self.__candles_srv = self.create_service(srv_type,
-                                                 srv_name,
-                                                 callback)
+        callback = self._on_recv_candles
+        self._candles_srv = self.create_service(srv_type,
+                                                srv_name,
+                                                callback)
 
-        self.__account_number = account_number
-
-    def __on_recv_candles(self,
-                          req: SrvTypeRequest,
-                          rsp: SrvTypeResponse
-                          ) -> SrvTypeResponse:
+    def _on_recv_candles(self,
+                         req: SrvTypeRequest,
+                         rsp: SrvTypeResponse
+                         ) -> SrvTypeResponse:
 
         self._logger.debug("{:=^50}".format(" Service[candles]:Start "))
         self._logger.debug("<Request>")
@@ -58,7 +48,7 @@ class CandlestickService(ServiceAbs):
         rsp.result = False
         rsp.frc_msg.reason_code = frc.REASON_UNSET
 
-        rsp = self.__check_consistency(req, rsp)
+        rsp = self._check_consistency(req, rsp)
         if rsp.frc_msg.reason_code != frc.REASON_UNSET:
             rsp.result = False
             dbg_tm_end = dt.datetime.now()
@@ -73,8 +63,8 @@ class CandlestickService(ServiceAbs):
 
         gran_id = req.gran_msg.gran_id
         minunit = GRAN_DICT[gran_id].timedelta
-        dt_from = dt.datetime.strptime(req.dt_from, self.DT_FMT)
-        dt_to = dt.datetime.strptime(req.dt_to, self.DT_FMT)
+        dt_from = dt.datetime.strptime(req.dt_from, self._DT_FMT)
+        dt_to = dt.datetime.strptime(req.dt_to, self._DT_FMT)
         dt_to = dt_to + minunit
 
         dtnow = dt.datetime.now()
@@ -92,7 +82,7 @@ class CandlestickService(ServiceAbs):
 
         while tmpdt < dt_to:
             rsp.cndl_msg_list = []
-            tmpdt = tmpdt + (minunit * self.MAX_SIZE)
+            tmpdt = tmpdt + (minunit * self._MAX_SIZE)
 
             if dt_to < tmpdt:
                 tmpdt = dt_to
@@ -103,8 +93,8 @@ class CandlestickService(ServiceAbs):
             self._logger.debug("  - to:  [{}]".format(to_))
 
             params = {
-                "from": (from_ - self.TMDLT).strftime(self.DT_FMT),
-                "to": (to_ - self.TMDLT).strftime(self.DT_FMT),
+                "from": (from_ - self._TMDLT).strftime(self._DT_FMT),
+                "to": (to_ - self._TMDLT).strftime(self._DT_FMT),
                 "granularity": gran,
                 "price": "AB"
             }
@@ -116,7 +106,7 @@ class CandlestickService(ServiceAbs):
             if rsp.frc_msg.reason_code != frc.REASON_UNSET:
                 break
 
-            rsp = self.__update_response(apirsp, rsp)
+            rsp = self._update_response(apirsp, rsp)
 
             if rsp.cndl_msg_list:
                 tmplist.append(rsp.cndl_msg_list)
@@ -154,27 +144,27 @@ class CandlestickService(ServiceAbs):
 
         return rsp
 
-    def __check_consistency(self,
-                            req: SrvTypeRequest,
-                            rsp: SrvTypeResponse
-                            ) -> SrvTypeResponse:
+    def _check_consistency(self,
+                           req: SrvTypeRequest,
+                           rsp: SrvTypeResponse
+                           ) -> SrvTypeResponse:
 
-        dt_from = dt.datetime.strptime(req.dt_from, self.DT_FMT)
-        dt_to = dt.datetime.strptime(req.dt_to, self.DT_FMT)
+        dt_from = dt.datetime.strptime(req.dt_from, self._DT_FMT)
+        dt_to = dt.datetime.strptime(req.dt_to, self._DT_FMT)
         dt_now = dt.datetime.now()
 
         if (dt_to < dt_from) or (dt_now < dt_from):
             rsp.frc_msg.reason_code = frc.REASON_ARG_ERR
-            self.__logger.error("!!!!!!!!!! Argument Error !!!!!!!!!!")
-            self.__logger.error("  - dt_to:[{}]".format(dt_to))
-            self.__logger.error("  - dt_from:[{}]".format(dt_from))
-            self.__logger.error("  - dt_now:[{}]".format(dt_now))
+            self._logger.error("!!!!!!!!!! Argument Error !!!!!!!!!!")
+            self._logger.error("  - dt_to:[{}]".format(dt_to))
+            self._logger.error("  - dt_from:[{}]".format(dt_from))
+            self._logger.error("  - dt_now:[{}]".format(dt_now))
         return rsp
 
-    def __update_response(self,
-                          apirsp: ApiRsp,
-                          rsp: SrvTypeResponse
-                          ) -> SrvTypeResponse:
+    def _update_response(self,
+                         apirsp: ApiRsp,
+                         rsp: SrvTypeResponse
+                         ) -> SrvTypeResponse:
 
         rsp.result = True
         if "candles" in apirsp.keys() and apirsp["candles"]:
@@ -188,8 +178,8 @@ class CandlestickService(ServiceAbs):
                 msg.bid_h = float(raw["bid"]["h"])
                 msg.bid_l = float(raw["bid"]["l"])
                 msg.bid_c = float(raw["bid"]["c"])
-                dttmp = dt.datetime.strptime(raw["time"], self.DT_FMT)
-                msg.time = (dttmp + self.TMDLT).strftime(self.DT_FMT)
+                dttmp = dt.datetime.strptime(raw["time"], self._DT_FMT)
+                msg.time = (dttmp + self._TMDLT).strftime(self._DT_FMT)
                 msg.is_complete = raw["complete"]
                 rsp.cndl_msg_list.append(msg)
 

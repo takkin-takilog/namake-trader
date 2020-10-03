@@ -22,7 +22,9 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 class CandlesData():
 
-    DT_LSB_DICT = {
+    DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+
+    _DT_LSB_DICT = {
         GranTm.GRAN_M1: dt.timedelta(minutes=1),    # 1 minute
         GranTm.GRAN_M2: dt.timedelta(minutes=2),    # 2 minutes
         GranTm.GRAN_M3: dt.timedelta(minutes=3),    # 3 minutes
@@ -42,28 +44,27 @@ class CandlesData():
         GranTm.GRAN_W: dt.timedelta(weeks=1),       # 1 Week
     }
 
-    COL_NAME_TIME = "time"
-    COL_NAME_ASK_OP = "open(Ask)"
-    COL_NAME_ASK_HI = "high(Ask)"
-    COL_NAME_ASK_LO = "low(Ask)"
-    COL_NAME_ASK_CL = "close(Ask)"
-    COL_NAME_BID_OP = "open(Bid)"
-    COL_NAME_BID_HI = "high(Bid)"
-    COL_NAME_BID_LO = "low(Bid)"
-    COL_NAME_BID_CL = "close(Bid)"
-    COL_NAME_COMP = "complete"
-    COL_NAME_MID_OP = "open(Mid)"
-    COL_NAME_MID_HI = "high(Mid)"
-    COL_NAME_MID_LO = "low(Mid)"
-    COL_NAME_MID_CL = "close(Mid)"
-    COL_NAME_HSC_OP = "half_spread_cost(open)"
-    COL_NAME_HSC_HI = "half_spread_cost(high)"
-    COL_NAME_HSC_LO = "half_spread_cost(low)"
-    COL_NAME_HSC_CL = "half_spread_cost(close)"
+    _COL_NAME_TIME = "time"
+    _COL_NAME_ASK_OP = "open(Ask)"
+    _COL_NAME_ASK_HI = "high(Ask)"
+    _COL_NAME_ASK_LO = "low(Ask)"
+    _COL_NAME_ASK_CL = "close(Ask)"
+    _COL_NAME_BID_OP = "open(Bid)"
+    _COL_NAME_BID_HI = "high(Bid)"
+    _COL_NAME_BID_LO = "low(Bid)"
+    _COL_NAME_BID_CL = "close(Bid)"
+    _COL_NAME_COMP = "complete"
+    _COL_NAME_MID_OP = "open(Mid)"
+    _COL_NAME_MID_HI = "high(Mid)"
+    _COL_NAME_MID_LO = "low(Mid)"
+    _COL_NAME_MID_CL = "close(Mid)"
+    _COL_NAME_HSC_OP = "half_spread_cost(open)"
+    _COL_NAME_HSC_HI = "half_spread_cost(high)"
+    _COL_NAME_HSC_LO = "half_spread_cost(low)"
+    _COL_NAME_HSC_CL = "half_spread_cost(close)"
 
-    DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
-    TIMEOUT_SEC = 3.0
-    MARGIN_SEC = dt.timedelta(seconds=2)
+    _TIMEOUT_SEC = 3.0
+    _MARGIN_SEC = dt.timedelta(seconds=2)
 
     def __init__(self,
                  node: Node,
@@ -73,12 +74,12 @@ class CandlesData():
                  data_length: int
                  ) -> None:
 
-        minunit = self.DT_LSB_DICT[gran_id]
-        self.__logger = node.get_logger()
+        minunit = self._DT_LSB_DICT[gran_id]
+        self._logger = node.get_logger()
 
-        self.__logger.debug("{:-^40}".format(" Create CandlesData:Start "))
-        self.__logger.debug("  - inst_id:[{}]".format(inst_id))
-        self.__logger.debug("  - gran_id:[{}]".format(gran_id))
+        self._logger.debug("{:-^40}".format(" Create CandlesData:Start "))
+        self._logger.debug("  - inst_id:[{}]".format(inst_id))
+        self._logger.debug("  - gran_id:[{}]".format(gran_id))
 
         dt_now = dt.datetime.now()
         dt_from = dt_now - minunit * data_length
@@ -89,14 +90,14 @@ class CandlesData():
         if dt_1h < interval:
             interval = dt_1h
 
-        self.__srv_cli = srv_cli
-        self.__inst_id = inst_id
-        self.__gran_id = gran_id
+        self._srv_cli = srv_cli
+        self._inst_id = inst_id
+        self._gran_id = gran_id
 
         cnt = 0
         is_comp = False
         while cnt < 3:
-            future = self.__request_async(dt_from, dt_to)
+            future = self._request_async(dt_from, dt_to)
             rclpy.spin_until_future_complete(node, future)
 
             if future.done() and future.result() is not None:
@@ -105,28 +106,28 @@ class CandlesData():
             cnt += 1
 
         if not is_comp:
-            self.__logger.error("!!!!!!!!!! ROS Service Error !!!!!!!!!!")
-            self.__logger.error("Service Name:[candles]")
+            self._logger.error("!!!!!!!!!! ROS Service Error !!!!!!!!!!")
+            self._logger.error("Service Name:[candles]")
         else:
-            df = self.__get_df_from_future(future)
+            df = self._get_df_from_future(future)
 
-            df_comp = df[(df[self.COL_NAME_COMP])]
-            df_prov = df[~(df[self.COL_NAME_COMP])]
+            df_comp = df[(df[self._COL_NAME_COMP])]
+            df_prov = df[~(df[self._COL_NAME_COMP])]
 
-            self.__interval = interval
-            self.__next_update_time = self.__get_next_update_time(gran_id, dt_now)
-            self.__df_comp = df_comp
-            self.__df_prov = df_prov
-            self.__future = None
-            self.__timeout_end = 0.0
+            self._interval = interval
+            self._next_update_time = self._get_next_update_time(gran_id, dt_now)
+            self._df_comp = df_comp
+            self._df_prov = df_prov
+            self._future = None
+            self._timeout_end = 0.0
 
-            self.__logger.debug("  - last_update_time:[{}]".format(self.__next_update_time))
-            self.__logger.debug("{:-^40}".format(" Create CandlesData:End "))
+            self._logger.debug("  - last_update_time:[{}]".format(self._next_update_time))
+            self._logger.debug("{:-^40}".format(" Create CandlesData:End "))
 
-    def __get_next_update_time(self,
-                               gran_id: int,
-                               dtin: dt.datetime
-                               ) -> dt.datetime:
+    def _get_next_update_time(self,
+                              gran_id: int,
+                              dtin: dt.datetime
+                              ) -> dt.datetime:
 
         if gran_id == GranTm.GRAN_M1:
             dtout = dt.datetime(dtin.year, dtin.month,
@@ -174,60 +175,60 @@ class CandlesData():
 
     @property
     def dataframe(self) -> pd.DataFrame:
-        return self.__df_comp
+        return self._df_comp
 
     def update_not_complete_data(self) -> None:
 
-        if self.__future is None:
+        if self._future is None:
 
             dt_now = dt.datetime.now()
             """
-            self.__logger.debug("[{}]update_not_complete_data[inst:{}][gran:{}]"
-                                .format(dt_now, self.__inst_id, self.__gran_id))
+            self._logger.debug("[{}]update_not_complete_data[inst:{}][gran:{}]"
+                                .format(dt_now, self._inst_id, self._gran_id))
             """
-            target_time = dt_now - self.__next_update_time - self.MARGIN_SEC
-            if self.__interval < target_time:
+            target_time = dt_now - self._next_update_time - self._MARGIN_SEC
+            if self._interval < target_time:
 
-                # dt_from = self.__next_update_time
-                dt_from = self.__df_comp.index[-1] + self.__interval
+                # dt_from = self._next_update_time
+                dt_from = self._df_comp.index[-1] + self._interval
                 dt_to = dt_now
 
-                self.__future = self.__request_async(dt_from, dt_to)
+                self._future = self._request_async(dt_from, dt_to)
 
-                self.__timeout_end = time.monotonic() + self.TIMEOUT_SEC
+                self._timeout_end = time.monotonic() + self._TIMEOUT_SEC
 
         else:
-            if self.__future.done() and self.__future.result() is not None:
+            if self._future.done() and self._future.result() is not None:
 
-                df = self.__get_df_from_future(self.__future)
-                self.__update_df(df)
-                self.__next_update_time += self.__interval
-                self.__future = None
+                df = self._get_df_from_future(self._future)
+                self._update_df(df)
+                self._next_update_time += self._interval
+                self._future = None
 
-                self.__logger.debug("<Update> inst_id:[{}], gran_id:[{}] last_update_time:[{}]"
-                                    .format(self.__inst_id, self.__gran_id, self.__next_update_time))
+                self._logger.debug("<Update> inst_id:[{}], gran_id:[{}] last_update_time:[{}]"
+                                   .format(self._inst_id, self._gran_id, self._next_update_time))
             else:
-                if time.monotonic() >= self.__timeout_end:
-                    self.__future = None
+                if time.monotonic() >= self._timeout_end:
+                    self._future = None
 
-    def __request_async(self,
-                        dt_from: dt.datetime,
-                        dt_to: dt.datetime
-                        ) -> Future:
+    def _request_async(self,
+                       dt_from: dt.datetime,
+                       dt_to: dt.datetime
+                       ) -> Future:
 
         req = CandlesSrv.Request()
 
-        req.inst_msg.inst_id = self.__inst_id
-        req.gran_msg.gran_id = self.__gran_id
+        req.inst_msg.inst_id = self._inst_id
+        req.gran_msg.gran_id = self._gran_id
 
         req.dt_from = dt_from.strftime(self.DT_FMT)
         req.dt_to = dt_to.strftime(self.DT_FMT)
 
-        future = self.__srv_cli.call_async(req)
+        future = self._srv_cli.call_async(req)
 
         return future
 
-    def __get_df_from_future(self, future: Future) -> pd.DataFrame:
+    def _get_df_from_future(self, future: Future) -> pd.DataFrame:
 
         df = pd.DataFrame()
         rsp = future.result()
@@ -263,28 +264,28 @@ class CandlesData():
             df = pd.DataFrame(data)
 
             if not df.empty:
-                df.columns = [self.COL_NAME_TIME,
-                              self.COL_NAME_ASK_OP,
-                              self.COL_NAME_ASK_HI,
-                              self.COL_NAME_ASK_LO,
-                              self.COL_NAME_ASK_CL,
-                              self.COL_NAME_BID_OP,
-                              self.COL_NAME_BID_HI,
-                              self.COL_NAME_BID_LO,
-                              self.COL_NAME_BID_CL,
-                              self.COL_NAME_MID_OP,
-                              self.COL_NAME_MID_HI,
-                              self.COL_NAME_MID_LO,
-                              self.COL_NAME_MID_CL,
-                              self.COL_NAME_HSC_OP,
-                              self.COL_NAME_HSC_HI,
-                              self.COL_NAME_HSC_LO,
-                              self.COL_NAME_HSC_CL,
-                              self.COL_NAME_COMP
+                df.columns = [self._COL_NAME_TIME,
+                              self._COL_NAME_ASK_OP,
+                              self._COL_NAME_ASK_HI,
+                              self._COL_NAME_ASK_LO,
+                              self._COL_NAME_ASK_CL,
+                              self._COL_NAME_BID_OP,
+                              self._COL_NAME_BID_HI,
+                              self._COL_NAME_BID_LO,
+                              self._COL_NAME_BID_CL,
+                              self._COL_NAME_MID_OP,
+                              self._COL_NAME_MID_HI,
+                              self._COL_NAME_MID_LO,
+                              self._COL_NAME_MID_CL,
+                              self._COL_NAME_HSC_OP,
+                              self._COL_NAME_HSC_HI,
+                              self._COL_NAME_HSC_LO,
+                              self._COL_NAME_HSC_CL,
+                              self._COL_NAME_COMP
                               ]
 
-                TIME = self.COL_NAME_TIME
-                if GranTm.GRAN_D <= self.__gran_id:
+                TIME = self._COL_NAME_TIME
+                if GranTm.GRAN_D <= self._gran_id:
                     df[TIME] = df[TIME].apply(
                         lambda d: dt.datetime(d.year, d.month, d.day))
 
@@ -292,38 +293,36 @@ class CandlesData():
 
         return df
 
-    def __update_df(self, df: pd.DataFrame):
+    def _update_df(self, df: pd.DataFrame):
 
         if not df.empty:
 
-            df_comp = df[(df[self.COL_NAME_COMP])]
-            df_prov = df[~(df[self.COL_NAME_COMP])]
+            df_comp = df[(df[self._COL_NAME_COMP])]
+            df_prov = df[~(df[self._COL_NAME_COMP])]
 
             if not df_comp.empty:
                 # "df_comp" deal with FIFO
-                self.__df_comp = self.__df_comp.append(df_comp)
-                droplist = self.__df_comp.index[range(0, len(df_comp))]
-                self.__df_comp.drop(droplist, inplace=True)
+                self._df_comp = self._df_comp.append(df_comp)
+                droplist = self._df_comp.index[range(0, len(df_comp))]
+                self._df_comp.drop(droplist, inplace=True)
 
             if not df_prov.empty:
-                self.__df_prov = df_prov
+                self._df_prov = df_prov
             else:
-                self.__df_prov = self.__df_prov[:0]  # All data delete
+                self._df_prov = self._df_prov[:0]  # All data delete
 
-            self.__logger.debug("  - df_comp:[{}]".format(df_comp.index.tolist()))
-            self.__logger.debug("  - df_prov:[{}]".format(df_prov.index.tolist()))
+            self._logger.debug("  - df_comp:[{}]".format(df_comp.index.tolist()))
+            self._logger.debug("  - df_prov:[{}]".format(df_prov.index.tolist()))
 
 
 class CandlestickManager(Node):
-
-    DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
 
     def __init__(self) -> None:
         super().__init__("candlestick_manager")
 
         # Set logger lebel
-        self.__logger = super().get_logger()
-        self.__logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+        self._logger = super().get_logger()
+        self._logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         ENA_INST = "enable_instrument."
         PRMNM_ENA_INST_USDJPY = ENA_INST + "usdjpy"
@@ -445,46 +444,46 @@ class CandlestickManager(Node):
         leng_d = self.get_parameter(PRMNM_LENG_D).value
         leng_w = self.get_parameter(PRMNM_LENG_W).value
 
-        self.__logger.debug("[Param]Enable instrument:")
-        self.__logger.debug("        USD/JPY:[{}]".format(ena_inst_usdjpy))
-        self.__logger.debug("        EUR/JPY:[{}]".format(ena_inst_eurjpy))
-        self.__logger.debug("        EUR/USD:[{}]".format(ena_inst_eurusd))
-        self.__logger.debug("[Param]Enable granularity:")
-        self.__logger.debug("        M1: [{}]".format(ena_gran_m1))
-        self.__logger.debug("        M2: [{}]".format(ena_gran_m2))
-        self.__logger.debug("        M3: [{}]".format(ena_gran_m3))
-        self.__logger.debug("        M4: [{}]".format(ena_gran_m4))
-        self.__logger.debug("        M5: [{}]".format(ena_gran_m5))
-        self.__logger.debug("        M10:[{}]".format(ena_gran_m10))
-        self.__logger.debug("        M15:[{}]".format(ena_gran_m15))
-        self.__logger.debug("        M30:[{}]".format(ena_gran_m30))
-        self.__logger.debug("        H1: [{}]".format(ena_gran_h1))
-        self.__logger.debug("        H2: [{}]".format(ena_gran_h2))
-        self.__logger.debug("        H3: [{}]".format(ena_gran_h3))
-        self.__logger.debug("        H4: [{}]".format(ena_gran_h4))
-        self.__logger.debug("        H6: [{}]".format(ena_gran_h6))
-        self.__logger.debug("        H8: [{}]".format(ena_gran_h8))
-        self.__logger.debug("        H12:[{}]".format(ena_gran_h12))
-        self.__logger.debug("        D:  [{}]".format(ena_gran_d))
-        self.__logger.debug("        W:  [{}]".format(ena_gran_w))
-        self.__logger.debug("[Param]Historical data length:")
-        self.__logger.debug("        M1: [{}]".format(leng_m1))
-        self.__logger.debug("        M2: [{}]".format(leng_m2))
-        self.__logger.debug("        M3: [{}]".format(leng_m3))
-        self.__logger.debug("        M4: [{}]".format(leng_m4))
-        self.__logger.debug("        M5: [{}]".format(leng_m5))
-        self.__logger.debug("        M10:[{}]".format(leng_m10))
-        self.__logger.debug("        M15:[{}]".format(leng_m15))
-        self.__logger.debug("        M30:[{}]".format(leng_m30))
-        self.__logger.debug("        H1: [{}]".format(leng_h1))
-        self.__logger.debug("        H2: [{}]".format(leng_h2))
-        self.__logger.debug("        H3: [{}]".format(leng_h3))
-        self.__logger.debug("        H4: [{}]".format(leng_h4))
-        self.__logger.debug("        H6: [{}]".format(leng_h6))
-        self.__logger.debug("        H8: [{}]".format(leng_h8))
-        self.__logger.debug("        H12:[{}]".format(leng_h12))
-        self.__logger.debug("        D:  [{}]".format(leng_d))
-        self.__logger.debug("        W:  [{}]".format(leng_w))
+        self._logger.debug("[Param]Enable instrument:")
+        self._logger.debug("        USD/JPY:[{}]".format(ena_inst_usdjpy))
+        self._logger.debug("        EUR/JPY:[{}]".format(ena_inst_eurjpy))
+        self._logger.debug("        EUR/USD:[{}]".format(ena_inst_eurusd))
+        self._logger.debug("[Param]Enable granularity:")
+        self._logger.debug("        M1: [{}]".format(ena_gran_m1))
+        self._logger.debug("        M2: [{}]".format(ena_gran_m2))
+        self._logger.debug("        M3: [{}]".format(ena_gran_m3))
+        self._logger.debug("        M4: [{}]".format(ena_gran_m4))
+        self._logger.debug("        M5: [{}]".format(ena_gran_m5))
+        self._logger.debug("        M10:[{}]".format(ena_gran_m10))
+        self._logger.debug("        M15:[{}]".format(ena_gran_m15))
+        self._logger.debug("        M30:[{}]".format(ena_gran_m30))
+        self._logger.debug("        H1: [{}]".format(ena_gran_h1))
+        self._logger.debug("        H2: [{}]".format(ena_gran_h2))
+        self._logger.debug("        H3: [{}]".format(ena_gran_h3))
+        self._logger.debug("        H4: [{}]".format(ena_gran_h4))
+        self._logger.debug("        H6: [{}]".format(ena_gran_h6))
+        self._logger.debug("        H8: [{}]".format(ena_gran_h8))
+        self._logger.debug("        H12:[{}]".format(ena_gran_h12))
+        self._logger.debug("        D:  [{}]".format(ena_gran_d))
+        self._logger.debug("        W:  [{}]".format(ena_gran_w))
+        self._logger.debug("[Param]Historical data length:")
+        self._logger.debug("        M1: [{}]".format(leng_m1))
+        self._logger.debug("        M2: [{}]".format(leng_m2))
+        self._logger.debug("        M3: [{}]".format(leng_m3))
+        self._logger.debug("        M4: [{}]".format(leng_m4))
+        self._logger.debug("        M5: [{}]".format(leng_m5))
+        self._logger.debug("        M10:[{}]".format(leng_m10))
+        self._logger.debug("        M15:[{}]".format(leng_m15))
+        self._logger.debug("        M30:[{}]".format(leng_m30))
+        self._logger.debug("        H1: [{}]".format(leng_h1))
+        self._logger.debug("        H2: [{}]".format(leng_h2))
+        self._logger.debug("        H3: [{}]".format(leng_h3))
+        self._logger.debug("        H4: [{}]".format(leng_h4))
+        self._logger.debug("        H6: [{}]".format(leng_h6))
+        self._logger.debug("        H8: [{}]".format(leng_h8))
+        self._logger.debug("        H12:[{}]".format(leng_h12))
+        self._logger.debug("        D:  [{}]".format(leng_d))
+        self._logger.debug("        W:  [{}]".format(leng_w))
 
         DATA_LENGTH_DICT = {
             GranApi.GRAN_M1: leng_m1,
@@ -553,18 +552,18 @@ class CandlestickManager(Node):
         # Create service server "CandlesMonitor"
         srv_type = CandlesMntSrv
         srv_name = "candles_monitor"
-        callback = self.__on_recv_candlesnt_mnt
-        self.__candles_mnt_srv = self.create_service(srv_type,
-                                                     srv_name,
-                                                     callback)
+        callback = self._on_recv_candlesnt_mnt
+        self._candles_mnt_srv = self.create_service(srv_type,
+                                                    srv_name,
+                                                    callback)
 
         try:
             # Create service client "Candles"
             srv_type = CandlesSrv
             srv_name = "candles"
-            cli_cdl = self.__create_service_client(srv_type, srv_name)
+            cli_cdl = self._create_service_client(srv_type, srv_name)
         except RuntimeError as err:
-            self.__logger.error(err)
+            self._logger.error(err)
             self.destroy_node()
             rclpy.shutdown()
 
@@ -579,21 +578,21 @@ class CandlestickManager(Node):
             obj_map_dict[inst_id] = gran_dict
 
         # type: Dict[InstrumentMnt][GranularityMnt]
-        self.__obj_map_dict = obj_map_dict
+        self._obj_map_dict = obj_map_dict
 
         # Create service server "HistoricalCandles"
         srv_type = HistoricalCandlesSrv
         srv_name = "historical_candles"
-        callback = self.__on_recv_historical_candles
-        self.__hc_srv = self.create_service(srv_type,
-                                            srv_name,
-                                            callback)
+        callback = self._on_recv_historical_candles
+        self._hc_srv = self.create_service(srv_type,
+                                           srv_name,
+                                           callback)
 
         # Timer(1s)
-        self.__timer_1s = self.create_timer(timer_period_sec=1.0,
-                                            callback=self.__on_timeout_1s)
+        self._timer_1s = self.create_timer(timer_period_sec=1.0,
+                                           callback=self._on_timeout_1s)
 
-        self.__cli_cdl = cli_cdl
+        self._cli_cdl = cli_cdl
 
         """
         dt_from = dt.datetime(2020, 5, 1)
@@ -613,14 +612,14 @@ class CandlestickManager(Node):
         print(df)
         """
 
-    def __get_dataframe(self,
-                        inst_id: InstApi,
-                        gran_id: GranApi,
-                        dt_from: dt.datetime=None,
-                        dt_to: dt.datetime=None
-                        ) -> pd.DataFrame:
+    def _get_dataframe(self,
+                       inst_id: InstApi,
+                       gran_id: GranApi,
+                       dt_from: dt.datetime=None,
+                       dt_to: dt.datetime=None
+                       ) -> pd.DataFrame:
 
-        df = self.__obj_map_dict[inst_id][gran_id].dataframe
+        df = self._obj_map_dict[inst_id][gran_id].dataframe
 
         if dt_from is not None:
             dftmp = df[(dt_from <= df.index)]
@@ -632,20 +631,20 @@ class CandlestickManager(Node):
 
         return dftmp
 
-    def __create_service_client(self, srv_type: int, srv_name: str) -> Client:
+    def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
         # Create service client
         cli = self.create_client(srv_type, srv_name)
         # Wait for a service server
         while not cli.wait_for_service(timeout_sec=1.0):
             if not rclpy.ok():
                 raise RuntimeError("Interrupted while waiting for service.")
-            self.__logger.info("Waiting for [{}] service...".format(srv_name))
+            self._logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
-    def __on_recv_historical_candles(self,
-                                     req: SrvTypeRequest,
-                                     rsp: SrvTypeResponse
-                                     ) -> SrvTypeResponse:
+    def _on_recv_historical_candles(self,
+                                    req: SrvTypeRequest,
+                                    rsp: SrvTypeResponse
+                                    ) -> SrvTypeResponse:
         logger = self._logger
 
         logger.debug("{:=^50}".format(" Service[historical_candles]:Start "))
@@ -668,29 +667,29 @@ class CandlestickManager(Node):
         else:
             dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
 
-        df = self.__get_dataframe(req.inst_msg.inst_id,
-                                  req.gran_msg.gran_id,
-                                  dt_from,
-                                  dt_to)
+        df = self._get_dataframe(req.inst_msg.inst_id,
+                                 req.gran_msg.gran_id,
+                                 dt_from,
+                                 dt_to)
 
         rsp.cndl_msg_list = []
         if not df.empty:
             for time, sr in df.iterrows():
                 msg = Candle()
-                msg.ask_o = sr[CandlesData.COL_NAME_ASK_OP]
-                msg.ask_h = sr[CandlesData.COL_NAME_ASK_HI]
-                msg.ask_l = sr[CandlesData.COL_NAME_ASK_LO]
-                msg.ask_c = sr[CandlesData.COL_NAME_ASK_CL]
-                msg.mid_o = sr[CandlesData.COL_NAME_MID_OP]
-                msg.mid_h = sr[CandlesData.COL_NAME_MID_HI]
-                msg.mid_l = sr[CandlesData.COL_NAME_MID_LO]
-                msg.mid_c = sr[CandlesData.COL_NAME_MID_CL]
-                msg.bid_o = sr[CandlesData.COL_NAME_BID_OP]
-                msg.bid_h = sr[CandlesData.COL_NAME_BID_HI]
-                msg.bid_l = sr[CandlesData.COL_NAME_BID_LO]
-                msg.bid_c = sr[CandlesData.COL_NAME_BID_CL]
+                msg.ask_o = sr[CandlesData._COL_NAME_ASK_OP]
+                msg.ask_h = sr[CandlesData._COL_NAME_ASK_HI]
+                msg.ask_l = sr[CandlesData._COL_NAME_ASK_LO]
+                msg.ask_c = sr[CandlesData._COL_NAME_ASK_CL]
+                msg.mid_o = sr[CandlesData._COL_NAME_MID_OP]
+                msg.mid_h = sr[CandlesData._COL_NAME_MID_HI]
+                msg.mid_l = sr[CandlesData._COL_NAME_MID_LO]
+                msg.mid_c = sr[CandlesData._COL_NAME_MID_CL]
+                msg.bid_o = sr[CandlesData._COL_NAME_BID_OP]
+                msg.bid_h = sr[CandlesData._COL_NAME_BID_HI]
+                msg.bid_l = sr[CandlesData._COL_NAME_BID_LO]
+                msg.bid_c = sr[CandlesData._COL_NAME_BID_CL]
                 msg.time = time.strftime(DT_FMT)
-                msg.is_complete = sr[CandlesData.COL_NAME_COMP]
+                msg.is_complete = sr[CandlesData._COL_NAME_COMP]
                 rsp.cndl_msg_list.append(msg)
 
         dbg_tm_end = dt.datetime.now()
@@ -702,10 +701,10 @@ class CandlestickManager(Node):
 
         return rsp
 
-    def __on_recv_candlesnt_mnt(self,
-                                req: SrvTypeRequest,
-                                rsp: SrvTypeResponse
-                                ) -> SrvTypeResponse:
+    def _on_recv_candlesnt_mnt(self,
+                               req: SrvTypeRequest,
+                               rsp: SrvTypeResponse
+                               ) -> SrvTypeResponse:
         logger = self._logger
 
         logger.debug("{:=^50}".format(" Service[candles_monitor]:Start "))
@@ -728,29 +727,29 @@ class CandlestickManager(Node):
         else:
             dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
 
-        df = self.__get_dataframe(req.inst_msg.inst_id,
-                                  req.gran_msg.gran_id,
-                                  dt_from,
-                                  dt_to)
+        df = self._get_dataframe(req.inst_msg.inst_id,
+                                 req.gran_msg.gran_id,
+                                 dt_from,
+                                 dt_to)
 
         rsp.cndl_msg_list = []
         if not df.empty:
             for time, sr in df.iterrows():
                 msg = CandleMnt()
-                msg.ask_o = sr[CandlesData.COL_NAME_ASK_OP]
-                msg.ask_h = sr[CandlesData.COL_NAME_ASK_HI]
-                msg.ask_l = sr[CandlesData.COL_NAME_ASK_LO]
-                msg.ask_c = sr[CandlesData.COL_NAME_ASK_CL]
-                msg.mid_o = sr[CandlesData.COL_NAME_MID_OP]
-                msg.mid_h = sr[CandlesData.COL_NAME_MID_HI]
-                msg.mid_l = sr[CandlesData.COL_NAME_MID_LO]
-                msg.mid_c = sr[CandlesData.COL_NAME_MID_CL]
-                msg.bid_o = sr[CandlesData.COL_NAME_BID_OP]
-                msg.bid_h = sr[CandlesData.COL_NAME_BID_HI]
-                msg.bid_l = sr[CandlesData.COL_NAME_BID_LO]
-                msg.bid_c = sr[CandlesData.COL_NAME_BID_CL]
+                msg.ask_o = sr[CandlesData._COL_NAME_ASK_OP]
+                msg.ask_h = sr[CandlesData._COL_NAME_ASK_HI]
+                msg.ask_l = sr[CandlesData._COL_NAME_ASK_LO]
+                msg.ask_c = sr[CandlesData._COL_NAME_ASK_CL]
+                msg.mid_o = sr[CandlesData._COL_NAME_MID_OP]
+                msg.mid_h = sr[CandlesData._COL_NAME_MID_HI]
+                msg.mid_l = sr[CandlesData._COL_NAME_MID_LO]
+                msg.mid_c = sr[CandlesData._COL_NAME_MID_CL]
+                msg.bid_o = sr[CandlesData._COL_NAME_BID_OP]
+                msg.bid_h = sr[CandlesData._COL_NAME_BID_HI]
+                msg.bid_l = sr[CandlesData._COL_NAME_BID_LO]
+                msg.bid_c = sr[CandlesData._COL_NAME_BID_CL]
                 msg.time = time.strftime(DT_FMT)
-                msg.is_complete = sr[CandlesData.COL_NAME_COMP]
+                msg.is_complete = sr[CandlesData._COL_NAME_COMP]
                 rsp.cndl_msg_list.append(msg)
 
         dbg_tm_end = dt.datetime.now()
@@ -762,9 +761,9 @@ class CandlestickManager(Node):
 
         return rsp
 
-    def __on_timeout_1s(self) -> None:
+    def _on_timeout_1s(self) -> None:
 
-        for gran_dict in self.__obj_map_dict.values():
+        for gran_dict in self._obj_map_dict.values():
             for obj in gran_dict.values():
                 obj.update_not_complete_data()
 

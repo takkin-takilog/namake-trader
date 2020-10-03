@@ -25,7 +25,7 @@ class GuiMonitor(QMainWindow):
         super(GuiMonitor, self).__init__(parent)
 
         # --------------- initialize Qt ---------------
-        ui = self.__load_ui(parent)
+        ui = self._load_ui(parent)
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
 
@@ -41,14 +41,14 @@ class GuiMonitor(QMainWindow):
 
         # QTimer
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.__on_timeout_1s)
+        self.timer.timeout.connect(self._on_timeout_1s)
 
         ui.labe_srvcon_status.setAlignment(Qt.AlignCenter)
 
-        callback = self.__on_srvcon_toggled
+        callback = self._on_srvcon_toggled
         ui.pushButton_srvcon.toggled.connect(callback)
 
-        ui.tabWidget.currentChanged.connect(self.__on_tab_changed)
+        ui.tabWidget.currentChanged.connect(self._on_tab_changed)
 
         # --------------- initialize ROS ---------------
         node = rclpy.create_node("gui_monitor")
@@ -64,7 +64,7 @@ class GuiMonitor(QMainWindow):
         # Create service client "CandlesMonitor"
         srv_type = CandlesMntSrv
         srv_name = "candles_monitor"
-        cli_cdl = self.__create_client(node, srv_type, srv_name)
+        cli_cdl = self._create_client(node, srv_type, srv_name)
 
         # Create publisher "Alive"
         msg_type = Bool
@@ -73,13 +73,13 @@ class GuiMonitor(QMainWindow):
                                  reliability=QoSReliabilityPolicy.RELIABLE)
         pub_alive = node.create_publisher(msg_type, topic, qos_profile)
 
-        self.__ui = ui
-        self.__node = node
-        self.__cli_cdl = cli_cdl
-        self.__pub_alive = pub_alive
+        self._ui = ui
+        self._node = node
+        self._cli_cdl = cli_cdl
+        self._pub_alive = pub_alive
 
-        self.__main_ui = MainUi(ui, node, cli_cdl)
-        self.__gapfill_ui = GapFillUi(ui, node, cli_cdl)
+        self._main_ui = MainUi(ui, node, cli_cdl)
+        self._gapfill_ui = GapFillUi(ui, node, cli_cdl)
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")
@@ -87,13 +87,13 @@ class GuiMonitor(QMainWindow):
 
     @property
     def node(self) -> Node:
-        return self.__node
+        return self._node
 
-    def __create_client(self,
-                        node: Node,
-                        srv_type,
-                        srv_name: str
-                        ) -> Client:
+    def _create_client(self,
+                       node: Node,
+                       srv_type,
+                       srv_name: str
+                       ) -> Client:
 
         cli = node.create_client(srv_type, srv_name)
         # Wait for a service server
@@ -102,7 +102,7 @@ class GuiMonitor(QMainWindow):
 
         return cli
 
-    def __load_ui(self, parent):
+    def _load_ui(self, parent):
         loader = QUiLoader()
         path = os.path.join(os.path.dirname(__file__), "gui_monitor.ui")
         ui_file = QFile(path)
@@ -112,54 +112,54 @@ class GuiMonitor(QMainWindow):
 
         return ui
 
-    def __on_srvcon_toggled(self, flag):
+    def _on_srvcon_toggled(self, flag):
 
         if flag is True:
-            gran_idx = self.__ui.comboBox_gran_main.currentIndex()
-            inst_idx = self.__ui.comboBox_inst_main.currentIndex()
-            self.__main_ui.draw_chart(inst_idx, gran_idx)
-            self.__ui.pushButton_srvcon.setText("切断")
+            gran_idx = self._ui.comboBox_gran_main.currentIndex()
+            inst_idx = self._ui.comboBox_inst_main.currentIndex()
+            self._main_ui.draw_chart(inst_idx, gran_idx)
+            self._ui.pushButton_srvcon.setText("切断")
 
-            self.__ui.labe_srvcon_status.setText("接続中")
+            self._ui.labe_srvcon_status.setText("接続中")
             str_ = "background-color: rgb(0, 255, 0);"
-            self.__ui.labe_srvcon_status.setStyleSheet(str_)
+            self._ui.labe_srvcon_status.setStyleSheet(str_)
 
             self.timer.start(1000)
         else:
-            self.__ui.pushButton_srvcon.setText("接続")
+            self._ui.pushButton_srvcon.setText("接続")
 
-            self.__ui.labe_srvcon_status.setText("切断")
+            self._ui.labe_srvcon_status.setText("切断")
             str_ = "background-color: rgb(136, 138, 133);"
-            self.__ui.labe_srvcon_status.setStyleSheet(str_)
+            self._ui.labe_srvcon_status.setStyleSheet(str_)
 
             self.timer.stop()
 
     def init_resize_qchart(self) -> None:
-        self.__main_ui.resize_chart_widget()
+        self._main_ui.resize_chart_widget()
 
     def resizeEvent(self, event):
-        index = self.__ui.tabWidget.currentIndex()
-        self.__resize_chart_widget(index)
+        index = self._ui.tabWidget.currentIndex()
+        self._resize_chart_widget(index)
 
-    def __on_tab_changed(self, index):
-        self.__resize_chart_widget(index)
+    def _on_tab_changed(self, index):
+        self._resize_chart_widget(index)
 
-    def __resize_chart_widget(self, tab_index):
+    def _resize_chart_widget(self, tab_index):
         if tab_index == 0:
-            self.__main_ui.resize_chart_widget()
+            self._main_ui.resize_chart_widget()
         elif tab_index == 1:
-            self.__gapfill_ui.resize_chart_widget()
+            self._gapfill_ui.resize_chart_widget()
 
-    def __on_timeout_1s(self) -> None:
+    def _on_timeout_1s(self) -> None:
 
-        if self.__ui.pushButton_srvcon.isChecked():
+        if self._ui.pushButton_srvcon.isChecked():
             self.logger.debug("publish start")
         else:
             self.logger.debug("publish stop")
 
         msg = Bool()
         msg.data = True
-        self.__pub_alive.publish(msg)
+        self._pub_alive.publish(msg)
 
 
 def main():

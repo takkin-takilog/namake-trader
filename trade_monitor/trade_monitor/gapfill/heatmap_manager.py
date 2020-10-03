@@ -28,7 +28,7 @@ class HeatMapManager():
     GAP_UPPER_LIMIT = 500   # pips
 
     def __init__(self, sts_bar):
-        self.__sts_bar = sts_bar
+        self._sts_bar = sts_bar
 
     def set_param(self, df_param: pd.DataFrame, inst_idx):
 
@@ -68,7 +68,7 @@ class HeatMapManager():
         df_htbl = pd.DataFrame(roslist, columns=hmap_col)
         df_htbl.set_index(COL_NAME_DATE, inplace=True)
 
-        df_hmap_base = self.__make_basemap(df_valid, df_htbl, inst_idx)
+        df_hmap_base = self._make_basemap(df_valid, df_htbl, inst_idx)
         df_hmap = df_hmap_base.sum(level=COL_GPA_PRICE_TH).sort_index()
 
         zero_idx = list(range(1, df_hmap.index[0]))
@@ -81,79 +81,79 @@ class HeatMapManager():
 
         date_list = df_valid.index.tolist()
 
-        self.__df_param_mst = df_valid
-        self.__df_param = df_valid
-        self.__df_hmap_base = df_hmap_base
-        self.__df_hmap_mst = df_hmap
-        self.__df_hmap = df_hmap
-        self.__df_hmap_deci = df_hmap
-        self.__df_hmap_zero = df_hmap_zero
-        self.__date_list = date_list
-        self.__decimate_value = 0
+        self._df_param_mst = df_valid
+        self._df_param = df_valid
+        self._df_hmap_base = df_hmap_base
+        self._df_hmap_mst = df_hmap
+        self._df_hmap = df_hmap
+        self._df_hmap_deci = df_hmap
+        self._df_hmap_zero = df_hmap_zero
+        self._date_list = date_list
+        self._decimate_value = 0
 
-        self.__date_step = len(df_valid)
-        self.__date_pos = 0
-        self.__gap_dir = self.GAP_DIR_ALL
+        self._date_step = len(df_valid)
+        self._date_pos = 0
+        self._gap_dir = self.GAP_DIR_ALL
 
     def reset_hmap(self, deci: int):
-        self.__df_param = self.__df_param_mst
-        self.__df_hmap = self.__df_hmap_mst
+        self._df_param = self._df_param_mst
+        self._df_hmap = self._df_hmap_mst
 
-        self.__date_step = len(self.__df_param)
-        df_new = self.__decimate_hmap(self.__df_hmap, deci)
-        self.__df_hmap_deci = df_new
-        self.__decimate_value = deci
-        self.__date_list = self.__df_param.index.tolist()
+        self._date_step = len(self._df_param)
+        df_new = self._decimate_hmap(self._df_hmap, deci)
+        self._df_hmap_deci = df_new
+        self._decimate_value = deci
+        self._date_list = self._df_param.index.tolist()
 
         return df_new
 
     def tuned_hmap(self):
-        start = self.__date_pos
-        end = self.__date_pos + self.__date_step
-        date_list = self.__df_param.index[start:end].tolist()
-        df_hmap_base = self.__df_hmap_base.loc[(date_list), :]
+        start = self._date_pos
+        end = self._date_pos + self._date_step
+        date_list = self._df_param.index[start:end].tolist()
+        df_hmap_base = self._df_hmap_base.loc[(date_list), :]
 
         df_hmap = df_hmap_base.sum(level=COL_GPA_PRICE_TH)
-        df_hmap = pd.concat([df_hmap, self.__df_hmap_zero]).sum(level=0)
+        df_hmap = pd.concat([df_hmap, self._df_hmap_zero]).sum(level=0)
         df_hmap.sort_index(inplace=True)
 
-        deci = self.__decimate_value
-        df_new = self.__decimate_hmap(df_hmap, deci)
-        self.__df_hmap_deci = df_new
-        self.__date_list = date_list
+        deci = self._decimate_value
+        df_new = self._decimate_hmap(df_hmap, deci)
+        self._df_hmap_deci = df_new
+        self._date_list = date_list
 
         return df_new
 
     def switch_dir_all(self):
-        self.__gap_dir = self.GAP_DIR_ALL
-        self.__update_param()
+        self._gap_dir = self.GAP_DIR_ALL
+        self._update_param()
 
     def switch_dir_up(self):
-        self.__gap_dir = self.GAP_DIR_UP
-        self.__update_param()
+        self._gap_dir = self.GAP_DIR_UP
+        self._update_param()
 
     def switch_dir_down(self):
-        self.__gap_dir = self.GAP_DIR_DOWN
-        self.__update_param()
+        self._gap_dir = self.GAP_DIR_DOWN
+        self._update_param()
 
-    def __update_param(self):
+    def _update_param(self):
 
-        df = self.__df_param_mst
+        df = self._df_param_mst
 
-        if self.__gap_dir == self.GAP_DIR_UP:
+        if self._gap_dir == self.GAP_DIR_UP:
             df_param = df[df[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_UP]
-        elif self.__gap_dir == self.GAP_DIR_DOWN:
+        elif self._gap_dir == self.GAP_DIR_DOWN:
             df_param = df[df[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_DOWN]
         else:
             df_param = df
 
-        self.__date_pos = 0
-        if len(df_param) < self.__date_step:
-            self.__date_step = len(df_param)
+        self._date_pos = 0
+        if len(df_param) < self._date_step:
+            self._date_step = len(df_param)
 
-        self.__df_param = df_param
+        self._df_param = df_param
 
-    def __decimate_hmap(self, df_hmap: pd.DataFrame, deci: int):
+    def _decimate_hmap(self, df_hmap: pd.DataFrame, deci: int):
 
         if deci < 2:
             return df_hmap
@@ -171,8 +171,8 @@ class HeatMapManager():
                            col_max + deci,
                            deci))
 
-        self.__sts_bar.set_label_text("Generating Heat Map : [1/3]")
-        self.__sts_bar.set_bar_range(0, len(rng_y) * len(rng_x))
+        self._sts_bar.set_label_text("Generating Heat Map : [1/3]")
+        self._sts_bar.set_bar_range(0, len(rng_y) * len(rng_x))
 
         new_y_map = []
         cnt = 0
@@ -189,7 +189,7 @@ class HeatMapManager():
                 x_rng = range(str_x,  end_x, 1)
                 new_x_list.append(df_hmap.loc[y_rng][x_rng].max().max())
                 cnt = cnt + 1
-                self.__sts_bar.set_bar_value(cnt)
+                self._sts_bar.set_bar_value(cnt)
             new_y_map.append(new_x_list)
 
         idx = "Y"
@@ -199,7 +199,7 @@ class HeatMapManager():
 
         return df_new
 
-    def __make_basemap(self,
+    def _make_basemap(self,
                        df_param: pd.DataFrame,
                        df_htbl: pd.DataFrame,
                        inst_idx: int
@@ -230,28 +230,28 @@ class HeatMapManager():
 
     @property
     def date_list(self):
-        return self.__date_list
+        return self._date_list
 
     @property
     def shape(self):
-        return self.__df_hmap_zero.shape
+        return self._df_hmap_zero.shape
 
     @property
     def data_len(self):
-        return len(self.__df_param)
+        return len(self._df_param)
 
     @property
     def date_step(self):
-        return self.__date_step
+        return self._date_step
 
     @date_step.setter
     def date_step(self, value):
-        self.__date_step = value
+        self._date_step = value
 
     @property
     def date_pos(self):
-        return self.__date_pos
+        return self._date_pos
 
     @date_pos.setter
     def date_pos(self, value):
-        self.__date_pos = value
+        self._date_pos = value

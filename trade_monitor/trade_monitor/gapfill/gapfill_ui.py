@@ -139,22 +139,22 @@ class GapFillUi():
             ui.comboBox_spread_curr.addItem(text)
 
         ui.comboBox_spread_prev.currentIndexChanged.connect(
-            self.__combobox_spread_prev_changed)
+            self._combobox_spread_prev_changed)
         ui.comboBox_spread_curr.currentIndexChanged.connect(
-            self.__combobox_spread_curr_changed)
+            self._combobox_spread_curr_changed)
 
-        callback = self.__on_gapfill_heatmap_clicked
+        callback = self._on_gapfill_heatmap_clicked
         ui.pushButton_gapfill_heatmap.clicked.connect(callback)
 
         logger = node.get_logger()
 
-        callback = self.__on_fetch_gapfill_clicked
+        callback = self._on_fetch_gapfill_clicked
         ui.pushButton_fetch_gapfill.clicked.connect(callback)
 
         qstd_itm_mdl = QStandardItemModel()
         sel_mdl = QItemSelectionModel(qstd_itm_mdl)
 
-        callback = self.__on_selection_gapfill_changed
+        callback = self._on_selection_gapfill_changed
         sel_mdl.selectionChanged.connect(callback)
 
         # set header
@@ -183,31 +183,31 @@ class GapFillUi():
             logger.info("Waiting for \"" + srv_name + "\" service...")
         """
 
-        self.__widget_htmap = GapFillHeatMap()
+        self._widget_htmap = GapFillHeatMap()
 
-        self.__chart_prev = chart_prev
-        self.__chart_curr = chart_curr
-        self.__qstd_itm_mdl = qstd_itm_mdl
+        self._chart_prev = chart_prev
+        self._chart_curr = chart_curr
+        self._qstd_itm_mdl = qstd_itm_mdl
 
-        self.__ui = ui
-        self.__node = node
-        #self.__srv_cli = srv_cli
-        self.__srv_cli_list = srv_cli_list
-        self.__cli_cdl = cli_cdl
-        self.__end_time = dt.time(10, 0, 0)
-        self.__is_update = False
-        self.__df_param = pd.DataFrame()
-        self.__sr_gf = pd.Series()
-        self.__df_prev = pd.DataFrame()
-        self.__df_curr = pd.DataFrame()
+        self._ui = ui
+        self._node = node
+        #self._srv_cli = srv_cli
+        self._srv_cli_list = srv_cli_list
+        self._cli_cdl = cli_cdl
+        self._end_time = dt.time(10, 0, 0)
+        self._is_update = False
+        self._df_param = pd.DataFrame()
+        self._sr_gf = pd.Series()
+        self._df_prev = pd.DataFrame()
+        self._df_curr = pd.DataFrame()
 
-        self.__logger = logger
+        self._logger = logger
 
-    def __on_fetch_gapfill_clicked(self):
+    def _on_fetch_gapfill_clicked(self):
 
-        self.__qstd_itm_mdl.clear()
-        self.__qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
-        inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
+        self._qstd_itm_mdl.clear()
+        self._qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
+        inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
         inst_msg = INST_MSG_LIST[inst_idx]
 
         decimal_digit = inst_msg.decimal_digit
@@ -216,13 +216,13 @@ class GapFillUi():
         # fetch Gap-fill data
         req = GapFillMntSrv.Request()
 
-        srv_cli = self.__srv_cli_list[inst_idx]
+        srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
-            self.__logger.error("service server [{}] not to become ready"
+            self._logger.error("service server [{}] not to become ready"
                                 .format(inst_msg.text))
         else:
             future = srv_cli.call_async(req)
-            rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
+            rclpy.spin_until_future_complete(self._node, future, timeout_sec=10.0)
 
             flg = future.done() and future.result() is not None
             assert flg, "fetch [Gap-Fill] failed!"
@@ -246,7 +246,7 @@ class GapFillUi():
                     QStandardItem(fmt.format(gapfillmsg.max_open_range)),
                     QStandardItem(fmt.format(gapfillmsg.end_close_price))
                 ]
-                self.__qstd_itm_mdl.appendRow(items)
+                self._qstd_itm_mdl.appendRow(items)
                 data.append([gapfillmsg.date,
                              gapfillmsg.gap_dir,
                              gapfillmsg.gap_close_price,
@@ -274,57 +274,57 @@ class GapFillUi():
                        ]
 
             df_param = pd.DataFrame(data, columns=columns)
-            self.__df_param = df_param.set_index(COL_NAME_DATE)
+            self._df_param = df_param.set_index(COL_NAME_DATE)
 
             """
             # Heat map data
-            self.__hmap_range_start = rsp.heatmap_range_start
-            self.__hmap_range_end = rsp.heatmap_range_end
-            self.__hmap_range_step = rsp.heatmap_range_step
+            self._hmap_range_start = rsp.heatmap_range_start
+            self._hmap_range_end = rsp.heatmap_range_end
+            self._hmap_range_step = rsp.heatmap_range_step
 
             hm_idx = [COL_NAME_DATE]
-            hm_x_range = list(np.arange(self.__hmap_range_start,
-                                        self.__hmap_range_end,
-                                        self.__hmap_range_step))
+            hm_x_range = list(np.arange(self._hmap_range_start,
+                                        self._hmap_range_end,
+                                        self._hmap_range_step))
             columns = hm_idx + hm_x_range
             data = []
             for heatmapmsg in rsp.heatmapmsg_list:
                 idx = [heatmapmsg.date]
                 data.append(idx + heatmapmsg.data_list.tolist())
             df_hmap = pd.DataFrame(data, columns=columns)
-            self.__df_hmap = df_hmap.set_index(hm_idx)
+            self._df_hmap = df_hmap.set_index(hm_idx)
             """
 
-            header = self.__ui.treeView_gapfill.header()
+            header = self._ui.treeView_gapfill.header()
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-            self.__end_time = dt.datetime.strptime(rsp.end_time, "%H:%M:%S").time()
-            #self.__decimal_digit = decimal_digit
-            self.__is_update = True
+            self._end_time = dt.datetime.strptime(rsp.end_time, "%H:%M:%S").time()
+            #self._decimal_digit = decimal_digit
+            self._is_update = True
 
-    def __on_gapfill_heatmap_clicked(self):
-        self.__logger.debug("gapfill_heatmap_clicked")
+    def _on_gapfill_heatmap_clicked(self):
+        self._logger.debug("gapfill_heatmap_clicked")
 
-        inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
-        self.__widget_htmap.set_param(inst_idx, self.__df_param)
-        self.__widget_htmap.show()
-        self.__widget_htmap.init_resize()
+        inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
+        self._widget_htmap.set_param(inst_idx, self._df_param)
+        self._widget_htmap.show()
+        self._widget_htmap.init_resize()
 
-    def __on_selection_gapfill_changed(self, selected, deselected):
+    def _on_selection_gapfill_changed(self, selected, deselected):
 
         qisr0 = selected.at(0)
 
         if qisr0 is not None:
 
             model_index = qisr0.indexes()[0]
-            trg_date_str = self.__qstd_itm_mdl.item(model_index.row()).text()
-            self.__logger.debug("target_date: " + trg_date_str)
+            trg_date_str = self._qstd_itm_mdl.item(model_index.row()).text()
+            self._logger.debug("target_date: " + trg_date_str)
             trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
 
             dt_from = trg_date - dt.timedelta(days=2)
             dt_to = trg_date + dt.timedelta(hours=12)
 
-            inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
+            inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
             inst_msg = INST_MSG_LIST[inst_idx]
 
             req = CandlesMntSrv.Request()
@@ -333,11 +333,11 @@ class GapFillUi():
             req.dt_from = dt_from.strftime(DT_FMT)
             req.dt_to = dt_to.strftime(DT_FMT)
 
-            self.__logger.debug("dt_from: " + req.dt_from)
-            self.__logger.debug("dt_to: " + req.dt_to)
+            self._logger.debug("dt_from: " + req.dt_from)
+            self._logger.debug("dt_to: " + req.dt_to)
 
-            future = self.__cli_cdl.call_async(req)
-            rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
+            future = self._cli_cdl.call_async(req)
+            rclpy.spin_until_future_complete(self._node, future, timeout_sec=10.0)
 
             flg = future.done() and future.result() is not None
             assert flg, "initial fetch [Day Candle] failed!"
@@ -366,7 +366,7 @@ class GapFillUi():
             df.columns = CANDLE_COL_NAME_LIST
             df = df.set_index(COL_NAME_TIME)
 
-            sr_gf = self.__df_param.loc[trg_date_str]
+            sr_gf = self._df_param.loc[trg_date_str]
 
             df_prev = df.loc[:, GapFillUi.ALL_COLUMNS]
             df_curr = df.loc[:, GapFillUi.ALL_COLUMNS]
@@ -385,61 +385,61 @@ class GapFillUi():
             max_y = max(max_prev, max_curr)
             min_y = min(min_prev, min_curr)
 
-            self.__chart_prev.set_max_y(max_y)
-            self.__chart_prev.set_min_y(min_y)
-            self.__chart_curr.set_max_y(max_y)
-            self.__chart_curr.set_min_y(min_y)
+            self._chart_prev.set_max_y(max_y)
+            self._chart_prev.set_min_y(min_y)
+            self._chart_curr.set_max_y(max_y)
+            self._chart_curr.set_min_y(min_y)
 
             decimal_digit = inst_msg.decimal_digit
 
-            idx = self.__ui.comboBox_spread_prev.currentIndex()
-            self.__update_prev_chart(idx, df_prev, sr_gf, decimal_digit)
+            idx = self._ui.comboBox_spread_prev.currentIndex()
+            self._update_prev_chart(idx, df_prev, sr_gf, decimal_digit)
 
-            idx = self.__ui.comboBox_spread_curr.currentIndex()
-            self.__update_curr_chart(idx, df_curr, sr_gf, decimal_digit)
+            idx = self._ui.comboBox_spread_curr.currentIndex()
+            self._update_curr_chart(idx, df_curr, sr_gf, decimal_digit)
 
-            self.__sr_gf = sr_gf
-            self.__df_prev = df_prev
-            self.__df_curr = df_curr
+            self._sr_gf = sr_gf
+            self._df_prev = df_prev
+            self._df_curr = df_curr
 
     def resize_chart_widget(self):
-        fs = self.__ui.widget_chart_gapfill_prev.frameSize()
-        self.__chart_prev.resize(fs)
-        fs = self.__ui.widget_chart_gapfill_curr.frameSize()
-        self.__chart_curr.resize(fs)
+        fs = self._ui.widget_chart_gapfill_prev.frameSize()
+        self._chart_prev.resize(fs)
+        fs = self._ui.widget_chart_gapfill_curr.frameSize()
+        self._chart_curr.resize(fs)
 
-    def __combobox_spread_prev_changed(self, idx):
+    def _combobox_spread_prev_changed(self, idx):
 
-        if self.__is_update:
-            inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
+        if self._is_update:
+            inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-            self.__update_prev_chart(idx, self.__df_prev, self.__sr_gf,
+            self._update_prev_chart(idx, self._df_prev, self._sr_gf,
                                      decimal_digit)
 
-    def __combobox_spread_curr_changed(self, idx):
+    def _combobox_spread_curr_changed(self, idx):
 
-        if self.__is_update:
-            inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
+        if self._is_update:
+            inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-            self.__update_curr_chart(idx, self.__df_curr, self.__sr_gf,
+            self._update_curr_chart(idx, self._df_curr, self._sr_gf,
                                      decimal_digit)
 
-    def __update_prev_chart(self, idx, df, sr_gf, decimal_digit):
+    def _update_prev_chart(self, idx, df, sr_gf, decimal_digit):
 
         df_prev = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
         df_prev.columns = GapFillUi.CDL_COLUMNS
 
-        self.__chart_prev.update(df_prev,
+        self._chart_prev.update(df_prev,
                                  sr_gf[COL_NAME_GPA_CLOSE_PRICE],
                                  sr_gf[COL_NAME_GPA_OPEN_PRICE],
                                  decimal_digit)
 
-    def __update_curr_chart(self, idx, df, sr_gf, decimal_digit):
+    def _update_curr_chart(self, idx, df, sr_gf, decimal_digit):
 
         df_curr = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
         df_curr.columns = GapFillUi.CDL_COLUMNS
 
-        self.__chart_curr.update(df_curr,
+        self._chart_curr.update(df_curr,
                                  sr_gf[COL_NAME_GPA_CLOSE_PRICE],
                                  sr_gf[COL_NAME_GPA_OPEN_PRICE],
-                                 decimal_digit, self.__end_time)
+                                 decimal_digit, self._end_time)

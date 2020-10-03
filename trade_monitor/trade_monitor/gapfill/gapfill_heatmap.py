@@ -105,19 +105,19 @@ class StatusBar():
         parent.addPermanentWidget(sts_label)
         parent.addPermanentWidget(prog_bar, 1)
 
-        self.__sts_label = sts_label
-        self.__prog_bar = prog_bar
+        self._sts_label = sts_label
+        self._prog_bar = prog_bar
 
     def set_label_text(self, text):
-        self.__sts_label.setText(text)
-        self.__sts_label.setVisible(True)
+        self._sts_label.setText(text)
+        self._sts_label.setVisible(True)
 
     def set_bar_range(self, minimum, maximum):
-        self.__prog_bar.setVisible(True)
-        self.__prog_bar.setRange(minimum, maximum)
+        self._prog_bar.setVisible(True)
+        self._prog_bar.setRange(minimum, maximum)
 
     def set_bar_value(self, value):
-        self.__prog_bar.setValue(value)
+        self._prog_bar.setValue(value)
 
 
 class ColorMapLabel(QLabel):
@@ -127,34 +127,34 @@ class ColorMapLabel(QLabel):
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        self.__margin_topbottom = 0.05
-        self.__margin_leftright = 0.3
+        self._margin_topbottom = 0.05
+        self._margin_leftright = 0.3
 
-        self.__max_abs = 100
-        self.__div = 2
+        self._max_abs = 100
+        self._div = 2
 
-        self.__frame_size = QSize()
+        self._frame_size = QSize()
 
     def update_intensity_range(self):
-        self.__max_abs = gradMng.intensityMax
-        self.__update()
+        self._max_abs = gradMng.intensityMax
+        self._update()
 
     def update_color_scale(self):
-        self.__update()
+        self._update()
 
     def resize(self, frame_size):
         super().resize(frame_size)
-        self.__frame_size = frame_size
-        self.__update()
+        self._frame_size = frame_size
+        self._update()
 
-    def __update(self):
+    def _update(self):
 
-        frame_size = self.__frame_size
+        frame_size = self._frame_size
 
-        tmp = frame_size.height() * self.__margin_topbottom
+        tmp = frame_size.height() * self._margin_topbottom
         tb_margin = utl.roundi(tmp)
 
-        tmp = frame_size.width() * self.__margin_leftright
+        tmp = frame_size.width() * self._margin_leftright
         lr_margin = utl.roundi(tmp)
 
         height = frame_size.height() - (tb_margin * 2)
@@ -172,11 +172,11 @@ class ColorMapLabel(QLabel):
         pmp.setPen(Qt.NoPen)
         pmp.drawRect(rect)
 
-        stpl = utl.roundi(height / self.__div)
-        stpi = utl.roundi(self.__max_abs * 2 / self.__div)
-        for i in range(0, self.__div + 1, 1):
+        stpl = utl.roundi(height / self._div)
+        stpi = utl.roundi(self._max_abs * 2 / self._div)
+        for i in range(0, self._div + 1, 1):
             y_pos = i * stpl + tb_margin
-            y_val = -i * stpi + self.__max_abs
+            y_val = -i * stpi + self._max_abs
             pmp.setPen(Qt.lightGray)
             pmp.drawLine(0, y_pos, width, y_pos)
             pmp.setPen(Qt.black)
@@ -201,12 +201,12 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
 
         super().__init__(upper_series, lower_series)
 
-        callback = self.__on_hovered
+        callback = self._on_hovered
         self.hovered.connect(callback)
 
-        self.__upper_series = upper_series
-        self.__lower_series = lower_series
-        self.__intensity = 0
+        self._upper_series = upper_series
+        self._lower_series = lower_series
+        self._intensity = 0
 
     def set_block(self,
                   left_x: int,
@@ -239,45 +239,45 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
             pen.setWidth(1)
             self.setPen(pen)
 
-        self.__intensity = intensity
-        self.__brush_color_off = color
-        self.__brush_color_on = QColor(inv_r, inv_g, inv_b)
-        self.__center = QPointF((right_x + left_x) / 2,
+        self._intensity = intensity
+        self._brush_color_off = color
+        self._brush_color_on = QColor(inv_r, inv_g, inv_b)
+        self._center = QPointF((right_x + left_x) / 2,
                                 (upper_y + lower_y) / 2)
-        self.__left_x = left_x
-        self.__right_x = right_x
-        self.__lower_y = lower_y
-        self.__upper_y = upper_y
+        self._left_x = left_x
+        self._right_x = right_x
+        self._lower_y = lower_y
+        self._upper_y = upper_y
 
     def set_intensity(self, intensity: int):
-        self.__update_color(intensity)
-        self.__intensity = intensity
+        self._update_color(intensity)
+        self._intensity = intensity
 
     def update_color(self):
-        self.__update_color(self.__intensity)
+        self._update_color(self._intensity)
 
-    def __update_color(self, intensity: int):
+    def _update_color(self, intensity: int):
         color = gradMng.convertValueToColor(intensity)
         self.setColor(color)
         inv_r = self.RGB8_MAX - color.red()
         inv_g = self.RGB8_MAX - color.green()
         inv_b = self.RGB8_MAX - color.blue()
 
-        self.__brush_color_off = color
-        self.__brush_color_on = QColor(inv_r, inv_g, inv_b)
+        self._brush_color_off = color
+        self._brush_color_on = QColor(inv_r, inv_g, inv_b)
 
-    def __on_hovered(self, point: QPointF, state: bool):
+    def _on_hovered(self, point: QPointF, state: bool):
         if state:
-            self.setColor(self.__brush_color_on)
+            self.setColor(self._brush_color_on)
 
-            text = f"・Profit or Loss: {self.__intensity}\n"\
-                f"・Loss cut Range th: {self.__left_x} - {self.__right_x}\n"\
-                f"・Gap Range Th: {self.__lower_y} - {self.__upper_y}"
+            text = f"・Profit or Loss: {self._intensity}\n"\
+                f"・Loss cut Range th: {self._left_x} - {self._right_x}\n"\
+                f"・Gap Range Th: {self._lower_y} - {self._upper_y}"
 
             callout.setText(text)
-            callout.updateGeometry(self.__center)
+            callout.updateGeometry(self._center)
         else:
-            self.setColor(self.__brush_color_off)
+            self.setColor(self._brush_color_off)
 
 
 class HeatMapChartViewAbs(QtCharts.QChartView):
@@ -346,7 +346,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.chart().addAxis(axis_x, Qt.AlignBottom)
         self.chart().addAxis(axis_y, Qt.AlignLeft)
 
-        self.__callout = Callout(self.chart())
+        self._callout = Callout(self.chart())
         callout.setChart(self.chart())
         self.scene().addItem(callout)
         shadow = QGraphicsDropShadowEffect()
@@ -354,15 +354,15 @@ class HeatMapChartView(HeatMapChartViewAbs):
         shadow.setBlurRadius(8)
         callout.setGraphicsEffect(shadow)
 
-        self.__sts_bar = sts_bar
+        self._sts_bar = sts_bar
 
     def rebuild_hmap(self, df_hmap: pd.DataFrame):
 
-        self.__draw_map(df_hmap)
+        self._draw_map(df_hmap)
 
     def update_hmap(self, df_hmap: pd.DataFrame):
 
-        self.__update_hmap(df_hmap)
+        self._update_hmap(df_hmap)
 
     def update_color(self):
         for block in self.chart().series():
@@ -377,7 +377,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         else:
             callout.hide()
 
-    def __draw_map(self, df: pd.DataFrame):
+    def _draw_map(self, df: pd.DataFrame):
 
         """
         min_val = df.min().min()
@@ -399,9 +399,9 @@ class HeatMapChartView(HeatMapChartViewAbs):
         chart = self.chart()
         diff = df.size - len(chart.series())
 
-        self.__sts_bar.set_label_text("Generating Heat Map : [2/3]")
+        self._sts_bar.set_label_text("Generating Heat Map : [2/3]")
         if 0 < diff:
-            self.__sts_bar.set_bar_range(0, diff)
+            self._sts_bar.set_bar_range(0, diff)
             ax_h = chart.axes(Qt.Horizontal)[0]
             ax_v = chart.axes(Qt.Vertical)[0]
             for i in range(diff):
@@ -409,16 +409,16 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 chart.addSeries(block)
                 block.attachAxis(ax_h)
                 block.attachAxis(ax_v)
-                self.__sts_bar.set_bar_value(i + 1)
+                self._sts_bar.set_bar_value(i + 1)
         elif diff < 0:
-            self.__sts_bar.set_bar_range(0, -diff)
+            self._sts_bar.set_bar_range(0, -diff)
             for i in range(-diff):
                 srlist = chart.series()
                 chart.removeSeries(srlist[-1])
-                self.__sts_bar.set_bar_value(i + 1)
+                self._sts_bar.set_bar_value(i + 1)
 
-        self.__sts_bar.set_label_text("Generating Heat Map : [3/3]")
-        self.__sts_bar.set_bar_range(0, df.size)
+        self._sts_bar.set_label_text("Generating Heat Map : [3/3]")
+        self._sts_bar.set_bar_range(0, df.size)
         itr = 0
         blklist = chart.series()
         for upper_y, row in df.iterrows():
@@ -428,14 +428,14 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 left_x = right_x - delta_x
                 blklist[itr].set_block(left_x, right_x, upper_y, lower_y, x)
                 itr += 1
-                self.__sts_bar.set_bar_value(itr)
+                self._sts_bar.set_bar_value(itr)
 
         ax_h = chart.axes(Qt.Horizontal)[0]
         ax_h.setRange(cols_list[0] - delta_x, cols_list[-1])
         ax_v = chart.axes(Qt.Vertical)[0]
         ax_v.setRange(rows_list[0] - delta_y, rows_list[-1])
 
-    def __update_hmap(self, df: pd.DataFrame):
+    def _update_hmap(self, df: pd.DataFrame):
 
         intensity_max = df.max().max()
         if intensity_max < 1:
@@ -443,15 +443,15 @@ class HeatMapChartView(HeatMapChartViewAbs):
 
         gradMng.updateColorTable(intensity_max)
 
-        self.__sts_bar.set_label_text("Generating Heat Map : [3/3]")
-        self.__sts_bar.set_bar_range(0, df.size)
+        self._sts_bar.set_label_text("Generating Heat Map : [3/3]")
+        self._sts_bar.set_bar_range(0, df.size)
         itr = 0
         srlist = self.chart().series()
         for _, row in df.iterrows():
             for x in row:
                 srlist[itr].set_intensity(x)
                 itr += 1
-                self.__sts_bar.set_bar_value(itr)
+                self._sts_bar.set_bar_value(itr)
 
 
 class GapFillHeatMap(QMainWindow):
@@ -459,7 +459,7 @@ class GapFillHeatMap(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        ui = self.__load_ui(parent)
+        ui = self._load_ui(parent)
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
 
@@ -489,133 +489,133 @@ class GapFillHeatMap(QMainWindow):
         ui.pushButton_gradientBtoYPB.setIcon(icon)
         ui.pushButton_gradientBtoYPB.setIconSize(QSize(icon_w, icon_h))
 
-        callback = self.__on_gradientBtoYPB_clicked
+        callback = self._on_gradientBtoYPB_clicked
         ui.pushButton_gradientBtoYPB.clicked.connect(callback)
 
-        callback = self.__on_gradientGtoRPB_clicked
+        callback = self._on_gradientGtoRPB_clicked
         ui.pushButton_gradientGtoRPB.clicked.connect(callback)
 
         gradMng.setGradient(grBtoY)
         color_map = ColorMapLabel(ui.widget_ColorMap)
 
-        callback = self.__on_pushButtonGenHMap_clicked
+        callback = self._on_pushButtonGenHMap_clicked
         ui.pushButton_genHMap.clicked.connect(callback)
 
-        callback = self.__on_spinBoxDecim_changed
+        callback = self._on_spinBoxDecim_changed
         ui.spinBox_Decim.valueChanged.connect(callback)
 
-        callback = self.__on_pushButtonAutoUpdate_toggled
+        callback = self._on_pushButtonAutoUpdate_toggled
         ui.pushButton_AutoUpdate.toggled.connect(callback)
 
         # ---------- Date Range ----------
-        callback = self.__on_spinBoxDateStep_changed
+        callback = self._on_spinBoxDateStep_changed
         ui.spinBox_DateStep.valueChanged.connect(callback)
 
-        callback = self.__on_scrollBarDate_changed
+        callback = self._on_scrollBarDate_changed
         ui.scrollBar_Date.valueChanged.connect(callback)
         # ---------- Gap Direction ----------
-        callback = self.__on_radioButtonGapDirAll_clicked
+        callback = self._on_radioButtonGapDirAll_clicked
         ui.radioButton_GapDirAll.clicked.connect(callback)
-        callback = self.__on_radioButtonGapDirUp_clicked
+        callback = self._on_radioButtonGapDirUp_clicked
         ui.radioButton_GpaDirUp.clicked.connect(callback)
-        callback = self.__on_radioButtonGapDirDown_clicked
+        callback = self._on_radioButtonGapDirDown_clicked
         ui.radioButton_GapDirLo.clicked.connect(callback)
 
-        self.__hmapmng = HeatMapManager(sts_bar)
+        self._hmapmng = HeatMapManager(sts_bar)
 
-        self.__ui = ui
-        self.__chart_view = chart_view
-        self.__color_map = color_map
+        self._ui = ui
+        self._chart_view = chart_view
+        self._color_map = color_map
 
-        self.__is_chart_updatable = True
+        self._is_chart_updatable = True
 
     def set_param(self,
                   inst_idx: int,
                   df_param: pd.DataFrame):
 
-        self.__hmapmng.set_param(df_param, inst_idx)
+        self._hmapmng.set_param(df_param, inst_idx)
 
-        shape = self.__hmapmng.shape
+        shape = self._hmapmng.shape
         lenmax = max(shape)
         val = math.ceil(lenmax / 100)
 
-        self.__ui.spinBox_Decim.setValue(val)
+        self._ui.spinBox_Decim.setValue(val)
 
-    def __on_pushButtonAutoUpdate_toggled(self, checked: bool):
+    def _on_pushButtonAutoUpdate_toggled(self, checked: bool):
         if checked:
-            self.__update_hmap()
+            self._update_hmap()
 
-    def __on_spinBoxDateStep_changed(self, value):
-        if self.__is_chart_updatable:
-            self.__hmapmng.date_step = value
-            maxval = self.__ui.spinBox_DateStep.maximum()
-            self.__ui.scrollBar_Date.setMaximum(maxval - value)
-            if self.__ui.pushButton_AutoUpdate.isChecked():
-                self.__update_hmap()
+    def _on_spinBoxDateStep_changed(self, value):
+        if self._is_chart_updatable:
+            self._hmapmng.date_step = value
+            maxval = self._ui.spinBox_DateStep.maximum()
+            self._ui.scrollBar_Date.setMaximum(maxval - value)
+            if self._ui.pushButton_AutoUpdate.isChecked():
+                self._update_hmap()
 
-    def __on_scrollBarDate_changed(self, value):
-        if self.__is_chart_updatable:
-            self.__hmapmng.date_pos = value
-            if self.__ui.pushButton_AutoUpdate.isChecked():
-                self.__update_hmap()
+    def _on_scrollBarDate_changed(self, value):
+        if self._is_chart_updatable:
+            self._hmapmng.date_pos = value
+            if self._ui.pushButton_AutoUpdate.isChecked():
+                self._update_hmap()
 
-    def __on_radioButtonGapDirAll_clicked(self):
-        self.__hmapmng.switch_dir_all()
-        self.__update_status()
-        if self.__ui.pushButton_AutoUpdate.isChecked():
-            self.__update_hmap()
+    def _on_radioButtonGapDirAll_clicked(self):
+        self._hmapmng.switch_dir_all()
+        self._update_status()
+        if self._ui.pushButton_AutoUpdate.isChecked():
+            self._update_hmap()
 
-    def __on_radioButtonGapDirUp_clicked(self):
-        self.__hmapmng.switch_dir_up()
-        self.__update_status()
-        if self.__ui.pushButton_AutoUpdate.isChecked():
-            self.__update_hmap()
+    def _on_radioButtonGapDirUp_clicked(self):
+        self._hmapmng.switch_dir_up()
+        self._update_status()
+        if self._ui.pushButton_AutoUpdate.isChecked():
+            self._update_hmap()
 
-    def __on_radioButtonGapDirDown_clicked(self):
-        self.__hmapmng.switch_dir_down()
-        self.__update_status()
-        if self.__ui.pushButton_AutoUpdate.isChecked():
-            self.__update_hmap()
+    def _on_radioButtonGapDirDown_clicked(self):
+        self._hmapmng.switch_dir_down()
+        self._update_status()
+        if self._ui.pushButton_AutoUpdate.isChecked():
+            self._update_hmap()
 
-    def __update_status(self):
-        self.__is_chart_updatable = False
-        date_pos = self.__hmapmng.date_pos
-        date_step = self.__hmapmng.date_step
-        data_len = self.__hmapmng.data_len
-        self.__ui.spinBox_DateStep.setMaximum(data_len)
-        self.__ui.spinBox_DateStep.setValue(date_step)
-        self.__ui.scrollBar_Date.setMaximum(data_len - date_step)
-        self.__ui.scrollBar_Date.setValue(date_pos)
-        self.__update_date_list()
-        self.__is_chart_updatable = True
+    def _update_status(self):
+        self._is_chart_updatable = False
+        date_pos = self._hmapmng.date_pos
+        date_step = self._hmapmng.date_step
+        data_len = self._hmapmng.data_len
+        self._ui.spinBox_DateStep.setMaximum(data_len)
+        self._ui.spinBox_DateStep.setValue(date_step)
+        self._ui.scrollBar_Date.setMaximum(data_len - date_step)
+        self._ui.scrollBar_Date.setValue(date_pos)
+        self._update_date_list()
+        self._is_chart_updatable = True
 
-    def __update_hmap(self):
-        df = self.__hmapmng.tuned_hmap()
-        self.__chart_view.update_hmap(df)
-        self.__update_date_list()
-        self.__color_map.update_intensity_range()
+    def _update_hmap(self):
+        df = self._hmapmng.tuned_hmap()
+        self._chart_view.update_hmap(df)
+        self._update_date_list()
+        self._color_map.update_intensity_range()
 
-    def __on_pushButtonGenHMap_clicked(self):
+    def _on_pushButtonGenHMap_clicked(self):
 
-        self.__ui.pushButton_AutoUpdate.setChecked(False)
+        self._ui.pushButton_AutoUpdate.setChecked(False)
 
-        deci = self.__ui.spinBox_Decim.value()
-        df = self.__hmapmng.reset_hmap(deci)
+        deci = self._ui.spinBox_Decim.value()
+        df = self._hmapmng.reset_hmap(deci)
 
-        self.__chart_view.rebuild_hmap(df)
-        self.__color_map.update_intensity_range()
+        self._chart_view.rebuild_hmap(df)
+        self._color_map.update_intensity_range()
 
-        self.__update_status()
+        self._update_status()
 
-        self.__ui.radioButton_GapDirAll.setChecked(True)
+        self._ui.radioButton_GapDirAll.setChecked(True)
 
-    def __update_date_list(self):
+    def _update_date_list(self):
         text = ""
-        for date in self.__hmapmng.date_list:
+        for date in self._hmapmng.date_list:
             text += date + "\n"
-        self.__ui.plainTextEdit_DateList.setPlainText(text)
+        self._ui.plainTextEdit_DateList.setPlainText(text)
 
-    def __on_gradientBtoYPB_clicked(self):
+    def _on_gradientBtoYPB_clicked(self):
         grBtoY = QLinearGradient(0, 0, 0, 100)
         grBtoY.setColorAt(1.0, Qt.black)
         grBtoY.setColorAt(0.67, Qt.blue)
@@ -623,10 +623,10 @@ class GapFillHeatMap(QMainWindow):
         grBtoY.setColorAt(0.0, Qt.yellow)
         gradMng.setGradient(grBtoY)
 
-        self.__chart_view.update_color()
-        self.__color_map.update_color_scale()
+        self._chart_view.update_color()
+        self._color_map.update_color_scale()
 
-    def __on_gradientGtoRPB_clicked(self):
+    def _on_gradientGtoRPB_clicked(self):
         grGtoR = QLinearGradient(0, 0, 0, 100)
         grGtoR.setColorAt(1.0, Qt.darkGreen)
         grGtoR.setColorAt(0.5, Qt.yellow)
@@ -634,18 +634,18 @@ class GapFillHeatMap(QMainWindow):
         grGtoR.setColorAt(0.0, Qt.darkRed)
         gradMng.setGradient(grGtoR)
 
-        self.__chart_view.update_color()
-        self.__color_map.update_color_scale()
+        self._chart_view.update_color()
+        self._color_map.update_color_scale()
 
-    def __on_spinBoxDecim_changed(self, decim):
-        shape = self.__hmapmng.shape
+    def _on_spinBoxDecim_changed(self, decim):
+        shape = self._hmapmng.shape
 
         row_len = math.ceil(shape[0] / decim)
         col_len = math.ceil(shape[1] / decim)
         txt = "rows len: " + str(row_len) + "\ncols len: " + str(col_len)
-        self.__ui.label_Roughness.setText(txt)
+        self._ui.label_Roughness.setText(txt)
 
-    def __load_ui(self, parent):
+    def _load_ui(self, parent):
         loader = QUiLoader()
         path = os.path.join(os.path.dirname(__file__), "gapfill_heatmap.ui")
         ui_file = QFile(path)
@@ -656,17 +656,17 @@ class GapFillHeatMap(QMainWindow):
         return ui
 
     def init_resize(self):
-        fs = self.__ui.widget_HeatMap.frameSize()
-        self.__chart_view.resize(fs)
-        fs = self.__ui.widget_ColorMap.frameSize()
-        self.__color_map.resize(fs)
+        fs = self._ui.widget_HeatMap.frameSize()
+        self._chart_view.resize(fs)
+        fs = self._ui.widget_ColorMap.frameSize()
+        self._color_map.resize(fs)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        fs = self.__ui.widget_HeatMap.frameSize()
-        self.__chart_view.resize(fs)
-        fs = self.__ui.widget_ColorMap.frameSize()
-        self.__color_map.resize(fs)
+        fs = self._ui.widget_HeatMap.frameSize()
+        self._chart_view.resize(fs)
+        fs = self._ui.widget_ColorMap.frameSize()
+        self._color_map.resize(fs)
 
 
 if __name__ == "__main__":

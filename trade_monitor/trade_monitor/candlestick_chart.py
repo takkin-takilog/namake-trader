@@ -108,9 +108,9 @@ class CandlestickChart(object):
 
         chart.legend().setVisible(False)
 
-        self.__series = series
-        self.__chart = chart
-        self.__chartview = chartview
+        self._series = series
+        self._chart = chart
+        self._chartview = chartview
 
     def update(self, df, gran_id):
 
@@ -123,7 +123,7 @@ class CandlestickChart(object):
             fmt = "%Y/%m/%d"
 
         x_axis_label = []
-        self.__series.clear()
+        self._series.clear()
         for time, sr in df.iterrows():
             o_ = sr[self.COL_NAME_OP]
             h_ = sr[self.COL_NAME_HI]
@@ -131,17 +131,17 @@ class CandlestickChart(object):
             c_ = sr[self.COL_NAME_CL]
             x_axis_label.append(time.strftime(fmt))
             cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_)
-            self.__series.append(cnd)
+            self._series.append(cnd)
 
-        self.__chart.axisX(self.__series).setCategories(x_axis_label)
-        self.__chart.axisX().setRange(x_axis_label[0], x_axis_label[-1])
-        self.__chart.axisY().setRange(min_y, max_y)
+        self._chart.axisX(self._series).setCategories(x_axis_label)
+        self._chart.axisX().setRange(x_axis_label[0], x_axis_label[-1])
+        self._chart.axisY().setRange(min_y, max_y)
 
-        self.__chartview.setRubberBand(
+        self._chartview.setRubberBand(
             QtCharts.QChartView.HorizontalRubberBand)
 
     def resize(self, frame_size):
-        self.__chartview.resize(frame_size)
+        self._chartview.resize(frame_size)
 
 
 class CalloutDataTime(CalloutChartAbs):
@@ -288,14 +288,14 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
         self._horline_curopn.setPen(pen)
         self.scene().addItem(self._horline_curopn)
 
-        self.__decimal_digit = 0
+        self._decimal_digit = 0
         self._is_update = False
 
     def set_max_y(self, max_y):
-        self.__max_y = max_y
+        self._max_y = max_y
 
     def set_min_y(self, min_y):
-        self.__min_y = min_y
+        self._min_y = min_y
 
     def update(self, df, gap_close_price, gap_open_price, decimal_digit):
 
@@ -312,7 +312,7 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
                                            qdt.toMSecsSinceEpoch())
             self._series.append(cnd)
 
-        self._chart.axisY().setRange(self.__min_y, self.__max_y)
+        self._chart.axisY().setRange(self._min_y, self._max_y)
 
         point = QPointF(0, gap_close_price)
         m2p = self._chart.mapToPosition(point)
@@ -333,17 +333,17 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
         self._horline_precls.show()
         self._horline_curopn.show()
 
-        self.__decimal_digit = decimal_digit
+        self._decimal_digit = decimal_digit
 
-        self.__gap_close_price = gap_close_price
-        self.__gap_open_price = gap_open_price
+        self._gap_close_price = gap_close_price
+        self._gap_open_price = gap_open_price
         self._is_update = True
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
 
         if self._is_update:
-            point = QPointF(0, self.__gap_close_price)
+            point = QPointF(0, self._gap_close_price)
             m2p = self._chart.mapToPosition(point)
             plotAreaRect = self._chart.plotArea()
             self._horline_precls.setLine(QLineF(plotAreaRect.left(),
@@ -351,7 +351,7 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
                                                 plotAreaRect.right(),
                                                 m2p.y()))
 
-            point = QPointF(0, self.__gap_open_price)
+            point = QPointF(0, self._gap_open_price)
             m2p = self._chart.mapToPosition(point)
             plotAreaRect = self._chart.plotArea()
             self._horline_curopn.setLine(QLineF(plotAreaRect.left(),
@@ -380,7 +380,7 @@ class CandlestickChartGapFillBase(CandlestickChartAbs):
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
-            fmt = "{:." + str(self.__decimal_digit) + "f}"
+            fmt = "{:." + str(self._decimal_digit) + "f}"
             prstr = fmt.format(m2v.y())
             self._callout_pr.setZValue(1)
             self._callout_pr.updateGeometry(prstr, event.pos())
@@ -441,15 +441,15 @@ class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
         super().__init__(widget)
 
         # Vertical Line (end hour)
-        self.__verline_endhour = QGraphicsLineItem()
-        pen = self.__verline_endhour.pen()
+        self._verline_endhour = QGraphicsLineItem()
+        pen = self._verline_endhour.pen()
         pen.setColor(Qt.cyan)
         pen.setWidth(1)
         pen.setStyle(Qt.DashLine)
-        self.__verline_endhour.setPen(pen)
-        self.scene().addItem(self.__verline_endhour)
+        self._verline_endhour.setPen(pen)
+        self.scene().addItem(self._verline_endhour)
 
-        self.__end_point = QPointF(0, 0)
+        self._end_point = QPointF(0, 0)
 
     def update(self,
                df,
@@ -476,21 +476,21 @@ class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
         h = end_time.hour
         m = end_time.minute
         qdttm = QDateTime(dt_.date(), QTime(h, m))
-        self.__end_point.setX(qdttm.toMSecsSinceEpoch())
-        self.__update_end_hour()
+        self._end_point.setX(qdttm.toMSecsSinceEpoch())
+        self._update_end_hour()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
 
         if self._is_update:
-            self.__update_end_hour()
+            self._update_end_hour()
 
-    def __update_end_hour(self):
+    def _update_end_hour(self):
 
-        m2p = self._chart.mapToPosition(self.__end_point)
+        m2p = self._chart.mapToPosition(self._end_point)
         plotAreaRect = self._chart.plotArea()
-        self.__verline_endhour.setLine(QLineF(m2p.x(),
-                                              plotAreaRect.top(),
-                                              m2p.x(),
-                                              plotAreaRect.bottom()))
-        self.__verline_endhour.show()
+        self._verline_endhour.setLine(QLineF(m2p.x(),
+                                             plotAreaRect.top(),
+                                             m2p.x(),
+                                             plotAreaRect.bottom()))
+        self._verline_endhour.show()
