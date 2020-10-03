@@ -456,7 +456,7 @@ class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
                gap_close_price,
                gap_open_price,
                decimal_digit,
-               end_hour):
+               end_time):
         super().update(df, gap_close_price, gap_open_price, decimal_digit)
 
         dt_ = df.index[-1]
@@ -473,7 +473,9 @@ class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
         self._chart.axisX().setTitleText(dtstr)
         self._chart.axisX().setRange(min_x, max_x)
 
-        qdttm = QDateTime(dt_.date(), QTime(end_hour, 0))
+        h = end_time.hour
+        m = end_time.minute
+        qdttm = QDateTime(dt_.date(), QTime(h, m))
         self.__end_point.setX(qdttm.toMSecsSinceEpoch())
         self.__update_end_hour()
 

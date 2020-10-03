@@ -128,6 +128,10 @@ class GapFillUi():
 
     def __init__(self, ui, node, cli_cdl) -> None:
 
+        utl.remove_all_items_of_comboBox(ui.comboBox_inst_gapfill)
+        for obj in INST_MSG_LIST:
+            ui.comboBox_inst_gapfill.addItem(obj.text)
+
         utl.remove_all_items_of_comboBox(ui.comboBox_spread_prev)
         utl.remove_all_items_of_comboBox(ui.comboBox_spread_curr)
         for text in SPREAD_MSG_LIST:
@@ -166,10 +170,18 @@ class GapFillUi():
         # Create service client "CandlesMonitor"
         srv_type = GapFillMntSrv
         srv_name = "gapfill_monitor"
-        srv_cli = node.create_client(srv_type, srv_name)
+        srv_cli_list = []
+        for obj in INST_MSG_LIST:
+            fullname = obj.namespace + "/" + srv_name
+            srv_cli = node.create_client(srv_type, fullname)
+            srv_cli_list.append(srv_cli)
+            #srv_cli.service_is_ready()
+
         # Wait for a service server
+        """
         while not srv_cli.wait_for_service(timeout_sec=1.0):
             logger.info("Waiting for \"" + srv_name + "\" service...")
+        """
 
         self.__widget_htmap = GapFillHeatMap()
 
@@ -179,9 +191,10 @@ class GapFillUi():
 
         self.__ui = ui
         self.__node = node
-        self.__srv_cli = srv_cli
+        #self.__srv_cli = srv_cli
+        self.__srv_cli_list = srv_cli_list
         self.__cli_cdl = cli_cdl
-        self.__end_hour = 9
+        self.__end_time = dt.time(10, 0, 0)
         self.__is_update = False
         self.__df_param = pd.DataFrame()
         self.__sr_gf = pd.Series()
@@ -195,93 +208,100 @@ class GapFillUi():
         self.__qstd_itm_mdl.clear()
         self.__qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
         inst_idx = self.__ui.comboBox_inst_gapfill.currentIndex()
-        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+        inst_msg = INST_MSG_LIST[inst_idx]
+
+        decimal_digit = inst_msg.decimal_digit
         fmt = "{:." + str(decimal_digit) + "f}"
 
         # fetch Gap-fill data
         req = GapFillMntSrv.Request()
-        req.inst_msg.inst_id = INST_MSG_LIST[inst_idx].msg_id
+        req.inst_msg.inst_id = inst_msg.msg_id
 
-        future = self.__srv_cli.call_async(req)
-        rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
+        srv_cli = self.__srv_cli_list[inst_idx]
+        if not srv_cli.service_is_ready():
+            self.__logger.error("service server [{}] not to become ready"
+                                .format(inst_msg.text))
+        else:
+            future = srv_cli.call_async(req)
+            rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
 
-        flg = future.done() and future.result() is not None
-        assert flg, "fetch [Gap-Fill] failed!"
+            flg = future.done() and future.result() is not None
+            assert flg, "fetch [Gap-Fill] failed!"
 
-        rsp = future.result()
-        # Parameter data
-        data = []
-        for gapfillmsg in rsp.gapfillmsg_list:
-            items = [
-                QStandardItem(gapfillmsg.date),
-                QStandardItem(self.GAP_DIR_DICT[gapfillmsg.gap_dir]),
-                QStandardItem(fmt.format(gapfillmsg.gap_close_price)),
-                QStandardItem(fmt.format(gapfillmsg.gap_open_price)),
-                QStandardItem(fmt.format(gapfillmsg.gap_price_mid)),
-                QStandardItem(fmt.format(gapfillmsg.gap_price_real)),
-                QStandardItem(self.GAP_FILL_VALID_DICT[
-                    gapfillmsg.is_valid]),
-                QStandardItem(self.GAP_FILL_SUCC_DICT[
-                    gapfillmsg.is_gapfill_success]),
-                QStandardItem(gapfillmsg.gap_filled_time),
-                QStandardItem(fmt.format(gapfillmsg.max_open_range)),
-                QStandardItem(fmt.format(gapfillmsg.end_close_price))
-            ]
-            self.__qstd_itm_mdl.appendRow(items)
-            data.append([gapfillmsg.date,
-                         gapfillmsg.gap_dir,
-                         gapfillmsg.gap_close_price,
-                         gapfillmsg.gap_open_price,
-                         gapfillmsg.gap_price_mid,
-                         gapfillmsg.gap_price_real,
-                         gapfillmsg.is_valid,
-                         gapfillmsg.is_gapfill_success,
-                         gapfillmsg.gap_filled_time,
-                         gapfillmsg.max_open_range,
-                         gapfillmsg.end_close_price
-                         ])
+            rsp = future.result()
+            # Parameter data
+            data = []
+            for gapfillmsg in rsp.gapfillmsg_list:
+                items = [
+                    QStandardItem(gapfillmsg.date),
+                    QStandardItem(self.GAP_DIR_DICT[gapfillmsg.gap_dir]),
+                    QStandardItem(fmt.format(gapfillmsg.gap_close_price)),
+                    QStandardItem(fmt.format(gapfillmsg.gap_open_price)),
+                    QStandardItem(fmt.format(gapfillmsg.gap_price_mid)),
+                    QStandardItem(fmt.format(gapfillmsg.gap_price_real)),
+                    QStandardItem(self.GAP_FILL_VALID_DICT[
+                        gapfillmsg.is_valid]),
+                    QStandardItem(self.GAP_FILL_SUCC_DICT[
+                        gapfillmsg.is_gapfill_success]),
+                    QStandardItem(gapfillmsg.gap_filled_time),
+                    QStandardItem(fmt.format(gapfillmsg.max_open_range)),
+                    QStandardItem(fmt.format(gapfillmsg.end_close_price))
+                ]
+                self.__qstd_itm_mdl.appendRow(items)
+                data.append([gapfillmsg.date,
+                             gapfillmsg.gap_dir,
+                             gapfillmsg.gap_close_price,
+                             gapfillmsg.gap_open_price,
+                             gapfillmsg.gap_price_mid,
+                             gapfillmsg.gap_price_real,
+                             gapfillmsg.is_valid,
+                             gapfillmsg.is_gapfill_success,
+                             gapfillmsg.gap_filled_time,
+                             gapfillmsg.max_open_range,
+                             gapfillmsg.end_close_price
+                             ])
 
-        columns = [COL_NAME_DATE,
-                   COL_NAME_GPA_DIR,
-                   COL_NAME_GPA_CLOSE_PRICE,
-                   COL_NAME_GPA_OPEN_PRICE,
-                   COL_NAME_GPA_PRICE_MID,
-                   COL_NAME_GPA_PRICE_REAL,
-                   COL_NAME_VALID_FLAG,
-                   COL_NAME_SUCCESS_FLAG,
-                   COL_NAME_GAP_FILLED_TIME,
-                   COL_NAME_MAX_OPEN_RANGE,
-                   COL_NAME_END_CLOSE_PRICE,
-                   ]
+            columns = [COL_NAME_DATE,
+                       COL_NAME_GPA_DIR,
+                       COL_NAME_GPA_CLOSE_PRICE,
+                       COL_NAME_GPA_OPEN_PRICE,
+                       COL_NAME_GPA_PRICE_MID,
+                       COL_NAME_GPA_PRICE_REAL,
+                       COL_NAME_VALID_FLAG,
+                       COL_NAME_SUCCESS_FLAG,
+                       COL_NAME_GAP_FILLED_TIME,
+                       COL_NAME_MAX_OPEN_RANGE,
+                       COL_NAME_END_CLOSE_PRICE,
+                       ]
 
-        df_param = pd.DataFrame(data, columns=columns)
-        self.__df_param = df_param.set_index(COL_NAME_DATE)
+            df_param = pd.DataFrame(data, columns=columns)
+            self.__df_param = df_param.set_index(COL_NAME_DATE)
 
-        """
-        # Heat map data
-        self.__hmap_range_start = rsp.heatmap_range_start
-        self.__hmap_range_end = rsp.heatmap_range_end
-        self.__hmap_range_step = rsp.heatmap_range_step
+            """
+            # Heat map data
+            self.__hmap_range_start = rsp.heatmap_range_start
+            self.__hmap_range_end = rsp.heatmap_range_end
+            self.__hmap_range_step = rsp.heatmap_range_step
 
-        hm_idx = [COL_NAME_DATE]
-        hm_x_range = list(np.arange(self.__hmap_range_start,
-                                    self.__hmap_range_end,
-                                    self.__hmap_range_step))
-        columns = hm_idx + hm_x_range
-        data = []
-        for heatmapmsg in rsp.heatmapmsg_list:
-            idx = [heatmapmsg.date]
-            data.append(idx + heatmapmsg.data_list.tolist())
-        df_hmap = pd.DataFrame(data, columns=columns)
-        self.__df_hmap = df_hmap.set_index(hm_idx)
-        """
+            hm_idx = [COL_NAME_DATE]
+            hm_x_range = list(np.arange(self.__hmap_range_start,
+                                        self.__hmap_range_end,
+                                        self.__hmap_range_step))
+            columns = hm_idx + hm_x_range
+            data = []
+            for heatmapmsg in rsp.heatmapmsg_list:
+                idx = [heatmapmsg.date]
+                data.append(idx + heatmapmsg.data_list.tolist())
+            df_hmap = pd.DataFrame(data, columns=columns)
+            self.__df_hmap = df_hmap.set_index(hm_idx)
+            """
 
-        header = self.__ui.treeView_gapfill.header()
-        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+            header = self.__ui.treeView_gapfill.header()
+            header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-        self.__end_hour = rsp.end_hour
-        self.__decimal_digit = decimal_digit
-        self.__is_update = True
+            self.__end_time = dt.datetime.strptime(rsp.end_time, "%H:%M:%S").time()
+            #self.__decimal_digit = decimal_digit
+            self.__is_update = True
 
     def __on_gapfill_heatmap_clicked(self):
         self.__logger.debug("gapfill_heatmap_clicked")
@@ -420,4 +440,4 @@ class GapFillUi():
         self.__chart_curr.update(df_curr,
                                  sr_gf[COL_NAME_GPA_CLOSE_PRICE],
                                  sr_gf[COL_NAME_GPA_OPEN_PRICE],
-                                 decimal_digit, self.__end_hour)
+                                 decimal_digit, self.__end_time)
