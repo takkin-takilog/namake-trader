@@ -68,11 +68,11 @@ class CandlestickChart(object):
         axis_y = QtCharts.QValueAxis()
         axis_y.setTitleText("Ratio")
 
-        # Customize axis label font
-        #Lfont = QFont("Sans Serif")
-        #Lfont.setPixelSize(16)
-        #axis_x.setLabelsFont(Lfont)
-        #axis_y.setLabelsFont(Lfont)
+        # #Customize axis label font
+        # Lfont = QFont("Sans Serif")
+        # Lfont.setPixelSize(16)
+        # axis_x.setLabelsFont(Lfont)
+        # axis_y.setLabelsFont(Lfont)
 
         """
         # Customize axis colors

@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from PySide2.QtCharts import QtCharts
 from PySide2.QtCore import Qt, QPointF, QRectF, QRect
@@ -22,7 +22,7 @@ class AbstractCalloutChart(QGraphicsItem):
         raise NotImplementedError()
 
     def boundingRect(self) -> QRectF:
-        #print("--- boundingRect ---")
+        # print("--- boundingRect ---")
         from_parent = self.mapFromParent(self._anchor)
         anchor = QPointF(from_parent)
         rect = QRectF()

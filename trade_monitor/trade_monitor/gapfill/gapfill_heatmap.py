@@ -243,7 +243,7 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         self._brush_color_off = color
         self._brush_color_on = QColor(inv_r, inv_g, inv_b)
         self._center = QPointF((right_x + left_x) / 2,
-                                (upper_y + lower_y) / 2)
+                               (upper_y + lower_y) / 2)
         self._left_x = left_x
         self._right_x = right_x
         self._lower_y = lower_y

@@ -175,13 +175,6 @@ class GapFillUi():
             fullname = obj.namespace + "/" + srv_name
             srv_cli = node.create_client(srv_type, fullname)
             srv_cli_list.append(srv_cli)
-            #srv_cli.service_is_ready()
-
-        # Wait for a service server
-        """
-        while not srv_cli.wait_for_service(timeout_sec=1.0):
-            logger.info("Waiting for \"" + srv_name + "\" service...")
-        """
 
         self._widget_htmap = GapFillHeatMap()
 
@@ -191,7 +184,6 @@ class GapFillUi():
 
         self._ui = ui
         self._node = node
-        #self._srv_cli = srv_cli
         self._srv_cli_list = srv_cli_list
         self._cli_cdl = cli_cdl
         self._end_time = dt.time(10, 0, 0)
@@ -219,7 +211,7 @@ class GapFillUi():
         srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
             self._logger.error("service server [{}] not to become ready"
-                                .format(inst_msg.text))
+                               .format(inst_msg.text))
         else:
             future = srv_cli.call_async(req)
             rclpy.spin_until_future_complete(self._node, future, timeout_sec=10.0)
@@ -299,7 +291,6 @@ class GapFillUi():
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
             self._end_time = dt.datetime.strptime(rsp.end_time, "%H:%M:%S").time()
-            #self._decimal_digit = decimal_digit
             self._is_update = True
 
     def _on_gapfill_heatmap_clicked(self):
@@ -414,7 +405,7 @@ class GapFillUi():
             inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
             self._update_prev_chart(idx, self._df_prev, self._sr_gf,
-                                     decimal_digit)
+                                    decimal_digit)
 
     def _combobox_spread_curr_changed(self, idx):
 
@@ -422,7 +413,7 @@ class GapFillUi():
             inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
             self._update_curr_chart(idx, self._df_curr, self._sr_gf,
-                                     decimal_digit)
+                                    decimal_digit)
 
     def _update_prev_chart(self, idx, df, sr_gf, decimal_digit):
 
@@ -430,9 +421,9 @@ class GapFillUi():
         df_prev.columns = GapFillUi.CDL_COLUMNS
 
         self._chart_prev.update(df_prev,
-                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
-                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
-                                 decimal_digit)
+                                sr_gf[COL_NAME_GPA_CLOSE_PRICE],
+                                sr_gf[COL_NAME_GPA_OPEN_PRICE],
+                                decimal_digit)
 
     def _update_curr_chart(self, idx, df, sr_gf, decimal_digit):
 
@@ -440,6 +431,6 @@ class GapFillUi():
         df_curr.columns = GapFillUi.CDL_COLUMNS
 
         self._chart_curr.update(df_curr,
-                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
-                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
-                                 decimal_digit, self._end_time)
+                                sr_gf[COL_NAME_GPA_CLOSE_PRICE],
+                                sr_gf[COL_NAME_GPA_OPEN_PRICE],
+                                decimal_digit, self._end_time)

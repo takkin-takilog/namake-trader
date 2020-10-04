@@ -180,13 +180,13 @@ class HeatMapManager():
             str_y = y - deci + 1
             str_y = utl.limit(str_y, row_min, row_max)
             end_y = utl.limit(y, row_min, row_max) + 1
-            y_rng = range(str_y,  end_y, 1)
+            y_rng = range(str_y, end_y, 1)
             new_x_list = [y]
             for x in rng_x:
                 str_x = x - deci + 1
                 str_x = utl.limit(str_x, col_min, col_max)
                 end_x = utl.limit(x, col_min, col_max) + 1
-                x_rng = range(str_x,  end_x, 1)
+                x_rng = range(str_x, end_x, 1)
                 new_x_list.append(df_hmap.loc[y_rng][x_rng].max().max())
                 cnt = cnt + 1
                 self._sts_bar.set_bar_value(cnt)
@@ -200,10 +200,10 @@ class HeatMapManager():
         return df_new
 
     def _make_basemap(self,
-                       df_param: pd.DataFrame,
-                       df_htbl: pd.DataFrame,
-                       inst_idx: int
-                       ):
+                      df_param: pd.DataFrame,
+                      df_htbl: pd.DataFrame,
+                      inst_idx: int
+                      ):
 
         label = COL_NAME_GPA_PRICE_MID
         gap_price_real_max = df_param[label].max()
