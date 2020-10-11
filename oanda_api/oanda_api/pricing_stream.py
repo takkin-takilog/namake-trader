@@ -41,90 +41,90 @@ class PricingStreamPublisher(Node):
         self.declare_parameter(PRMNM_ENA_INST_EURJPY)
         self.declare_parameter(PRMNM_ENA_INST_EURUSD)
 
-        account_number = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        access_token = self.get_parameter(PRMNM_ACCESS_TOKEN).value
-        ena_inst_usdjpy = self.get_parameter(PRMNM_ENA_INST_USDJPY).value
-        ena_inst_eurjpy = self.get_parameter(PRMNM_ENA_INST_EURJPY).value
-        ena_inst_eurusd = self.get_parameter(PRMNM_ENA_INST_EURUSD).value
+        ACCOUNT_NUMBER = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
+        ACCESS_TOKEN = self.get_parameter(PRMNM_ACCESS_TOKEN).value
+        ENA_INST_USDJPY = self.get_parameter(PRMNM_ENA_INST_USDJPY).value
+        ENA_INST_EURJPY = self.get_parameter(PRMNM_ENA_INST_EURJPY).value
+        ENA_INST_EURUSD = self.get_parameter(PRMNM_ENA_INST_EURUSD).value
 
-        logger.debug("[Param]Account Number:[{}]".format(account_number))
-        logger.debug("[Param]Access Token:[{}]".format(access_token))
+        logger.debug("[Param]Account Number:[{}]".format(ACCOUNT_NUMBER))
+        logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
         logger.debug("[Param]Enable instrument:")
-        logger.debug("        USD/JPY:[{}]".format(ena_inst_usdjpy))
-        logger.debug("        EUR/JPY:[{}]".format(ena_inst_eurjpy))
-        logger.debug("        EUR/USD:[{}]".format(ena_inst_eurusd))
+        logger.debug("        USD/JPY:[{}]".format(ENA_INST_USDJPY))
+        logger.debug("        EUR/JPY:[{}]".format(ENA_INST_EURJPY))
+        logger.debug("        EUR/USD:[{}]".format(ENA_INST_EURUSD))
 
         # Declare publisher and subscriber
         qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
                                  reliability=QoSReliabilityPolicy.RELIABLE)
         inst_name_list = []
-        self.__pub_dict = {}
-        if ena_inst_usdjpy:
+        self._pub_dict = {}
+        if ENA_INST_USDJPY:
             inst_name = INST_DICT[Instrument.INST_USD_JPY].name
             pub = self.create_publisher(Pricing,
                                         TPCNM_PRICING_USDJPY,
                                         qos_profile)
-            self.__pub_dict[inst_name] = pub.publish
+            self._pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
-        if ena_inst_eurjpy:
+        if ENA_INST_EURJPY:
             inst_name = INST_DICT[Instrument.INST_EUR_JPY].name
             pub = self.create_publisher(Pricing,
                                         TPCNM_PRICING_EURJPY,
                                         qos_profile)
-            self.__pub_dict[inst_name] = pub.publish
+            self._pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
-        if ena_inst_eurusd:
+        if ENA_INST_EURUSD:
             inst_name = INST_DICT[Instrument.INST_EUR_USD].name
             pub = self.create_publisher(Pricing,
                                         TPCNM_PRICING_EURUSD,
                                         qos_profile)
-            self.__pub_dict[inst_name] = pub.publish
+            self._pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
 
-        self.__pub_hb = self.create_publisher(String,
-                                              TPCNM_HEARTBEAT,
-                                              qos_profile)
+        self._pub_hb = self.create_publisher(String,
+                                             TPCNM_HEARTBEAT,
+                                             qos_profile)
 
-        callback = self.__on_subs_act_flg
-        self.__sub_act = self.create_subscription(Bool,
-                                                  TPCNM_ACT_FLG,
-                                                  callback,
-                                                  qos_profile)
+        callback = self._on_subs_act_flg
+        self._sub_act = self.create_subscription(Bool,
+                                                 TPCNM_ACT_FLG,
+                                                 callback,
+                                                 qos_profile)
 
         # Initialize
-        self.__act_flg = True
-        self.__api = API(access_token=access_token)
+        self._act_flg = True
+        self._api = API(access_token=ACCESS_TOKEN)
 
         instruments = ",".join(inst_name_list)
         params = {"instruments": instruments}
-        self.__pi = pr.PricingStream(account_number, params)
+        self._pi = pr.PricingStream(ACCOUNT_NUMBER, params)
 
-        self.__logger = logger
+        self._logger = logger
 
     def background(self) -> None:
 
-        if self.__act_flg:
+        if self._act_flg:
             try:
-                self.__request()
+                self._request()
             except V20Error as e:
-                self.__logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
-                self.__logger.error("{}".format(e))
+                self._logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
+                self._logger.error("{}".format(e))
             except StreamTerminated as e:
-                self.__logger.debug("Stream Terminated: {}".format(e))
+                self._logger.debug("Stream Terminated: {}".format(e))
 
-    def __on_subs_act_flg(self, msg: MsgType) -> None:
+    def _on_subs_act_flg(self, msg: MsgType) -> None:
         if msg.data:
-            self.__act_flg = True
+            self._act_flg = True
         else:
-            self.__act_flg = False
+            self._act_flg = False
 
-    def __request(self) -> None:
+    def _request(self) -> None:
 
-        for rsp in self.__api.request(self.__pi):
+        for rsp in self._api.request(self._pi):
 
             rclpy.spin_once(self, timeout_sec=0)
-            if not self.__act_flg:
-                self.__pi.terminate()
+            if not self._act_flg:
+                self._pi.terminate()
 
             if "type" in rsp.keys():
                 typ = rsp["type"]
@@ -145,13 +145,13 @@ class PricingStreamPublisher(Node):
                     msg.closeout_ask = float(rsp["closeoutAsk"])
                     msg.tradeable = rsp["tradeable"]
                     # Publish topics
-                    self.__pub_dict[rsp["instrument"]](msg)
+                    self._pub_dict[rsp["instrument"]](msg)
 
                 elif typ == "HEARTBEAT":
                     msg = String()
                     msg.data = rsp["time"]
                     # Publish topics
-                    self.__pub_hb.publish(msg)
+                    self._pub_hb.publish(msg)
 
 
 def main(args=None):

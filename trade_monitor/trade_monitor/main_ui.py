@@ -30,31 +30,31 @@ class MainUi():
 
         logger = node.get_logger()
 
-        callback = self.__on_cb_inst_main_changed
+        callback = self._on_cb_inst_main_changed
         ui.comboBox_inst_main.currentIndexChanged.connect(callback)
-        callback = self.__on_cb_gran_main_changed
+        callback = self._on_cb_gran_main_changed
         ui.comboBox_gran_main.currentIndexChanged.connect(callback)
 
         cs_chart = CandlestickChart(ui.widget_chart_main)
 
-        self.__ui = ui
-        self.__cs_chart = cs_chart
-        self.__node = node
-        self.__logger = logger
-        self.__cli_cdl = cli_cdl
+        self._ui = ui
+        self._cs_chart = cs_chart
+        self._node = node
+        self._logger = logger
+        self._cli_cdl = cli_cdl
 
     def draw_chart(self, inst_idx, gran_idx):
-        self.__draw_chart(inst_idx, gran_idx)
+        self._draw_chart(inst_idx, gran_idx)
 
-    def __on_cb_inst_main_changed(self, inst_idx):
-        gran_idx = self.__ui.comboBox_gran_main.currentIndex()
-        self.__draw_chart(inst_idx, gran_idx)
+    def _on_cb_inst_main_changed(self, inst_idx):
+        gran_idx = self._ui.comboBox_gran_main.currentIndex()
+        self._draw_chart(inst_idx, gran_idx)
 
-    def __on_cb_gran_main_changed(self, gran_idx):
-        inst_idx = self.__ui.comboBox_inst_main.currentIndex()
-        self.__draw_chart(inst_idx, gran_idx)
+    def _on_cb_gran_main_changed(self, gran_idx):
+        inst_idx = self._ui.comboBox_inst_main.currentIndex()
+        self._draw_chart(inst_idx, gran_idx)
 
-    def __draw_chart(self, inst_idx, gran_idx):
+    def _draw_chart(self, inst_idx, gran_idx):
 
         dt_now = dt.datetime.now()
         dt_from = dt_now - dt.timedelta(days=20)
@@ -69,8 +69,8 @@ class MainUi():
         req.dt_from = dt_from.strftime(DT_FMT)
         req.dt_to = dt_to.strftime(DT_FMT)
 
-        future = self.__cli_cdl.call_async(req)
-        rclpy.spin_until_future_complete(self.__node, future, timeout_sec=10.0)
+        future = self._cli_cdl.call_async(req)
+        rclpy.spin_until_future_complete(self._node, future, timeout_sec=10.0)
 
         flg = future.done() and future.result() is not None
         assert flg, "initial fetch [Day Candle] failed!"
@@ -111,8 +111,8 @@ class MainUi():
                          CandlestickChart.COL_NAME_CL
                          ]
 
-        self.__cs_chart.update(dftmp, gran_id)
+        self._cs_chart.update(dftmp, gran_id)
 
     def resize_chart_widget(self):
-        fs = self.__ui.widget_chart_main.frameSize()
-        self.__cs_chart.resize(fs)
+        fs = self._ui.widget_chart_main.frameSize()
+        self._cs_chart.resize(fs)

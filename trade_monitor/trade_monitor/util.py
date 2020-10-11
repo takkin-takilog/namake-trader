@@ -45,72 +45,78 @@ class MsgGranDict():
                  msg_id: int,
                  text: str
                  ) -> None:
-        self.__msg_id = msg_id
-        self.__text = text
+        self._msg_id = msg_id
+        self._text = text
 
     @property
     def msg_id(self) -> int:
-        return self.__msg_id
+        return self._msg_id
 
     @property
     def text(self) -> str:
-        return self.__text
+        return self._text
 
 
 class MsgInstDict():
 
     def __init__(self,
                  msg_id: int,
+                 namespace: str,
                  text: str,
                  decimal_digit: int,
                  min_unit: str
                  ) -> None:
-        self.__msg_id = msg_id
-        self.__text = text
-        self.__decimal_digit = decimal_digit
-        self.__min_unit = min_unit
+        self._msg_id = msg_id
+        self._namespace = namespace
+        self._text = text
+        self._decimal_digit = decimal_digit
+        self._min_unit = min_unit
 
     @property
     def msg_id(self) -> int:
-        return self.__msg_id
+        return self._msg_id
+
+    @property
+    def namespace(self) -> str:
+        return self._namespace
 
     @property
     def text(self) -> str:
-        return self.__text
+        return self._text
 
     @property
     def decimal_digit(self) -> int:
-        return self.__decimal_digit
+        return self._decimal_digit
 
     @property
     def min_unit(self) -> str:
-        return self.__min_unit
+        return self._min_unit
 
 
 class GradientManager():
 
-    __RBG_MAX = 255
+    _RBG_MAX = 255
 
     def __init__(self) -> None:
-        self.__grad = 0
-        self.__slope = 0
-        self.__intercept = 0
-        self.__intensityMax = 1
-        self.__intensityMin = 0
-        self.__image = QImage()
+        self._grad = 0
+        self._slope = 0
+        self._intercept = 0
+        self._intensityMax = 1
+        self._intensityMin = 0
+        self._image = QImage()
 
     @property
     def intensityMax(self):
-        return self.__intensityMax
+        return self._intensityMax
 
     @property
     def intensityMin(self):
-        return self.__intensityMin
+        return self._intensityMin
 
     def setGradient(self, grad: QLinearGradient) -> None:
-        self.__grad = grad
-        self.updateColorTable(self.__intensityMax,
-                              self.__intensityMin)
+        self._grad = grad
+        self.updateColorTable(self._intensityMax,
+                              self._intensityMin)
 
     @staticmethod
     def generateIcon(grad: QLinearGradient,
@@ -133,41 +139,41 @@ class GradientManager():
         if min_ is None:
             min_ = -max_
 
-        self.__grad.setStart(0, 0)
-        self.__grad.setFinalStop(0, self.__RBG_MAX)
+        self._grad.setStart(0, 0)
+        self._grad.setFinalStop(0, self._RBG_MAX)
         # create image and fill it with gradient
-        image = QImage(1, self.__RBG_MAX + 1, QImage.Format_RGB32)
+        image = QImage(1, self._RBG_MAX + 1, QImage.Format_RGB32)
         painter = QPainter(image)
-        painter.fillRect(image.rect(), self.__grad)
+        painter.fillRect(image.rect(), self._grad)
         painter.end()
 
-        self.__slope = self.__RBG_MAX / (min_ - max_)
-        self.__intercept = self.__RBG_MAX * max_ / (max_ - min_)
+        self._slope = self._RBG_MAX / (min_ - max_)
+        self._intercept = self._RBG_MAX * max_ / (max_ - min_)
 
-        self.__intensityMax = max_
-        self.__intensityMin = min_
-        self.__image = image
+        self._intensityMax = max_
+        self._intensityMin = min_
+        self._image = image
 
     def convertValueToColor(self, value) -> QColor:
-        calcf = self.__slope * value + self.__intercept
-        calcf = self.__limit_rgb(calcf)
-        return self.__image.pixelColor(0, calcf)
+        calcf = self._slope * value + self._intercept
+        calcf = self._limit_rgb(calcf)
+        return self._image.pixelColor(0, calcf)
 
     def convertValueToIntensity(self, value):
-        calcf = self.__slope * value + self.__intercept
+        calcf = self._slope * value + self._intercept
         return int(calcf)
 
     def setRect(self, rect: QRectF):
-        self.__grad.setStart(rect.topLeft())
-        self.__grad.setFinalStop(0, rect.bottom())
+        self._grad.setStart(rect.topLeft())
+        self._grad.setFinalStop(0, rect.bottom())
 
     def getGradient(self) -> QLinearGradient:
-        return self.__grad
+        return self._grad
 
-    def __limit_rgb(self, val_in: float):
+    def _limit_rgb(self, val_in: float):
 
-        if self.__RBG_MAX < val_in:
-            val_out = self.__RBG_MAX
+        if self._RBG_MAX < val_in:
+            val_out = self._RBG_MAX
         elif val_in < 0:
             val_out = 0
         else:
@@ -177,9 +183,9 @@ class GradientManager():
 
 
 INST_MSG_LIST = [
-    MsgInstDict(Inst.INST_USD_JPY, "USD/JPY", 3, "0.001"),
-    MsgInstDict(Inst.INST_EUR_JPY, "EUR/JPY", 3, "0.001"),
-    MsgInstDict(Inst.INST_EUR_USD, "EUR/USD", 5, "0.00001"),
+    MsgInstDict(Inst.INST_USD_JPY, "usdjpy", "USD/JPY", 3, "0.001"),
+    MsgInstDict(Inst.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3, "0.001"),
+    MsgInstDict(Inst.INST_EUR_USD, "eurusd", "EUR/USD", 5, "0.00001"),
 ]
 
 GRAN_MSG_LIST = [

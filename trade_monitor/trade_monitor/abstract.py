@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from PySide2.QtCharts import QtCharts
 from PySide2.QtCore import Qt, QPointF, QRectF, QRect
@@ -6,8 +6,7 @@ from PySide2.QtGui import QPalette, QColor, QFont, QFontMetrics, QPainter
 from PySide2.QtGui import QLinearGradient
 
 
-class CalloutChartAbs(QGraphicsItem):
-    __metaclass__ = ABCMeta
+class AbstractCalloutChart(QGraphicsItem):
 
     def __init__(self, parent: QtCharts.QChart):
         super().__init__()
@@ -23,7 +22,7 @@ class CalloutChartAbs(QGraphicsItem):
         raise NotImplementedError()
 
     def boundingRect(self) -> QRectF:
-        #print("--- boundingRect ---")
+        # print("--- boundingRect ---")
         from_parent = self.mapFromParent(self._anchor)
         anchor = QPointF(from_parent)
         rect = QRectF()
@@ -54,8 +53,7 @@ class CalloutChartAbs(QGraphicsItem):
         self._rect = self._textRect.adjusted(-dx, -dy, dx, dy)
 
 
-class CandlestickChartAbs(QtCharts.QChartView):
-    __metaclass__ = ABCMeta
+class AbstractCandlestickChart(QtCharts.QChartView):
 
     COL_NAME_OP = "open"
     COL_NAME_HI = "high"
