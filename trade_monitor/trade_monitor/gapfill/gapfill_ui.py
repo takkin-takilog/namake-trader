@@ -125,26 +125,26 @@ class GapFillUi():
 
     def __init__(self, ui) -> None:
 
-        utl.remove_all_items_of_comboBox(ui.comboBox_inst_gapfill)
+        utl.remove_all_items_of_comboBox(ui.comboBox_gapfill_inst)
         for obj in INST_MSG_LIST:
-            ui.comboBox_inst_gapfill.addItem(obj.text)
+            ui.comboBox_gapfill_inst.addItem(obj.text)
 
-        utl.remove_all_items_of_comboBox(ui.comboBox_spread_prev)
-        utl.remove_all_items_of_comboBox(ui.comboBox_spread_curr)
+        utl.remove_all_items_of_comboBox(ui.comboBox_gapfill_spread_prev)
+        utl.remove_all_items_of_comboBox(ui.comboBox_gapfill_spread_curr)
         for text in SPREAD_MSG_LIST:
-            ui.comboBox_spread_prev.addItem(text)
-            ui.comboBox_spread_curr.addItem(text)
+            ui.comboBox_gapfill_spread_prev.addItem(text)
+            ui.comboBox_gapfill_spread_curr.addItem(text)
 
-        ui.comboBox_spread_prev.currentIndexChanged.connect(
-            self._combobox_spread_prev_changed)
-        ui.comboBox_spread_curr.currentIndexChanged.connect(
-            self._combobox_spread_curr_changed)
+        ui.comboBox_gapfill_spread_prev.currentIndexChanged.connect(
+            self._comboBox_gapfill_spread_prev_changed)
+        ui.comboBox_gapfill_spread_curr.currentIndexChanged.connect(
+            self._comboBox_gapfill_spread_curr_changed)
 
         callback = self._on_gapfill_heatmap_clicked
         ui.pushButton_gapfill_heatmap.clicked.connect(callback)
 
         callback = self._on_fetch_gapfill_clicked
-        ui.pushButton_fetch_gapfill.clicked.connect(callback)
+        ui.pushButton_gapfill_fetch.clicked.connect(callback)
 
         qstd_itm_mdl = QStandardItemModel()
         sel_mdl = QItemSelectionModel(qstd_itm_mdl)
@@ -159,8 +159,8 @@ class GapFillUi():
         header = ui.treeView_gapfill.header()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-        chart_prev = CandlestickChartGapFillPrev(ui.widget_chart_gapfill_prev)
-        chart_curr = CandlestickChartGapFillCurr(ui.widget_chart_gapfill_curr)
+        chart_prev = CandlestickChartGapFillPrev(ui.widget_gapfill_chart_prev)
+        chart_curr = CandlestickChartGapFillCurr(ui.widget_gapfill_chart_curr)
 
         # Create service client "gapfill_monitor"
         srv_type = GapFillMntSrv
@@ -190,7 +190,7 @@ class GapFillUi():
 
         self._qstd_itm_mdl.clear()
         self._qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
-        inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
+        inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
         inst_msg = INST_MSG_LIST[inst_idx]
 
         decimal_digit = inst_msg.decimal_digit
@@ -292,7 +292,7 @@ class GapFillUi():
     def _on_gapfill_heatmap_clicked(self):
         utl.logger().debug("gapfill_heatmap_clicked")
 
-        inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
+        inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
         self._widget_htmap.set_param(inst_idx, self._df_param)
         self._widget_htmap.show()
         self._widget_htmap.init_resize()
@@ -311,7 +311,7 @@ class GapFillUi():
             dt_from = trg_date - dt.timedelta(days=2)
             dt_to = trg_date + dt.timedelta(hours=12)
 
-            inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
+            inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
             inst_msg = INST_MSG_LIST[inst_idx]
 
             req = CandlesMntSrv.Request()
@@ -373,10 +373,10 @@ class GapFillUi():
 
             decimal_digit = inst_msg.decimal_digit
 
-            idx = self._ui.comboBox_spread_prev.currentIndex()
+            idx = self._ui.comboBox_gapfill_spread_prev.currentIndex()
             self._update_prev_chart(idx, df_prev, sr_gf, decimal_digit)
 
-            idx = self._ui.comboBox_spread_curr.currentIndex()
+            idx = self._ui.comboBox_gapfill_spread_curr.currentIndex()
             self._update_curr_chart(idx, df_curr, sr_gf, decimal_digit)
 
             self._sr_gf = sr_gf
@@ -384,23 +384,23 @@ class GapFillUi():
             self._df_curr = df_curr
 
     def resize_chart_widget(self):
-        fs = self._ui.widget_chart_gapfill_prev.frameSize()
+        fs = self._ui.widget_gapfill_chart_prev.frameSize()
         self._chart_prev.resize(fs)
-        fs = self._ui.widget_chart_gapfill_curr.frameSize()
+        fs = self._ui.widget_gapfill_chart_curr.frameSize()
         self._chart_curr.resize(fs)
 
-    def _combobox_spread_prev_changed(self, idx):
+    def _comboBox_gapfill_spread_prev_changed(self, idx):
 
         if self._is_update:
-            inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
+            inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
             self._update_prev_chart(idx, self._df_prev, self._sr_gf,
                                     decimal_digit)
 
-    def _combobox_spread_curr_changed(self, idx):
+    def _comboBox_gapfill_spread_curr_changed(self, idx):
 
         if self._is_update:
-            inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
+            inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
             self._update_curr_chart(idx, self._df_curr, self._sr_gf,
                                     decimal_digit)

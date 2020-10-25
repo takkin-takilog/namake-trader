@@ -95,7 +95,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="main">
        <attribute name="title">
@@ -207,7 +207,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
-           <widget class="QPushButton" name="pushButton_fetch_gapfill">
+           <widget class="QPushButton" name="pushButton_gapfill_fetch">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -232,7 +232,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="comboBox_inst_gapfill">
+           <widget class="QComboBox" name="comboBox_gapfill_inst">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -311,7 +311,7 @@
           <item>
            <layout class="QGridLayout" name="gridLayout">
             <item row="0" column="0">
-             <widget class="QComboBox" name="comboBox_spread_prev">
+             <widget class="QComboBox" name="comboBox_gapfill_spread_prev">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -345,7 +345,7 @@
              </spacer>
             </item>
             <item row="1" column="0" colspan="2">
-             <widget class="QWidget" name="widget_chart_gapfill_prev" native="true">
+             <widget class="QWidget" name="widget_gapfill_chart_prev" native="true">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
@@ -362,7 +362,7 @@
           <item>
            <layout class="QGridLayout" name="gridLayout_2">
             <item row="0" column="0">
-             <widget class="QComboBox" name="comboBox_spread_curr">
+             <widget class="QComboBox" name="comboBox_gapfill_spread_curr">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -396,7 +396,7 @@
              </spacer>
             </item>
             <item row="1" column="0" colspan="2">
-             <widget class="QWidget" name="widget_chart_gapfill_curr" native="true">
+             <widget class="QWidget" name="widget_gapfill_chart_curr" native="true">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
