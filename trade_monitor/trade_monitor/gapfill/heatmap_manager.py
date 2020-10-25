@@ -1,7 +1,7 @@
 import math
 import pandas as pd
-from trade_monitor.util import INST_MSG_LIST
-from trade_monitor import util as utl
+from trade_monitor import utilities as utl
+from trade_monitor.utilities import INST_MSG_LIST
 from trade_apl_msgs.msg import GapFillMsg
 
 COL_NAME_DATE = "date"

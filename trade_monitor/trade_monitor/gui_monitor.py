@@ -14,9 +14,9 @@ from std_msgs.msg import String, Bool
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor.gapfill.gapfill_ui import GapFillUi
 from trade_monitor.main_ui import MainUi
-from trade_monitor import util as utl
-from trade_monitor.util import INST_MSG_LIST
-from trade_monitor.util import GRAN_MSG_LIST
+from trade_monitor import utilities as utl
+from trade_monitor.utilities import INST_MSG_LIST
+from trade_monitor.utilities import GRAN_MSG_LIST
 
 
 class GuiMonitor(QMainWindow):
@@ -73,13 +73,16 @@ class GuiMonitor(QMainWindow):
                                  reliability=QoSReliabilityPolicy.RELIABLE)
         pub_alive = node.create_publisher(msg_type, topic, qos_profile)
 
+        utl.set_node(node)
+        utl.set_service_client_candle(cli_cdl)
+
         self._ui = ui
         self._node = node
         self._cli_cdl = cli_cdl
         self._pub_alive = pub_alive
 
-        self._main_ui = MainUi(ui, node, cli_cdl)
-        self._gapfill_ui = GapFillUi(ui, node, cli_cdl)
+        self._main_ui = MainUi(ui)
+        self._gapfill_ui = GapFillUi(ui)
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")

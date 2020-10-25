@@ -5,30 +5,29 @@ import rclpy
 
 from trade_monitor.candlestick_chart import CandlestickChart
 from trade_manager_msgs.srv import CandlesMntSrv
-from trade_monitor.util import INST_MSG_LIST, GRAN_MSG_LIST
-from trade_monitor.util import DT_FMT
-from trade_monitor.util import CANDLE_COL_NAME_LIST
-from trade_monitor.util import (COL_NAME_TIME,
-                                COL_NAME_ASK_OP,
-                                COL_NAME_ASK_HI,
-                                COL_NAME_ASK_LO,
-                                COL_NAME_ASK_CL,
-                                COL_NAME_BID_OP,
-                                COL_NAME_BID_HI,
-                                COL_NAME_BID_LO,
-                                COL_NAME_BID_CL,
-                                COL_NAME_MID_OP,
-                                COL_NAME_MID_HI,
-                                COL_NAME_MID_LO,
-                                COL_NAME_MID_CL
-                                )
+from trade_monitor import utilities as utl
+from trade_monitor.utilities import INST_MSG_LIST, GRAN_MSG_LIST
+from trade_monitor.utilities import DT_FMT
+from trade_monitor.utilities import CANDLE_COL_NAME_LIST
+from trade_monitor.utilities import (COL_NAME_TIME,
+                                     COL_NAME_ASK_OP,
+                                     COL_NAME_ASK_HI,
+                                     COL_NAME_ASK_LO,
+                                     COL_NAME_ASK_CL,
+                                     COL_NAME_BID_OP,
+                                     COL_NAME_BID_HI,
+                                     COL_NAME_BID_LO,
+                                     COL_NAME_BID_CL,
+                                     COL_NAME_MID_OP,
+                                     COL_NAME_MID_HI,
+                                     COL_NAME_MID_LO,
+                                     COL_NAME_MID_CL
+                                     )
 
 
 class MainUi():
 
-    def __init__(self, ui, node, cli_cdl):
-
-        logger = node.get_logger()
+    def __init__(self, ui):
 
         callback = self._on_cb_inst_main_changed
         ui.comboBox_inst_main.currentIndexChanged.connect(callback)
@@ -39,9 +38,6 @@ class MainUi():
 
         self._ui = ui
         self._cs_chart = cs_chart
-        self._node = node
-        self._logger = logger
-        self._cli_cdl = cli_cdl
 
     def draw_chart(self, inst_idx, gran_idx):
         self._draw_chart(inst_idx, gran_idx)
@@ -69,14 +65,8 @@ class MainUi():
         req.dt_from = dt_from.strftime(DT_FMT)
         req.dt_to = dt_to.strftime(DT_FMT)
 
-        future = self._cli_cdl.call_async(req)
-        rclpy.spin_until_future_complete(self._node, future, timeout_sec=10.0)
-
-        flg = future.done() and future.result() is not None
-        assert flg, "initial fetch [Day Candle] failed!"
-
+        rsp = utl.call_servive_sync_candle(req, timeout_sec=10.0)
         data = []
-        rsp = future.result()
         for cndl_msg in rsp.cndl_msg_list:
             dt_ = dt.datetime.strptime(cndl_msg.time, DT_FMT)
             data.append([dt_,

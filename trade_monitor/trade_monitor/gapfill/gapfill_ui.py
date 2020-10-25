@@ -1,12 +1,9 @@
 import pandas as pd
 import datetime as dt
-import numpy as np
 
 from PySide2.QtWidgets import QHeaderView
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtCore import QItemSelectionModel
-
-import rclpy
 
 from trade_monitor.candlestick_chart import CandlestickChartGapFillPrev
 from trade_monitor.candlestick_chart import CandlestickChartGapFillCurr
@@ -16,25 +13,25 @@ from trade_apl_msgs.msg import GapFillMsg
 from trade_manager_msgs.msg import Granularity as Gran
 from trade_manager_msgs.srv import CandlesMntSrv
 
-from trade_monitor import util as utl
-from trade_monitor.util import SPREAD_MSG_LIST
-from trade_monitor.util import INST_MSG_LIST
-from trade_monitor.util import DT_FMT
-from trade_monitor.util import CANDLE_COL_NAME_LIST
-from trade_monitor.util import (COL_NAME_TIME,
-                                COL_NAME_ASK_OP,
-                                COL_NAME_ASK_HI,
-                                COL_NAME_ASK_LO,
-                                COL_NAME_ASK_CL,
-                                COL_NAME_MID_OP,
-                                COL_NAME_MID_HI,
-                                COL_NAME_MID_LO,
-                                COL_NAME_MID_CL,
-                                COL_NAME_BID_OP,
-                                COL_NAME_BID_HI,
-                                COL_NAME_BID_LO,
-                                COL_NAME_BID_CL
-                                )
+from trade_monitor import utilities as utl
+from trade_monitor.utilities import SPREAD_MSG_LIST
+from trade_monitor.utilities import INST_MSG_LIST
+from trade_monitor.utilities import DT_FMT
+from trade_monitor.utilities import CANDLE_COL_NAME_LIST
+from trade_monitor.utilities import (COL_NAME_TIME,
+                                     COL_NAME_ASK_OP,
+                                     COL_NAME_ASK_HI,
+                                     COL_NAME_ASK_LO,
+                                     COL_NAME_ASK_CL,
+                                     COL_NAME_MID_OP,
+                                     COL_NAME_MID_HI,
+                                     COL_NAME_MID_LO,
+                                     COL_NAME_MID_CL,
+                                     COL_NAME_BID_OP,
+                                     COL_NAME_BID_HI,
+                                     COL_NAME_BID_LO,
+                                     COL_NAME_BID_CL
+                                     )
 
 from trade_monitor.gapfill.gapfill_heatmap import GapFillHeatMap
 
@@ -126,7 +123,7 @@ class GapFillUi():
 
     DRAW_CANDLE_COUNT = 50
 
-    def __init__(self, ui, node, cli_cdl) -> None:
+    def __init__(self, ui) -> None:
 
         utl.remove_all_items_of_comboBox(ui.comboBox_inst_gapfill)
         for obj in INST_MSG_LIST:
@@ -145,8 +142,6 @@ class GapFillUi():
 
         callback = self._on_gapfill_heatmap_clicked
         ui.pushButton_gapfill_heatmap.clicked.connect(callback)
-
-        logger = node.get_logger()
 
         callback = self._on_fetch_gapfill_clicked
         ui.pushButton_fetch_gapfill.clicked.connect(callback)
@@ -167,13 +162,13 @@ class GapFillUi():
         chart_prev = CandlestickChartGapFillPrev(ui.widget_chart_gapfill_prev)
         chart_curr = CandlestickChartGapFillCurr(ui.widget_chart_gapfill_curr)
 
-        # Create service client "CandlesMonitor"
+        # Create service client "gapfill_monitor"
         srv_type = GapFillMntSrv
         srv_name = "gapfill_monitor"
         srv_cli_list = []
         for obj in INST_MSG_LIST:
             fullname = obj.namespace + "/" + srv_name
-            srv_cli = node.create_client(srv_type, fullname)
+            srv_cli = utl.get_node().create_client(srv_type, fullname)
             srv_cli_list.append(srv_cli)
 
         self._widget_htmap = GapFillHeatMap()
@@ -183,17 +178,13 @@ class GapFillUi():
         self._qstd_itm_mdl = qstd_itm_mdl
 
         self._ui = ui
-        self._node = node
         self._srv_cli_list = srv_cli_list
-        self._cli_cdl = cli_cdl
         self._end_time = dt.time(10, 0, 0)
         self._is_update = False
         self._df_param = pd.DataFrame()
         self._sr_gf = pd.Series()
         self._df_prev = pd.DataFrame()
         self._df_curr = pd.DataFrame()
-
-        self._logger = logger
 
     def _on_fetch_gapfill_clicked(self):
 
@@ -210,9 +201,13 @@ class GapFillUi():
 
         srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
-            self._logger.error("service server [{}] not to become ready"
+            utl.logger().error("service server [{}] not to become ready"
                                .format(inst_msg.text))
         else:
+
+            rsp = utl.call_servive_sync(srv_cli, req, timeout_sec=10.0)
+
+            """
             future = srv_cli.call_async(req)
             rclpy.spin_until_future_complete(self._node, future, timeout_sec=10.0)
 
@@ -220,6 +215,7 @@ class GapFillUi():
             assert flg, "fetch [Gap-Fill] failed!"
 
             rsp = future.result()
+            """
             # Parameter data
             data = []
             for gapfillmsg in rsp.gapfillmsg_list:
@@ -294,14 +290,14 @@ class GapFillUi():
             self._is_update = True
 
     def _on_gapfill_heatmap_clicked(self):
-        self._logger.debug("gapfill_heatmap_clicked")
+        utl.logger().debug("gapfill_heatmap_clicked")
 
         inst_idx = self._ui.comboBox_inst_gapfill.currentIndex()
         self._widget_htmap.set_param(inst_idx, self._df_param)
         self._widget_htmap.show()
         self._widget_htmap.init_resize()
 
-    def _on_selection_gapfill_changed(self, selected, deselected):
+    def _on_selection_gapfill_changed(self, selected, _):
 
         qisr0 = selected.at(0)
 
@@ -309,7 +305,7 @@ class GapFillUi():
 
             model_index = qisr0.indexes()[0]
             trg_date_str = self._qstd_itm_mdl.item(model_index.row()).text()
-            self._logger.debug("target_date: " + trg_date_str)
+            utl.logger().debug("target_date: " + trg_date_str)
             trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
 
             dt_from = trg_date - dt.timedelta(days=2)
@@ -324,17 +320,11 @@ class GapFillUi():
             req.dt_from = dt_from.strftime(DT_FMT)
             req.dt_to = dt_to.strftime(DT_FMT)
 
-            self._logger.debug("dt_from: " + req.dt_from)
-            self._logger.debug("dt_to: " + req.dt_to)
+            utl.logger().debug("dt_from: " + req.dt_from)
+            utl.logger().debug("dt_to: " + req.dt_to)
 
-            future = self._cli_cdl.call_async(req)
-            rclpy.spin_until_future_complete(self._node, future, timeout_sec=10.0)
-
-            flg = future.done() and future.result() is not None
-            assert flg, "initial fetch [Day Candle] failed!"
-
+            rsp = utl.call_servive_sync_candle(req, timeout_sec=10.0)
             data = []
-            rsp = future.result()
             for cndl_msg in rsp.cndl_msg_list:
                 dt_ = dt.datetime.strptime(cndl_msg.time, DT_FMT)
                 data.append([dt_,

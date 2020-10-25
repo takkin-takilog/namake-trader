@@ -2,7 +2,6 @@ import sys
 import os
 import math
 import pandas as pd
-from abc import ABCMeta
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QSizePolicy
 from PySide2.QtWidgets import QStyleOptionGraphicsItem
@@ -15,11 +14,11 @@ from PySide2.QtGui import QLinearGradient, QFontMetrics
 from PySide2.QtCharts import QtCharts
 
 from trade_monitor.abstract import AbstractCalloutChart
-from trade_monitor import util as utl
-from trade_monitor.util import GradientManager
+from trade_monitor import utilities as utl
+from trade_monitor.utilities import GradientManager
 from trade_monitor.gapfill.heatmap_manager import HeatMapManager
 
-gradMng = GradientManager()
+_g_gradMng = GradientManager()
 
 
 class Callout(AbstractCalloutChart):
@@ -87,8 +86,8 @@ class Callout(AbstractCalloutChart):
         painter.drawText(self._textRect, self._text)
 
 
-callout = Callout()
-callout.setZValue(0)
+_g_callout = Callout()
+_g_callout.setZValue(0)
 
 
 class StatusBar():
@@ -136,7 +135,7 @@ class ColorMapLabel(QLabel):
         self._frame_size = QSize()
 
     def update_intensity_range(self):
-        self._max_abs = gradMng.intensityMax
+        self._max_abs = _g_gradMng.intensityMax
         self._update()
 
     def update_color_scale(self):
@@ -162,8 +161,8 @@ class ColorMapLabel(QLabel):
 
         rect = QRectF(0, tb_margin, width, height)
 
-        gradMng.setRect(rect)
-        grad = gradMng.getGradient()
+        _g_gradMng.setRect(rect)
+        grad = _g_gradMng.getGradient()
 
         pm = QPixmap(frame_size)
         pm.fill(Qt.transparent)
@@ -222,7 +221,7 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         self.lowerSeries().replace(0, left_x, lower_y)
         self.lowerSeries().replace(1, right_x, lower_y)
 
-        color = gradMng.convertValueToColor(intensity)
+        color = _g_gradMng.convertValueToColor(intensity)
         self.setColor(color)
 
         inv_r = self.RGB8_MAX - color.red()
@@ -257,7 +256,7 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
         self._update_color(self._intensity)
 
     def _update_color(self, intensity: int):
-        color = gradMng.convertValueToColor(intensity)
+        color = _g_gradMng.convertValueToColor(intensity)
         self.setColor(color)
         inv_r = self.RGB8_MAX - color.red()
         inv_g = self.RGB8_MAX - color.green()
@@ -274,14 +273,13 @@ class HeatBlockSeries(QtCharts.QAreaSeries):
                 f"・Loss cut Range th: {self._left_x} - {self._right_x}\n"\
                 f"・Gap Range Th: {self._lower_y} - {self._upper_y}"
 
-            callout.setText(text)
-            callout.updateGeometry(self._center)
+            _g_callout.setText(text)
+            _g_callout.updateGeometry(self._center)
         else:
             self.setColor(self._brush_color_off)
 
 
 class HeatMapChartViewAbs(QtCharts.QChartView):
-    __metaclass__ = ABCMeta
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -346,13 +344,12 @@ class HeatMapChartView(HeatMapChartViewAbs):
         self.chart().addAxis(axis_x, Qt.AlignBottom)
         self.chart().addAxis(axis_y, Qt.AlignLeft)
 
-        self._callout = Callout(self.chart())
-        callout.setChart(self.chart())
-        self.scene().addItem(callout)
+        _g_callout.setChart(self.chart())
+        self.scene().addItem(_g_callout)
         shadow = QGraphicsDropShadowEffect()
         shadow.setOffset(0, 4)
         shadow.setBlurRadius(8)
-        callout.setGraphicsEffect(shadow)
+        _g_callout.setGraphicsEffect(shadow)
 
         self._sts_bar = sts_bar
 
@@ -373,9 +370,9 @@ class HeatMapChartView(HeatMapChartViewAbs):
         flag1 = self.chart().plotArea().contains(event.pos())
         flag2 = 0 < len(self.chart().series())
         if (flag1 and flag2):
-            callout.show()
+            _g_callout.show()
         else:
-            callout.hide()
+            _g_callout.hide()
 
     def _draw_map(self, df: pd.DataFrame):
 
@@ -388,7 +385,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         if intensity_max < 1:
             intensity_max = abs(df.min().min())
 
-        gradMng.updateColorTable(intensity_max)
+        _g_gradMng.updateColorTable(intensity_max)
 
         rows_list = [n for n in df.index.to_list()]
         cols_list = [n for n in df.columns.to_list()]
@@ -441,7 +438,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
         if intensity_max < 1:
             intensity_max = abs(df.min().min())
 
-        gradMng.updateColorTable(intensity_max)
+        _g_gradMng.updateColorTable(intensity_max)
 
         self._sts_bar.set_label_text("Generating Heat Map : [3/3]")
         self._sts_bar.set_bar_range(0, df.size)
@@ -495,7 +492,7 @@ class GapFillHeatMap(QMainWindow):
         callback = self._on_gradientGtoRPB_clicked
         ui.pushButton_gradientGtoRPB.clicked.connect(callback)
 
-        gradMng.setGradient(grBtoY)
+        _g_gradMng.setGradient(grBtoY)
         color_map = ColorMapLabel(ui.widget_ColorMap)
 
         callback = self._on_pushButtonGenHMap_clicked
@@ -621,7 +618,7 @@ class GapFillHeatMap(QMainWindow):
         grBtoY.setColorAt(0.67, Qt.blue)
         grBtoY.setColorAt(0.33, Qt.red)
         grBtoY.setColorAt(0.0, Qt.yellow)
-        gradMng.setGradient(grBtoY)
+        _g_gradMng.setGradient(grBtoY)
 
         self._chart_view.update_color()
         self._color_map.update_color_scale()
@@ -632,7 +629,7 @@ class GapFillHeatMap(QMainWindow):
         grGtoR.setColorAt(0.5, Qt.yellow)
         grGtoR.setColorAt(0.2, Qt.red)
         grGtoR.setColorAt(0.0, Qt.darkRed)
-        gradMng.setGradient(grGtoR)
+        _g_gradMng.setGradient(grGtoR)
 
         self._chart_view.update_color()
         self._color_map.update_color_scale()
