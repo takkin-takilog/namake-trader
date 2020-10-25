@@ -13,6 +13,7 @@ from rclpy.client import Client
 from std_msgs.msg import String, Bool
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor.gapfill.gapfill_ui import GapFillUi
+from trade_monitor.ttm.ttm_ui import TtmUi
 from trade_monitor.main_ui import MainUi
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import INST_MSG_LIST
@@ -83,6 +84,7 @@ class GuiMonitor(QMainWindow):
 
         self._main_ui = MainUi(ui)
         self._gapfill_ui = GapFillUi(ui)
+        self._ttm_ui = TtmUi(ui)
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")
@@ -152,6 +154,8 @@ class GuiMonitor(QMainWindow):
             self._main_ui.resize_chart_widget()
         elif tab_index == 1:
             self._gapfill_ui.resize_chart_widget()
+        elif tab_index == 2:
+            self._ttm_ui.resize_chart_widget()
 
     def _on_timeout_1s(self) -> None:
 

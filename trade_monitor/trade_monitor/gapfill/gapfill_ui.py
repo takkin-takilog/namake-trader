@@ -16,7 +16,7 @@ from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import SPREAD_MSG_LIST
 from trade_monitor.utilities import INST_MSG_LIST
-from trade_monitor.utilities import DT_FMT
+from trade_monitor.utilities import DTTM_FMT, DT_FMT, TM_FMT
 from trade_monitor.utilities import CANDLE_COL_NAME_LIST
 from trade_monitor.utilities import (COL_NAME_TIME,
                                      COL_NAME_ASK_OP,
@@ -65,7 +65,7 @@ class GapFillUi():
         False: "Failure"
     }
 
-    GAP_FILL_HEADERS = [
+    TREEVIEW_HEADERS = [
         "Date",
         "Gap dir",
         "Previous close price",
@@ -153,7 +153,7 @@ class GapFillUi():
         sel_mdl.selectionChanged.connect(callback)
 
         # set header
-        qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
+        qstd_itm_mdl.setHorizontalHeaderLabels(self.TREEVIEW_HEADERS)
         ui.treeView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
         header = ui.treeView_gapfill.header()
@@ -189,7 +189,7 @@ class GapFillUi():
     def _on_fetch_gapfill_clicked(self):
 
         self._qstd_itm_mdl.clear()
-        self._qstd_itm_mdl.setHorizontalHeaderLabels(self.GAP_FILL_HEADERS)
+        self._qstd_itm_mdl.setHorizontalHeaderLabels(self.TREEVIEW_HEADERS)
         inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
         inst_msg = INST_MSG_LIST[inst_idx]
 
@@ -286,7 +286,7 @@ class GapFillUi():
             header = self._ui.treeView_gapfill.header()
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-            self._end_time = dt.datetime.strptime(rsp.end_time, "%H:%M:%S").time()
+            self._end_time = dt.datetime.strptime(rsp.end_time, TM_FMT).time()
             self._is_update = True
 
     def _on_gapfill_heatmap_clicked(self):
@@ -306,7 +306,7 @@ class GapFillUi():
             model_index = qisr0.indexes()[0]
             trg_date_str = self._qstd_itm_mdl.item(model_index.row()).text()
             utl.logger().debug("target_date: " + trg_date_str)
-            trg_date = dt.datetime.strptime(trg_date_str, "%Y-%m-%d")
+            trg_date = dt.datetime.strptime(trg_date_str, DT_FMT)
 
             dt_from = trg_date - dt.timedelta(days=2)
             dt_to = trg_date + dt.timedelta(hours=12)
@@ -317,8 +317,8 @@ class GapFillUi():
             req = CandlesMntSrv.Request()
             req.gran_msg.gran_id = Gran.GRAN_M10
             req.inst_msg.inst_id = inst_msg.msg_id
-            req.dt_from = dt_from.strftime(DT_FMT)
-            req.dt_to = dt_to.strftime(DT_FMT)
+            req.dt_from = dt_from.strftime(DTTM_FMT)
+            req.dt_to = dt_to.strftime(DTTM_FMT)
 
             utl.logger().debug("dt_from: " + req.dt_from)
             utl.logger().debug("dt_to: " + req.dt_to)
@@ -326,7 +326,7 @@ class GapFillUi():
             rsp = utl.call_servive_sync_candle(req, timeout_sec=10.0)
             data = []
             for cndl_msg in rsp.cndl_msg_list:
-                dt_ = dt.datetime.strptime(cndl_msg.time, DT_FMT)
+                dt_ = dt.datetime.strptime(cndl_msg.time, DTTM_FMT)
                 data.append([dt_,
                              cndl_msg.ask_o,
                              cndl_msg.ask_h,

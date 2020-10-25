@@ -7,7 +7,7 @@ from trade_monitor.candlestick_chart import CandlestickChart
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import INST_MSG_LIST, GRAN_MSG_LIST
-from trade_monitor.utilities import DT_FMT
+from trade_monitor.utilities import DTTM_FMT
 from trade_monitor.utilities import CANDLE_COL_NAME_LIST
 from trade_monitor.utilities import (COL_NAME_TIME,
                                      COL_NAME_ASK_OP,
@@ -62,13 +62,13 @@ class MainUi():
         req = CandlesMntSrv.Request()
         req.gran_msg.gran_id = gran_id
         req.inst_msg.inst_id = inst_id
-        req.dt_from = dt_from.strftime(DT_FMT)
-        req.dt_to = dt_to.strftime(DT_FMT)
+        req.dt_from = dt_from.strftime(DTTM_FMT)
+        req.dt_to = dt_to.strftime(DTTM_FMT)
 
         rsp = utl.call_servive_sync_candle(req, timeout_sec=10.0)
         data = []
         for cndl_msg in rsp.cndl_msg_list:
-            dt_ = dt.datetime.strptime(cndl_msg.time, DT_FMT)
+            dt_ = dt.datetime.strptime(cndl_msg.time, DTTM_FMT)
             data.append([dt_,
                          cndl_msg.ask_o,
                          cndl_msg.ask_h,

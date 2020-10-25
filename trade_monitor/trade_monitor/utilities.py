@@ -12,7 +12,9 @@ from trade_manager_msgs.msg import Granularity as Gran
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
-DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+DTTM_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+DT_FMT = "%Y-%m-%d"
+TM_FMT = "%H:%M:%S"
 
 # Candlestick data frame column name
 COL_NAME_TIME = "time"
