@@ -6,9 +6,11 @@ import rclpy
 from rclpy.node import Node
 from oandapyV20 import API
 from oandapyV20.exceptions import V20Error
+from requests.exceptions import ConnectionError
 from api_msgs.msg import Instrument
 from api_msgs.msg import Granularity
 from api_msgs.msg import FailReasonCode as frc
+
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
