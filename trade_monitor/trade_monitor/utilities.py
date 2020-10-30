@@ -12,10 +12,6 @@ from trade_manager_msgs.msg import Granularity as Gran
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
-#DTTM_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
-#DT_FMT = "%Y-%m-%d"
-#TM_FMT = "%H:%M:%S"
-
 FMT_DTTM_API = "%Y-%m-%dT%H:%M:00.000000000Z"
 FMT_DATE_YMD = "%Y-%m-%d"
 FMT_TIME_HM = "%H:%M"
