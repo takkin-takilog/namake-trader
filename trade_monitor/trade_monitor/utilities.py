@@ -12,9 +12,14 @@ from trade_manager_msgs.msg import Granularity as Gran
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
-DTTM_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
-DT_FMT = "%Y-%m-%d"
-TM_FMT = "%H:%M:%S"
+#DTTM_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
+#DT_FMT = "%Y-%m-%d"
+#TM_FMT = "%H:%M:%S"
+
+FMT_DTTM_API = "%Y-%m-%dT%H:%M:00.000000000Z"
+FMT_DATE_YMD = "%Y-%m-%d"
+FMT_TIME_HM = "%H:%M"
+FMT_TIME_HMS = "%H:%M:%S"
 
 # Candlestick data frame column name
 COL_NAME_TIME = "time"
@@ -47,6 +52,25 @@ CANDLE_COL_NAME_LIST = [COL_NAME_TIME,
                         COL_NAME_BID_CL,
                         COL_NAME_COMP
                         ]
+
+GRAN_TIME_DICT = {
+    Gran.GRAN_M1: "1min",
+    Gran.GRAN_M2: "2min",
+    Gran.GRAN_M3: "3min",
+    Gran.GRAN_M4: "4min",
+    Gran.GRAN_M5: "5min",
+    Gran.GRAN_M10: "10min",
+    Gran.GRAN_M15: "15min",
+    Gran.GRAN_M30: "30min",
+    Gran.GRAN_H1: "1H",
+    Gran.GRAN_H2: "2H",
+    Gran.GRAN_H3: "3H",
+    Gran.GRAN_H4: "4H",
+    Gran.GRAN_H6: "6H",
+    Gran.GRAN_H8: "8H",
+    Gran.GRAN_H12: "12H",
+    Gran.GRAN_D: "D"
+}
 
 
 class MsgGranDict():

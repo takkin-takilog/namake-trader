@@ -16,7 +16,10 @@ from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import SPREAD_MSG_LIST
 from trade_monitor.utilities import INST_MSG_LIST
-from trade_monitor.utilities import DTTM_FMT, DT_FMT, TM_FMT
+from trade_monitor.utilities import (FMT_DTTM_API,
+                                     FMT_DATE_YMD,
+                                     FMT_TIME_HMS
+                                     )
 from trade_monitor.utilities import CANDLE_COL_NAME_LIST
 from trade_monitor.utilities import (COL_NAME_TIME,
                                      COL_NAME_ASK_OP,
@@ -286,7 +289,8 @@ class GapFillUi():
             header = self._ui.treeView_gapfill.header()
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-            self._end_time = dt.datetime.strptime(rsp.end_time, TM_FMT).time()
+            self._end_time = dt.datetime.strptime(rsp.end_time,
+                                                  FMT_TIME_HMS).time()
             self._is_update = True
 
     def _on_gapfill_heatmap_clicked(self):
@@ -306,7 +310,7 @@ class GapFillUi():
             model_index = qisr0.indexes()[0]
             trg_date_str = self._qstd_itm_mdl.item(model_index.row()).text()
             utl.logger().debug("target_date: " + trg_date_str)
-            trg_date = dt.datetime.strptime(trg_date_str, DT_FMT)
+            trg_date = dt.datetime.strptime(trg_date_str, FMT_DATE_YMD)
 
             dt_from = trg_date - dt.timedelta(days=2)
             dt_to = trg_date + dt.timedelta(hours=12)
@@ -317,8 +321,8 @@ class GapFillUi():
             req = CandlesMntSrv.Request()
             req.gran_msg.gran_id = Gran.GRAN_M10
             req.inst_msg.inst_id = inst_msg.msg_id
-            req.dt_from = dt_from.strftime(DTTM_FMT)
-            req.dt_to = dt_to.strftime(DTTM_FMT)
+            req.dt_from = dt_from.strftime(FMT_DTTM_API)
+            req.dt_to = dt_to.strftime(FMT_DTTM_API)
 
             utl.logger().debug("dt_from: " + req.dt_from)
             utl.logger().debug("dt_to: " + req.dt_to)
@@ -326,7 +330,7 @@ class GapFillUi():
             rsp = utl.call_servive_sync_candle(req, timeout_sec=10.0)
             data = []
             for cndl_msg in rsp.cndl_msg_list:
-                dt_ = dt.datetime.strptime(cndl_msg.time, DTTM_FMT)
+                dt_ = dt.datetime.strptime(cndl_msg.time, FMT_DTTM_API)
                 data.append([dt_,
                              cndl_msg.ask_o,
                              cndl_msg.ask_h,

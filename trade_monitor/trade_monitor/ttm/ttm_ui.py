@@ -6,10 +6,21 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtCore import QItemSelectionModel
 
 from trade_apl_msgs.srv import TtmMntSrv
-from trade_apl_msgs.msg import TtmMsg
+from trade_apl_msgs.msg import TtmTblBaseRecMsg
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import INST_MSG_LIST
-from trade_monitor.utilities import DT_FMT
+from trade_monitor.utilities import GRAN_TIME_DICT
+from trade_monitor.utilities import (FMT_DTTM_API,
+                                     FMT_DATE_YMD,
+                                     FMT_TIME_HM,
+                                     FMT_TIME_HMS
+                                     )
+
+
+pd.set_option("display.max_columns", 1000)
+pd.set_option("display.max_rows", 300)
+pd.set_option("display.width", 200)
+pd.options.display.float_format = '{:.3f}'.format
 
 
 class TtmUi():
@@ -25,7 +36,7 @@ class TtmUi():
     }
 
     _GOTODAY_ID_DICT = {
-        0: "None",
+        0: "-",
         1: "5",
         2: "10",
         3: "15",
@@ -34,13 +45,11 @@ class TtmUi():
         6: "L/D"
     }
 
-    ID_NONE = 0         # Not Goto-Day
-    ID_DAY_5 = 1        # Goto-Day(5 Day)
-    ID_DAY_10 = 2       # Goto-Day(10 Day)
-    ID_DAY_15 = 3       # Goto-Day(15 Day)
-    ID_DAY_20 = 4       # Goto-Day(20 Day)
-    ID_DAY_25 = 5       # Goto-Day(25 Day)
-    ID_LAST_DAY = 6     # Goto-Day(Last Day)
+    _GAP_TYP_DICT = {
+        1: "High  - Open",
+        2: "Low   - Open",
+        3: "Close - Open"
+    }
 
     _TREEVIEW_HEADERS = [
         "Date",
@@ -48,6 +57,26 @@ class TtmUi():
         "Goto day",
         "Data type"
     ]
+
+    _COL_DATE = "Date"
+    _COL_WEEKDAY_ID = "Weekday_id"
+    _COL_GOTO_ID = "Goto_id"
+    _COL_IS_GOTO = "Is_Goto"
+    _COL_GAP_TYP = "Gap_type"
+    _COL_DATA_TYP = "Data_type"
+    _COL_MONTH = "Month"
+
+    _GAP_TYP_HO = 1    # High - Open price
+    _GAP_TYP_LO = 2    # Low - Open price
+    _GAP_TYP_CO = 3    # Close - Open price
+
+    _DATA_TYP_HO_MEAN = 1   # Mean of High - Open price
+    _DATA_TYP_HO_STD = 2    # Std of High - Open price
+    _DATA_TYP_LO_MEAN = 3   # Mean of Low - Open price
+    _DATA_TYP_LO_STD = 4    # Std of Low - Open price
+    _DATA_TYP_CO_MEAN = 5   # Mean of Close - Open price
+    _DATA_TYP_CO_STD = 6    # Std of Close - Open price
+    _DATA_TYP_CO_CSUM = 7   # Cumsum of Close - Open price
 
     def __init__(self, ui) -> None:
 
@@ -103,19 +132,84 @@ class TtmUi():
 
             rsp = utl.call_servive_sync(srv_cli, req, timeout_sec=10.0)
 
-            # Parameter data
-            data = []
-            for ttmmsg in rsp.ttmmsg_list:
+            start_time_str = rsp.start_time
+            end_time_str = rsp.end_time
+            freq = GRAN_TIME_DICT[rsp.gran_id]
+            time_range_list = pd.date_range(start_time_str,
+                                            end_time_str,
+                                            freq=freq
+                                            ).strftime(FMT_TIME_HM).to_list()
+
+            print("---------- time_range_list -----------")
+            print(time_range_list)
+
+            tbl = []
+            for rec in rsp.ttm_tbl_base:
+                record = []
+                record += [rec.date]
+                record += [rec.month]
+                record += [rec.weekday_id]
+                record += [rec.goto_id]
+                record += [rec.is_goto]
+                record += [rec.gap_type]
+                record += rec.data_list
+                tbl.append(record)
+
+            columns = [self._COL_DATE,
+                       self._COL_MONTH,
+                       self._COL_WEEKDAY_ID,
+                       self._COL_GOTO_ID,
+                       self._COL_IS_GOTO,
+                       self._COL_GAP_TYP] + time_range_list
+            df_base = pd.DataFrame(tbl,
+                                   columns=columns)
+
+            index = [self._COL_DATE,
+                     self._COL_MONTH,
+                     self._COL_WEEKDAY_ID,
+                     self._COL_GOTO_ID,
+                     self._COL_IS_GOTO,
+                     self._COL_GAP_TYP,
+                     ]
+            df_base.set_index(index, inplace=True)
+
+            print("---------- df_base -----------")
+            print(df_base)
+
+            level = [self._COL_WEEKDAY_ID,
+                     self._COL_IS_GOTO,
+                     self._COL_GAP_TYP,
+                     ]
+
+            # ----- make DataFrame "Mean" -----
+            df_week_goto = self.__make_statistics_dataframe(df_base, level)
+            print("----------------- df_week_goto -------------------")
+            print(df_week_goto)
+
+            level = [self._COL_MONTH,
+                     self._COL_GOTO_ID,
+                     self._COL_GAP_TYP,
+                     ]
+            df_month_goto = self.__make_statistics_dataframe(df_base, level)
+            print("----------------- df_week_goto -------------------")
+            print(df_month_goto)
+
+            # compose Tree View
+            for index, row in df_base.iterrows():
                 items = [
-                    QStandardItem(ttmmsg.date),
-                    QStandardItem(self._WEEKDAY_ID_DICT[ttmmsg.weekday_id]),
-                    QStandardItem(self._GOTODAY_ID_DICT[ttmmsg.goto_id]),
-                    QStandardItem(str(ttmmsg.data_type))
+                    QStandardItem(index[0]),  # date
+                    QStandardItem(self._WEEKDAY_ID_DICT[index[2]]),
+                    QStandardItem(self._GOTODAY_ID_DICT[index[3]]),
+                    QStandardItem(self._GAP_TYP_DICT[index[5]])
                 ]
                 self._qstd_itm_mdl.appendRow(items)
 
             header = self._ui.treeView_ttm.header()
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
+
+            self.__df_base = df_base
+            self.__df_week_goto = df_week_goto
+            self.__df_month_goto = df_month_goto
 
     def _on_selection_ttm_changed(self, selected, _):
 
@@ -126,8 +220,53 @@ class TtmUi():
             model_index = qisr0.indexes()[0]
             trg_date_str = self._qstd_itm_mdl.item(model_index.row()).text()
             utl.logger().debug("target_date: " + trg_date_str)
-            trg_date = dt.datetime.strptime(trg_date_str, DT_FMT)
+            trg_date = dt.datetime.strptime(trg_date_str, FMT_DATE_YMD)
 
     def resize_chart_widget(self):
         pass
 
+    def __make_statistics_dataframe(self,
+                                    df_base: pd.DataFrame,
+                                    level: list
+                                    ) -> pd.DataFrame:
+
+        # ----- make DataFrame "Mean" -----
+        df_mean = df_base.mean(level=level).sort_index()
+        df_mean.reset_index(self._COL_GAP_TYP, inplace=True)
+
+        df_mean[self._COL_DATA_TYP] = 0
+        cond = df_mean[self._COL_GAP_TYP] == self._GAP_TYP_HO
+        df_mean.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_HO_MEAN
+        cond = df_mean[self._COL_GAP_TYP] == self._GAP_TYP_LO
+        df_mean.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_LO_MEAN
+        cond = df_mean[self._COL_GAP_TYP] == self._GAP_TYP_CO
+        df_mean.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_CO_MEAN
+
+        df_mean.drop(columns=self._COL_GAP_TYP, inplace=True)
+        index = self._COL_DATA_TYP
+        df_mean.set_index(index, append=True, inplace=True)
+
+        # ----- make DataFrame "Std" -----
+        df_std = df_base.std(level=level).sort_index()
+        df_std.reset_index(self._COL_GAP_TYP, inplace=True)
+
+        df_std[self._COL_DATA_TYP] = 0
+        cond = df_std[self._COL_GAP_TYP] == self._GAP_TYP_HO
+        df_std.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_HO_STD
+        cond = df_std[self._COL_GAP_TYP] == self._GAP_TYP_LO
+        df_std.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_LO_STD
+        cond = df_std[self._COL_GAP_TYP] == self._GAP_TYP_CO
+        df_std.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_CO_STD
+
+        df_std.drop(columns=self._COL_GAP_TYP, inplace=True)
+        index = self._COL_DATA_TYP
+        df_std.set_index(index, append=True, inplace=True)
+
+        # ----- make DataFrame "Cumulative Sum" -----
+        cond = df_mean.index.get_level_values(self._COL_DATA_TYP) == self._DATA_TYP_CO_MEAN
+        df_csum = df_mean[cond].rename(index={self._DATA_TYP_CO_MEAN: self._DATA_TYP_CO_CSUM},
+                                       level=self._COL_DATA_TYP)
+        df_csum = df_csum.cumsum(axis=1)
+
+        # concat "df_mean" and "df_std" and "df_csum"
+        return pd.concat([df_mean, df_std, df_csum]).sort_index()
