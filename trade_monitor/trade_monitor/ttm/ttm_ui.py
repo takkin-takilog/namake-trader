@@ -6,7 +6,7 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtCore import QItemSelectionModel
 
 from trade_apl_msgs.srv import TtmMntSrv
-from trade_apl_msgs.msg import TtmTblBaseRecMsg
+from trade_apl_msgs.msg import TtmTblOhlcRecMsg, TtmTblBaseRecMsg
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import INST_MSG_LIST
 from trade_monitor.utilities import GRAN_TIME_DICT
@@ -59,6 +59,11 @@ class TtmUi():
     ]
 
     _COL_DATE = "Date"
+    _COL_TIME = "Time"
+    _COL_O = "O"
+    _COL_H = "H"
+    _COL_L = "L"
+    _COL_C = "C"
     _COL_WEEKDAY_ID = "Weekday_id"
     _COL_GOTO_ID = "Goto_id"
     _COL_IS_GOTO = "Is_Goto"
@@ -143,16 +148,45 @@ class TtmUi():
             print("---------- time_range_list -----------")
             print(time_range_list)
 
+            # ---------- compose Table "OHLC" ----------
+            tbl = []
+            for rec in rsp.ttm_tbl_ohlc:
+                record = [rec.date,
+                          rec.time,
+                          rec.open,
+                          rec.high,
+                          rec.low,
+                          rec.close
+                          ]
+                tbl.append(record)
+
+            columns = [self._COL_DATE,
+                       self._COL_TIME,
+                       self._COL_O,
+                       self._COL_H,
+                       self._COL_L,
+                       self._COL_C,
+                       ]
+            df_ohlc = pd.DataFrame(tbl, columns=columns)
+
+            index = [self._COL_DATE,
+                     self._COL_TIME
+                     ]
+            df_ohlc.set_index(index, inplace=True)
+
+            print("----------------- df_ohlc -----------------")
+            print(df_ohlc)
+
+            # ---------- compose Table "Base" ----------
             tbl = []
             for rec in rsp.ttm_tbl_base:
-                record = []
-                record += [rec.date]
-                record += [rec.month]
-                record += [rec.weekday_id]
-                record += [rec.goto_id]
-                record += [rec.is_goto]
-                record += [rec.gap_type]
-                record += rec.data_list
+                record = [rec.date,
+                          rec.month,
+                          rec.weekday_id,
+                          rec.goto_id,
+                          rec.is_goto,
+                          rec.gap_type
+                          ] + rec.data_list.tolist()
                 tbl.append(record)
 
             columns = [self._COL_DATE,
@@ -161,8 +195,7 @@ class TtmUi():
                        self._COL_GOTO_ID,
                        self._COL_IS_GOTO,
                        self._COL_GAP_TYP] + time_range_list
-            df_base = pd.DataFrame(tbl,
-                                   columns=columns)
+            df_base = pd.DataFrame(tbl, columns=columns)
 
             index = [self._COL_DATE,
                      self._COL_MONTH,
@@ -173,19 +206,20 @@ class TtmUi():
                      ]
             df_base.set_index(index, inplace=True)
 
-            print("---------- df_base -----------")
+            print("----------------- df_base -----------------")
             print(df_base)
 
+            # ---------- compose Table "week_goto" ----------
             level = [self._COL_WEEKDAY_ID,
                      self._COL_IS_GOTO,
                      self._COL_GAP_TYP,
                      ]
 
-            # ----- make DataFrame "Mean" -----
             df_week_goto = self.__make_statistics_dataframe(df_base, level)
             print("----------------- df_week_goto -------------------")
             print(df_week_goto)
 
+            # ---------- compose Table "month_goto" ----------
             level = [self._COL_MONTH,
                      self._COL_GOTO_ID,
                      self._COL_GAP_TYP,
@@ -194,7 +228,7 @@ class TtmUi():
             print("----------------- df_week_goto -------------------")
             print(df_month_goto)
 
-            # compose Tree View
+            # ---------- compose Tree View ----------
             for index, row in df_base.iterrows():
                 items = [
                     QStandardItem(index[0]),  # date
@@ -207,6 +241,7 @@ class TtmUi():
             header = self._ui.treeView_ttm.header()
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
+            self.__df_ohlc = df_ohlc
             self.__df_base = df_base
             self.__df_week_goto = df_week_goto
             self.__df_month_goto = df_month_goto
