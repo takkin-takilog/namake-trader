@@ -229,12 +229,13 @@ class TtmUi():
             print(df_month_goto)
 
             # ---------- compose Tree View ----------
-            for index, row in df_base.iterrows():
+            flg = df_base.index.get_level_values(self._COL_GAP_TYP) == self._GAP_TYP_CO
+            df = df_base[flg]
+            for index, row in df.iterrows():
                 items = [
                     QStandardItem(index[0]),  # date
                     QStandardItem(self._WEEKDAY_ID_DICT[index[2]]),
                     QStandardItem(self._GOTODAY_ID_DICT[index[3]]),
-                    QStandardItem(self._GAP_TYP_DICT[index[5]])
                 ]
                 self._qstd_itm_mdl.appendRow(items)
 
