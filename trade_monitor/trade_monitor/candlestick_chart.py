@@ -245,9 +245,9 @@ class CandlestickChartGapFillBase(AbstractCandlestickChart):
         # axis_y.setLabelsFont(Lfont)
         chart = self.chart()
         chart.addAxis(axis_x, Qt.AlignBottom)
-        self._series.attachAxis(axis_x)
+        self._ser_cdl.attachAxis(axis_x)
         chart.addAxis(axis_y, Qt.AlignLeft)
-        self._series.attachAxis(axis_y)
+        self._ser_cdl.attachAxis(axis_y)
 
         self._callout_dt = CalloutDataTime(chart)
         self._callout_pr = CallouPrice(chart)
@@ -299,7 +299,7 @@ class CandlestickChartGapFillBase(AbstractCandlestickChart):
 
     def update(self, df, gap_close_price, gap_open_price, decimal_digit):
 
-        self._series.clear()
+        self._ser_cdl.clear()
         for dt_, sr in df.iterrows():
             o_ = sr[self.COL_NAME_OP]
             h_ = sr[self.COL_NAME_HI]
@@ -310,7 +310,7 @@ class CandlestickChartGapFillBase(AbstractCandlestickChart):
             qdt = QDateTime(qd, qt)
             cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_,
                                            qdt.toMSecsSinceEpoch())
-            self._series.append(cnd)
+            self._ser_cdl.append(cnd)
 
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)

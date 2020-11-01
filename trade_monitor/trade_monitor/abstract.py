@@ -64,15 +64,15 @@ class AbstractCandlestickChart(QtCharts.QChartView):
         super().__init__()
 
         # Chart Type
-        series = QtCharts.QCandlestickSeries()
-        series.setDecreasingColor(Qt.red)
-        series.setIncreasingColor(Qt.green)
+        ser_cdl = QtCharts.QCandlestickSeries()
+        ser_cdl.setDecreasingColor(Qt.red)
+        ser_cdl.setIncreasingColor(Qt.green)
 
         # Create Chart and set General Chart setting
         chart = QtCharts.QChart()
         chart.layout().setContentsMargins(0, 0, 0, 0)
         chart.setBackgroundRoundness(0)
-        chart.addSeries(series)
+        chart.addSeries(ser_cdl)
 
         # itle Font size
         """
@@ -110,9 +110,7 @@ class AbstractCandlestickChart(QtCharts.QChartView):
         self.setParent(widget)
         self.resize(widget.frameSize())
 
-        self._series = series
-        self._chart = chart
-        self._widget = widget
+        self._ser_cdl = ser_cdl
 
     @abstractmethod
     def update(self, df):
