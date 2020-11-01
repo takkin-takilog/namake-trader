@@ -243,14 +243,14 @@ class CandlestickChartGapFillBase(AbstractCandlestickChart):
         # Lfont.setPixelSize(16)
         # axis_x.setLabelsFont(Lfont)
         # axis_y.setLabelsFont(Lfont)
-
-        self._chart.addAxis(axis_x, Qt.AlignBottom)
+        chart = self.chart()
+        chart.addAxis(axis_x, Qt.AlignBottom)
         self._series.attachAxis(axis_x)
-        self._chart.addAxis(axis_y, Qt.AlignLeft)
+        chart.addAxis(axis_y, Qt.AlignLeft)
         self._series.attachAxis(axis_y)
 
-        self._callout_dt = CalloutDataTime(self._chart)
-        self._callout_pr = CallouPrice(self._chart)
+        self._callout_dt = CalloutDataTime(chart)
+        self._callout_pr = CallouPrice(chart)
         self.scene().addItem(self._callout_dt)
         self.scene().addItem(self._callout_pr)
 
@@ -312,19 +312,20 @@ class CandlestickChartGapFillBase(AbstractCandlestickChart):
                                            qdt.toMSecsSinceEpoch())
             self._series.append(cnd)
 
-        self._chart.axisY().setRange(self._min_y, self._max_y)
+        chart = self.chart()
+        chart.axisY().setRange(self._min_y, self._max_y)
 
         point = QPointF(0, gap_close_price)
-        m2p = self._chart.mapToPosition(point)
-        plotAreaRect = self._chart.plotArea()
+        m2p = chart.mapToPosition(point)
+        plotAreaRect = chart.plotArea()
         self._horline_precls.setLine(QLineF(plotAreaRect.left(),
                                             m2p.y(),
                                             plotAreaRect.right(),
                                             m2p.y()))
 
         point = QPointF(0, gap_open_price)
-        m2p = self._chart.mapToPosition(point)
-        plotAreaRect = self._chart.plotArea()
+        m2p = chart.mapToPosition(point)
+        plotAreaRect = chart.plotArea()
         self._horline_curopn.setLine(QLineF(plotAreaRect.left(),
                                             m2p.y(),
                                             plotAreaRect.right(),
@@ -343,17 +344,18 @@ class CandlestickChartGapFillBase(AbstractCandlestickChart):
         super().resizeEvent(event)
 
         if self._is_update:
+            chart = self.chart()
             point = QPointF(0, self._gap_close_price)
-            m2p = self._chart.mapToPosition(point)
-            plotAreaRect = self._chart.plotArea()
+            m2p = chart.mapToPosition(point)
+            plotAreaRect = chart.plotArea()
             self._horline_precls.setLine(QLineF(plotAreaRect.left(),
                                                 m2p.y(),
                                                 plotAreaRect.right(),
                                                 m2p.y()))
 
             point = QPointF(0, self._gap_open_price)
-            m2p = self._chart.mapToPosition(point)
-            plotAreaRect = self._chart.plotArea()
+            m2p = chart.mapToPosition(point)
+            plotAreaRect = chart.plotArea()
             self._horline_curopn.setLine(QLineF(plotAreaRect.left(),
                                                 m2p.y(),
                                                 plotAreaRect.right(),
@@ -365,16 +367,17 @@ class CandlestickChartGapFillBase(AbstractCandlestickChart):
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
 
-        flag = self._chart.plotArea().contains(event.pos())
+        chart = self.chart()
+        flag = chart.plotArea().contains(event.pos())
         if flag:
-            m2v = self._chart.mapToValue(event.pos())
+            m2v = chart.mapToValue(event.pos())
             dt_ = QDateTime.fromMSecsSinceEpoch(round(m2v.x()))
             qtime = dt_.time()
             minu = round(qtime.minute() / 10) * 10
             qdttm = QDateTime(dt_.date(),
                               QTime(qtime.hour(), 0)).addSecs(60 * minu)
             m2v.setX(qdttm.toMSecsSinceEpoch())
-            m2p = self._chart.mapToPosition(m2v)
+            m2p = chart.mapToPosition(m2v)
             dtstr = qdttm.toString("yyyy/MM/dd hh:mm")
             self._callout_dt.setZValue(0)
             self._callout_dt.updateGeometry(dtstr, m2p)
@@ -386,7 +389,7 @@ class CandlestickChartGapFillBase(AbstractCandlestickChart):
             self._callout_pr.updateGeometry(prstr, event.pos())
             self._callout_pr.show()
 
-            plotAreaRect = self._chart.plotArea()
+            plotAreaRect = chart.plotArea()
             self._verline_callout.setLine(QLineF(m2p.x(),
                                                  plotAreaRect.top(),
                                                  m2p.x(),
@@ -431,8 +434,8 @@ class CandlestickChartGapFillPrev(CandlestickChartGapFillBase):
         min_x = QDateTime(qd, qt)
         dtstr = dt_.strftime("%Y/%m/%d (Fri)")
 
-        self._chart.axisX().setTitleText(dtstr)
-        self._chart.axisX().setRange(min_x, max_x)
+        self.chart().axisX().setTitleText(dtstr)
+        self.chart().axisX().setRange(min_x, max_x)
 
 
 class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
@@ -470,8 +473,8 @@ class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
         min_x = QDateTime(qd, qt)
         dtstr = dt_.strftime("%Y/%m/%d (Mon)")
 
-        self._chart.axisX().setTitleText(dtstr)
-        self._chart.axisX().setRange(min_x, max_x)
+        self.chart().axisX().setTitleText(dtstr)
+        self.chart().axisX().setRange(min_x, max_x)
 
         h = end_time.hour
         m = end_time.minute
@@ -487,8 +490,8 @@ class CandlestickChartGapFillCurr(CandlestickChartGapFillBase):
 
     def _update_end_hour(self):
 
-        m2p = self._chart.mapToPosition(self._end_point)
-        plotAreaRect = self._chart.plotArea()
+        m2p = self.chart().mapToPosition(self._end_point)
+        plotAreaRect = self.chart().plotArea()
         self._verline_endhour.setLine(QLineF(m2p.x(),
                                              plotAreaRect.top(),
                                              m2p.x(),
