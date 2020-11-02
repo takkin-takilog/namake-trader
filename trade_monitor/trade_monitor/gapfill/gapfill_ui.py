@@ -5,9 +5,6 @@ from PySide2.QtWidgets import QHeaderView
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtCore import QItemSelectionModel
 
-from trade_monitor.candlestick_chart import CandlestickChartGapFillPrev
-from trade_monitor.candlestick_chart import CandlestickChartGapFillCurr
-
 from trade_apl_msgs.srv import GapFillMntSrv
 from trade_apl_msgs.msg import GapFillMsg
 from trade_manager_msgs.msg import Granularity as Gran
@@ -49,6 +46,9 @@ from trade_monitor.gapfill.heatmap_manager import (COL_NAME_DATE,
                                                    COL_NAME_GAP_FILLED_TIME,
                                                    COL_NAME_MAX_OPEN_RANGE,
                                                    COL_NAME_END_CLOSE_PRICE)
+
+from trade_monitor.gapfill.candlestick_chart import CandlestickChartGapFillPrev
+from trade_monitor.gapfill.candlestick_chart import CandlestickChartGapFillCurr
 
 
 class GapFillUi():
