@@ -223,9 +223,6 @@ class BaseCandlestickChart(QtCharts.QChartView):
 
         self._ser_cdl = ser_cdl
         self._decimal_digit = 0
-        self._gap_close_price = 0
-        self._gap_open_price = 0
-        self._is_update = False
 
     def set_max_y(self, max_y):
         self._max_y = max_y
@@ -233,7 +230,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, df, gap_close_price, gap_open_price, decimal_digit):
+    def update(self, df, decimal_digit):
 
         self._ser_cdl.clear()
         for dt_, sr in df.iterrows():
@@ -252,9 +249,6 @@ class BaseCandlestickChart(QtCharts.QChartView):
         chart.axisY().setRange(self._min_y, self._max_y)
 
         self._decimal_digit = decimal_digit
-        self._gap_close_price = gap_close_price
-        self._gap_open_price = gap_open_price
-        self._is_update = True
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

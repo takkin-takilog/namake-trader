@@ -26,8 +26,12 @@ class BaseCandlestickChartGapFill(BaseCandlestickChart):
         self._hl_curr_opn.setPen(pen)
         self.scene().addItem(self._hl_curr_opn)
 
+        self._gap_close_price = 0
+        self._gap_open_price = 0
+        self._is_update = False
+
     def update(self, df, gap_close_price, gap_open_price, decimal_digit):
-        super().update(df, gap_close_price, gap_open_price, decimal_digit)
+        super().update(df, decimal_digit)
 
         chart = self.chart()
         point = QPointF(0, gap_close_price)
@@ -48,6 +52,10 @@ class BaseCandlestickChartGapFill(BaseCandlestickChart):
 
         self._hl_prev_cls.show()
         self._hl_curr_opn.show()
+
+        self._gap_close_price = gap_close_price
+        self._gap_open_price = gap_open_price
+        self._is_update = True
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
