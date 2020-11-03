@@ -15,7 +15,7 @@ from trade_monitor.utilities import (FMT_DTTM_API,
                                      FMT_TIME_HM,
                                      FMT_TIME_HMS
                                      )
-
+from trade_monitor.ttm.candlestick_chart import CandlestickChartTtm
 
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
@@ -83,6 +83,12 @@ class TtmUi():
     _DATA_TYP_CO_STD = 6    # Std of Close - Open price
     _DATA_TYP_CO_CSUM = 7   # Cumsum of Close - Open price
 
+    _CDL_COLUMNS = [CandlestickChartTtm.COL_NAME_OP,
+                    CandlestickChartTtm.COL_NAME_HI,
+                    CandlestickChartTtm.COL_NAME_LO,
+                    CandlestickChartTtm.COL_NAME_CL
+                    ]
+
     def __init__(self, ui) -> None:
 
         utl.remove_all_items_of_comboBox(ui.comboBox_ttm_inst)
@@ -105,6 +111,8 @@ class TtmUi():
         header = ui.treeView_ttm.header()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
+        chart = CandlestickChartTtm(ui.widget_ttm_chart1m)
+
         # Create service client "ttm_monitor"
         srv_type = TtmMntSrv
         srv_name = "ttm_monitor"
@@ -115,6 +123,7 @@ class TtmUi():
             srv_cli_list.append(srv_cli)
 
         self._qstd_itm_mdl = qstd_itm_mdl
+        self._chart = chart
 
         self._ui = ui
         self._srv_cli_list = srv_cli_list
@@ -257,6 +266,22 @@ class TtmUi():
             trg_date_str = self._qstd_itm_mdl.item(model_index.row()).text()
             utl.logger().debug("target_date: " + trg_date_str)
             trg_date = dt.datetime.strptime(trg_date_str, FMT_DATE_YMD)
+
+            df_ohlc = self.__df_ohlc
+            flg = df_ohlc.index.get_level_values(self._COL_DATE) == trg_date_str
+            print("-------------------------------")
+            # df = df_ohlc[flg].reset_index(level=self._COL_DATE, drop=True)
+            df.rename(index=lambda x:x.upper())
+
+            max_y = df[self._COL_H].max()
+            min_y = df[self._COL_L].min()
+            self._chart.set_max_y(max_y)
+            self._chart.set_min_y(min_y)
+
+            inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
+            decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+
+            self._chart.update(df, decimal_digit)
 
     def resize_chart_widget(self):
         pass
