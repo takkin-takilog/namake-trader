@@ -3,7 +3,84 @@ from PySide2.QtWidgets import QGraphicsLineItem
 from trade_monitor.base import BaseCandlestickChart
 
 
-class CandlestickChartGapFillPrev(BaseCandlestickChart):
+class BaseCandlestickChartGapFill(BaseCandlestickChart):
+
+    def __init__(self, widget):
+        super().__init__(widget)
+
+        # ---------- Add PreviousClosePriceLine on scene ----------
+        self._hl_prev_cls = QGraphicsLineItem()
+        pen = self._hl_prev_cls.pen()
+        pen.setColor(Qt.magenta)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._hl_prev_cls.setPen(pen)
+        self.scene().addItem(self._hl_prev_cls)
+
+        # ---------- Add CurrentOpenPriceLine on scene ----------
+        self._hl_curr_opn = QGraphicsLineItem()
+        pen = self._hl_curr_opn.pen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._hl_curr_opn.setPen(pen)
+        self.scene().addItem(self._hl_curr_opn)
+
+    def update(self, df, gap_close_price, gap_open_price, decimal_digit):
+        super().update(df, gap_close_price, gap_open_price, decimal_digit)
+
+        chart = self.chart()
+        point = QPointF(0, gap_close_price)
+        m2p = chart.mapToPosition(point)
+        plotAreaRect = chart.plotArea()
+        self._hl_prev_cls.setLine(QLineF(plotAreaRect.left(),
+                                         m2p.y(),
+                                         plotAreaRect.right(),
+                                         m2p.y()))
+
+        point = QPointF(0, gap_open_price)
+        m2p = chart.mapToPosition(point)
+        plotAreaRect = chart.plotArea()
+        self._hl_curr_opn.setLine(QLineF(plotAreaRect.left(),
+                                         m2p.y(),
+                                         plotAreaRect.right(),
+                                         m2p.y()))
+
+        self._hl_prev_cls.show()
+        self._hl_curr_opn.show()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        if self._is_update:
+            chart = self.chart()
+            point = QPointF(0, self._gap_close_price)
+            m2p = chart.mapToPosition(point)
+            plotAreaRect = chart.plotArea()
+            self._hl_prev_cls.setLine(QLineF(plotAreaRect.left(),
+                                             m2p.y(),
+                                             plotAreaRect.right(),
+                                             m2p.y()))
+
+            point = QPointF(0, self._gap_open_price)
+            m2p = chart.mapToPosition(point)
+            plotAreaRect = chart.plotArea()
+            self._hl_curr_opn.setLine(QLineF(plotAreaRect.left(),
+                                             m2p.y(),
+                                             plotAreaRect.right(),
+                                             m2p.y()))
+
+            self._hl_prev_cls.show()
+            self._hl_curr_opn.show()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+        self._hl_prev_cls.show()
+        self._hl_curr_opn.show()
+
+
+class CandlestickChartGapFillPrev(BaseCandlestickChartGapFill):
 
     def __init__(self, widget):
         super().__init__(widget)
@@ -30,7 +107,7 @@ class CandlestickChartGapFillPrev(BaseCandlestickChart):
         self.chart().axisX().setRange(min_x, max_x)
 
 
-class CandlestickChartGapFillCurr(BaseCandlestickChart):
+class CandlestickChartGapFillCurr(BaseCandlestickChartGapFill):
 
     def __init__(self, widget):
         super().__init__(widget)

@@ -219,24 +219,6 @@ class BaseCandlestickChart(QtCharts.QChartView):
         self._callout_hl.setPen(pen)
         self.scene().addItem(self._callout_hl)
 
-        # ---------- Add PreviousClosePriceLine on scene ----------
-        self._hl_prev_cls = QGraphicsLineItem()
-        pen = self._hl_prev_cls.pen()
-        pen.setColor(Qt.magenta)
-        pen.setWidth(1)
-        pen.setStyle(Qt.DashLine)
-        self._hl_prev_cls.setPen(pen)
-        self.scene().addItem(self._hl_prev_cls)
-
-        # ---------- Add CurrentOpenPriceLine on scene ----------
-        self._hl_curr_opn = QGraphicsLineItem()
-        pen = self._hl_curr_opn.pen()
-        pen.setColor(Qt.blue)
-        pen.setWidth(1)
-        pen.setStyle(Qt.DashLine)
-        self._hl_curr_opn.setPen(pen)
-        self.scene().addItem(self._hl_curr_opn)
-
         self.resize(widget.frameSize())
 
         self._ser_cdl = ser_cdl
@@ -269,25 +251,6 @@ class BaseCandlestickChart(QtCharts.QChartView):
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)
 
-        point = QPointF(0, gap_close_price)
-        m2p = chart.mapToPosition(point)
-        plotAreaRect = chart.plotArea()
-        self._hl_prev_cls.setLine(QLineF(plotAreaRect.left(),
-                                         m2p.y(),
-                                         plotAreaRect.right(),
-                                         m2p.y()))
-
-        point = QPointF(0, gap_open_price)
-        m2p = chart.mapToPosition(point)
-        plotAreaRect = chart.plotArea()
-        self._hl_curr_opn.setLine(QLineF(plotAreaRect.left(),
-                                         m2p.y(),
-                                         plotAreaRect.right(),
-                                         m2p.y()))
-
-        self._hl_prev_cls.show()
-        self._hl_curr_opn.show()
-
         self._decimal_digit = decimal_digit
         self._gap_close_price = gap_close_price
         self._gap_open_price = gap_open_price
@@ -295,27 +258,6 @@ class BaseCandlestickChart(QtCharts.QChartView):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-
-        if self._is_update:
-            chart = self.chart()
-            point = QPointF(0, self._gap_close_price)
-            m2p = chart.mapToPosition(point)
-            plotAreaRect = chart.plotArea()
-            self._hl_prev_cls.setLine(QLineF(plotAreaRect.left(),
-                                             m2p.y(),
-                                             plotAreaRect.right(),
-                                             m2p.y()))
-
-            point = QPointF(0, self._gap_open_price)
-            m2p = chart.mapToPosition(point)
-            plotAreaRect = chart.plotArea()
-            self._hl_curr_opn.setLine(QLineF(plotAreaRect.left(),
-                                             m2p.y(),
-                                             plotAreaRect.right(),
-                                             m2p.y()))
-
-            self._hl_prev_cls.show()
-            self._hl_curr_opn.show()
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -360,6 +302,3 @@ class BaseCandlestickChart(QtCharts.QChartView):
             self._callout_pr.hide()
             self._callout_vl.hide()
             self._callout_hl.hide()
-
-        self._hl_prev_cls.show()
-        self._hl_curr_opn.show()
