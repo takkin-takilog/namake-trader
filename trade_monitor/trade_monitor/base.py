@@ -261,10 +261,13 @@ class BaseCandlestickChart(QtCharts.QChartView):
         if flag:
             m2v = chart.mapToValue(event.pos())
             dt_ = QDateTime.fromMSecsSinceEpoch(round(m2v.x()))
+
+            # TODO: gran
             qtime = dt_.time()
             minu = round(qtime.minute() / 10) * 10
             qdttm = QDateTime(dt_.date(),
                               QTime(qtime.hour(), 0)).addSecs(60 * minu)
+
             m2v.setX(qdttm.toMSecsSinceEpoch())
             m2p = chart.mapToPosition(m2v)
             dtstr = qdttm.toString("yyyy/MM/dd hh:mm")

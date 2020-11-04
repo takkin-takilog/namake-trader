@@ -12,7 +12,7 @@ class CandlestickChartTtm(BaseCandlestickChart):
 
         dt_ = df.index[-1]
         qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute).addSecs(60 * 10)
+        qt = QTime(dt_.hour, dt_.minute).addSecs(60)
         max_x = QDateTime(qd, qt)
 
         dt_ = df.index[0]

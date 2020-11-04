@@ -263,18 +263,19 @@ class TtmUi():
         if qisr0 is not None:
 
             model_index = qisr0.indexes()[0]
-            trg_date_str = self._qstd_itm_mdl.item(model_index.row()).text()
-            utl.logger().debug("target_date: " + trg_date_str)
-            trg_date = dt.datetime.strptime(trg_date_str, FMT_DATE_YMD)
+            date_str = self._qstd_itm_mdl.item(model_index.row()).text()
+            utl.logger().debug("target_date: " + date_str)
+            # trg_date = dt.datetime.strptime(date_str, FMT_DATE_YMD)
 
             df_ohlc = self.__df_ohlc
-            flg = df_ohlc.index.get_level_values(self._COL_DATE) == trg_date_str
-            print("-------------------------------")
-            # df = df_ohlc[flg].reset_index(level=self._COL_DATE, drop=True)
-            df.rename(index=lambda x:x.upper())
+            flg = df_ohlc.index.get_level_values(self._COL_DATE) == date_str
+            df = df_ohlc[flg].reset_index(level=self._COL_DATE, drop=True)
+            fmt = FMT_DATE_YMD + FMT_TIME_HM
+            df = df.rename(index=lambda t: dt.datetime.strptime(date_str + t, fmt))
+            df.columns = self._CDL_COLUMNS
 
-            max_y = df[self._COL_H].max()
-            min_y = df[self._COL_L].min()
+            max_y = df[CandlestickChartTtm.COL_NAME_HI].max()
+            min_y = df[CandlestickChartTtm.COL_NAME_LO].min()
             self._chart.set_max_y(max_y)
             self._chart.set_min_y(min_y)
 

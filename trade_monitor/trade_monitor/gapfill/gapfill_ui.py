@@ -7,7 +7,6 @@ from PySide2.QtCore import QItemSelectionModel
 
 from trade_apl_msgs.srv import GapFillMntSrv
 from trade_apl_msgs.msg import GapFillMsg
-from trade_manager_msgs.msg import Granularity as Gran
 from trade_manager_msgs.srv import CandlesMntSrv
 
 from trade_monitor import utilities as utl
@@ -181,6 +180,7 @@ class GapFillUi():
         self._qstd_itm_mdl = qstd_itm_mdl
 
         self._ui = ui
+        self._gran_id = 0
         self._srv_cli_list = srv_cli_list
         self._end_time = dt.time(10, 0, 0)
         self._is_update = False
@@ -209,7 +209,7 @@ class GapFillUi():
         else:
 
             rsp = utl.call_servive_sync(srv_cli, req, timeout_sec=10.0)
-
+            self._gran_id = rsp.gran_id
             """
             future = srv_cli.call_async(req)
             rclpy.spin_until_future_complete(self._node, future, timeout_sec=10.0)
@@ -319,7 +319,7 @@ class GapFillUi():
             inst_msg = INST_MSG_LIST[inst_idx]
 
             req = CandlesMntSrv.Request()
-            req.gran_msg.gran_id = Gran.GRAN_M10
+            req.gran_msg.gran_id = self._gran_id
             req.inst_msg.inst_id = inst_msg.msg_id
             req.dt_from = dt_from.strftime(FMT_DTTM_API)
             req.dt_to = dt_to.strftime(FMT_DTTM_API)
