@@ -415,6 +415,7 @@ class GapFillUi():
         df_prev.columns = GapFillUi.CDL_COLUMNS
 
         self._chart_prev.update(df_prev,
+                                self._gran_id,
                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
                                 decimal_digit)
@@ -425,6 +426,7 @@ class GapFillUi():
         df_curr.columns = GapFillUi.CDL_COLUMNS
 
         self._chart_curr.update(df_curr,
+                                self._gran_id,
                                 sr_gf[COL_NAME_GPA_CLOSE_PRICE],
                                 sr_gf[COL_NAME_GPA_OPEN_PRICE],
                                 decimal_digit, self._end_time)

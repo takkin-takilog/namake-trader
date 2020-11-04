@@ -49,7 +49,7 @@ CANDLE_COL_NAME_LIST = [COL_NAME_TIME,
                         COL_NAME_COMP
                         ]
 
-GRAN_TIME_DICT = {
+GRAN_FREQ_DICT = {
     Gran.GRAN_M1: "1min",
     Gran.GRAN_M2: "2min",
     Gran.GRAN_M3: "3min",

@@ -7,8 +7,8 @@ class CandlestickChartTtm(BaseCandlestickChart):
     def __init__(self, widget):
         super().__init__(widget)
 
-    def update(self, df, decimal_digit):
-        super().update(df, decimal_digit)
+    def update(self, df, gran_id, decimal_digit):
+        super().update(df, gran_id, decimal_digit)
 
         dt_ = df.index[-1]
         qd = QDate(dt_.year, dt_.month, dt_.day)

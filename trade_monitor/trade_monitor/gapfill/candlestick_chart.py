@@ -30,8 +30,8 @@ class BaseCandlestickChartGapFill(BaseCandlestickChart):
         self._gap_open_price = 0
         self._is_update = False
 
-    def update(self, df, gap_close_price, gap_open_price, decimal_digit):
-        super().update(df, decimal_digit)
+    def update(self, df, gran_id, gap_close_price, gap_open_price, decimal_digit):
+        super().update(df, gran_id, decimal_digit)
 
         chart = self.chart()
         point = QPointF(0, gap_close_price)
@@ -95,10 +95,11 @@ class CandlestickChartGapFillPrev(BaseCandlestickChartGapFill):
 
     def update(self,
                df,
+               gran_id,
                gap_close_price,
                gap_open_price,
                decimal_digit):
-        super().update(df, gap_close_price, gap_open_price, decimal_digit)
+        super().update(df, gran_id, gap_close_price, gap_open_price, decimal_digit)
 
         dt_ = df.index[-1]
         qd = QDate(dt_.year, dt_.month, dt_.day)
@@ -133,11 +134,12 @@ class CandlestickChartGapFillCurr(BaseCandlestickChartGapFill):
 
     def update(self,
                df,
+               gran_id,
                gap_close_price,
                gap_open_price,
                decimal_digit,
                end_time):
-        super().update(df, gap_close_price, gap_open_price, decimal_digit)
+        super().update(df, gran_id, gap_close_price, gap_open_price, decimal_digit)
 
         dt_ = df.index[-1]
         qd = QDate(dt_.year, dt_.month, dt_.day)

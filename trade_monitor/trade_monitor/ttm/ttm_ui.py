@@ -9,7 +9,7 @@ from trade_apl_msgs.srv import TtmMntSrv
 from trade_apl_msgs.msg import TtmTblOhlcRecMsg, TtmTblBaseRecMsg
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import INST_MSG_LIST
-from trade_monitor.utilities import GRAN_TIME_DICT
+from trade_monitor.utilities import GRAN_FREQ_DICT
 from trade_monitor.utilities import (FMT_DTTM_API,
                                      FMT_DATE_YMD,
                                      FMT_TIME_HM,
@@ -126,6 +126,7 @@ class TtmUi():
         self._chart = chart
 
         self._ui = ui
+        self._gran_id = 0
         self._srv_cli_list = srv_cli_list
 
     def _on_fetch_ttm_clicked(self):
@@ -145,10 +146,11 @@ class TtmUi():
         else:
 
             rsp = utl.call_servive_sync(srv_cli, req, timeout_sec=10.0)
+            self._gran_id = rsp.gran_id
 
             start_time_str = rsp.start_time
             end_time_str = rsp.end_time
-            freq = GRAN_TIME_DICT[rsp.gran_id]
+            freq = GRAN_FREQ_DICT[rsp.gran_id]
             time_range_list = pd.date_range(start_time_str,
                                             end_time_str,
                                             freq=freq
@@ -282,10 +284,11 @@ class TtmUi():
             inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
 
-            self._chart.update(df, decimal_digit)
+            self._chart.update(df, self._gran_id, decimal_digit)
 
     def resize_chart_widget(self):
-        pass
+        fs = self._ui.widget_ttm_chart1m.frameSize()
+        self._chart.resize(fs)
 
     def __make_statistics_dataframe(self,
                                     df_base: pd.DataFrame,

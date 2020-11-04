@@ -1,3 +1,4 @@
+import pandas as pd
 from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtCharts import QtCharts
@@ -5,6 +6,7 @@ from PySide2.QtCore import Qt, QPointF, QRectF, QRect, QLineF
 from PySide2.QtCore import QDateTime, QDate, QTime
 from PySide2.QtGui import QPalette, QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QPen
+from trade_monitor.utilities import GRAN_FREQ_DICT
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 CALLOUT_DATE_COLOR = QColor(0, 204, 51)
@@ -223,6 +225,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
 
         self._ser_cdl = ser_cdl
         self._decimal_digit = 0
+        self._freq = ""
 
     def set_max_y(self, max_y):
         self._max_y = max_y
@@ -230,7 +233,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, df, decimal_digit):
+    def update(self, df, gran_id, decimal_digit):
 
         self._ser_cdl.clear()
         for dt_, sr in df.iterrows():
@@ -249,6 +252,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
         chart.axisY().setRange(self._min_y, self._max_y)
 
         self._decimal_digit = decimal_digit
+        self._freq = GRAN_FREQ_DICT[gran_id]
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -260,13 +264,12 @@ class BaseCandlestickChart(QtCharts.QChartView):
         flag = chart.plotArea().contains(event.pos())
         if flag:
             m2v = chart.mapToValue(event.pos())
-            dt_ = QDateTime.fromMSecsSinceEpoch(round(m2v.x()))
+            pdt = QDateTime.fromMSecsSinceEpoch(round(m2v.x())).toPython()
+            pdt = pd.to_datetime(pdt).round(self._freq)
 
-            # TODO: gran
-            qtime = dt_.time()
-            minu = round(qtime.minute() / 10) * 10
-            qdttm = QDateTime(dt_.date(),
-                              QTime(qtime.hour(), 0)).addSecs(60 * minu)
+            qd = QDate(pdt.year, pdt.month, pdt.day)
+            qt = QTime(pdt.hour, pdt.minute, pdt.second)
+            qdttm = QDateTime(qd, qt)
 
             m2v.setX(qdttm.toMSecsSinceEpoch())
             m2p = chart.mapToPosition(m2v)
