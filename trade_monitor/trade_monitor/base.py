@@ -225,7 +225,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
 
         self._ser_cdl = ser_cdl
         self._decimal_digit = 0
-        self._freq = ""
+        self._freq = "D"
 
     def set_max_y(self, max_y):
         self._max_y = max_y

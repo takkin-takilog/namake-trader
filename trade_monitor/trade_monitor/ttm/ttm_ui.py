@@ -156,9 +156,6 @@ class TtmUi():
                                             freq=freq
                                             ).strftime(FMT_TIME_HM).to_list()
 
-            print("---------- time_range_list -----------")
-            print(time_range_list)
-
             # ---------- compose Table "OHLC" ----------
             tbl = []
             for rec in rsp.ttm_tbl_ohlc:
@@ -184,9 +181,6 @@ class TtmUi():
                      self._COL_TIME
                      ]
             df_ohlc.set_index(index, inplace=True)
-
-            print("----------------- df_ohlc -----------------")
-            print(df_ohlc)
 
             # ---------- compose Table "Base" ----------
             tbl = []
@@ -217,9 +211,6 @@ class TtmUi():
                      ]
             df_base.set_index(index, inplace=True)
 
-            print("----------------- df_base -----------------")
-            print(df_base)
-
             # ---------- compose Table "week_goto" ----------
             level = [self._COL_WEEKDAY_ID,
                      self._COL_IS_GOTO,
@@ -227,8 +218,6 @@ class TtmUi():
                      ]
 
             df_week_goto = self.__make_statistics_dataframe(df_base, level)
-            print("----------------- df_week_goto -------------------")
-            print(df_week_goto)
 
             # ---------- compose Table "month_goto" ----------
             level = [self._COL_MONTH,
@@ -236,8 +225,6 @@ class TtmUi():
                      self._COL_GAP_TYP,
                      ]
             df_month_goto = self.__make_statistics_dataframe(df_base, level)
-            print("----------------- df_week_goto -------------------")
-            print(df_month_goto)
 
             # ---------- compose Tree View ----------
             flg = df_base.index.get_level_values(self._COL_GAP_TYP) == self._GAP_TYP_CO
