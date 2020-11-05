@@ -294,7 +294,6 @@ class GapFillUi():
             self._is_update = True
 
     def _on_gapfill_heatmap_clicked(self):
-        utl.logger().debug("gapfill_heatmap_clicked")
 
         inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
         self._widget_htmap.set_param(inst_idx, self._df_param)
@@ -309,7 +308,6 @@ class GapFillUi():
 
             model_index = qisr0.indexes()[0]
             trg_date_str = self._qstd_itm_mdl.item(model_index.row()).text()
-            utl.logger().debug("target_date: " + trg_date_str)
             trg_date = dt.datetime.strptime(trg_date_str, FMT_DATE_YMD)
 
             dt_from = trg_date - dt.timedelta(days=2)

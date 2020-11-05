@@ -1,4 +1,5 @@
 from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
+from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QGraphicsLineItem
 from trade_monitor.base import BaseCandlestickChart
 from trade_monitor.base import CalloutDataTime
@@ -9,17 +10,22 @@ class CandlestickChartTtm(BaseCandlestickChart):
     def __init__(self, widget):
         super().__init__(widget)
 
+        color = QColor(Qt.blue)
+
         # ---------- Add CurrentOpenPriceLine on scene ----------
         self._vl_ttm = QGraphicsLineItem()
         pen = self._vl_ttm.pen()
-        pen.setColor(Qt.blue)
+        pen.setColor(color)
         pen.setWidth(1)
         pen.setStyle(Qt.DashLine)
         self._vl_ttm.setPen(pen)
+        self._vl_ttm.setZValue(1)
         self.scene().addItem(self._vl_ttm)
 
         # ---------- Add CalloutDataTime on scene ----------
         self._callout_ttm_dt = CalloutDataTime(self.chart())
+        self._callout_ttm_dt.setBackgroundColor(color)
+        self._callout_ttm_dt.setZValue(0)
         self.scene().addItem(self._callout_ttm_dt)
 
         self._is_update = False
@@ -79,6 +85,5 @@ class CandlestickChartTtm(BaseCandlestickChart):
 
         # drow Callout TTM
         dtstr = qdttm.toString("hh:mm")
-        self._callout_ttm_dt.setZValue(0)
         self._callout_ttm_dt.updateGeometry(dtstr, m2p)
         self._callout_ttm_dt.show()

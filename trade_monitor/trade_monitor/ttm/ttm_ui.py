@@ -253,8 +253,6 @@ class TtmUi():
 
             model_index = qisr0.indexes()[0]
             date_str = self._qstd_itm_mdl.item(model_index.row()).text()
-            utl.logger().debug("target_date: " + date_str)
-            # trg_date = dt.datetime.strptime(date_str, FMT_DATE_YMD)
 
             df_ohlc = self.__df_ohlc
             flg = df_ohlc.index.get_level_values(self._COL_DATE) == date_str
@@ -265,8 +263,9 @@ class TtmUi():
 
             max_y = df[CandlestickChartTtm.COL_NAME_HI].max()
             min_y = df[CandlestickChartTtm.COL_NAME_LO].min()
-            self._chart.set_max_y(max_y)
-            self._chart.set_min_y(min_y)
+            dif = (max_y - min_y) * 0.05
+            self._chart.set_max_y(max_y + dif)
+            self._chart.set_min_y(min_y - dif)
 
             inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit

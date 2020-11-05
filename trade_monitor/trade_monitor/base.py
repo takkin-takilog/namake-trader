@@ -22,6 +22,8 @@ class BaseCalloutChart(QGraphicsItem):
         self._font = QFont()
         self._textRect = QRectF()
         self._rect = QRectF()
+        self._backgroundColor = QColor(Qt.black)
+        self._textColor = QColor(Qt.white)
 
     def updateGeometry(self, text: str, point: QPointF):
         raise NotImplementedError()
@@ -42,6 +44,12 @@ class BaseCalloutChart(QGraphicsItem):
               option: QStyleOptionGraphicsItem,
               widget: QWidget):
         raise NotImplementedError()
+
+    def setBackgroundColor(self, color: QColor):
+        self._backgroundColor = color
+
+    def setTextColor(self, color: QColor):
+        self._textColor = color
 
     def _setText(self, text: str):
         self._text = text
@@ -81,12 +89,12 @@ class CalloutDataTime(BaseCalloutChart):
         path.addRoundedRect(self._rect, 5, 5)   # 丸みを帯びた長方形の角を規定
 
         # 枠を描写
-        painter.setBrush(CALLOUT_DATE_COLOR)    # 図形の塗りつぶし
-        painter.setPen(QPen(CALLOUT_DATE_COLOR))
+        painter.setBrush(self._backgroundColor)    # 図形の塗りつぶし
+        painter.setPen(QPen(self._backgroundColor))
         painter.drawPath(path)
 
         # 文字を描写
-        painter.setPen(QPen(QColor(Qt.white)))
+        painter.setPen(QPen(self._textColor))
         painter.drawText(self._textRect, self._text)
 
 
@@ -114,12 +122,12 @@ class CallouPrice(BaseCalloutChart):
         path.addRoundedRect(self._rect, 5, 5)   # 丸みを帯びた長方形の角を規定
 
         # 枠を描写
-        painter.setBrush(CALLOUT_PRICE_COLOR)    # 図形の塗りつぶし
-        painter.setPen(QPen(CALLOUT_PRICE_COLOR))
+        painter.setBrush(self._backgroundColor)    # 図形の塗りつぶし
+        painter.setPen(QPen(self._backgroundColor))
         painter.drawPath(path)
 
         # 文字を描写
-        painter.setPen(QPen(QColor(Qt.white)))
+        painter.setPen(QPen(self._textColor))
         painter.drawText(self._textRect, self._text)
 
 
@@ -199,10 +207,14 @@ class BaseCandlestickChart(QtCharts.QChartView):
 
         # ---------- Add CalloutDataTime on scene ----------
         self._callout_dt = CalloutDataTime(chart)
+        self._callout_dt.setBackgroundColor(CALLOUT_DATE_COLOR)
+        self._callout_dt.setZValue(100)
         self.scene().addItem(self._callout_dt)
 
         # ---------- Add CallouPrice on scene ----------
         self._callout_pr = CallouPrice(chart)
+        self._callout_pr.setBackgroundColor(CALLOUT_PRICE_COLOR)
+        self._callout_pr.setZValue(100)
         self.scene().addItem(self._callout_pr)
 
         # ---------- Add CallouVerticalLine on scene ----------
@@ -211,6 +223,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
         pen.setColor(CALLOUT_DATE_COLOR)
         pen.setWidth(1)
         self._callout_vl.setPen(pen)
+        self._callout_vl.setZValue(100)
         self.scene().addItem(self._callout_vl)
 
         # ---------- Add CallouHorizontalLine on scene ----------
@@ -219,6 +232,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
         pen.setColor(CALLOUT_PRICE_COLOR)
         pen.setWidth(1)
         self._callout_hl.setPen(pen)
+        self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
         self.resize(widget.frameSize())
@@ -274,13 +288,11 @@ class BaseCandlestickChart(QtCharts.QChartView):
             m2v.setX(qdttm.toMSecsSinceEpoch())
             m2p = chart.mapToPosition(m2v)
             dtstr = qdttm.toString("yyyy/MM/dd hh:mm")
-            self._callout_dt.setZValue(0)
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
             fmt = "{:." + str(self._decimal_digit) + "f}"
             prstr = fmt.format(m2v.y())
-            self._callout_pr.setZValue(1)
             self._callout_pr.updateGeometry(prstr, event.pos())
             self._callout_pr.show()
 
