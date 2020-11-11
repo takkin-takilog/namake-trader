@@ -1,4 +1,3 @@
-from abc import ABCMeta
 from typing import TypeVar
 from typing import Tuple
 import datetime as dt
@@ -14,6 +13,8 @@ SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 ApiRsp = TypeVar("ApiRsp")
 EndPoint = TypeVar("EndPoint")
+
+ADD_CIPHERS = "HIGH:!DH"
 
 
 class InstInfo():
@@ -79,25 +80,44 @@ GRAN_DICT = {
 }
 
 
-class AbstractService(Node, metaclass=ABCMeta):
+class BaseService(Node):
 
     def __init__(self,
                  node_name: str
                  ) -> None:
         super().__init__(node_name)
 
-        PRMNM_ACCESS_TOKEN = "access_token"
+        PRMNM_USE_ENV_LIVE = "use_env_live"
+        ENV_PRAC = "env_practice."
+        PRMNM_PRAC_ACCESS_TOKEN = ENV_PRAC + "access_token"
+        ENV_LIVE = "env_live."
+        PRMNM_LIVE_ACCESS_TOKEN = ENV_LIVE + "access_token"
 
         # Set logger lebel
         self._logger = super().get_logger()
         self._logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # Declare parameter
-        self.declare_parameter(PRMNM_ACCESS_TOKEN)
-        ACCESS_TOKEN = self.get_parameter(PRMNM_ACCESS_TOKEN).value
+        self.declare_parameter(PRMNM_USE_ENV_LIVE)
+        self.declare_parameter(PRMNM_PRAC_ACCESS_TOKEN)
+        self.declare_parameter(PRMNM_LIVE_ACCESS_TOKEN)
+
+        USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
+        if USE_ENV_LIVE:
+            ACCESS_TOKEN = self.get_parameter(PRMNM_LIVE_ACCESS_TOKEN).value
+        else:
+            ACCESS_TOKEN = self.get_parameter(PRMNM_PRAC_ACCESS_TOKEN).value
+
+        self._logger.debug("[Param]Use Env Live:[{}]".format(USE_ENV_LIVE))
         self._logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
 
-        self._api = API(access_token=ACCESS_TOKEN)
+        if USE_ENV_LIVE:
+            environment = "live"
+        else:
+            environment = "practice"
+
+        self._api = API(access_token=ACCESS_TOKEN,
+                        environment=environment)
 
     def _request_api(self,
                      endpoint: EndPoint,
