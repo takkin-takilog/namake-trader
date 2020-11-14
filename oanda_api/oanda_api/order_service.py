@@ -1,4 +1,5 @@
 from typing import TypeVar, Dict
+import requests
 import datetime as dt
 import json
 from decimal import Decimal, ROUND_HALF_UP
@@ -10,8 +11,8 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           OrderDetailsSrv, OrderCancelSrv)
 from api_msgs.msg import OrderType, OrderState, TradeState
 from api_msgs.msg import FailReasonCode as frc
-from oanda_api.service_common import AbstractService
-from oanda_api.service_common import INST_DICT
+from oanda_api.service_common import BaseService
+from oanda_api.service_common import INST_DICT, ADD_CIPHERS
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -45,17 +46,27 @@ _TRADE_STS_DICT = {
 }
 
 
-class OrderService(AbstractService):
+class OrderService(BaseService):
 
     def __init__(self) -> None:
         super().__init__("order_service")
 
-        PRMNM_ACCOUNT_NUMBER = "account_number"
+        ENV_PRAC = "env_practice."
+        PRMNM_PRAC_ACCOUNT_NUMBER = ENV_PRAC + "account_number"
+        ENV_LIVE = "env_live."
+        PRMNM_LIVE_ACCOUNT_NUMBER = ENV_LIVE + "account_number"
 
         # Declare parameter
-        self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
+        self.declare_parameter(PRMNM_PRAC_ACCOUNT_NUMBER)
+        self.declare_parameter(PRMNM_LIVE_ACCOUNT_NUMBER)
 
-        self._ACCOUNT_NUMBER = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
+        PRMNM_USE_ENV_LIVE = "use_env_live"
+        USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
+        if USE_ENV_LIVE:
+            self._ACCOUNT_NUMBER = self.get_parameter(PRMNM_LIVE_ACCOUNT_NUMBER).value
+        else:
+            self._ACCOUNT_NUMBER = self.get_parameter(PRMNM_PRAC_ACCOUNT_NUMBER).value
+
         self._logger.debug("[Param]Account Number:[{}]".format(self._ACCOUNT_NUMBER))
 
         # Create service server "OrderCreate"
@@ -519,6 +530,9 @@ class OrderService(AbstractService):
 
 
 def main(args=None):
+
+    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
+
     rclpy.init(args=args)
     order = OrderService()
 

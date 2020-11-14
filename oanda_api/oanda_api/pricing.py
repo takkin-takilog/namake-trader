@@ -1,4 +1,5 @@
 from typing import TypeVar
+import requests
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
@@ -7,7 +8,7 @@ from api_msgs.msg import PriceBucket, Pricing, Instrument
 from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error
-from oanda_api.service_common import INST_DICT
+from oanda_api.service_common import INST_DICT, ADD_CIPHERS
 
 MsgType = TypeVar("MsgType")
 
@@ -17,12 +18,13 @@ class PricingPublisher(Node):
     def __init__(self) -> None:
         super().__init__("pricing")
 
-        # Set logger lebel
-        logger = super().get_logger()
-        logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-
-        PRMNM_ACCOUNT_NUMBER = "account_number"
-        PRMNM_ACCESS_TOKEN = "ACCESS_TOKEN"
+        PRMNM_USE_ENV_LIVE = "use_env_live"
+        ENV_PRAC = "env_practice."
+        PRMNM_PRAC_ACCOUNT_NUMBER = ENV_PRAC + "account_number"
+        PRMNM_PRAC_ACCESS_TOKEN = ENV_PRAC + "access_token"
+        ENV_LIVE = "env_live."
+        PRMNM_LIVE_ACCOUNT_NUMBER = ENV_LIVE + "account_number"
+        PRMNM_LIVE_ACCESS_TOKEN = ENV_LIVE + "access_token"
         ENA_INST = "enable_instrument."
         PRMNM_ENA_INST_USDJPY = ENA_INST + "usdjpy"
         PRMNM_ENA_INST_EURJPY = ENA_INST + "eurjpy"
@@ -33,19 +35,32 @@ class PricingPublisher(Node):
         TPCNM_PRICING_EURUSD = "pricing_eurusd"
         TPCNM_ACT_FLG = "activate_flag"
 
+        # Set logger lebel
+        logger = super().get_logger()
+        logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+
         # Declare parameter
-        self.declare_parameter(PRMNM_ACCOUNT_NUMBER)
-        self.declare_parameter(PRMNM_ACCESS_TOKEN)
+        self.declare_parameter(PRMNM_USE_ENV_LIVE)
+        self.declare_parameter(PRMNM_PRAC_ACCOUNT_NUMBER)
+        self.declare_parameter(PRMNM_PRAC_ACCESS_TOKEN)
+        self.declare_parameter(PRMNM_LIVE_ACCOUNT_NUMBER)
+        self.declare_parameter(PRMNM_LIVE_ACCESS_TOKEN)
         self.declare_parameter(PRMNM_ENA_INST_USDJPY)
         self.declare_parameter(PRMNM_ENA_INST_EURJPY)
         self.declare_parameter(PRMNM_ENA_INST_EURUSD)
 
-        ACCOUNT_NUMBER = self.get_parameter(PRMNM_ACCOUNT_NUMBER).value
-        ACCESS_TOKEN = self.get_parameter(PRMNM_ACCESS_TOKEN).value
+        USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
+        if USE_ENV_LIVE:
+            ACCOUNT_NUMBER = self.get_parameter(PRMNM_LIVE_ACCOUNT_NUMBER).value
+            ACCESS_TOKEN = self.get_parameter(PRMNM_LIVE_ACCESS_TOKEN).value
+        else:
+            ACCOUNT_NUMBER = self.get_parameter(PRMNM_PRAC_ACCOUNT_NUMBER).value
+            ACCESS_TOKEN = self.get_parameter(PRMNM_PRAC_ACCESS_TOKEN).value
         ENA_INST_USDJPY = self.get_parameter(PRMNM_ENA_INST_USDJPY).value
         ENA_INST_EURJPY = self.get_parameter(PRMNM_ENA_INST_EURJPY).value
         ENA_INST_EURUSD = self.get_parameter(PRMNM_ENA_INST_EURUSD).value
 
+        logger.debug("[Param]Use Env Live:[{}]".format(USE_ENV_LIVE))
         logger.debug("[Param]Account Number:[{}]".format(ACCOUNT_NUMBER))
         logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
         logger.debug("[Param]Enable instrument:")
@@ -88,7 +103,14 @@ class PricingPublisher(Node):
 
         # Initialize
         self._act_flg = False
-        self._api = API(ACCESS_TOKEN=ACCESS_TOKEN)
+
+        if USE_ENV_LIVE:
+            environment = "live"
+        else:
+            environment = "practice"
+
+        self._api = API(access_token=ACCESS_TOKEN,
+                        environment=environment)
 
         instruments = ",".join(inst_name_list)
         params = {"instruments": instruments}
@@ -139,6 +161,9 @@ class PricingPublisher(Node):
 
 
 def main(args=None):
+
+    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
+
     rclpy.init(args=args)
     pricing_api = PricingPublisher()
 

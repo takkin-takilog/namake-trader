@@ -1,19 +1,20 @@
 from typing import TypeVar
+import requests
 import datetime as dt
 import rclpy
 import oandapyV20.endpoints.instruments as instruments
 from api_msgs.msg import Candle
 from api_msgs.msg import FailReasonCode as frc
 from api_msgs.srv import CandlesSrv
-from oanda_api.service_common import AbstractService
-from oanda_api.service_common import INST_DICT, GRAN_DICT
+from oanda_api.service_common import BaseService
+from oanda_api.service_common import INST_DICT, GRAN_DICT, ADD_CIPHERS
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 ApiRsp = TypeVar("ApiRsp")
 
 
-class CandlestickService(AbstractService):
+class CandlestickService(BaseService):
 
     _MAX_SIZE = 4999
     # _MAX_SIZE = 10    # For test
@@ -187,6 +188,9 @@ class CandlestickService(AbstractService):
 
 
 def main(args=None):
+
+    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
+
     rclpy.init(args=args)
     cs = CandlestickService()
 
