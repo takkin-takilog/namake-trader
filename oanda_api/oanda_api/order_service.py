@@ -54,7 +54,7 @@ class OrderService(BaseService):
         ENV_PRAC = "env_practice."
         PRMNM_PRAC_ACCOUNT_NUMBER = ENV_PRAC + "account_number"
         ENV_LIVE = "env_live."
-        PRMNM_LIVE_ACCOUNT_NUMBER = ENV_LIVE + "access_token"
+        PRMNM_LIVE_ACCOUNT_NUMBER = ENV_LIVE + "account_number"
 
         # Declare parameter
         self.declare_parameter(PRMNM_PRAC_ACCOUNT_NUMBER)
