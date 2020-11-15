@@ -481,7 +481,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_gapfill_heatmap_2">
+           <widget class="QPushButton" name="pushButton_ttm_details">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -495,7 +495,7 @@
              </size>
             </property>
             <property name="text">
-             <string>disp HeatMap</string>
+             <string>disp Details</string>
             </property>
            </widget>
           </item>

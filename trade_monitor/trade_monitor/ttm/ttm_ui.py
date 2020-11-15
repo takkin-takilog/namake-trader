@@ -16,6 +16,8 @@ from trade_monitor.utilities import (FMT_DTTM_API,
                                      FMT_TIME_HMS
                                      )
 from trade_monitor.ttm.candlestick_chart import CandlestickChartTtm
+from trade_monitor.ttm.ttm_details import TtmDetails
+
 
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
@@ -104,6 +106,9 @@ class TtmUi():
         callback = self._on_selection_ttm_changed
         sel_mdl.selectionChanged.connect(callback)
 
+        callback = self._on_ttm_details_clicked
+        ui.pushButton_ttm_details.clicked.connect(callback)
+
         # set header
         qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
         ui.treeView_ttm.setModel(qstd_itm_mdl)
@@ -121,6 +126,8 @@ class TtmUi():
             fullname = obj.namespace + "/" + srv_name
             srv_cli = utl.get_node().create_client(srv_type, fullname)
             srv_cli_list.append(srv_cli)
+
+        self._widget_details = TtmDetails()
 
         self._qstd_itm_mdl = qstd_itm_mdl
         self._chart = chart
@@ -271,6 +278,13 @@ class TtmUi():
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
 
             self._chart.update(df, self._gran_id, decimal_digit)
+
+    def _on_ttm_details_clicked(self):
+
+        inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
+        #self._widget_htmap.set_param(inst_idx, self._df_param)
+        self._widget_details.show()
+        self._widget_details.init_resize()
 
     def resize_chart_widget(self):
         fs = self._ui.widget_ttm_chart1m.frameSize()
