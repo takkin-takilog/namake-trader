@@ -251,7 +251,7 @@ def set_service_client_candle(client: Client) -> None:
     _g_service_client_candle = client
 
 
-def logger():
+def get_logger():
     global _g_node
     return _g_node.get_logger()
 

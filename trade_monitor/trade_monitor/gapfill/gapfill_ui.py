@@ -292,6 +292,7 @@ class GapFillUi():
             self._end_time = dt.datetime.strptime(rsp.end_time,
                                                   FMT_TIME_HMS).time()
             self._is_update = True
+            self._logger = utl.get_logger()
 
     def _on_gapfill_heatmap_clicked(self):
 
@@ -322,8 +323,8 @@ class GapFillUi():
             req.dt_from = dt_from.strftime(FMT_DTTM_API)
             req.dt_to = dt_to.strftime(FMT_DTTM_API)
 
-            utl.logger().debug("dt_from: " + req.dt_from)
-            utl.logger().debug("dt_to: " + req.dt_to)
+            self._logger.debug("dt_from: " + req.dt_from)
+            self._logger.debug("dt_to: " + req.dt_to)
 
             rsp = utl.call_servive_sync_candle(req, timeout_sec=10.0)
             data = []

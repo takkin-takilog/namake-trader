@@ -17,7 +17,19 @@ from trade_monitor.utilities import (FMT_DTTM_API,
                                      )
 from trade_monitor.ttm.candlestick_chart import CandlestickChartTtm
 from trade_monitor.ttm.ttm_details import TtmDetails
-
+from trade_monitor.ttm.ttm_common import (COL_DATE,
+                                          COL_TIME,
+                                          COL_O,
+                                          COL_H,
+                                          COL_L,
+                                          COL_C,
+                                          COL_WEEKDAY_ID,
+                                          COL_GOTO_ID,
+                                          COL_IS_GOTO,
+                                          COL_GAP_TYP,
+                                          COL_DATA_TYP,
+                                          COL_MONTH
+                                          )
 
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
@@ -135,6 +147,7 @@ class TtmUi():
         self._ui = ui
         self._gran_id = 0
         self._srv_cli_list = srv_cli_list
+        self._logger = utl.get_logger()
 
     def _on_fetch_ttm_clicked(self):
 
@@ -148,7 +161,7 @@ class TtmUi():
 
         srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
-            utl.logger().error("service server [{}] not to become ready"
+            self._logger.error("service server [{}] not to become ready"
                                .format(inst_msg.text))
         else:
 
@@ -175,17 +188,17 @@ class TtmUi():
                           ]
                 tbl.append(record)
 
-            columns = [self._COL_DATE,
-                       self._COL_TIME,
-                       self._COL_O,
-                       self._COL_H,
-                       self._COL_L,
-                       self._COL_C,
+            columns = [COL_DATE,
+                       COL_TIME,
+                       COL_O,
+                       COL_H,
+                       COL_L,
+                       COL_C,
                        ]
             df_ohlc = pd.DataFrame(tbl, columns=columns)
 
-            index = [self._COL_DATE,
-                     self._COL_TIME
+            index = [COL_DATE,
+                     COL_TIME
                      ]
             df_ohlc.set_index(index, inplace=True)
 
@@ -201,40 +214,40 @@ class TtmUi():
                           ] + rec.data_list.tolist()
                 tbl.append(record)
 
-            columns = [self._COL_DATE,
-                       self._COL_MONTH,
-                       self._COL_WEEKDAY_ID,
-                       self._COL_GOTO_ID,
-                       self._COL_IS_GOTO,
-                       self._COL_GAP_TYP] + time_range_list
+            columns = [COL_DATE,
+                       COL_MONTH,
+                       COL_WEEKDAY_ID,
+                       COL_GOTO_ID,
+                       COL_IS_GOTO,
+                       COL_GAP_TYP] + time_range_list
             df_base = pd.DataFrame(tbl, columns=columns)
 
-            index = [self._COL_DATE,
-                     self._COL_MONTH,
-                     self._COL_WEEKDAY_ID,
-                     self._COL_GOTO_ID,
-                     self._COL_IS_GOTO,
-                     self._COL_GAP_TYP,
+            index = [COL_DATE,
+                     COL_MONTH,
+                     COL_WEEKDAY_ID,
+                     COL_GOTO_ID,
+                     COL_IS_GOTO,
+                     COL_GAP_TYP,
                      ]
             df_base.set_index(index, inplace=True)
 
             # ---------- compose Table "week_goto" ----------
-            level = [self._COL_WEEKDAY_ID,
-                     self._COL_IS_GOTO,
-                     self._COL_GAP_TYP,
+            level = [COL_WEEKDAY_ID,
+                     COL_IS_GOTO,
+                     COL_GAP_TYP,
                      ]
 
             df_week_goto = self.__make_statistics_dataframe(df_base, level)
 
             # ---------- compose Table "month_goto" ----------
-            level = [self._COL_MONTH,
-                     self._COL_GOTO_ID,
-                     self._COL_GAP_TYP,
+            level = [COL_MONTH,
+                     COL_GOTO_ID,
+                     COL_GAP_TYP,
                      ]
             df_month_goto = self.__make_statistics_dataframe(df_base, level)
 
             # ---------- compose Tree View ----------
-            flg = df_base.index.get_level_values(self._COL_GAP_TYP) == self._GAP_TYP_CO
+            flg = df_base.index.get_level_values(COL_GAP_TYP) == self._GAP_TYP_CO
             df = df_base[flg]
             for index, row in df.iterrows():
                 items = [
@@ -247,10 +260,10 @@ class TtmUi():
             header = self._ui.treeView_ttm.header()
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-            self.__df_ohlc = df_ohlc
-            self.__df_base = df_base
-            self.__df_week_goto = df_week_goto
-            self.__df_month_goto = df_month_goto
+            self._df_ohlc = df_ohlc
+            self._df_base = df_base
+            self._df_week_goto = df_week_goto
+            self._df_month_goto = df_month_goto
 
     def _on_selection_ttm_changed(self, selected, _):
 
@@ -261,9 +274,9 @@ class TtmUi():
             model_index = qisr0.indexes()[0]
             date_str = self._qstd_itm_mdl.item(model_index.row()).text()
 
-            df_ohlc = self.__df_ohlc
-            flg = df_ohlc.index.get_level_values(self._COL_DATE) == date_str
-            df = df_ohlc[flg].reset_index(level=self._COL_DATE, drop=True)
+            df_ohlc = self._df_ohlc
+            flg = df_ohlc.index.get_level_values(COL_DATE) == date_str
+            df = df_ohlc[flg].reset_index(level=COL_DATE, drop=True)
             fmt = FMT_DATE_YMD + FMT_TIME_HM
             df = df.rename(index=lambda t: dt.datetime.strptime(date_str + t, fmt))
             df.columns = self._CDL_COLUMNS
@@ -285,6 +298,9 @@ class TtmUi():
         #self._widget_htmap.set_param(inst_idx, self._df_param)
         self._widget_details.show()
         self._widget_details.init_resize()
+        self._widget_details.set_data(self._df_base,
+                                      self._df_week_goto,
+                                      self._df_month_goto)
 
     def resize_chart_widget(self):
         fs = self._ui.widget_ttm_chart1m.frameSize()
@@ -297,40 +313,40 @@ class TtmUi():
 
         # ----- make DataFrame "Mean" -----
         df_mean = df_base.mean(level=level).sort_index()
-        df_mean.reset_index(self._COL_GAP_TYP, inplace=True)
+        df_mean.reset_index(COL_GAP_TYP, inplace=True)
 
-        df_mean[self._COL_DATA_TYP] = 0
-        cond = df_mean[self._COL_GAP_TYP] == self._GAP_TYP_HO
-        df_mean.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_HO_MEAN
-        cond = df_mean[self._COL_GAP_TYP] == self._GAP_TYP_LO
-        df_mean.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_LO_MEAN
-        cond = df_mean[self._COL_GAP_TYP] == self._GAP_TYP_CO
-        df_mean.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_CO_MEAN
+        df_mean[COL_DATA_TYP] = 0
+        cond = df_mean[COL_GAP_TYP] == self._GAP_TYP_HO
+        df_mean.loc[cond, COL_DATA_TYP] = self._DATA_TYP_HO_MEAN
+        cond = df_mean[COL_GAP_TYP] == self._GAP_TYP_LO
+        df_mean.loc[cond, COL_DATA_TYP] = self._DATA_TYP_LO_MEAN
+        cond = df_mean[COL_GAP_TYP] == self._GAP_TYP_CO
+        df_mean.loc[cond, COL_DATA_TYP] = self._DATA_TYP_CO_MEAN
 
-        df_mean.drop(columns=self._COL_GAP_TYP, inplace=True)
-        index = self._COL_DATA_TYP
+        df_mean.drop(columns=COL_GAP_TYP, inplace=True)
+        index = COL_DATA_TYP
         df_mean.set_index(index, append=True, inplace=True)
 
         # ----- make DataFrame "Std" -----
         df_std = df_base.std(level=level).sort_index()
-        df_std.reset_index(self._COL_GAP_TYP, inplace=True)
+        df_std.reset_index(COL_GAP_TYP, inplace=True)
 
-        df_std[self._COL_DATA_TYP] = 0
-        cond = df_std[self._COL_GAP_TYP] == self._GAP_TYP_HO
-        df_std.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_HO_STD
-        cond = df_std[self._COL_GAP_TYP] == self._GAP_TYP_LO
-        df_std.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_LO_STD
-        cond = df_std[self._COL_GAP_TYP] == self._GAP_TYP_CO
-        df_std.loc[cond, self._COL_DATA_TYP] = self._DATA_TYP_CO_STD
+        df_std[COL_DATA_TYP] = 0
+        cond = df_std[COL_GAP_TYP] == self._GAP_TYP_HO
+        df_std.loc[cond, COL_DATA_TYP] = self._DATA_TYP_HO_STD
+        cond = df_std[COL_GAP_TYP] == self._GAP_TYP_LO
+        df_std.loc[cond, COL_DATA_TYP] = self._DATA_TYP_LO_STD
+        cond = df_std[COL_GAP_TYP] == self._GAP_TYP_CO
+        df_std.loc[cond, COL_DATA_TYP] = self._DATA_TYP_CO_STD
 
-        df_std.drop(columns=self._COL_GAP_TYP, inplace=True)
-        index = self._COL_DATA_TYP
+        df_std.drop(columns=COL_GAP_TYP, inplace=True)
+        index = COL_DATA_TYP
         df_std.set_index(index, append=True, inplace=True)
 
         # ----- make DataFrame "Cumulative Sum" -----
-        cond = df_mean.index.get_level_values(self._COL_DATA_TYP) == self._DATA_TYP_CO_MEAN
+        cond = df_mean.index.get_level_values(COL_DATA_TYP) == self._DATA_TYP_CO_MEAN
         df_csum = df_mean[cond].rename(index={self._DATA_TYP_CO_MEAN: self._DATA_TYP_CO_CSUM},
-                                       level=self._COL_DATA_TYP)
+                                       level=COL_DATA_TYP)
         df_csum = df_csum.cumsum(axis=1)
 
         # concat "df_mean" and "df_std" and "df_csum"

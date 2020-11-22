@@ -1,0 +1,13 @@
+
+COL_DATE = "Date"
+COL_TIME = "Time"
+COL_O = "O"
+COL_H = "H"
+COL_L = "L"
+COL_C = "C"
+COL_WEEKDAY_ID = "Weekday_id"
+COL_GOTO_ID = "Goto_id"
+COL_IS_GOTO = "Is_Goto"
+COL_GAP_TYP = "Gap_type"
+COL_DATA_TYP = "Data_type"
+COL_MONTH = "Month"
