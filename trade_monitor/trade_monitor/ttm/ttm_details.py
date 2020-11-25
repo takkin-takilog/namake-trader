@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from PySide2.QtWidgets import QMainWindow
-from PySide2.QtCore import QFile, QDate
+from PySide2.QtCore import QFile, QDate, Qt
 from PySide2.QtUiTools import QUiLoader
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import FMT_QT_DATE_YMD
@@ -22,6 +22,8 @@ class TtmDetails(QMainWindow):
 
         callback = self._on_pushButton_update_clicked
         ui.pushButton_update.clicked.connect(callback)
+        callback = self._on_checkBox_autoupdate_stateChanged
+        ui.checkBox_AutoUpdate.stateChanged.connect(callback)
         callback = self._on_lower_date_changed
         ui.dateEdit_lower.dateChanged.connect(callback)
         callback = self._on_upper_date_changed
@@ -51,6 +53,11 @@ class TtmDetails(QMainWindow):
         self._df_week_goto = df_week_goto
         self._df_month_goto = df_month_goto
 
+        wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
+        wasBlocked2 = self._ui.dateEdit_upper.blockSignals(True)
+        wasBlocked3 = self._ui.spinBox_Step.blockSignals(True)
+        wasBlocked4 = self._ui.ScrollBar_DateRange.blockSignals(True)
+
         self._ui.dateEdit_lower.setDateRange(qdate_l, qdate_u)
         self._ui.dateEdit_lower.setDate(qdate_l)
         self._ui.dateEdit_upper.setDateRange(qdate_l, qdate_u)
@@ -61,8 +68,22 @@ class TtmDetails(QMainWindow):
         self._ui.ScrollBar_DateRange.setMaximum(self._drm.slidable_count)
         self._ui.ScrollBar_DateRange.setValue(self._drm.lower_pos)
 
+        self._ui.dateEdit_lower.blockSignals(wasBlocked1)
+        self._ui.dateEdit_upper.blockSignals(wasBlocked2)
+        self._ui.spinBox_Step.blockSignals(wasBlocked3)
+        self._ui.ScrollBar_DateRange.blockSignals(wasBlocked4)
+
     def _on_pushButton_update_clicked(self, checked):
         self._logger.debug("=========================================")
+
+    def _on_checkBox_autoupdate_stateChanged(self, state):
+        self._logger.debug("---on_checkBox_autoupdate_stateChanged ----------")
+        self._logger.debug("state:{}".format(state))
+
+        if state == Qt.Checked:
+            self._ui.pushButton_update.setEnabled(False)
+        else:
+            self._ui.pushButton_update.setEnabled(True)
 
     def _on_lower_date_changed(self, qdate):
         self._logger.debug("---[1]on_start_date_changed ----------")
@@ -72,10 +93,18 @@ class TtmDetails(QMainWindow):
 
         self._update_dataframe()
 
+        wasBlocked1 = self._ui.dateEdit_upper.blockSignals(True)
+        wasBlocked2 = self._ui.spinBox_Step.blockSignals(True)
+        wasBlocked3 = self._ui.ScrollBar_DateRange.blockSignals(True)
+
         self._ui.dateEdit_upper.setMinimumDate(qdate)
         self._ui.spinBox_Step.setValue(self._drm.count)
         self._ui.ScrollBar_DateRange.setMaximum(self._drm.slidable_count)
         self._ui.ScrollBar_DateRange.setValue(self._drm.lower_pos)
+
+        self._ui.dateEdit_upper.blockSignals(wasBlocked1)
+        self._ui.spinBox_Step.blockSignals(wasBlocked2)
+        self._ui.ScrollBar_DateRange.blockSignals(wasBlocked3)
 
     def _on_upper_date_changed(self, qdate):
         self._logger.debug("---[2]on_end_date_changed ----------")
@@ -85,10 +114,18 @@ class TtmDetails(QMainWindow):
 
         self._update_dataframe()
 
+        wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
+        wasBlocked2 = self._ui.spinBox_Step.blockSignals(True)
+        wasBlocked3 = self._ui.ScrollBar_DateRange.blockSignals(True)
+
         self._ui.dateEdit_lower.setMaximumDate(qdate)
         self._ui.spinBox_Step.setValue(self._drm.count)
         self._ui.ScrollBar_DateRange.setMaximum(self._drm.slidable_count)
         self._ui.ScrollBar_DateRange.setValue(self._drm.lower_pos)
+
+        self._ui.dateEdit_lower.blockSignals(wasBlocked1)
+        self._ui.spinBox_Step.blockSignals(wasBlocked2)
+        self._ui.ScrollBar_DateRange.blockSignals(wasBlocked3)
 
     def _on_spinBox_step_value_changed(self, value):
         self._logger.debug("---[3]on_spinBox_step_value_changed ----------")
@@ -105,12 +142,20 @@ class TtmDetails(QMainWindow):
         qdate_l = QDate.fromString(self._drm.lower_date, FMT_QT_DATE_YMD)
         qdate_u = QDate.fromString(self._drm.upper_date, FMT_QT_DATE_YMD)
 
+        wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
+        wasBlocked2 = self._ui.dateEdit_upper.blockSignals(True)
+        wasBlocked3 = self._ui.ScrollBar_DateRange.blockSignals(True)
+
         self._ui.dateEdit_lower.setMaximumDate(qdate_u)
         self._ui.dateEdit_lower.setDate(qdate_l)
         self._ui.dateEdit_upper.setMinimumDate(qdate_l)
         self._ui.dateEdit_upper.setDate(qdate_u)
         self._ui.ScrollBar_DateRange.setMaximum(self._drm.slidable_count)
         self._ui.ScrollBar_DateRange.setValue(self._drm.lower_pos)
+
+        self._ui.dateEdit_lower.blockSignals(wasBlocked1)
+        self._ui.dateEdit_upper.blockSignals(wasBlocked2)
+        self._ui.ScrollBar_DateRange.blockSignals(wasBlocked3)
 
     def _on_ScrollBar_DateRange_value_changed(self, value):
         self._logger.debug("---[4]on_ScrollBar_DateRange_value_changed ----------")
@@ -123,10 +168,16 @@ class TtmDetails(QMainWindow):
         qdate_l = QDate.fromString(self._drm.lower_date, FMT_QT_DATE_YMD)
         qdate_u = QDate.fromString(self._drm.upper_date, FMT_QT_DATE_YMD)
 
+        wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
+        wasBlocked2 = self._ui.dateEdit_upper.blockSignals(True)
+
         self._ui.dateEdit_lower.setMaximumDate(qdate_u)
         self._ui.dateEdit_lower.setDate(qdate_l)
         self._ui.dateEdit_upper.setMinimumDate(qdate_l)
         self._ui.dateEdit_upper.setDate(qdate_u)
+
+        self._ui.dateEdit_lower.blockSignals(wasBlocked1)
+        self._ui.dateEdit_upper.blockSignals(wasBlocked2)
 
     def _update_dataframe(self):
         self._logger.debug("---[99]update_dataframe ----------")
