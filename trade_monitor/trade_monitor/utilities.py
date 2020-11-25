@@ -214,6 +214,146 @@ class GradientManager():
         return val_out
 
 
+class DateRangeManager():
+
+    def __init__(self):
+        self._date_list = []
+        self._upper_pos = 0
+        self._lower_pos = 0
+
+    def init_date_list(self, date_list):
+
+        self._date_list = sorted(date_list)
+
+        if date_list:
+            self._upper_pos = len(date_list) - 1
+        else:
+            self._upper_pos = 0
+
+        self._lower_pos = 0
+
+    @property
+    def length(self):
+        return len(self._date_list)
+
+    @property
+    def count(self):
+        if self._date_list:
+            count = self._upper_pos - self._lower_pos + 1
+        else:
+            count = 0
+
+        return count
+
+    @property
+    def list_all(self):
+        return self._date_list.copy()
+
+    @property
+    def list_within_range(self):
+        return self._date_list[self._lower_pos:self._upper_pos + 1]
+
+    @property
+    def upper_pos(self):
+        return self._upper_pos
+
+    @property
+    def lower_pos(self):
+        return self._lower_pos
+
+    @property
+    def upper_date(self):
+        return self._date_list[self._upper_pos]
+
+    @property
+    def lower_date(self):
+        return self._date_list[self._lower_pos]
+
+    @property
+    def slidable_count(self):
+        return self.length - self.count
+
+    def slide(self, step):
+
+        if self._date_list:
+            if 0 < step:
+                max_pos = len(self._date_list) - 1
+                updated_pos = self._upper_pos + step
+                if max_pos < updated_pos:
+                    slide_cnt = max_pos - self._upper_pos
+                else:
+                    slide_cnt = step
+            else:
+                updated_pos = self._lower_pos + step
+                if updated_pos < 0:
+                    slide_cnt = 0 - self._lower_pos
+                else:
+                    slide_cnt = step
+
+            self._upper_pos += slide_cnt
+            self._lower_pos += slide_cnt
+
+    def expand_range(self, step, priority_upper=True):
+
+        if self._date_list:
+            if 0 < step:
+                max_pos = len(self._date_list) - 1
+                if priority_upper:
+                    updated_pos = self._upper_pos + step
+                    if max_pos < updated_pos:
+                        self._upper_pos = max_pos
+                        slide_cnt = updated_pos - max_pos
+                        lower_pos = self._lower_pos
+                        lower_pos -= slide_cnt
+                        if lower_pos < 0:
+                            lower_pos = 0
+                        self._lower_pos = lower_pos
+
+                    else:
+                        self._upper_pos += step
+                else:
+                    updated_pos = self._lower_pos - step
+                    if updated_pos < 0:
+                        self._lower_pos = 0
+                        upper_pos = self._upper_pos
+                        upper_pos -= updated_pos
+                        if max_pos < upper_pos:
+                            upper_pos = max_pos
+                        self._upper_pos = upper_pos
+                    else:
+                        self._lower_pos -= step
+
+    def shrink_range(self, step, priority_upper=True):
+
+        if self._date_list:
+            if 0 < step:
+                if self.count <= step:
+                    slide_cnt = self.count - 1
+                else:
+                    slide_cnt = step
+
+                if priority_upper:
+                    self._upper_pos -= slide_cnt
+                else:
+                    self._lower_pos += slide_cnt
+
+    def set_upper(self, date):
+
+        idx = self._date_list.index(date)
+        if idx < self._lower_pos:
+            idx = self._lower_pos
+
+        self._upper_pos = idx
+
+    def set_lower(self, date):
+
+        idx = self._date_list.index(date)
+        if self._upper_pos < idx:
+            idx = self._upper_pos
+
+        self._lower_pos = idx
+
+
 INST_MSG_LIST = [
     MsgInstDict(Inst.INST_USD_JPY, "usdjpy", "USD/JPY", 3, "0.001"),
     MsgInstDict(Inst.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3, "0.001"),

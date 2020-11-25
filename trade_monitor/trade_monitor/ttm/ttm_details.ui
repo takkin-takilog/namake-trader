@@ -72,7 +72,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QDateEdit" name="dateEdit_Start">
+              <widget class="QDateEdit" name="dateEdit_lower">
                <property name="calendarPopup">
                 <bool>true</bool>
                </property>
@@ -90,7 +90,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QDateEdit" name="dateEdit_End">
+              <widget class="QDateEdit" name="dateEdit_upper">
                <property name="calendarPopup">
                 <bool>true</bool>
                </property>
@@ -121,12 +121,18 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_5">
       <item>
-       <widget class="QScrollBar" name="horizontalScrollBar_Range">
+       <widget class="QScrollBar" name="ScrollBar_DateRange">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="maximum">
+         <number>10</number>
+        </property>
+        <property name="singleStep">
+         <number>1</number>
         </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
