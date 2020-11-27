@@ -1,12 +1,14 @@
 import os
 import pandas as pd
-from PySide2.QtWidgets import QMainWindow
+from PySide2.QtWidgets import QMainWindow, QHeaderView
+from PySide2.QtWidgets import QTableWidgetItem
 from PySide2.QtCore import QFile, QDate, Qt
 from PySide2.QtUiTools import QUiLoader
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import FMT_QT_DATE_YMD
 from trade_monitor.utilities import DateRangeManager
 from trade_monitor.ttm.ttm_common import COL_DATE
+from trade_monitor.ttm.candlestick_chart import CandlestickChartTtm
 
 
 class TtmDetails(QMainWindow):
@@ -32,6 +34,12 @@ class TtmDetails(QMainWindow):
         ui.spinBox_Step.valueChanged.connect(callback)
         callback = self._on_ScrollBar_DateRange_value_changed
         ui.ScrollBar_DateRange.valueChanged.connect(callback)
+
+        col_cnt = ui.tableWidget.columnCount()
+        header = ui.tableWidget.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        for i in range(col_cnt - 1):
+            header.setSectionResizeMode(i, QHeaderView.ResizeToContents)
 
         self._drm = DateRangeManager()
         self._logger = utl.get_logger()
@@ -75,6 +83,23 @@ class TtmDetails(QMainWindow):
 
     def _on_pushButton_update_clicked(self, checked):
         self._logger.debug("=========================================")
+
+        row_cnt = self._ui.tableWidget.rowCount()
+        col_cnt = self._ui.tableWidget.columnCount()
+
+        # set Table item
+        for i in range(row_cnt):
+            for j in range(col_cnt - 1):
+                item = QTableWidgetItem(str("[{}][{}]".format(i, j)))
+                item.setTextAlignment(Qt.AlignCenter)
+                self._ui.tableWidget.setItem(i, j, item)
+
+        widget = self._ui.tableWidget.cellWidget(0, 2)
+
+        self._logger.debug("type(widget):{}".format(type(widget)))
+
+        chart = CandlestickChartTtm(widget)
+        item = QTableWidgetItem(widget)
 
     def _on_checkBox_autoupdate_stateChanged(self, state):
         self._logger.debug("---on_checkBox_autoupdate_stateChanged ----------")
