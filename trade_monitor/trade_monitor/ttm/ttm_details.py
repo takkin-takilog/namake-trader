@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from PySide2.QtWidgets import QMainWindow, QHeaderView
+from PySide2.QtWidgets import QWidget, QMainWindow, QHeaderView
 from PySide2.QtWidgets import QTableWidgetItem
 from PySide2.QtCore import QFile, QDate, Qt
 from PySide2.QtUiTools import QUiLoader
@@ -40,6 +40,14 @@ class TtmDetails(QMainWindow):
         header.setSectionResizeMode(QHeaderView.Stretch)
         for i in range(col_cnt - 1):
             header.setSectionResizeMode(i, QHeaderView.ResizeToContents)
+
+        vHeaderView = ui.tableWidget.verticalHeader()
+        hHeaderView = ui.tableWidget.horizontalHeader()
+
+        callback = self._on_vHeaderView_sectionResized
+        vHeaderView.sectionResized.connect(callback)
+        callback = self._on_hHeaderView_sectionResized
+        hHeaderView.sectionResized.connect(callback)
 
         self._drm = DateRangeManager()
         self._logger = utl.get_logger()
@@ -81,8 +89,23 @@ class TtmDetails(QMainWindow):
         self._ui.spinBox_Step.blockSignals(wasBlocked3)
         self._ui.ScrollBar_DateRange.blockSignals(wasBlocked4)
 
+    def _on_vHeaderView_sectionResized(self, index, oldSize, newSize):
+        self._logger.debug("--- on_tableWidget_rowResized ----------")
+        self._logger.debug(" row:{}".format(index))
+        self._logger.debug(" oldHeight:{}".format(oldSize))
+        self._logger.debug(" newHeight:{}".format(newSize))
+
+    def _on_hHeaderView_sectionResized(self, index, oldSize, newSize):
+        self._logger.debug("--- on_tableWidget_columnResized ----------")
+        self._logger.debug(" column:{}".format(index))
+        self._logger.debug(" oldWidth:{}".format(oldSize))
+        self._logger.debug(" newWidth:{}".format(newSize))
+
     def _on_pushButton_update_clicked(self, checked):
         self._logger.debug("=========================================")
+
+        vHeaderView = self._ui.tableWidget.verticalHeader()
+        vHeaderView.setDefaultSectionSize(100)
 
         row_cnt = self._ui.tableWidget.rowCount()
         col_cnt = self._ui.tableWidget.columnCount()
@@ -94,12 +117,11 @@ class TtmDetails(QMainWindow):
                 item.setTextAlignment(Qt.AlignCenter)
                 self._ui.tableWidget.setItem(i, j, item)
 
-        widget = self._ui.tableWidget.cellWidget(0, 2)
+        # self._logger.debug("type(widget):{}".format(type(widget)))
 
-        self._logger.debug("type(widget):{}".format(type(widget)))
-
-        chart = CandlestickChartTtm(widget)
-        item = QTableWidgetItem(widget)
+        widget = QWidget()
+        self._chart = CandlestickChartTtm(widget)
+        self._ui.tableWidget.setCellWidget(0, 2, widget)
 
     def _on_checkBox_autoupdate_stateChanged(self, state):
         self._logger.debug("---on_checkBox_autoupdate_stateChanged ----------")
