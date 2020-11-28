@@ -95,11 +95,26 @@ class TtmDetails(QMainWindow):
         self._logger.debug(" oldHeight:{}".format(oldSize))
         self._logger.debug(" newHeight:{}".format(newSize))
 
+        vHeaderView = self._ui.tableWidget.verticalHeader()
+        vHeaderView.setDefaultSectionSize(newSize)
+
+        col_cnt = self._ui.tableWidget.columnCount()
+        widget = self._ui.tableWidget.cellWidget(index, col_cnt - 1)
+
+        self._logger.debug(" widget.frameSize:{}".format(widget.frameSize()))
+        self._logger.debug(" widget.width:{}".format(widget.width()))
+        self._logger.debug(" widget.height :{}".format(widget.height()))
+
+        self._chart.resize(widget.frameSize())
+
     def _on_hHeaderView_sectionResized(self, index, oldSize, newSize):
         self._logger.debug("--- on_tableWidget_columnResized ----------")
         self._logger.debug(" column:{}".format(index))
         self._logger.debug(" oldWidth:{}".format(oldSize))
         self._logger.debug(" newWidth:{}".format(newSize))
+
+        widget = self._ui.tableWidget.cellWidget(0, index)
+        self._chart.resize(widget.frameSize())
 
     def _on_pushButton_update_clicked(self, checked):
         self._logger.debug("=========================================")
