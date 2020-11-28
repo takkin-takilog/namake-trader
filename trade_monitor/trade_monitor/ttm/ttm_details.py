@@ -7,11 +7,17 @@ from PySide2.QtUiTools import QUiLoader
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import FMT_QT_DATE_YMD
 from trade_monitor.utilities import DateRangeManager
+from trade_monitor.utilities import WEEKDAY_ID_DICT
 from trade_monitor.ttm.ttm_common import COL_DATE
 from trade_monitor.ttm.candlestick_chart import CandlestickChartTtm
 
 
 class TtmDetails(QMainWindow):
+
+    _GOTO_DICT = {
+        True: "T",
+        False: "F"
+    }
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -35,6 +41,10 @@ class TtmDetails(QMainWindow):
         callback = self._on_ScrollBar_DateRange_value_changed
         ui.ScrollBar_DateRange.valueChanged.connect(callback)
 
+        row_cnt = ui.tableWidget.rowCount()
+        for i in reversed(range(row_cnt)):
+            ui.tableWidget.removeRow(i)
+
         col_cnt = ui.tableWidget.columnCount()
         header = ui.tableWidget.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
@@ -43,6 +53,7 @@ class TtmDetails(QMainWindow):
 
         vHeaderView = ui.tableWidget.verticalHeader()
         hHeaderView = ui.tableWidget.horizontalHeader()
+        vHeaderView.setDefaultSectionSize(100)
 
         callback = self._on_vHeaderView_sectionResized
         vHeaderView.sectionResized.connect(callback)
@@ -105,7 +116,7 @@ class TtmDetails(QMainWindow):
         self._logger.debug(" widget.width:{}".format(widget.width()))
         self._logger.debug(" widget.height :{}".format(widget.height()))
 
-        self._chart.resize(widget.frameSize())
+        # self._chart.resize(widget.frameSize())
 
     def _on_hHeaderView_sectionResized(self, index, oldSize, newSize):
         self._logger.debug("--- on_tableWidget_columnResized ----------")
@@ -113,15 +124,42 @@ class TtmDetails(QMainWindow):
         self._logger.debug(" oldWidth:{}".format(oldSize))
         self._logger.debug(" newWidth:{}".format(newSize))
 
-        widget = self._ui.tableWidget.cellWidget(0, index)
-        self._chart.resize(widget.frameSize())
+        #widget = self._ui.tableWidget.cellWidget(0, index)
+        #self._chart.resize(widget.frameSize())
 
     def _on_pushButton_update_clicked(self, checked):
         self._logger.debug("=========================================")
 
-        vHeaderView = self._ui.tableWidget.verticalHeader()
-        vHeaderView.setDefaultSectionSize(100)
+        self._logger.debug("{}".format(self._df_week_goto))
 
+        row_cnt = self._ui.tableWidget.rowCount()
+        for i in reversed(range(row_cnt)):
+            self._ui.tableWidget.removeRow(i)
+
+        ins_no = 0
+        for weekday_id in WEEKDAY_ID_DICT.keys():
+            for is_goto in (False, True):
+                idxloc = (weekday_id, is_goto)
+                if idxloc in self._df_week_goto.index:
+                    df = self._df_week_goto.loc[idxloc]
+                    self._logger.debug("--- [{},{}] ---".format(weekday_id, is_goto))
+                    self._logger.debug("{}".format(df))
+                    self._ui.tableWidget.insertRow(ins_no)
+
+                    item = QTableWidgetItem(WEEKDAY_ID_DICT[weekday_id])
+                    item.setTextAlignment(Qt.AlignCenter)
+                    self._ui.tableWidget.setItem(ins_no, 0, item)
+
+                    item = QTableWidgetItem(self._GOTO_DICT[is_goto])
+                    item.setTextAlignment(Qt.AlignCenter)
+                    self._ui.tableWidget.setItem(ins_no, 1, item)
+
+                    self._ui.tableWidget.setRowHidden(0, True)
+
+                    ins_no += 1
+
+
+        """
         row_cnt = self._ui.tableWidget.rowCount()
         col_cnt = self._ui.tableWidget.columnCount()
 
@@ -137,6 +175,7 @@ class TtmDetails(QMainWindow):
         widget = QWidget()
         self._chart = CandlestickChartTtm(widget)
         self._ui.tableWidget.setCellWidget(0, 2, widget)
+        """
 
     def _on_checkBox_autoupdate_stateChanged(self, state):
         self._logger.debug("---on_checkBox_autoupdate_stateChanged ----------")
