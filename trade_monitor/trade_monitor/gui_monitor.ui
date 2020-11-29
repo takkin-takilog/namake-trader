@@ -416,7 +416,7 @@
       </widget>
       <widget class="QWidget" name="ttm">
        <attribute name="title">
-        <string>中値</string>
+        <string>仲値</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
