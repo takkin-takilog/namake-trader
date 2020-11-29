@@ -85,10 +85,14 @@ class TtmDetails(QMainWindow):
         hHeaderView = ui.tableWidget.horizontalHeader()
         vHeaderView.setDefaultSectionSize(100)
 
+        utl.get_logger().debug("##### 1 ############################")
+
         callback = self._on_vHeaderView_sectionResized
         vHeaderView.sectionResized.connect(callback)
         callback = self._on_hHeaderView_sectionResized
         hHeaderView.sectionResized.connect(callback)
+
+        utl.get_logger().debug("##### 2 ############################")
 
         """
         self._CHECKSTATE_CHARTTYP_DICT = {
@@ -110,6 +114,7 @@ class TtmDetails(QMainWindow):
         self._ui = ui
         self._df_week_goto = pd.DataFrame()
         self._df_month_goto = pd.DataFrame()
+        self._chart_list = []
 
     def set_data(self, df_base, df_week_goto, df_month_goto):
 
@@ -147,30 +152,28 @@ class TtmDetails(QMainWindow):
 
     def _on_vHeaderView_sectionResized(self, index, oldSize, newSize):
         self._logger.debug("--- on_tableWidget_rowResized ----------")
-        self._logger.debug(" row:{}".format(index))
-        self._logger.debug(" oldHeight:{}".format(oldSize))
-        self._logger.debug(" newHeight:{}".format(newSize))
 
         vHeaderView = self._ui.tableWidget.verticalHeader()
         vHeaderView.setDefaultSectionSize(newSize)
 
         col_cnt = self._ui.tableWidget.columnCount()
         widget = self._ui.tableWidget.cellWidget(index, col_cnt - 1)
+        qsize = widget.frameSize()
+        qsize.setHeight(newSize)
 
-        self._logger.debug(" widget.frameSize:{}".format(widget.frameSize()))
-        self._logger.debug(" widget.width:{}".format(widget.width()))
-        self._logger.debug(" widget.height :{}".format(widget.height()))
-
-        # self._chart.resize(widget.frameSize())
+        for chart in self._chart_list:
+            chart.resize(qsize)
 
     def _on_hHeaderView_sectionResized(self, index, oldSize, newSize):
         self._logger.debug("--- on_tableWidget_columnResized ----------")
-        self._logger.debug(" column:{}".format(index))
-        self._logger.debug(" oldWidth:{}".format(oldSize))
-        self._logger.debug(" newWidth:{}".format(newSize))
 
-        # widget = self._ui.tableWidget.cellWidget(0, index)
-        # self._chart.resize(widget.frameSize())
+        row_cnt = self._ui.tableWidget.rowCount()
+        if 0 < row_cnt:
+            widget = self._ui.tableWidget.cellWidget(0, index)
+            qsize = widget.frameSize()
+            qsize.setWidth(newSize)
+            for chart in self._chart_list:
+                chart.resize(qsize)
 
     def _on_pushButton_update_clicked(self, checked):
         self._logger.debug("=========================================")
@@ -301,7 +304,7 @@ class TtmDetails(QMainWindow):
         for i in reversed(range(row_cnt)):
             self._ui.tableWidget.removeRow(i)
 
-        data_mat = []
+        self._chart_list = []
         ins_no = 0
         for weekday_id in WEEKDAY_ID_DICT.keys():
             for is_goto in (False, True):
@@ -331,13 +334,7 @@ class TtmDetails(QMainWindow):
                             widget = QWidget()
                             chart = CandlestickChartTtm(widget)
                             self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
-                            data_row = [weekday_id,
-                                        is_goto,
-                                        self._CHART_TYP_STATISTICS,
-                                        ins_no,
-                                        chart
-                                        ]
-                            data_mat.append(data_row)
+                            self._chart_list.append(chart)
 
                             ins_no += 1
 
@@ -356,47 +353,9 @@ class TtmDetails(QMainWindow):
                             widget = QWidget()
                             chart = CandlestickChartTtm(widget)
                             self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
-                            data_row = [weekday_id,
-                                        is_goto,
-                                        self._CHART_TYP_CUMSUM,
-                                        ins_no,
-                                        chart
-                                        ]
-                            data_mat.append(data_row)
+                            self._chart_list.append(chart)
 
                             ins_no += 1
-
-        df = pd.DataFrame(data_mat,
-                          columns=[self._COL_WEEKDAY_ID,
-                                   self._COL_IS_GOTO,
-                                   self._COL_CHART_TYP,
-                                   self._COL_TBLPOS,
-                                   self._COL_CHART_OBJ])
-
-        self._logger.debug("---------------------")
-        self._logger.debug("{}".format(df))
-
-        self._df_tblpos = df.set_index([self._COL_WEEKDAY_ID,
-                                        self._COL_IS_GOTO,
-                                        self._COL_CHART_TYP])
-
-        """
-        row_cnt = self._ui.tableWidget.rowCount()
-        col_cnt = self._ui.tableWidget.columnCount()
-
-        # set Table item
-        for i in range(row_cnt):
-            for j in range(col_cnt - 1):
-                item = QTableWidgetItem(str("[{}][{}]".format(i, j)))
-                item.setTextAlignment(Qt.AlignCenter)
-                self._ui.tableWidget.setItem(i, j, item)
-
-        # self._logger.debug("type(widget):{}".format(type(widget)))
-
-        widget = QWidget()
-        self._chart = CandlestickChartTtm(widget)
-        self._ui.tableWidget.setCellWidget(0, 2, widget)
-        """
 
     def _load_ui(self, parent):
         loader = QUiLoader()
