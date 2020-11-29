@@ -106,7 +106,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox_3">
         <property name="title">
-         <string>GroupBox</string>
+         <string>Show item</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
@@ -116,7 +116,7 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-             <widget class="QCheckBox" name="checkBox">
+             <widget class="QCheckBox" name="checkBox_ChartTyp_stat">
               <property name="text">
                <string>Statistical chart</string>
               </property>
@@ -126,7 +126,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="checkBox_2">
+             <widget class="QCheckBox" name="checkBox_ChartTyp_cumsum">
               <property name="text">
                <string>CumSum chart</string>
               </property>
@@ -145,7 +145,7 @@
            </property>
            <layout class="QGridLayout" name="gridLayout">
             <item row="1" column="1">
-             <widget class="QCheckBox" name="checkBox_6">
+             <widget class="QCheckBox" name="checkBox_Weekday_thu">
               <property name="text">
                <string>Thu</string>
               </property>
@@ -155,7 +155,7 @@
              </widget>
             </item>
             <item row="0" column="0">
-             <widget class="QCheckBox" name="checkBox_3">
+             <widget class="QCheckBox" name="checkBox_Weekday_mon">
               <property name="text">
                <string>Mon</string>
               </property>
@@ -165,7 +165,7 @@
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QCheckBox" name="checkBox_5">
+             <widget class="QCheckBox" name="checkBox_Weekday_wed">
               <property name="text">
                <string>Wed</string>
               </property>
@@ -175,7 +175,7 @@
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QCheckBox" name="checkBox_4">
+             <widget class="QCheckBox" name="checkBox_Weekday_tue">
               <property name="text">
                <string>Tue</string>
               </property>
@@ -185,7 +185,7 @@
              </widget>
             </item>
             <item row="2" column="0">
-             <widget class="QCheckBox" name="checkBox_7">
+             <widget class="QCheckBox" name="checkBox_Weekday_fri">
               <property name="text">
                <string>Fri</string>
               </property>
@@ -218,25 +218,6 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_5">
       <item>
-       <widget class="QScrollBar" name="ScrollBar_DateRange">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="maximum">
-         <number>10</number>
-        </property>
-        <property name="singleStep">
-         <number>1</number>
-        </property>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QTableWidget" name="tableWidget">
         <property name="focusPolicy">
          <enum>Qt::NoFocus</enum>
@@ -256,6 +237,9 @@
         <property name="columnCount">
          <number>3</number>
         </property>
+        <attribute name="horizontalHeaderVisible">
+         <bool>true</bool>
+        </attribute>
         <attribute name="horizontalHeaderStretchLastSection">
          <bool>true</bool>
         </attribute>
@@ -325,6 +309,25 @@
           <string>333</string>
          </property>
         </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QScrollBar" name="ScrollBar_DateRange">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximum">
+         <number>10</number>
+        </property>
+        <property name="singleStep">
+         <number>1</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
        </widget>
       </item>
      </layout>

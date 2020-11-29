@@ -30,6 +30,8 @@ from trade_monitor.ttm.ttm_common import (COL_DATE,
                                           COL_DATA_TYP,
                                           COL_MONTH
                                           )
+from trade_monitor.ttm.ttm_common import WEEKDAY_ID_DICT
+from trade_monitor.ttm.ttm_common import GOTODAY_ID_DICT
 
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
@@ -39,31 +41,13 @@ pd.options.display.float_format = '{:.3f}'.format
 
 class TtmUi():
 
-    _WEEKDAY_ID_DICT = {
-        0: "Mon",
-        1: "Tue",
-        2: "Wed",
-        3: "Thu",
-        4: "Fri",
-        5: "Sat",
-        6: "Sun"
-    }
-
-    _GOTODAY_ID_DICT = {
-        0: "-",
-        1: "5",
-        2: "10",
-        3: "15",
-        4: "20",
-        5: "25",
-        6: "L/D"
-    }
-
+    """
     _GAP_TYP_DICT = {
         1: "High  - Open",
         2: "Low   - Open",
         3: "Close - Open"
     }
+    """
 
     _TREEVIEW_HEADERS = [
         "Date",
@@ -252,8 +236,8 @@ class TtmUi():
             for index, row in df.iterrows():
                 items = [
                     QStandardItem(index[0]),  # date
-                    QStandardItem(self._WEEKDAY_ID_DICT[index[2]]),
-                    QStandardItem(self._GOTODAY_ID_DICT[index[3]]),
+                    QStandardItem(WEEKDAY_ID_DICT[index[2]]),
+                    QStandardItem(GOTODAY_ID_DICT[index[3]]),
                 ]
                 self._qstd_itm_mdl.appendRow(items)
 

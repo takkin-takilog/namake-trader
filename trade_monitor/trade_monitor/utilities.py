@@ -70,16 +70,6 @@ GRAN_FREQ_DICT = {
     Gran.GRAN_D: "D"
 }
 
-WEEKDAY_ID_DICT = {
-    0: "Mon",
-    1: "Tue",
-    2: "Wed",
-    3: "Thu",
-    4: "Fri",
-    5: "Sat",
-    6: "Sun"
-}
-
 
 class MsgGranDict():
 
