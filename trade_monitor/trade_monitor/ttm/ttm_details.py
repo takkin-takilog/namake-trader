@@ -19,6 +19,15 @@ class TtmDetails(QMainWindow):
         False: "F"
     }
 
+    _COL_WEEKDAY_ID = "Weekday_id"
+    _COL_IS_GOTO = "Is_Goto"
+    _COL_CHART_TYP = "Is_Goto"
+    _COL_TBLPOS = "TblPos_Row"
+
+    # define Chart Type
+    _CHART_TYP_STATISTICS = 0
+    _CHART_TYP_CUMSUM = 1
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -136,6 +145,7 @@ class TtmDetails(QMainWindow):
         for i in reversed(range(row_cnt)):
             self._ui.tableWidget.removeRow(i)
 
+        data_mat = []
         ins_no = 0
         for weekday_id in WEEKDAY_ID_DICT.keys():
             for is_goto in (False, True):
@@ -146,18 +156,47 @@ class TtmDetails(QMainWindow):
                     self._logger.debug("{}".format(df))
                     self._ui.tableWidget.insertRow(ins_no)
 
+                    # set WeekDay
                     item = QTableWidgetItem(WEEKDAY_ID_DICT[weekday_id])
                     item.setTextAlignment(Qt.AlignCenter)
                     self._ui.tableWidget.setItem(ins_no, 0, item)
 
+                    # set GotoDay
                     item = QTableWidgetItem(self._GOTO_DICT[is_goto])
                     item.setTextAlignment(Qt.AlignCenter)
                     self._ui.tableWidget.setItem(ins_no, 1, item)
 
                     self._ui.tableWidget.setRowHidden(0, True)
 
+                    # set Chart Widget
+                    widget = QWidget()
+                    self._chart = CandlestickChartTtm(widget)
+                    self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
+
+                    data_row = [weekday_id,
+                                is_goto,
+                                self._CHART_TYP_STATISTICS,
+                                ins_no
+                                ]
+                    data_mat.append(data_row)
                     ins_no += 1
 
+                    data_row = [weekday_id,
+                                is_goto,
+                                self._CHART_TYP_CUMSUM,
+                                ins_no
+                                ]
+                    data_mat.append(data_row)
+                    ins_no += 1
+
+        df = pd.DataFrame(data_mat,
+                          columns=[self._COL_WEEKDAY_ID,
+                                   self._COL_IS_GOTO,
+                                   self._COL_CHART_TYP,
+                                   self._COL_TBLPOS])
+        self._df_tblpos = df.set_index([self._COL_WEEKDAY_ID,
+                                        self._COL_IS_GOTO,
+                                        self._COL_CHART_TYP])
 
         """
         row_cnt = self._ui.tableWidget.rowCount()
@@ -291,6 +330,9 @@ class TtmDetails(QMainWindow):
 
         mst_list = self._df_base_mst.index.get_level_values(level=COL_DATE)
         self._df_base = self._df_base_mst[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
+
+    def _update_tablewidget_hidden(self):
+
 
     def _load_ui(self, parent):
         loader = QUiLoader()
