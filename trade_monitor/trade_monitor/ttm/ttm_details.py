@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from PySide2.QtWidgets import QWidget, QMainWindow, QHeaderView
-from PySide2.QtWidgets import QTableWidgetItem
+from PySide2.QtWidgets import QTableWidgetItem, QGridLayout
 from PySide2.QtCore import QFile, QDate, Qt
 from PySide2.QtUiTools import QUiLoader
 from trade_monitor import utilities as utl
@@ -85,21 +85,10 @@ class TtmDetails(QMainWindow):
         hHeaderView = ui.tableWidget.horizontalHeader()
         vHeaderView.setDefaultSectionSize(100)
 
-        utl.get_logger().debug("##### 1 ############################")
-
         callback = self._on_vHeaderView_sectionResized
         vHeaderView.sectionResized.connect(callback)
         callback = self._on_hHeaderView_sectionResized
         hHeaderView.sectionResized.connect(callback)
-
-        utl.get_logger().debug("##### 2 ############################")
-
-        """
-        self._CHECKSTATE_CHARTTYP_DICT = {
-            self._CHART_TYP_STATISTICS: ui.checkBox_ChartTyp_stat.checkState,
-            self._CHART_TYP_CUMSUM: ui.checkBox_ChartTyp_cumsum.checkState,
-        }
-        """
 
         self._CHECKSTATE_WEEKDAY_DICT = {
             WEEKDAY_ID_MON: ui.checkBox_Weekday_mon.checkState,
@@ -114,7 +103,6 @@ class TtmDetails(QMainWindow):
         self._ui = ui
         self._df_week_goto = pd.DataFrame()
         self._df_month_goto = pd.DataFrame()
-        self._chart_list = []
 
     def set_data(self, df_base, df_week_goto, df_month_goto):
 
@@ -156,24 +144,8 @@ class TtmDetails(QMainWindow):
         vHeaderView = self._ui.tableWidget.verticalHeader()
         vHeaderView.setDefaultSectionSize(newSize)
 
-        col_cnt = self._ui.tableWidget.columnCount()
-        widget = self._ui.tableWidget.cellWidget(index, col_cnt - 1)
-        qsize = widget.frameSize()
-        qsize.setHeight(newSize)
-
-        for chart in self._chart_list:
-            chart.resize(qsize)
-
     def _on_hHeaderView_sectionResized(self, index, oldSize, newSize):
         self._logger.debug("--- on_tableWidget_columnResized ----------")
-
-        row_cnt = self._ui.tableWidget.rowCount()
-        if 0 < row_cnt:
-            widget = self._ui.tableWidget.cellWidget(0, index)
-            qsize = widget.frameSize()
-            qsize.setWidth(newSize)
-            for chart in self._chart_list:
-                chart.resize(qsize)
 
     def _on_pushButton_update_clicked(self, checked):
         self._logger.debug("=========================================")
@@ -304,15 +276,12 @@ class TtmDetails(QMainWindow):
         for i in reversed(range(row_cnt)):
             self._ui.tableWidget.removeRow(i)
 
-        self._chart_list = []
         ins_no = 0
         for weekday_id in WEEKDAY_ID_DICT.keys():
             for is_goto in (False, True):
                 idxloc = (weekday_id, is_goto)
                 if idxloc in self._df_week_goto.index:
                     df = self._df_week_goto.loc[idxloc]
-                    self._logger.debug("--- [{},{}] ---".format(weekday_id, is_goto))
-                    self._logger.debug("{}".format(df))
 
                     checkState = self._CHECKSTATE_WEEKDAY_DICT[weekday_id]
                     wd_stat = checkState()
@@ -332,9 +301,11 @@ class TtmDetails(QMainWindow):
                             self._ui.tableWidget.setItem(ins_no, 1, item_gt)
 
                             widget = QWidget()
+                            lay = QGridLayout(widget)
+                            lay.setMargin(0)
                             chart = CandlestickChartTtm(widget)
+                            lay.addWidget(chart, 0, 0, 1, 1)
                             self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
-                            self._chart_list.append(chart)
 
                             ins_no += 1
 
@@ -351,9 +322,11 @@ class TtmDetails(QMainWindow):
                             self._ui.tableWidget.setItem(ins_no, 1, item_gt)
 
                             widget = QWidget()
+                            lay = QGridLayout(widget)
+                            lay.setMargin(0)
                             chart = CandlestickChartTtm(widget)
+                            lay.addWidget(chart, 0, 0, 1, 1)
                             self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
-                            self._chart_list.append(chart)
 
                             ins_no += 1
 
