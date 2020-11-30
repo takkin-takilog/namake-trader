@@ -155,7 +155,7 @@ class GuiMonitor(QMainWindow):
         elif tab_index == 1:
             self._gapfill_ui.resize_chart_widget()
         elif tab_index == 2:
-            self._ttm_ui.resize_chart_widget()
+            pass
 
     def _on_timeout_1s(self) -> None:
 

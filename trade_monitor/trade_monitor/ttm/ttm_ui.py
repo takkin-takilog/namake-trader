@@ -1,7 +1,7 @@
 import pandas as pd
 import datetime as dt
 
-from PySide2.QtWidgets import QHeaderView
+from PySide2.QtWidgets import QHeaderView, QGridLayout
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtCore import QItemSelectionModel
 
@@ -112,7 +112,10 @@ class TtmUi():
         header = ui.treeView_ttm.header()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
+        lay = QGridLayout(ui.widget_ttm_chart1m)
+        lay.setMargin(0)
         chart = CandlestickChartTtm(ui.widget_ttm_chart1m)
+        lay.addWidget(chart, 0, 0, 1, 1)
 
         # Create service client "ttm_monitor"
         srv_type = TtmMntSrv
@@ -285,10 +288,6 @@ class TtmUi():
         self._widget_details.set_data(self._df_base,
                                       self._df_week_goto,
                                       self._df_month_goto)
-
-    def resize_chart_widget(self):
-        fs = self._ui.widget_ttm_chart1m.frameSize()
-        self._chart.resize(fs)
 
     def __make_statistics_dataframe(self,
                                     df_base: pd.DataFrame,
