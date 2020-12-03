@@ -1,6 +1,7 @@
 from typing import TypeVar
 from typing import Tuple
 import datetime as dt
+from requests.exceptions import ConnectionError
 import rclpy
 from rclpy.node import Node
 from oandapyV20 import API
@@ -128,13 +129,17 @@ class BaseService(Node):
         apirsp = None
         try:
             apirsp = self._api.request(endpoint)
-        except ConnectionError as err:
-            self._logger.error("!!!!!!!!!! ConnectionError !!!!!!!!!!")
-            self._logger.error("{}".format(err))
-            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
         except V20Error as err:
-            self._logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
+            self._logger.error("{:!^50}".format(" V20Error "))
             self._logger.error("{}".format(err))
             rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
+        except ConnectionError as err:
+            self._logger.error("{:!^50}".format(" ConnectionError "))
+            self._logger.error("{}".format(err))
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+        except Exception as err:
+            self._logger.error("{:!^50}".format(" OthersError "))
+            self._logger.error("{}".format(err))
+            rsp.frc_msg.reason_code = frc.REASON_OTHERS
 
         return apirsp, rsp

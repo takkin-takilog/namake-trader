@@ -1,5 +1,6 @@
 from typing import TypeVar
 import requests
+from requests.exceptions import ConnectionError
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
@@ -128,11 +129,17 @@ class PricingStreamPublisher(Node):
         if self._act_flg:
             try:
                 self._request()
-            except V20Error as e:
-                self._logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
-                self._logger.error("{}".format(e))
-            except StreamTerminated as e:
-                self._logger.debug("Stream Terminated: {}".format(e))
+            except StreamTerminated as err:
+                self._logger.debug("Stream Terminated: {}".format(err))
+            except V20Error as err:
+                self._logger.error("{:!^50}".format(" V20Error "))
+                self._logger.error("{}".format(err))
+            except ConnectionError as err:
+                self._logger.error("{:!^50}".format(" ConnectionError "))
+                self._logger.error("{}".format(err))
+            except Exception as err:
+                self._logger.error("{:!^50}".format(" OthersError "))
+                self._logger.error("{}".format(err))
 
     def _on_subs_act_flg(self, msg: MsgType) -> None:
         if msg.data:

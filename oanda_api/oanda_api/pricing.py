@@ -1,5 +1,6 @@
 from typing import TypeVar
 import requests
+from requests.exceptions import ConnectionError
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
@@ -123,9 +124,15 @@ class PricingPublisher(Node):
         while self._act_flg:
             try:
                 self._request()
-            except V20Error as e:
-                self._logger.error("!!!!!!!!!! V20Error !!!!!!!!!!")
-                self._logger.error("{}".format(e))
+            except V20Error as err:
+                self._logger.error("{:!^50}".format(" V20Error "))
+                self._logger.error("{}".format(err))
+            except ConnectionError as err:
+                self._logger.error("{:!^50}".format(" ConnectionError "))
+                self._logger.error("{}".format(err))
+            except Exception as err:
+                self._logger.error("{:!^50}".format(" OthersError "))
+                self._logger.error("{}".format(err))
 
             rclpy.spin_once(self, timeout_sec=0)
 
