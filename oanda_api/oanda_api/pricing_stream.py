@@ -1,6 +1,6 @@
 from typing import TypeVar
 import requests
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, ReadTimeout
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
@@ -30,6 +30,7 @@ class PricingStreamPublisher(Node):
         PRMNM_ENA_INST_USDJPY = ENA_INST + "usdjpy"
         PRMNM_ENA_INST_EURJPY = ENA_INST + "eurjpy"
         PRMNM_ENA_INST_EURUSD = ENA_INST + "eurusd"
+        PRMNM_CONN_TIMEOUT = "connection_timeout"
 
         TPCNM_PRICING_USDJPY = "pricing_usdjpy"
         TPCNM_PRICING_EURJPY = "pricing_eurjpy"
@@ -50,6 +51,7 @@ class PricingStreamPublisher(Node):
         self.declare_parameter(PRMNM_ENA_INST_USDJPY)
         self.declare_parameter(PRMNM_ENA_INST_EURJPY)
         self.declare_parameter(PRMNM_ENA_INST_EURUSD)
+        self.declare_parameter(PRMNM_CONN_TIMEOUT)
 
         USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
         if USE_ENV_LIVE:
@@ -61,6 +63,7 @@ class PricingStreamPublisher(Node):
         ENA_INST_USDJPY = self.get_parameter(PRMNM_ENA_INST_USDJPY).value
         ENA_INST_EURJPY = self.get_parameter(PRMNM_ENA_INST_EURJPY).value
         ENA_INST_EURUSD = self.get_parameter(PRMNM_ENA_INST_EURUSD).value
+        CONN_TIMEOUT = self.get_parameter(PRMNM_CONN_TIMEOUT).value
 
         logger.debug("[Param]Use Env Live:[{}]".format(USE_ENV_LIVE))
         logger.debug("[Param]Account Number:[{}]".format(ACCOUNT_NUMBER))
@@ -69,6 +72,7 @@ class PricingStreamPublisher(Node):
         logger.debug("        USD/JPY:[{}]".format(ENA_INST_USDJPY))
         logger.debug("        EUR/JPY:[{}]".format(ENA_INST_EURJPY))
         logger.debug("        EUR/USD:[{}]".format(ENA_INST_EURUSD))
+        logger.debug("[Param]Connection Timeout:[{}]".format(CONN_TIMEOUT))
 
         # Declare publisher and subscriber
         qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
@@ -115,8 +119,15 @@ class PricingStreamPublisher(Node):
         else:
             environment = "practice"
 
+        if CONN_TIMEOUT <= 0:
+            request_params = None
+            logger.debug("Not set Timeout")
+        else:
+            request_params = {"timeout": CONN_TIMEOUT}
+
         self._api = API(access_token=ACCESS_TOKEN,
-                        environment=environment)
+                        environment=environment,
+                        request_params=request_params)
 
         instruments = ",".join(inst_name_list)
         params = {"instruments": instruments}
@@ -136,6 +147,9 @@ class PricingStreamPublisher(Node):
                 self._logger.error("{}".format(err))
             except ConnectionError as err:
                 self._logger.error("{:!^50}".format(" ConnectionError "))
+                self._logger.error("{}".format(err))
+            except ReadTimeout as err:
+                self._logger.error("{:!^50}".format(" ReadTimeout "))
                 self._logger.error("{}".format(err))
             except Exception as err:
                 self._logger.error("{:!^50}".format(" OthersError "))

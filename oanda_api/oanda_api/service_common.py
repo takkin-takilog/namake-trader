@@ -1,7 +1,7 @@
 from typing import TypeVar
 from typing import Tuple
 import datetime as dt
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, ReadTimeout
 import rclpy
 from rclpy.node import Node
 from oandapyV20 import API
@@ -93,6 +93,7 @@ class BaseService(Node):
         PRMNM_PRAC_ACCESS_TOKEN = ENV_PRAC + "access_token"
         ENV_LIVE = "env_live."
         PRMNM_LIVE_ACCESS_TOKEN = ENV_LIVE + "access_token"
+        PRMNM_CONN_TIMEOUT = "connection_timeout"
 
         # Set logger lebel
         self._logger = super().get_logger()
@@ -102,23 +103,33 @@ class BaseService(Node):
         self.declare_parameter(PRMNM_USE_ENV_LIVE)
         self.declare_parameter(PRMNM_PRAC_ACCESS_TOKEN)
         self.declare_parameter(PRMNM_LIVE_ACCESS_TOKEN)
+        self.declare_parameter(PRMNM_CONN_TIMEOUT)
 
         USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
         if USE_ENV_LIVE:
             ACCESS_TOKEN = self.get_parameter(PRMNM_LIVE_ACCESS_TOKEN).value
         else:
             ACCESS_TOKEN = self.get_parameter(PRMNM_PRAC_ACCESS_TOKEN).value
+        CONN_TIMEOUT = self.get_parameter(PRMNM_CONN_TIMEOUT).value
 
         self._logger.debug("[Param]Use Env Live:[{}]".format(USE_ENV_LIVE))
         self._logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
+        self._logger.debug("[Param]Connection Timeout:[{}]".format(CONN_TIMEOUT))
 
         if USE_ENV_LIVE:
             environment = "live"
         else:
             environment = "practice"
 
+        if CONN_TIMEOUT <= 0:
+            request_params = None
+            self._logger.debug("Not set Timeout")
+        else:
+            request_params = {"timeout": CONN_TIMEOUT}
+
         self._api = API(access_token=ACCESS_TOKEN,
-                        environment=environment)
+                        environment=environment,
+                        request_params=request_params)
 
     def _request_api(self,
                      endpoint: EndPoint,
@@ -135,6 +146,10 @@ class BaseService(Node):
             rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
         except ConnectionError as err:
             self._logger.error("{:!^50}".format(" ConnectionError "))
+            self._logger.error("{}".format(err))
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+        except ReadTimeout as err:
+            self._logger.error("{:!^50}".format(" ReadTimeout "))
             self._logger.error("{}".format(err))
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
         except Exception as err:
