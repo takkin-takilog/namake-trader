@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>737</width>
-    <height>670</height>
+    <height>748</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -129,6 +129,35 @@
              <widget class="QCheckBox" name="checkBox_ChartTyp_cumsum">
               <property name="text">
                <string>CumSum chart</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_6">
+           <property name="title">
+            <string>GotoDay</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_2">
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="checkBox_GotoDay_true">
+              <property name="text">
+               <string>Goto-day</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QCheckBox" name="checkBox_GotoDay_false">
+              <property name="text">
+               <string>Not Goto-day</string>
               </property>
               <property name="checked">
                <bool>true</bool>

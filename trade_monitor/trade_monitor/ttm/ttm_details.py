@@ -8,21 +8,15 @@ from trade_monitor import utilities as utl
 from trade_monitor.utilities import FMT_QT_DATE_YMD
 from trade_monitor.utilities import DateRangeManager
 from trade_monitor.ttm.ttm_common import COL_DATE
-from trade_monitor.ttm.ttm_common import WEEKDAY_ID_DICT
 from trade_monitor.ttm.ttm_common import (WEEKDAY_ID_MON,
                                           WEEKDAY_ID_TUE,
                                           WEEKDAY_ID_WED,
                                           WEEKDAY_ID_THU,
                                           WEEKDAY_ID_FRI)
-from trade_monitor.ttm.candlestick_chart import CandlestickChartTtm
+from trade_monitor.ttm.candlestick_chart import LineChartTtm
 
 
 class TtmDetails(QMainWindow):
-
-    _GOTO_DICT = {
-        True: "T",
-        False: "F"
-    }
 
     _COL_WEEKDAY_ID = "Weekday_id"
     _COL_IS_GOTO = "Is_Goto"
@@ -30,9 +24,31 @@ class TtmDetails(QMainWindow):
     _COL_TBLPOS = "TblPos_Row"
     _COL_CHART_OBJ = "Chart_Obj"
 
+    # define Goto-Day ID
+    _GOTODAY_ID_T = 0
+    _GOTODAY_ID_F = 1
+
     # define Chart Type
     _CHART_TYP_STATISTICS = 0
     _CHART_TYP_CUMSUM = 1
+
+    _WEEKDAY_ID_DICT = {
+        WEEKDAY_ID_MON: "Mon",
+        WEEKDAY_ID_TUE: "Tue",
+        WEEKDAY_ID_WED: "Wed",
+        WEEKDAY_ID_THU: "Thu",
+        WEEKDAY_ID_FRI: "Fri",
+    }
+
+    _GOTO_ID_DICT = {
+        _GOTODAY_ID_T: "T",
+        _GOTODAY_ID_F: "F"
+    }
+
+    _CHARTTYP_LIST = {
+        _CHART_TYP_STATISTICS,
+        _CHART_TYP_CUMSUM
+    }
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -60,6 +76,12 @@ class TtmDetails(QMainWindow):
         ui.checkBox_ChartTyp_stat.stateChanged.connect(callback)
         callback = self._on_checkBox_ShowItem_stateChanged
         ui.checkBox_ChartTyp_cumsum.stateChanged.connect(callback)
+
+        callback = self._on_checkBox_ShowItem_stateChanged
+        ui.checkBox_GotoDay_true.stateChanged.connect(callback)
+        callback = self._on_checkBox_ShowItem_stateChanged
+        ui.checkBox_GotoDay_false.stateChanged.connect(callback)
+
         callback = self._on_checkBox_ShowItem_stateChanged
         ui.checkBox_Weekday_mon.stateChanged.connect(callback)
         callback = self._on_checkBox_ShowItem_stateChanged
@@ -96,6 +118,16 @@ class TtmDetails(QMainWindow):
             WEEKDAY_ID_WED: ui.checkBox_Weekday_wed.checkState,
             WEEKDAY_ID_THU: ui.checkBox_Weekday_thu.checkState,
             WEEKDAY_ID_FRI: ui.checkBox_Weekday_fri.checkState
+        }
+
+        self._CHECKSTATE_GOTODAY_DICT = {
+            self._GOTODAY_ID_T: ui.checkBox_GotoDay_true.checkState,
+            self._GOTODAY_ID_F: ui.checkBox_GotoDay_false.checkState,
+        }
+
+        self._CHECKSTATE_CHARTTYP_DICT = {
+            self._CHART_TYP_STATISTICS: ui.checkBox_ChartTyp_stat.checkState,
+            self._CHART_TYP_CUMSUM: ui.checkBox_ChartTyp_cumsum.checkState,
         }
 
         self._drm = DateRangeManager()
@@ -277,58 +309,51 @@ class TtmDetails(QMainWindow):
             self._ui.tableWidget.removeRow(i)
 
         ins_no = 0
-        for weekday_id in WEEKDAY_ID_DICT.keys():
-            for is_goto in (False, True):
-                idxloc = (weekday_id, is_goto)
-                if idxloc in self._df_week_goto.index:
-                    df = self._df_week_goto.loc[idxloc]
+        for weekday_id in self._WEEKDAY_ID_DICT.keys():
+            checkState = self._CHECKSTATE_WEEKDAY_DICT[weekday_id]
+            wd_stat = checkState()
+            if wd_stat != Qt.Checked:
+                continue
 
-                    checkState = self._CHECKSTATE_WEEKDAY_DICT[weekday_id]
-                    wd_stat = checkState()
+            for gotoday_id in self._GOTO_ID_DICT.keys():
+                checkState = self._CHECKSTATE_GOTODAY_DICT[gotoday_id]
+                gd_stat = checkState()
+                if gd_stat != Qt.Checked:
+                    continue
 
-                    if wd_stat == Qt.Checked:
+                for charttyp_id in self._CHARTTYP_LIST:
+                    checkState = self._CHECKSTATE_CHARTTYP_DICT[charttyp_id]
+                    gd_stat = checkState()
+                    if gd_stat != Qt.Checked:
+                        continue
 
-                        # ---------- set Statistical chart ----------
-                        ct_stat = self._ui.checkBox_ChartTyp_stat.checkState()
+                    if gotoday_id == self._GOTODAY_ID_T:
+                        is_goto = True
+                    else:
+                        is_goto = False
 
-                        if ct_stat == Qt.Checked:
-                            self._ui.tableWidget.insertRow(ins_no)
-                            item_wd = QTableWidgetItem(WEEKDAY_ID_DICT[weekday_id])
-                            item_wd.setTextAlignment(Qt.AlignCenter)
-                            self._ui.tableWidget.setItem(ins_no, 0, item_wd)
-                            item_gt = QTableWidgetItem(self._GOTO_DICT[is_goto])
-                            item_gt.setTextAlignment(Qt.AlignCenter)
-                            self._ui.tableWidget.setItem(ins_no, 1, item_gt)
+                    idxloc = (weekday_id, is_goto)
+                    if idxloc in self._df_week_goto.index:
+                        df = self._df_week_goto.loc[idxloc]
 
-                            widget = QWidget()
-                            lay = QGridLayout(widget)
-                            lay.setMargin(0)
-                            chart = CandlestickChartTtm(widget)
-                            lay.addWidget(chart, 0, 0, 1, 1)
-                            self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
+                        self._ui.tableWidget.insertRow(ins_no)
 
-                            ins_no += 1
+                        item_wd = QTableWidgetItem(self._WEEKDAY_ID_DICT[weekday_id])
+                        item_wd.setTextAlignment(Qt.AlignCenter)
+                        self._ui.tableWidget.setItem(ins_no, 0, item_wd)
 
-                        # ---------- set CumSum chart ----------
-                        ct_stat = self._ui.checkBox_ChartTyp_cumsum.checkState()
+                        item_gt = QTableWidgetItem(self._GOTO_ID_DICT[gotoday_id])
+                        item_gt.setTextAlignment(Qt.AlignCenter)
+                        self._ui.tableWidget.setItem(ins_no, 1, item_gt)
 
-                        if ct_stat == Qt.Checked:
-                            self._ui.tableWidget.insertRow(ins_no)
-                            item_wd = QTableWidgetItem(WEEKDAY_ID_DICT[weekday_id])
-                            item_wd.setTextAlignment(Qt.AlignCenter)
-                            self._ui.tableWidget.setItem(ins_no, 0, item_wd)
-                            item_gt = QTableWidgetItem(self._GOTO_DICT[is_goto])
-                            item_gt.setTextAlignment(Qt.AlignCenter)
-                            self._ui.tableWidget.setItem(ins_no, 1, item_gt)
+                        widget = QWidget()
+                        lay = QGridLayout(widget)
+                        lay.setMargin(0)
+                        chart = LineChartTtm(widget)
+                        lay.addWidget(chart, 0, 0, 1, 1)
+                        self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
 
-                            widget = QWidget()
-                            lay = QGridLayout(widget)
-                            lay.setMargin(0)
-                            chart = CandlestickChartTtm(widget)
-                            lay.addWidget(chart, 0, 0, 1, 1)
-                            self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
-
-                            ins_no += 1
+                        ins_no += 1
 
     def _load_ui(self, parent):
         loader = QUiLoader()
