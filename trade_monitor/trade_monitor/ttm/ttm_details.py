@@ -4,6 +4,7 @@ from PySide2.QtWidgets import QWidget, QMainWindow, QHeaderView
 from PySide2.QtWidgets import QTableWidgetItem, QGridLayout
 from PySide2.QtCore import QFile, QDate, Qt
 from PySide2.QtUiTools import QUiLoader
+from PySide2.QtCharts import QtCharts
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import FMT_QT_DATE_YMD
 from trade_monitor.utilities import DateRangeManager
@@ -14,6 +15,23 @@ from trade_monitor.ttm.ttm_common import (WEEKDAY_ID_MON,
                                           WEEKDAY_ID_THU,
                                           WEEKDAY_ID_FRI)
 from trade_monitor.ttm.candlestick_chart import LineChartTtm
+
+
+class ChartMng():
+
+    def __init__(self,
+                 df: pd.DataFrame,
+                 chart: QtCharts.QChart):
+        self._df = df
+        self._chart = chart
+
+        @property
+        def df(self):
+            return self._df
+
+        @property
+        def chart(self):
+            return self._chart
 
 
 class TtmDetails(QMainWindow):
@@ -133,10 +151,15 @@ class TtmDetails(QMainWindow):
         self._drm = DateRangeManager()
         self._logger = utl.get_logger()
         self._ui = ui
-        self._df_week_goto = pd.DataFrame()
+        self._df_base_mst = pd.DataFrame()
+        self._df_base = pd.DataFrame()
+        self._df_wg = pd.DataFrame()
         self._df_month_goto = pd.DataFrame()
+        self._gran_id = None
+        self._decimal_digit = None
+        self._chartmng_list = []
 
-    def set_data(self, df_base, df_week_goto, df_month_goto):
+    def set_data(self, df_base, df_week_goto, df_month_goto, gran_id, decimal_digit):
 
         date_list = list(df_base.groupby(COL_DATE).groups.keys())
 
@@ -145,10 +168,22 @@ class TtmDetails(QMainWindow):
         qdate_l = QDate.fromString(self._drm.lower_date, FMT_QT_DATE_YMD)
         qdate_u = QDate.fromString(self._drm.upper_date, FMT_QT_DATE_YMD)
 
+        """
+        TODO:
+        level = [COL_WEEKDAY_ID,
+                 COL_IS_GOTO,
+                 COL_GAP_TYP,
+                 ]
+        df_week_goto = self.__make_statistics_dataframe(df_base, level)
+        """
+
+
         self._df_base_mst = df_base
         self._df_base = df_base
-        self._df_week_goto = df_week_goto
+        self._df_wg = df_week_goto
         self._df_month_goto = df_month_goto
+        self._gran_id = gran_id
+        self._decimal_digit = decimal_digit
 
         wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
         wasBlocked2 = self._ui.dateEdit_upper.blockSignals(True)
@@ -198,7 +233,9 @@ class TtmDetails(QMainWindow):
         sdt_str = qdate.toString(FMT_QT_DATE_YMD)
         self._drm.set_lower(sdt_str)
 
-        self._update_dataframe()
+        stat = self._ui.checkBox_AutoUpdate.checkState()
+        if stat == Qt.Checked:
+            self._update_dataframe()
 
         wasBlocked1 = self._ui.dateEdit_upper.blockSignals(True)
         wasBlocked2 = self._ui.spinBox_Step.blockSignals(True)
@@ -302,8 +339,23 @@ class TtmDetails(QMainWindow):
         mst_list = self._df_base_mst.index.get_level_values(level=COL_DATE)
         self._df_base = self._df_base_mst[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
 
+        """
+        mst_list = self._df_wg_mst.index.get_level_values(level=COL_DATE)
+        self._df_wg = self._df_wg_mst[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
+        """
+
+        for chartmng in self._chartmng_list:
+            df = chartmng.df[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
+            chartmng.chart.update(df, self._gran_id, self._decimal_digit)
+
+        """
+        mst_list = self._df_month_goto_mst.index.get_level_values(level=COL_DATE)
+        self._df_month_goto = self._df_month_goto_mst[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
+        """
+
     def _generate_tableWidget(self):
 
+        self._chartmng_list = []
         row_cnt = self._ui.tableWidget.rowCount()
         for i in reversed(range(row_cnt)):
             self._ui.tableWidget.removeRow(i)
@@ -333,8 +385,8 @@ class TtmDetails(QMainWindow):
                         is_goto = False
 
                     idxloc = (weekday_id, is_goto)
-                    if idxloc in self._df_week_goto.index:
-                        df = self._df_week_goto.loc[idxloc]
+                    if idxloc in self._df_wg.index:
+                        df_wg = self._df_wg.loc[idxloc]
 
                         self._ui.tableWidget.insertRow(ins_no)
 
@@ -352,6 +404,9 @@ class TtmDetails(QMainWindow):
                         chart = LineChartTtm(widget)
                         lay.addWidget(chart, 0, 0, 1, 1)
                         self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
+
+                        cm = ChartMng(df_wg, chart)
+                        self._chartmng_list.append(cm)
 
                         ins_no += 1
 

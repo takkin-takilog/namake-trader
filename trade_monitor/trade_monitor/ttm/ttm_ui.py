@@ -282,12 +282,16 @@ class TtmUi():
     def _on_ttm_details_clicked(self):
 
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
+        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+
         #self._widget_htmap.set_param(inst_idx, self._df_param)
         self._widget_details.show()
         self._widget_details.init_resize()
         self._widget_details.set_data(self._df_base,
                                       self._df_week_goto,
-                                      self._df_month_goto)
+                                      self._df_month_goto,
+                                      self._gran_id,
+                                      decimal_digit)
 
     def __make_statistics_dataframe(self,
                                     df_base: pd.DataFrame,
