@@ -138,7 +138,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
     COL_NAME_LO = "low"
     COL_NAME_CL = "close"
 
-    def __init__(self, widget):
+    def __init__(self, widget=None):
         super().__init__(widget)
 
         self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
@@ -237,8 +237,6 @@ class BaseCandlestickChart(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
-        self.resize(widget.frameSize())
-
         self._ser_cdl = ser_cdl
         self._decimal_digit = 0
         self._freq = "D"
@@ -325,7 +323,7 @@ class BaseLineChart(QtCharts.QChartView):
     COL_NAME_LO = "low"
     COL_NAME_CL = "close"
 
-    def __init__(self, widget):
+    def __init__(self, widget=None):
         super().__init__(widget)
 
         self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
@@ -421,8 +419,6 @@ class BaseLineChart(QtCharts.QChartView):
         self._callout_hl.setPen(pen)
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
-
-        self.resize(widget.frameSize())
 
         self._ser_line = ser_line
         self._decimal_digit = 0

@@ -18,7 +18,7 @@ from trade_monitor.ttm.ttm_common import (DATA_TYP_HO_MEAN,
 
 class CandlestickChartTtm(BaseCandlestickChart):
 
-    def __init__(self, widget):
+    def __init__(self, widget=None):
         super().__init__(widget)
 
         color = QColor(Qt.blue)
@@ -102,7 +102,7 @@ class CandlestickChartTtm(BaseCandlestickChart):
 
 class LineChartTtm(BaseLineChart):
 
-    def __init__(self, widget):
+    def __init__(self, widget=None):
         super().__init__(widget)
 
         self._CALLOUT_DT_FMT = "hh:mm"
@@ -172,7 +172,7 @@ class LineChartTtm(BaseLineChart):
 
 class LineChartTtmStatistics(LineChartTtm):
 
-    def __init__(self, widget):
+    def __init__(self, widget=None):
         super().__init__(widget)
 
     def update(self, df, gran_id, decimal_digit):
@@ -200,7 +200,7 @@ class LineChartTtmStatistics(LineChartTtm):
 
 class LineChartTtmCumsum(LineChartTtm):
 
-    def __init__(self, widget):
+    def __init__(self, widget=None):
         super().__init__(widget)
 
     def update(self, df, gran_id, decimal_digit):

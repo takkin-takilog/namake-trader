@@ -429,20 +429,20 @@ class TtmDetails(QMainWindow):
                         item_gt.setTextAlignment(Qt.AlignCenter)
                         self._ui.tableWidget.setItem(ins_no, 1, item_gt)
 
-                        widget = QWidget()
-                        lay = QGridLayout(widget)
-                        lay.setMargin(0)
+                        # widget = QWidget()
+                        #lay = QGridLayout(widget)
+                        #lay.setMargin(0)
 
                         if charttyp_id == self._CHART_TYP_STATISTICS:
-                            chart = LineChartTtmStatistics(widget)
+                            chart = LineChartTtmStatistics()
                         else:
-                            chart = LineChartTtmCumsum(widget)
+                            chart = LineChartTtmCumsum()
 
                         chart.set_max_y(max_y)
                         chart.set_min_y(-max_y)
                         chart.update(df, self._gran_id, self._decimal_digit)
-                        lay.addWidget(chart, 0, 0, 1, 1)
-                        self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
+                        #lay.addWidget(chart, 0, 0, 1, 1)
+                        self._ui.tableWidget.setCellWidget(ins_no, 2, chart)
 
                         ins_no += 1
 
