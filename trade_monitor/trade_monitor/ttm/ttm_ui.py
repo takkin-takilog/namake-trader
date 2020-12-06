@@ -30,8 +30,10 @@ from trade_monitor.ttm.ttm_common import (COL_DATE,
                                           COL_DATA_TYP,
                                           COL_MONTH
                                           )
+from trade_monitor.ttm.ttm_common import GAP_TYP_CO
 from trade_monitor.ttm.ttm_common import WEEKDAY_ID_DICT
 from trade_monitor.ttm.ttm_common import GOTODAY_ID_DICT
+from trade_monitor.ttm import ttm_common as ttmcom
 
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
@@ -56,6 +58,7 @@ class TtmUi():
         "Data type"
     ]
 
+    """
     _COL_DATE = "Date"
     _COL_TIME = "Time"
     _COL_O = "O"
@@ -80,6 +83,7 @@ class TtmUi():
     _DATA_TYP_CO_MEAN = 5   # Mean of Close - Open price
     _DATA_TYP_CO_STD = 6    # Std of Close - Open price
     _DATA_TYP_CO_CSUM = 7   # Cumsum of Close - Open price
+    """
 
     _CDL_COLUMNS = [CandlestickChartTtm.COL_NAME_OP,
                     CandlestickChartTtm.COL_NAME_HI,
@@ -219,22 +223,31 @@ class TtmUi():
             df_base.set_index(index, inplace=True)
 
             # ---------- compose Table "week_goto" ----------
+            """
             level = [COL_WEEKDAY_ID,
                      COL_IS_GOTO,
                      COL_GAP_TYP,
                      ]
-
             df_week_goto = self.__make_statistics_dataframe(df_base, level)
+            """
+            """
+            df_week_goto = ttmcom.convert_base2weekgoto(df_base)
+            """
 
             # ---------- compose Table "month_goto" ----------
+            """
             level = [COL_MONTH,
                      COL_GOTO_ID,
                      COL_GAP_TYP,
                      ]
             df_month_goto = self.__make_statistics_dataframe(df_base, level)
+            """
+            """
+            df_month_goto = ttmcom.convert_base2monthgoto(df_base)
+            """
 
             # ---------- compose Tree View ----------
-            flg = df_base.index.get_level_values(COL_GAP_TYP) == self._GAP_TYP_CO
+            flg = df_base.index.get_level_values(COL_GAP_TYP) == GAP_TYP_CO
             df = df_base[flg]
             for index, row in df.iterrows():
                 items = [
@@ -249,8 +262,10 @@ class TtmUi():
 
             self._df_ohlc = df_ohlc
             self._df_base = df_base
+            """
             self._df_week_goto = df_week_goto
             self._df_month_goto = df_month_goto
+            """
 
     def _on_selection_ttm_changed(self, selected, _):
 
@@ -288,11 +303,12 @@ class TtmUi():
         self._widget_details.show()
         self._widget_details.init_resize()
         self._widget_details.set_data(self._df_base,
-                                      self._df_week_goto,
-                                      self._df_month_goto,
+                                      # self._df_week_goto,
+                                      # self._df_month_goto,
                                       self._gran_id,
                                       decimal_digit)
 
+    """
     def __make_statistics_dataframe(self,
                                     df_base: pd.DataFrame,
                                     level: list
@@ -338,3 +354,4 @@ class TtmUi():
 
         # concat "df_mean" and "df_std" and "df_csum"
         return pd.concat([df_mean, df_std, df_csum]).sort_index()
+        """

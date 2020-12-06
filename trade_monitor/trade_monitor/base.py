@@ -430,8 +430,9 @@ class BaseLineChart(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, df, gran_id, decimal_digit):
+    def update(self, gran_id, decimal_digit):
 
+        """
         self._ser_line.clear()
         for dt_, sr in df.iterrows():
             o_ = sr[self.COL_NAME_OP]
@@ -444,6 +445,7 @@ class BaseLineChart(QtCharts.QChartView):
             cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_,
                                            qdt.toMSecsSinceEpoch())
             self._ser_line.append(cnd)
+        """
 
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)

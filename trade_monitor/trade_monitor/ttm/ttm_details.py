@@ -8,13 +8,14 @@ from PySide2.QtCharts import QtCharts
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import FMT_QT_DATE_YMD
 from trade_monitor.utilities import DateRangeManager
-from trade_monitor.ttm.ttm_common import COL_DATE
+from trade_monitor.ttm.ttm_common import COL_DATE, COL_DATA_TYP, DATA_TYP_CO_CSUM
 from trade_monitor.ttm.ttm_common import (WEEKDAY_ID_MON,
                                           WEEKDAY_ID_TUE,
                                           WEEKDAY_ID_WED,
                                           WEEKDAY_ID_THU,
                                           WEEKDAY_ID_FRI)
 from trade_monitor.ttm.candlestick_chart import LineChartTtm
+from trade_monitor.ttm import ttm_common as ttmcom
 
 
 class ChartMng():
@@ -151,15 +152,12 @@ class TtmDetails(QMainWindow):
         self._drm = DateRangeManager()
         self._logger = utl.get_logger()
         self._ui = ui
-        self._df_base_mst = pd.DataFrame()
         self._df_base = pd.DataFrame()
         self._df_wg = pd.DataFrame()
-        self._df_month_goto = pd.DataFrame()
         self._gran_id = None
         self._decimal_digit = None
-        self._chartmng_list = []
 
-    def set_data(self, df_base, df_week_goto, df_month_goto, gran_id, decimal_digit):
+    def set_data(self, df_base, gran_id, decimal_digit):
 
         date_list = list(df_base.groupby(COL_DATE).groups.keys())
 
@@ -177,11 +175,8 @@ class TtmDetails(QMainWindow):
         df_week_goto = self.__make_statistics_dataframe(df_base, level)
         """
 
-
-        self._df_base_mst = df_base
         self._df_base = df_base
-        self._df_wg = df_week_goto
-        self._df_month_goto = df_month_goto
+        self._df_wg = ttmcom.convert_base2weekgoto(df_base)
         self._gran_id = gran_id
         self._decimal_digit = decimal_digit
 
@@ -216,7 +211,7 @@ class TtmDetails(QMainWindow):
 
     def _on_pushButton_update_clicked(self, checked):
         self._logger.debug("=========================================")
-        self._generate_tableWidget()
+        self._generate_tableWidget(self._df_wg)
 
     def _on_checkBox_autoupdate_stateChanged(self, state):
         self._logger.debug("---on_checkBox_autoupdate_stateChanged ----------")
@@ -256,7 +251,9 @@ class TtmDetails(QMainWindow):
         sdt_str = qdate.toString(FMT_QT_DATE_YMD)
         self._drm.set_upper(sdt_str)
 
-        self._update_dataframe()
+        stat = self._ui.checkBox_AutoUpdate.checkState()
+        if stat == Qt.Checked:
+            self._update_dataframe()
 
         wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
         wasBlocked2 = self._ui.spinBox_Step.blockSignals(True)
@@ -281,7 +278,9 @@ class TtmDetails(QMainWindow):
         else:
             self._drm.shrink_range(-slide_cnt)
 
-        self._update_dataframe()
+        stat = self._ui.checkBox_AutoUpdate.checkState()
+        if stat == Qt.Checked:
+            self._update_dataframe()
 
         qdate_l = QDate.fromString(self._drm.lower_date, FMT_QT_DATE_YMD)
         qdate_u = QDate.fromString(self._drm.upper_date, FMT_QT_DATE_YMD)
@@ -307,7 +306,9 @@ class TtmDetails(QMainWindow):
         step = value - self._drm.lower_pos
         self._drm.slide(step)
 
-        self._update_dataframe()
+        stat = self._ui.checkBox_AutoUpdate.checkState()
+        if stat == Qt.Checked:
+            self._update_dataframe()
 
         qdate_l = QDate.fromString(self._drm.lower_date, FMT_QT_DATE_YMD)
         qdate_u = QDate.fromString(self._drm.upper_date, FMT_QT_DATE_YMD)
@@ -325,7 +326,7 @@ class TtmDetails(QMainWindow):
 
     def _on_checkBox_ShowItem_stateChanged(self, state):
         self._logger.debug("--- on_checkBox_ShowItem_stateChanged ----------")
-        self._generate_tableWidget()
+        self._generate_tableWidget(self._df_wg)
 
     def _update_dataframe(self):
         self._logger.debug("---[99]update_dataframe ----------")
@@ -336,29 +337,47 @@ class TtmDetails(QMainWindow):
         self._logger.debug(" - sdt_str:{}".format(sdt_str))
         self._logger.debug(" - sdt_end:{}".format(sdt_end))
 
-        mst_list = self._df_base_mst.index.get_level_values(level=COL_DATE)
-        self._df_base = self._df_base_mst[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
+        mst_list = self._df_base.index.get_level_values(level=COL_DATE)
+        df_base = self._df_base[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
 
+        df_wg = ttmcom.convert_base2weekgoto(df_base)
+        self._generate_tableWidget(df_wg)
+        self._df_wg = df_wg
         """
         mst_list = self._df_wg_mst.index.get_level_values(level=COL_DATE)
         self._df_wg = self._df_wg_mst[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
         """
-
+        """
         for chartmng in self._chartmng_list:
             df = chartmng.df[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
             chartmng.chart.update(df, self._gran_id, self._decimal_digit)
+        """
 
         """
         mst_list = self._df_month_goto_mst.index.get_level_values(level=COL_DATE)
         self._df_month_goto = self._df_month_goto_mst[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
         """
 
-    def _generate_tableWidget(self):
+    def _generate_tableWidget(self, df_wg):
 
-        self._chartmng_list = []
         row_cnt = self._ui.tableWidget.rowCount()
         for i in reversed(range(row_cnt)):
             self._ui.tableWidget.removeRow(i)
+
+        self._logger.debug("--- 1 ----------------------------------------")
+        self._logger.debug("{}".format(df_wg))
+
+        mst_list = df_wg.index.get_level_values(level=COL_DATA_TYP)
+        df_wg_st = df_wg[mst_list < DATA_TYP_CO_CSUM]
+        df_wg_cs = df_wg[mst_list == DATA_TYP_CO_CSUM]
+
+        max_ = df_wg_st.max().max()
+        min_ = df_wg_st.min().min()
+        wg_st_max = max(abs(max_), abs(min_))
+
+        max_ = df_wg_cs.max().max()
+        min_ = df_wg_cs.min().min()
+        wg_cs_max = max(abs(max_), abs(min_))
 
         ins_no = 0
         for weekday_id in self._WEEKDAY_ID_DICT.keys():
@@ -385,8 +404,13 @@ class TtmDetails(QMainWindow):
                         is_goto = False
 
                     idxloc = (weekday_id, is_goto)
-                    if idxloc in self._df_wg.index:
-                        df_wg = self._df_wg.loc[idxloc]
+                    if idxloc in df_wg.index:
+                        df = df_wg.loc[idxloc]
+
+                        if charttyp_id == self._CHART_TYP_STATISTICS:
+                            max_y = wg_st_max
+                        else:
+                            max_y = wg_cs_max
 
                         self._ui.tableWidget.insertRow(ins_no)
 
@@ -402,11 +426,12 @@ class TtmDetails(QMainWindow):
                         lay = QGridLayout(widget)
                         lay.setMargin(0)
                         chart = LineChartTtm(widget)
+                        # TODO:dfデータに加工が必要かも？
+                        chart.set_max_y(max_y)
+                        chart.set_min_y(-max_y)
+                        chart.update(df, self._gran_id, self._decimal_digit)
                         lay.addWidget(chart, 0, 0, 1, 1)
                         self._ui.tableWidget.setCellWidget(ins_no, 2, widget)
-
-                        cm = ChartMng(df_wg, chart)
-                        self._chartmng_list.append(cm)
 
                         ins_no += 1
 

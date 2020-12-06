@@ -4,6 +4,15 @@ from PySide2.QtWidgets import QGraphicsLineItem
 from trade_monitor.base import BaseCandlestickChart
 from trade_monitor.base import CalloutDataTime
 from trade_monitor.base import BaseLineChart
+from trade_monitor import utilities as utl
+from trade_monitor.ttm.ttm_common import (DATA_TYP_HO_MEAN,
+                                          DATA_TYP_HO_STD,
+                                          DATA_TYP_LO_MEAN,
+                                          DATA_TYP_LO_STD,
+                                          DATA_TYP_CO_MEAN,
+                                          DATA_TYP_CO_STD,
+                                          DATA_TYP_CO_CSUM
+                                          )
 
 
 class CandlestickChartTtm(BaseCandlestickChart):
@@ -113,10 +122,50 @@ class LineChartTtm(BaseLineChart):
         self._callout_ttm_dt.setZValue(0)
         self.scene().addItem(self._callout_ttm_dt)
 
+        self._logger = utl.get_logger()
         self._is_update = False
 
     def update(self, df, gran_id, decimal_digit):
-        super().update(df, gran_id, decimal_digit)
+
+        self._logger.debug("--------------------------")
+        self._logger.debug("{}".format(df))
+
+        super().update(gran_id, decimal_digit)
+
+        self._ser_line.clear()
+
+        sr = df.loc[DATA_TYP_HO_MEAN]
+
+        self._logger.debug("============================")
+        self._logger.debug("{}".format(type(sr)))
+        self._logger.debug("{}".format(sr))
+
+        self._logger.debug("--- index ----------")
+        self._logger.debug("{}".format(sr.index.to_list()))
+        self._logger.debug("--- values ----------")
+        self._logger.debug("{}".format(sr.values))
+
+        for idx in sr.index:
+            print("{}:{}".format(idx, sr[idx]))
+            self._ser_line.append(idx, sr[idx])
+
+        """
+        for dt_, sr in df.iterrows():
+            o_ = sr[self.COL_NAME_OP]
+            h_ = sr[self.COL_NAME_HI]
+            l_ = sr[self.COL_NAME_LO]
+            c_ = sr[self.COL_NAME_CL]
+            qd = QDate(dt_.year, dt_.month, dt_.day)
+            qt = QTime(dt_.hour, dt_.minute)
+            qdt = QDateTime(qd, qt)
+            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_,
+                                           qdt.toMSecsSinceEpoch())
+            self._ser_line.append(cnd)
+
+        """
+
+
+        """
 
         dt_ = df.index[-1]
         qd = QDate(dt_.year, dt_.month, dt_.day)
@@ -140,6 +189,7 @@ class LineChartTtm(BaseLineChart):
 
         self._is_update = True
         self._qdttm = qdttm
+        """
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
