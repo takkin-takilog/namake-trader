@@ -15,7 +15,7 @@ from trade_monitor.utilities import (FMT_DTTM_API,
                                      FMT_TIME_HM,
                                      FMT_TIME_HMS
                                      )
-from trade_monitor.ttm.candlestick_chart import CandlestickChartTtm
+from trade_monitor.ttm.chart import CandlestickChartTtm
 from trade_monitor.ttm.ttm_details import TtmDetails
 from trade_monitor.ttm.ttm_common import (COL_DATE,
                                           COL_TIME,

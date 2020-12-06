@@ -18,6 +18,7 @@ FMT_TIME_HM = "%H:%M"
 FMT_TIME_HMS = "%H:%M:%S"
 
 FMT_QT_DATE_YMD = "yyyy-MM-dd"
+FMT_QT_TIME = "HH:mm"
 
 # Candlestick data frame column name
 COL_NAME_TIME = "time"

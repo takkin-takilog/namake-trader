@@ -141,6 +141,8 @@ class BaseCandlestickChart(QtCharts.QChartView):
     def __init__(self, widget):
         super().__init__(widget)
 
+        self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
+
         # ---------- Create Chart ----------
         chart = QtCharts.QChart()
         chart.layout().setContentsMargins(0, 0, 0, 0)
@@ -287,7 +289,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
 
             m2v.setX(qdttm.toMSecsSinceEpoch())
             m2p = chart.mapToPosition(m2v)
-            dtstr = qdttm.toString("yyyy/MM/dd hh:mm")
+            dtstr = qdttm.toString(self._CALLOUT_DT_FMT)
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
@@ -326,6 +328,8 @@ class BaseLineChart(QtCharts.QChartView):
     def __init__(self, widget):
         super().__init__(widget)
 
+        self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
+
         # ---------- Create Chart ----------
         chart = QtCharts.QChart()
         chart.layout().setContentsMargins(0, 0, 0, 0)
@@ -357,7 +361,7 @@ class BaseLineChart(QtCharts.QChartView):
         # ---------- Set X Axis on chart ----------
         axis_x = QtCharts.QDateTimeAxis()
         axis_x.setTickCount(2)
-        axis_x.setTitleText("Date")
+        # axis_x.setTitleText("Date")
         axis_x.setFormat("h:mm")
         axis_x.setLabelsAngle(0)
 
@@ -380,7 +384,7 @@ class BaseLineChart(QtCharts.QChartView):
         ser_line.attachAxis(axis_y)
 
         # ---------- Set Animation on chart ----------
-        chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
+        # chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
         # ---------- Set Legend on chart ----------
         chart.legend().hide()
@@ -432,21 +436,6 @@ class BaseLineChart(QtCharts.QChartView):
 
     def update(self, gran_id, decimal_digit):
 
-        """
-        self._ser_line.clear()
-        for dt_, sr in df.iterrows():
-            o_ = sr[self.COL_NAME_OP]
-            h_ = sr[self.COL_NAME_HI]
-            l_ = sr[self.COL_NAME_LO]
-            c_ = sr[self.COL_NAME_CL]
-            qd = QDate(dt_.year, dt_.month, dt_.day)
-            qt = QTime(dt_.hour, dt_.minute)
-            qdt = QDateTime(qd, qt)
-            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_,
-                                           qdt.toMSecsSinceEpoch())
-            self._ser_line.append(cnd)
-        """
-
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)
 
@@ -472,7 +461,7 @@ class BaseLineChart(QtCharts.QChartView):
 
             m2v.setX(qdttm.toMSecsSinceEpoch())
             m2p = chart.mapToPosition(m2v)
-            dtstr = qdttm.toString("yyyy/MM/dd hh:mm")
+            dtstr = qdttm.toString(self._CALLOUT_DT_FMT)
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 

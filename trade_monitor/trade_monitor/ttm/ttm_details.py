@@ -14,7 +14,8 @@ from trade_monitor.ttm.ttm_common import (WEEKDAY_ID_MON,
                                           WEEKDAY_ID_WED,
                                           WEEKDAY_ID_THU,
                                           WEEKDAY_ID_FRI)
-from trade_monitor.ttm.candlestick_chart import LineChartTtm
+from trade_monitor.ttm.chart import LineChartTtmStatistics
+from trade_monitor.ttm.chart import LineChartTtmCumsum
 from trade_monitor.ttm import ttm_common as ttmcom
 
 
@@ -364,12 +365,14 @@ class TtmDetails(QMainWindow):
         for i in reversed(range(row_cnt)):
             self._ui.tableWidget.removeRow(i)
 
-        self._logger.debug("--- 1 ----------------------------------------")
-        self._logger.debug("{}".format(df_wg))
-
         mst_list = df_wg.index.get_level_values(level=COL_DATA_TYP)
         df_wg_st = df_wg[mst_list < DATA_TYP_CO_CSUM]
         df_wg_cs = df_wg[mst_list == DATA_TYP_CO_CSUM]
+
+        self._logger.debug("--- df_wg_st ----------------------------------------")
+        self._logger.debug("{}".format(df_wg_st))
+        self._logger.debug("--- df_wg_cs ----------------------------------------")
+        self._logger.debug("{}".format(df_wg_cs))
 
         max_ = df_wg_st.max().max()
         min_ = df_wg_st.min().min()
@@ -403,14 +406,18 @@ class TtmDetails(QMainWindow):
                     else:
                         is_goto = False
 
-                    idxloc = (weekday_id, is_goto)
-                    if idxloc in df_wg.index:
-                        df = df_wg.loc[idxloc]
+                    if charttyp_id == self._CHART_TYP_STATISTICS:
+                        df_trg = df_wg_st
+                        max_y = wg_st_max
+                        self._logger.debug("===== MAX st: {}".format(max_y))
+                    else:
+                        df_trg = df_wg_cs
+                        max_y = wg_cs_max
+                        self._logger.debug("===== MAX cs: {}".format(max_y))
 
-                        if charttyp_id == self._CHART_TYP_STATISTICS:
-                            max_y = wg_st_max
-                        else:
-                            max_y = wg_cs_max
+                    idxloc = (weekday_id, is_goto)
+                    if idxloc in df_trg.index:
+                        df = df_trg.loc[idxloc]
 
                         self._ui.tableWidget.insertRow(ins_no)
 
@@ -425,8 +432,12 @@ class TtmDetails(QMainWindow):
                         widget = QWidget()
                         lay = QGridLayout(widget)
                         lay.setMargin(0)
-                        chart = LineChartTtm(widget)
-                        # TODO:dfデータに加工が必要かも？
+
+                        if charttyp_id == self._CHART_TYP_STATISTICS:
+                            chart = LineChartTtmStatistics(widget)
+                        else:
+                            chart = LineChartTtmCumsum(widget)
+
                         chart.set_max_y(max_y)
                         chart.set_min_y(-max_y)
                         chart.update(df, self._gran_id, self._decimal_digit)

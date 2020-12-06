@@ -5,6 +5,7 @@ from trade_monitor.base import BaseCandlestickChart
 from trade_monitor.base import CalloutDataTime
 from trade_monitor.base import BaseLineChart
 from trade_monitor import utilities as utl
+from trade_monitor.utilities import FMT_QT_TIME
 from trade_monitor.ttm.ttm_common import (DATA_TYP_HO_MEAN,
                                           DATA_TYP_HO_STD,
                                           DATA_TYP_LO_MEAN,
@@ -104,6 +105,8 @@ class LineChartTtm(BaseLineChart):
     def __init__(self, widget):
         super().__init__(widget)
 
+        self._CALLOUT_DT_FMT = "hh:mm"
+
         color = QColor(Qt.blue)
 
         # ---------- Add CurrentOpenPriceLine on scene ----------
@@ -122,80 +125,23 @@ class LineChartTtm(BaseLineChart):
         self._callout_ttm_dt.setZValue(0)
         self.scene().addItem(self._callout_ttm_dt)
 
+        self._QDT_BASE = QDate(2010, 1, 1)
+        self._QDTTM_TTM = QDateTime(self._QDT_BASE, QTime(9, 55))
+
         self._logger = utl.get_logger()
         self._is_update = False
 
-    def update(self, df, gran_id, decimal_digit):
-
-        self._logger.debug("--------------------------")
-        self._logger.debug("{}".format(df))
-
+    def update(self, gran_id, decimal_digit):
         super().update(gran_id, decimal_digit)
 
-        self._ser_line.clear()
-
-        sr = df.loc[DATA_TYP_HO_MEAN]
-
-        self._logger.debug("============================")
-        self._logger.debug("{}".format(type(sr)))
-        self._logger.debug("{}".format(sr))
-
-        self._logger.debug("--- index ----------")
-        self._logger.debug("{}".format(sr.index.to_list()))
-        self._logger.debug("--- values ----------")
-        self._logger.debug("{}".format(sr.values))
-
-        for idx in sr.index:
-            print("{}:{}".format(idx, sr[idx]))
-            self._ser_line.append(idx, sr[idx])
-
-        """
-        for dt_, sr in df.iterrows():
-            o_ = sr[self.COL_NAME_OP]
-            h_ = sr[self.COL_NAME_HI]
-            l_ = sr[self.COL_NAME_LO]
-            c_ = sr[self.COL_NAME_CL]
-            qd = QDate(dt_.year, dt_.month, dt_.day)
-            qt = QTime(dt_.hour, dt_.minute)
-            qdt = QDateTime(qd, qt)
-            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_,
-                                           qdt.toMSecsSinceEpoch())
-            self._ser_line.append(cnd)
-
-        """
-
-
-        """
-
-        dt_ = df.index[-1]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute)
-        max_x = QDateTime(qd, qt)
-
-        dt_ = df.index[0]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute)
-        min_x = QDateTime(qd, qt)
-
-        dtstr = dt_.strftime("%Y/%m/%d")
-
-        chart = self.chart()
-        chart.axisX().setTitleText(dtstr)
-        chart.axisX().setRange(min_x, max_x)
-
-        qdttm = QDateTime(dt_.date(), QTime(9, 55))
-
-        self._update_callout_ttm(qdttm)
-
+        self._update_callout_ttm(self._QDTTM_TTM)
         self._is_update = True
-        self._qdttm = qdttm
-        """
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
 
         if self._is_update:
-            self._update_callout_ttm(self._qdttm)
+            self._update_callout_ttm(self._QDTTM_TTM)
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -222,3 +168,59 @@ class LineChartTtm(BaseLineChart):
         dtstr = qdttm.toString("hh:mm")
         self._callout_ttm_dt.updateGeometry(dtstr, m2p)
         self._callout_ttm_dt.show()
+
+
+class LineChartTtmStatistics(LineChartTtm):
+
+    def __init__(self, widget):
+        super().__init__(widget)
+
+    def update(self, df, gran_id, decimal_digit):
+        super().update(gran_id, decimal_digit)
+
+        self._ser_line.clear()
+
+        sr = df.loc[DATA_TYP_HO_MEAN]
+
+        for idx in sr.index:
+            qtm = QTime.fromString(idx, FMT_QT_TIME)
+            qdttm = QDateTime(self._QDT_BASE, qtm)
+            self._ser_line.append(qdttm.toMSecsSinceEpoch(), sr[idx])
+
+        tm_ = sr.index[-1]
+        qtm = QTime.fromString(tm_, FMT_QT_TIME)
+        max_x = QDateTime(self._QDT_BASE, qtm)
+
+        tm_ = sr.index[0]
+        qtm = QTime.fromString(tm_, FMT_QT_TIME)
+        min_x = QDateTime(self._QDT_BASE, qtm)
+
+        self.chart().axisX().setRange(min_x, max_x)
+
+
+class LineChartTtmCumsum(LineChartTtm):
+
+    def __init__(self, widget):
+        super().__init__(widget)
+
+    def update(self, df, gran_id, decimal_digit):
+        super().update(gran_id, decimal_digit)
+
+        self._ser_line.clear()
+
+        sr = df.loc[DATA_TYP_CO_CSUM]
+
+        for idx in sr.index:
+            qtm = QTime.fromString(idx, FMT_QT_TIME)
+            qdttm = QDateTime(self._QDT_BASE, qtm)
+            self._ser_line.append(qdttm.toMSecsSinceEpoch(), sr[idx])
+
+        tm_ = sr.index[-1]
+        qtm = QTime.fromString(tm_, FMT_QT_TIME)
+        max_x = QDateTime(self._QDT_BASE, qtm)
+
+        tm_ = sr.index[0]
+        qtm = QTime.fromString(tm_, FMT_QT_TIME)
+        min_x = QDateTime(self._QDT_BASE, qtm)
+
+        self.chart().axisX().setRange(min_x, max_x)
