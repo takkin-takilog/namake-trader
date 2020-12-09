@@ -1,10 +1,9 @@
 import os
 import pandas as pd
-from PySide2.QtWidgets import QWidget, QMainWindow, QHeaderView
-from PySide2.QtWidgets import QTableWidgetItem, QGridLayout
+from PySide2.QtWidgets import QMainWindow, QHeaderView
+from PySide2.QtWidgets import QTableWidgetItem
 from PySide2.QtCore import QFile, QDate, Qt
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtCharts import QtCharts
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import FMT_QT_DATE_YMD
 from trade_monitor.utilities import DateRangeManager
@@ -17,23 +16,6 @@ from trade_monitor.ttm.ttm_common import (WEEKDAY_ID_MON,
 from trade_monitor.ttm.chart import LineChartTtmStatistics
 from trade_monitor.ttm.chart import LineChartTtmCumsum
 from trade_monitor.ttm import ttm_common as ttmcom
-
-
-class ChartMng():
-
-    def __init__(self,
-                 df: pd.DataFrame,
-                 chart: QtCharts.QChart):
-        self._df = df
-        self._chart = chart
-
-        @property
-        def df(self):
-            return self._df
-
-        @property
-        def chart(self):
-            return self._chart
 
 
 class TtmDetails(QMainWindow):
@@ -157,6 +139,8 @@ class TtmDetails(QMainWindow):
         self._df_wg = pd.DataFrame()
         self._gran_id = None
         self._decimal_digit = None
+        self._chart_idx_list = []
+        self._is_require_reconstruct_table = True
 
     def set_data(self, df_base, gran_id, decimal_digit):
 
@@ -166,15 +150,6 @@ class TtmDetails(QMainWindow):
 
         qdate_l = QDate.fromString(self._drm.lower_date, FMT_QT_DATE_YMD)
         qdate_u = QDate.fromString(self._drm.upper_date, FMT_QT_DATE_YMD)
-
-        """
-        TODO:
-        level = [COL_WEEKDAY_ID,
-                 COL_IS_GOTO,
-                 COL_GAP_TYP,
-                 ]
-        df_week_goto = self.__make_statistics_dataframe(df_base, level)
-        """
 
         self._df_base = df_base
         self._df_wg = ttmcom.convert_base2weekgoto(df_base)
@@ -211,12 +186,11 @@ class TtmDetails(QMainWindow):
         self._logger.debug("--- on_tableWidget_columnResized ----------")
 
     def _on_pushButton_update_clicked(self, checked):
-        self._logger.debug("=========================================")
-        self._generate_tableWidget(self._df_wg)
+        self._update_table()
 
     def _on_checkBox_autoupdate_stateChanged(self, state):
         self._logger.debug("---on_checkBox_autoupdate_stateChanged ----------")
-        self._logger.debug("state:{}".format(state))
+        # self._logger.debug("state:{}".format(state))
 
         if state == Qt.Checked:
             self._ui.pushButton_update.setEnabled(False)
@@ -231,7 +205,7 @@ class TtmDetails(QMainWindow):
 
         stat = self._ui.checkBox_AutoUpdate.checkState()
         if stat == Qt.Checked:
-            self._update_dataframe()
+            self._update_table()
 
         wasBlocked1 = self._ui.dateEdit_upper.blockSignals(True)
         wasBlocked2 = self._ui.spinBox_Step.blockSignals(True)
@@ -254,7 +228,7 @@ class TtmDetails(QMainWindow):
 
         stat = self._ui.checkBox_AutoUpdate.checkState()
         if stat == Qt.Checked:
-            self._update_dataframe()
+            self._update_table()
 
         wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
         wasBlocked2 = self._ui.spinBox_Step.blockSignals(True)
@@ -281,7 +255,7 @@ class TtmDetails(QMainWindow):
 
         stat = self._ui.checkBox_AutoUpdate.checkState()
         if stat == Qt.Checked:
-            self._update_dataframe()
+            self._update_table()
 
         qdate_l = QDate.fromString(self._drm.lower_date, FMT_QT_DATE_YMD)
         qdate_u = QDate.fromString(self._drm.upper_date, FMT_QT_DATE_YMD)
@@ -309,7 +283,7 @@ class TtmDetails(QMainWindow):
 
         stat = self._ui.checkBox_AutoUpdate.checkState()
         if stat == Qt.Checked:
-            self._update_dataframe()
+            self._update_table()
 
         qdate_l = QDate.fromString(self._drm.lower_date, FMT_QT_DATE_YMD)
         qdate_u = QDate.fromString(self._drm.upper_date, FMT_QT_DATE_YMD)
@@ -327,62 +301,40 @@ class TtmDetails(QMainWindow):
 
     def _on_checkBox_ShowItem_stateChanged(self, state):
         self._logger.debug("--- on_checkBox_ShowItem_stateChanged ----------")
-        self._generate_tableWidget(self._df_wg)
 
-    def _update_dataframe(self):
+        self._is_require_reconstruct_table = True
+
+        stat = self._ui.checkBox_AutoUpdate.checkState()
+        if stat == Qt.Checked:
+            self._update_table()
+
+    def _update_table(self):
+
+        df_wg = self._get_latest_dataframe()
+
+        if self._is_require_reconstruct_table:
+            self._reconstruct_table()
+
+        self._update_chart(df_wg)
+
+    def _get_latest_dataframe(self):
         self._logger.debug("---[99]update_dataframe ----------")
 
         sdt_str = self._drm.lower_date
         sdt_end = self._drm.upper_date
-
-        self._logger.debug(" - sdt_str:{}".format(sdt_str))
-        self._logger.debug(" - sdt_end:{}".format(sdt_end))
-
         mst_list = self._df_base.index.get_level_values(level=COL_DATE)
         df_base = self._df_base[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
-
         df_wg = ttmcom.convert_base2weekgoto(df_base)
-        self._generate_tableWidget(df_wg)
-        self._df_wg = df_wg
-        """
-        mst_list = self._df_wg_mst.index.get_level_values(level=COL_DATE)
-        self._df_wg = self._df_wg_mst[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
-        """
-        """
-        for chartmng in self._chartmng_list:
-            df = chartmng.df[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
-            chartmng.chart.update(df, self._gran_id, self._decimal_digit)
-        """
 
-        """
-        mst_list = self._df_month_goto_mst.index.get_level_values(level=COL_DATE)
-        self._df_month_goto = self._df_month_goto_mst[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
-        """
+        return df_wg
 
-    def _generate_tableWidget(self, df_wg):
+    def _reconstruct_table(self):
 
         row_cnt = self._ui.tableWidget.rowCount()
         for i in reversed(range(row_cnt)):
             self._ui.tableWidget.removeRow(i)
 
-        mst_list = df_wg.index.get_level_values(level=COL_DATA_TYP)
-        df_wg_st = df_wg[mst_list < DATA_TYP_CO_CSUM]
-        df_wg_cs = df_wg[mst_list == DATA_TYP_CO_CSUM]
-
-        self._logger.debug("--- df_wg_st ----------------------------------------")
-        self._logger.debug("{}".format(df_wg_st))
-        self._logger.debug("--- df_wg_cs ----------------------------------------")
-        self._logger.debug("{}".format(df_wg_cs))
-
-        max_ = df_wg_st.max().max()
-        min_ = df_wg_st.min().min()
-        wg_st_max = max(abs(max_), abs(min_))
-
-        max_ = df_wg_cs.max().max()
-        min_ = df_wg_cs.min().min()
-        wg_cs_max = max(abs(max_), abs(min_))
-
-        ins_no = 0
+        chart_idx_list = []
         for weekday_id in self._WEEKDAY_ID_DICT.keys():
             checkState = self._CHECKSTATE_WEEKDAY_DICT[weekday_id]
             wd_stat = checkState()
@@ -401,50 +353,72 @@ class TtmDetails(QMainWindow):
                     if gd_stat != Qt.Checked:
                         continue
 
-                    if gotoday_id == self._GOTODAY_ID_T:
-                        is_goto = True
-                    else:
-                        is_goto = False
+                    chart_idx_list.append([weekday_id, gotoday_id, charttyp_id])
 
-                    if charttyp_id == self._CHART_TYP_STATISTICS:
-                        df_trg = df_wg_st
-                        max_y = wg_st_max
-                        self._logger.debug("===== MAX st: {}".format(max_y))
-                    else:
-                        df_trg = df_wg_cs
-                        max_y = wg_cs_max
-                        self._logger.debug("===== MAX cs: {}".format(max_y))
+        for i, chart_idx in enumerate(chart_idx_list):
+            weekday_id = chart_idx[0]
+            gotoday_id = chart_idx[1]
+            charttyp_id = chart_idx[2]
 
-                    idxloc = (weekday_id, is_goto)
-                    if idxloc in df_trg.index:
-                        df = df_trg.loc[idxloc]
+            self._ui.tableWidget.insertRow(i)
 
-                        self._ui.tableWidget.insertRow(ins_no)
+            item_wd = QTableWidgetItem(self._WEEKDAY_ID_DICT[weekday_id])
+            item_wd.setTextAlignment(Qt.AlignCenter)
+            self._ui.tableWidget.setItem(i, 0, item_wd)
 
-                        item_wd = QTableWidgetItem(self._WEEKDAY_ID_DICT[weekday_id])
-                        item_wd.setTextAlignment(Qt.AlignCenter)
-                        self._ui.tableWidget.setItem(ins_no, 0, item_wd)
+            item_gt = QTableWidgetItem(self._GOTO_ID_DICT[gotoday_id])
+            item_gt.setTextAlignment(Qt.AlignCenter)
+            self._ui.tableWidget.setItem(i, 1, item_gt)
 
-                        item_gt = QTableWidgetItem(self._GOTO_ID_DICT[gotoday_id])
-                        item_gt.setTextAlignment(Qt.AlignCenter)
-                        self._ui.tableWidget.setItem(ins_no, 1, item_gt)
+            if charttyp_id == self._CHART_TYP_STATISTICS:
+                chart = LineChartTtmStatistics()
+            else:
+                chart = LineChartTtmCumsum()
+            self._ui.tableWidget.setCellWidget(i, 2, chart)
 
-                        # widget = QWidget()
-                        #lay = QGridLayout(widget)
-                        #lay.setMargin(0)
+        self._chart_idx_list = chart_idx_list
+        self._is_require_reconstruct_table = False
 
-                        if charttyp_id == self._CHART_TYP_STATISTICS:
-                            chart = LineChartTtmStatistics()
-                        else:
-                            chart = LineChartTtmCumsum()
+    def _update_chart(self, df_wg):
 
-                        chart.set_max_y(max_y)
-                        chart.set_min_y(-max_y)
-                        chart.update(df, self._gran_id, self._decimal_digit)
-                        #lay.addWidget(chart, 0, 0, 1, 1)
-                        self._ui.tableWidget.setCellWidget(ins_no, 2, chart)
+        mst_list = df_wg.index.get_level_values(level=COL_DATA_TYP)
+        df_wg_st = df_wg[mst_list < DATA_TYP_CO_CSUM]
+        df_wg_cs = df_wg[mst_list == DATA_TYP_CO_CSUM]
 
-                        ins_no += 1
+        max_ = df_wg_st.max().max()
+        min_ = df_wg_st.min().min()
+        wg_st_max = max(abs(max_), abs(min_))
+
+        max_ = df_wg_cs.max().max()
+        min_ = df_wg_cs.min().min()
+        wg_cs_max = max(abs(max_), abs(min_))
+
+        for i, chart_idx in enumerate(self._chart_idx_list):
+            weekday_id = chart_idx[0]
+            gotoday_id = chart_idx[1]
+            charttyp_id = chart_idx[2]
+
+            if gotoday_id == self._GOTODAY_ID_T:
+                is_goto = True
+            else:
+                is_goto = False
+
+            if charttyp_id == self._CHART_TYP_STATISTICS:
+                df_trg = df_wg_st
+                max_y = wg_st_max
+            else:
+                df_trg = df_wg_cs
+                max_y = wg_cs_max
+
+            idxloc = (weekday_id, is_goto)
+            if idxloc in df_trg.index:
+                df = df_trg.loc[idxloc]
+                chart = self._ui.tableWidget.cellWidget(i, 2)
+                chart.set_max_y(max_y)
+                chart.set_min_y(-max_y)
+                chart.update(df, self._gran_id, self._decimal_digit)
+            else:
+                pass
 
     def _load_ui(self, parent):
         loader = QUiLoader()
