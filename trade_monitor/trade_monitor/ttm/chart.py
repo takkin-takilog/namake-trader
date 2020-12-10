@@ -1,6 +1,8 @@
+import pandas as pd
 from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
-from PySide2.QtGui import QColor
+from PySide2.QtGui import QColor, QPen
 from PySide2.QtWidgets import QGraphicsLineItem
+from PySide2.QtCharts import QtCharts
 from trade_monitor.base import BaseCandlestickChart
 from trade_monitor.base import CalloutDataTime
 from trade_monitor.base import BaseLineChart
@@ -102,6 +104,10 @@ class CandlestickChartTtm(BaseCandlestickChart):
 
 class LineChartTtm(BaseLineChart):
 
+    _COL_DATA_TYP = "DataType"
+    _COL_PEN = "Pen"
+    _COL_SERIES = "Series"
+
     def __init__(self, widget=None):
         super().__init__(widget)
 
@@ -125,14 +131,64 @@ class LineChartTtm(BaseLineChart):
         self._callout_ttm_dt.setZValue(0)
         self.scene().addItem(self._callout_ttm_dt)
 
+        # ---------- Add Horizon Zero Line on scene ----------
+        self._hl_zero = QGraphicsLineItem()
+        pen = self._hl_zero.pen()
+        pen.setColor(QColor(Qt.black))
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._hl_zero.setPen(pen)
+        self._hl_zero.setZValue(1)
+        self.scene().addItem(self._hl_zero)
+
         self._QDT_BASE = QDate(2010, 1, 1)
         self._QDTTM_TTM = QDateTime(self._QDT_BASE, QTime(9, 55))
 
         self._logger = utl.get_logger()
         self._is_update = False
 
-    def update(self, gran_id, decimal_digit):
+    def _init_chart(self, data_list):
+
+        chart_tbl = pd.DataFrame(data_list,
+                                 columns=[self._COL_DATA_TYP,
+                                          self._COL_PEN,
+                                          self._COL_SERIES])
+        chart_tbl.set_index(self._COL_DATA_TYP, inplace=True)
+
+        # ---------- Attach X/Y Axis to series ----------
+        axis_x = self.chart().axes(Qt.Horizontal)[0]
+        axis_y = self.chart().axes(Qt.Vertical)[0]
+
+        for _, row in chart_tbl.iterrows():
+            series = row[self._COL_SERIES]
+            series.setPen(row[self._COL_PEN])
+            self.chart().addSeries(series)
+            series.attachAxis(axis_x)
+            series.attachAxis(axis_y)
+
+        self._chart_tbl = chart_tbl
+
+    def update(self, df, gran_id, decimal_digit):
         super().update(gran_id, decimal_digit)
+
+        for data_type, row in self._chart_tbl.iterrows():
+            series = row[self._COL_SERIES]
+            series.clear()
+
+            pdsr = df.loc[data_type]
+
+            for idx in pdsr.index:
+                qtm = QTime.fromString(idx, FMT_QT_TIME)
+                qdttm = QDateTime(self._QDT_BASE, qtm)
+                series.append(qdttm.toMSecsSinceEpoch(), pdsr[idx])
+
+        qtm = QTime.fromString(df.columns[-1], FMT_QT_TIME)
+        max_x = QDateTime(self._QDT_BASE, qtm)
+
+        qtm = QTime.fromString(df.columns[0], FMT_QT_TIME)
+        min_x = QDateTime(self._QDT_BASE, qtm)
+
+        self.chart().axisX().setRange(min_x, max_x)
 
         self._update_callout_ttm(self._QDTTM_TTM)
         self._is_update = True
@@ -148,6 +204,7 @@ class LineChartTtm(BaseLineChart):
 
         self._vl_ttm.show()
         self._callout_ttm_dt.show()
+        self._hl_zero.show()
 
     def _update_callout_ttm(self, qdttm):
 
@@ -169,33 +226,43 @@ class LineChartTtm(BaseLineChart):
         self._callout_ttm_dt.updateGeometry(dtstr, m2p)
         self._callout_ttm_dt.show()
 
+        # drow Horizontal Zreo Line
+        x = qdttm.toMSecsSinceEpoch()
+        ttm_point = QPointF(0, 0)
+        m2p = chart.mapToPosition(ttm_point)
+        plotAreaRect = chart.plotArea()
+        self._hl_zero.setLine(QLineF(plotAreaRect.left(),
+                                     m2p.y(),
+                                     plotAreaRect.right(),
+                                     m2p.y()))
+        self._hl_zero.show()
+
 
 class LineChartTtmStatistics(LineChartTtm):
 
     def __init__(self, widget=None):
         super().__init__(widget)
 
-    def update(self, df, gran_id, decimal_digit):
-        super().update(gran_id, decimal_digit)
+        pen1 = QPen()
+        pen1.setColor(Qt.green)
+        pen1.setWidth(2)
+        pen1.setStyle(Qt.DashLine)
 
-        self._ser_line.clear()
+        pen2 = QPen()
+        pen2.setColor(Qt.magenta)
+        pen2.setWidth(3)
+        pen2.setStyle(Qt.SolidLine)
 
-        sr = df.loc[DATA_TYP_HO_MEAN]
+        data_list = [
+            [DATA_TYP_HO_MEAN, pen1, QtCharts.QLineSeries()],
+            # [DATA_TYP_HO_STD, Qt.blue, QtCharts.QLineSeries()],
+            [DATA_TYP_LO_MEAN, pen1, QtCharts.QLineSeries()],
+            # [DATA_TYP_LO_STD, Qt.green, QtCharts.QLineSeries()],
+            [DATA_TYP_CO_MEAN, pen2, QtCharts.QLineSeries()],
+            # [DATA_TYP_CO_STD, Qt.yellow, QtCharts.QLineSeries()]
+        ]
 
-        for idx in sr.index:
-            qtm = QTime.fromString(idx, FMT_QT_TIME)
-            qdttm = QDateTime(self._QDT_BASE, qtm)
-            self._ser_line.append(qdttm.toMSecsSinceEpoch(), sr[idx])
-
-        tm_ = sr.index[-1]
-        qtm = QTime.fromString(tm_, FMT_QT_TIME)
-        max_x = QDateTime(self._QDT_BASE, qtm)
-
-        tm_ = sr.index[0]
-        qtm = QTime.fromString(tm_, FMT_QT_TIME)
-        min_x = QDateTime(self._QDT_BASE, qtm)
-
-        self.chart().axisX().setRange(min_x, max_x)
+        self._init_chart(data_list)
 
 
 class LineChartTtmCumsum(LineChartTtm):
@@ -203,24 +270,13 @@ class LineChartTtmCumsum(LineChartTtm):
     def __init__(self, widget=None):
         super().__init__(widget)
 
-    def update(self, df, gran_id, decimal_digit):
-        super().update(gran_id, decimal_digit)
+        pen = QPen()
+        pen.setColor(Qt.magenta)
+        pen.setWidth(3)
+        pen.setStyle(Qt.SolidLine)
 
-        self._ser_line.clear()
+        data_list = [
+            [DATA_TYP_CO_CSUM, pen, QtCharts.QLineSeries()]
+        ]
 
-        sr = df.loc[DATA_TYP_CO_CSUM]
-
-        for idx in sr.index:
-            qtm = QTime.fromString(idx, FMT_QT_TIME)
-            qdttm = QDateTime(self._QDT_BASE, qtm)
-            self._ser_line.append(qdttm.toMSecsSinceEpoch(), sr[idx])
-
-        tm_ = sr.index[-1]
-        qtm = QTime.fromString(tm_, FMT_QT_TIME)
-        max_x = QDateTime(self._QDT_BASE, qtm)
-
-        tm_ = sr.index[0]
-        qtm = QTime.fromString(tm_, FMT_QT_TIME)
-        min_x = QDateTime(self._QDT_BASE, qtm)
-
-        self.chart().axisX().setRange(min_x, max_x)
+        self._init_chart(data_list)

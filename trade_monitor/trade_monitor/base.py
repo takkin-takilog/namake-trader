@@ -333,10 +333,6 @@ class BaseLineChart(QtCharts.QChartView):
         chart.layout().setContentsMargins(0, 0, 0, 0)
         chart.setBackgroundRoundness(0)
 
-        # ---------- Add Series on chart ----------
-        ser_line = QtCharts.QLineSeries()
-        chart.addSeries(ser_line)
-
         """
         # ---------- Set font on chart ----------
         font = QFont("Sans Serif", )
@@ -374,12 +370,10 @@ class BaseLineChart(QtCharts.QChartView):
                           QTime(0, 0))
         axis_x.setRange(yesterday, today)
         chart.addAxis(axis_x, Qt.AlignBottom)
-        ser_line.attachAxis(axis_x)
 
         # ---------- Set Y Axis on chart ----------
         axis_y = QtCharts.QValueAxis()
         chart.addAxis(axis_y, Qt.AlignLeft)
-        ser_line.attachAxis(axis_y)
 
         # ---------- Set Animation on chart ----------
         # chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
@@ -420,7 +414,6 @@ class BaseLineChart(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
-        self._ser_line = ser_line
         self._decimal_digit = 0
         self._freq = "D"
 
