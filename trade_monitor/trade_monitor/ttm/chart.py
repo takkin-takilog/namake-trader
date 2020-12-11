@@ -243,23 +243,28 @@ class LineChartTtmStatistics(LineChartTtm):
     def __init__(self, widget=None):
         super().__init__(widget)
 
-        pen1 = QPen()
-        pen1.setColor(Qt.green)
-        pen1.setWidth(2)
-        pen1.setStyle(Qt.DashLine)
+        pen_hl_m = QPen()
+        pen_hl_m.setColor(Qt.green)
+        pen_hl_m.setWidth(2)
+        pen_hl_m.setStyle(Qt.SolidLine)
 
-        pen2 = QPen()
-        pen2.setColor(Qt.magenta)
-        pen2.setWidth(3)
-        pen2.setStyle(Qt.SolidLine)
+        pen_c_m = QPen()
+        pen_c_m.setColor(Qt.magenta)
+        pen_c_m.setWidth(3)
+        pen_c_m.setStyle(Qt.SolidLine)
+
+        pen_c_s = QPen()
+        pen_c_s.setColor(Qt.magenta)
+        pen_c_s.setWidth(1)
+        pen_c_s.setStyle(Qt.DashLine)
 
         data_list = [
-            [DATA_TYP_HO_MEAN, pen1, QtCharts.QLineSeries()],
+            [DATA_TYP_HO_MEAN, pen_hl_m, QtCharts.QLineSeries()],
             # [DATA_TYP_HO_STD, Qt.blue, QtCharts.QLineSeries()],
-            [DATA_TYP_LO_MEAN, pen1, QtCharts.QLineSeries()],
+            [DATA_TYP_LO_MEAN, pen_hl_m, QtCharts.QLineSeries()],
             # [DATA_TYP_LO_STD, Qt.green, QtCharts.QLineSeries()],
-            [DATA_TYP_CO_MEAN, pen2, QtCharts.QLineSeries()],
-            # [DATA_TYP_CO_STD, Qt.yellow, QtCharts.QLineSeries()]
+            [DATA_TYP_CO_MEAN, pen_c_m, QtCharts.QLineSeries()],
+            [DATA_TYP_CO_STD, pen_c_s, QtCharts.QLineSeries()]
         ]
 
         self._init_chart(data_list)
@@ -271,7 +276,7 @@ class LineChartTtmCumsum(LineChartTtm):
         super().__init__(widget)
 
         pen = QPen()
-        pen.setColor(Qt.magenta)
+        pen.setColor(Qt.cyan)
         pen.setWidth(3)
         pen.setStyle(Qt.SolidLine)
 

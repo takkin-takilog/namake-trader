@@ -312,6 +312,9 @@ class TtmDetails(QMainWindow):
 
         df_wg = self._get_latest_dataframe()
 
+        self._logger.debug("--- df_wg --------------------------------")
+        self._logger.debug("{}".format(df_wg))
+
         if self._is_require_reconstruct_table:
             self._reconstruct_table()
 
