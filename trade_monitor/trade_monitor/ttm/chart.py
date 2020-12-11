@@ -23,6 +23,8 @@ class CandlestickChartTtm(BaseCandlestickChart):
     def __init__(self, widget=None):
         super().__init__(widget)
 
+        self._CALLOUT_DT_FMT = "hh:mm"
+
         color = QColor(Qt.blue)
 
         # ---------- Add CurrentOpenPriceLine on scene ----------

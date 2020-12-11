@@ -7,7 +7,8 @@ from PySide2.QtUiTools import QUiLoader
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import FMT_QT_DATE_YMD
 from trade_monitor.utilities import DateRangeManager
-from trade_monitor.ttm.ttm_common import COL_DATE, COL_DATA_TYP, DATA_TYP_CO_CSUM
+from trade_monitor.ttm.ttm_common import COL_DATE, COL_DATA_TYP, DATA_TYP_CO_CSUM,\
+    DATA_TYP_CO_MEAN, DATA_TYP_HO_MEAN, DATA_TYP_LO_MEAN
 from trade_monitor.ttm.ttm_common import (WEEKDAY_ID_MON,
                                           WEEKDAY_ID_TUE,
                                           WEEKDAY_ID_WED,
@@ -383,12 +384,17 @@ class TtmDetails(QMainWindow):
 
         mst_list = df_wg.index.get_level_values(level=COL_DATA_TYP)
         df_wg_st = df_wg[mst_list < DATA_TYP_CO_CSUM]
-        df_wg_cs = df_wg[mst_list == DATA_TYP_CO_CSUM]
 
-        max_ = df_wg_st.max().max()
-        min_ = df_wg_st.min().min()
+        cond = ((mst_list == DATA_TYP_CO_MEAN) |
+                (mst_list == DATA_TYP_HO_MEAN) |
+                (mst_list == DATA_TYP_LO_MEAN))
+        df_max = df_wg[cond]
+
+        max_ = df_max.max().max()
+        min_ = df_max.min().min()
         wg_st_max = max(abs(max_), abs(min_))
 
+        df_wg_cs = df_wg[mst_list == DATA_TYP_CO_CSUM]
         max_ = df_wg_cs.max().max()
         min_ = df_wg_cs.min().min()
         wg_cs_max = max(abs(max_), abs(min_))
