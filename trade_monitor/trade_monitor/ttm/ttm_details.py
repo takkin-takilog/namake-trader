@@ -312,9 +312,6 @@ class TtmDetails(QMainWindow):
 
         df_wg = self._get_latest_dataframe()
 
-        self._logger.debug("--- df_wg --------------------------------")
-        self._logger.debug("{}".format(df_wg))
-
         if self._is_require_reconstruct_table:
             self._reconstruct_table()
 
@@ -413,15 +410,15 @@ class TtmDetails(QMainWindow):
                 df_trg = df_wg_cs
                 max_y = wg_cs_max
 
+            chart = self._ui.tableWidget.cellWidget(i, 2)
+            chart.set_max_y(max_y)
+            chart.set_min_y(-max_y)
             idxloc = (weekday_id, is_goto)
             if idxloc in df_trg.index:
                 df = df_trg.loc[idxloc]
-                chart = self._ui.tableWidget.cellWidget(i, 2)
-                chart.set_max_y(max_y)
-                chart.set_min_y(-max_y)
                 chart.update(df, self._gran_id, self._decimal_digit)
             else:
-                pass
+                chart.clear()
 
     def _load_ui(self, parent):
         loader = QUiLoader()

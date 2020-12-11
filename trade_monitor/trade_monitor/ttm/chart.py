@@ -168,19 +168,28 @@ class LineChartTtm(BaseLineChart):
 
         self._chart_tbl = chart_tbl
 
+    def clear(self):
+
+        for _, row in self._chart_tbl.iterrows():
+            series = row[self._COL_SERIES]
+            series.clear()
+
+        chart = self.chart()
+        chart.axisY().setRange(self._min_y, self._max_y)
+
     def update(self, df, gran_id, decimal_digit):
         super().update(gran_id, decimal_digit)
 
         for data_type, row in self._chart_tbl.iterrows():
             series = row[self._COL_SERIES]
             series.clear()
-
             pdsr = df.loc[data_type]
 
-            for idx in pdsr.index:
-                qtm = QTime.fromString(idx, FMT_QT_TIME)
-                qdttm = QDateTime(self._QDT_BASE, qtm)
-                series.append(qdttm.toMSecsSinceEpoch(), pdsr[idx])
+            if not pdsr.isnull().any():
+                for idx in pdsr.index:
+                    qtm = QTime.fromString(idx, FMT_QT_TIME)
+                    qdttm = QDateTime(self._QDT_BASE, qtm)
+                    series.append(qdttm.toMSecsSinceEpoch(), pdsr[idx])
 
         qtm = QTime.fromString(df.columns[-1], FMT_QT_TIME)
         max_x = QDateTime(self._QDT_BASE, qtm)
