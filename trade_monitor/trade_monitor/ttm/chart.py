@@ -265,7 +265,7 @@ class LineChartTtmStatistics(LineChartTtm):
         pen_c_m.setStyle(Qt.SolidLine)
 
         pen_c_s = QPen()
-        pen_c_s.setColor(Qt.magenta)
+        pen_c_s.setColor(Qt.red)
         pen_c_s.setWidth(1)
         pen_c_s.setStyle(Qt.DashLine)
 

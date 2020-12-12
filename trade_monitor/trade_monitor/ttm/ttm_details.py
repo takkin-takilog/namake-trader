@@ -195,6 +195,8 @@ class TtmDetails(QMainWindow):
 
         if state == Qt.Checked:
             self._ui.pushButton_update.setEnabled(False)
+            if self._is_require_reconstruct_table:
+                self._update_table()
         else:
             self._ui.pushButton_update.setEnabled(True)
 
