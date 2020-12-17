@@ -2,11 +2,13 @@ import pandas as pd
 import datetime as dt
 
 from PySide2.QtWidgets import QHeaderView, QGridLayout
+from PySide2.QtWidgets import QAction, QMenu
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtCore import QItemSelectionModel
+from PySide2.QtCore import QItemSelectionModel, QSignalMapper, QPoint, Qt
 
 from trade_apl_msgs.srv import TtmMntSrv
 from trade_apl_msgs.msg import TtmTblOhlcRecMsg, TtmTblBaseRecMsg
+from trade_monitor.base import PandasModel, CustomProxyModel
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import INST_MSG_LIST
 from trade_monitor.utilities import GRAN_FREQ_DICT
@@ -51,11 +53,16 @@ class TtmUi():
     }
     """
 
+    _TREEVIEW_ITEM_DATE = "Date"
+    _TREEVIEW_ITEM_WEEKDAY = "Weekday"
+    _TREEVIEW_ITEM_GOTODAY = "Goto day"
+    _TREEVIEW_ITEM_DATATYP = "Data type"
+
     _TREEVIEW_HEADERS = [
-        "Date",
-        "Weekday",
-        "Goto day",
-        "Data type"
+        _TREEVIEW_ITEM_DATE,
+        _TREEVIEW_ITEM_WEEKDAY,
+        _TREEVIEW_ITEM_GOTODAY,
+        _TREEVIEW_ITEM_DATATYP
     ]
 
     """
@@ -100,21 +107,42 @@ class TtmUi():
         callback = self._on_fetch_ttm_clicked
         ui.pushButton_ttm_fetch.clicked.connect(callback)
 
+        """
         qstd_itm_mdl = QStandardItemModel()
         sel_mdl = QItemSelectionModel(qstd_itm_mdl)
 
         callback = self._on_selection_ttm_changed
         sel_mdl.selectionChanged.connect(callback)
+        """
 
         callback = self._on_ttm_details_clicked
         ui.pushButton_ttm_details.clicked.connect(callback)
 
+        # set Tree View
+        model = PandasModel()
+        proxy = CustomProxyModel()
+        proxy.setSourceModel(model)
+        ui.treeView_ttm.setModel(proxy)
+
+        selmdl = ui.treeView_ttm.selectionModel()
+        callback = self._on_selection_ttm_changed
+        selmdl.selectionChanged.connect(callback)
+
+        header = ui.treeView_ttm.header()
+        header.setSectionsClickable(True)
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        callback = self.on_view_header_sectionClicked
+        header.sectionClicked.connect(callback)
+
+
         # set header
+        """
         qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
         ui.treeView_ttm.setModel(qstd_itm_mdl)
         ui.treeView_ttm.setSelectionModel(sel_mdl)
         header = ui.treeView_ttm.header()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        """
 
         lay = QGridLayout(ui.widget_ttm_chart1m)
         lay.setMargin(0)
@@ -132,7 +160,7 @@ class TtmUi():
 
         self._widget_details = TtmDetails()
 
-        self._qstd_itm_mdl = qstd_itm_mdl
+        # self._qstd_itm_mdl = qstd_itm_mdl
         self._chart = chart
 
         self._ui = ui
@@ -140,10 +168,54 @@ class TtmUi():
         self._srv_cli_list = srv_cli_list
         self._logger = utl.get_logger()
 
+    def on_view_header_sectionClicked(self, logicalIndex):
+        print("--- on_view_header_sectionClicked ---")
+
+        self.logicalIndex = logicalIndex
+        self.menuValues = QMenu()
+        self.menuValues.setStyleSheet("QMenu { menu-scrollable: 1; }")
+        self.signalMapper = QSignalMapper()
+
+        model = self._ui.treeView_ttm.model().sourceModel()
+        # valuesUnique = model._df.iloc[:, self.logicalIndex].unique()
+        valuesUnique = model.getColumnUnique(self.logicalIndex)
+
+        # actAll = QAction("All", self)
+        parent = self._ui.treeView_ttm
+        actAll = QAction("All", parent)
+        actAll.triggered.connect(self.on_actionAll_triggered)
+        self.menuValues.addAction(actAll)
+        self.menuValues.addSeparator()
+
+        actOrderAsc = QAction("Order Asc", parent)
+        actOrderAsc.triggered.connect(self.on_actionOrderAsc_triggered)
+        self.menuValues.addAction(actOrderAsc)
+        actOrderDes = QAction("Order Des", parent)
+        actOrderDes.triggered.connect(self.on_actionOrderDes_triggered)
+        self.menuValues.addAction(actOrderDes)
+        self.menuValues.addSeparator()
+
+        for actNumber, actName in enumerate(sorted(list(set(valuesUnique)))):
+            action = QAction(str(actName), parent)
+            self.signalMapper.setMapping(action, actNumber)
+            action.triggered.connect(self.signalMapper.map)
+            self.menuValues.addAction(action)
+        self.signalMapper.mapped.connect(self.on_signalMapper_mapped)
+
+        header = self._ui.treeView_ttm.header()
+
+        headerPos = self._ui.treeView_ttm.mapToGlobal(header.pos())
+        posY = headerPos.y() + header.height()
+        posX = headerPos.x() + header.sectionPosition(self.logicalIndex)
+
+        self.menuValues.exec_(QPoint(posX, posY))
+
     def _on_fetch_ttm_clicked(self):
 
+        """
         self._qstd_itm_mdl.clear()
         self._qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
+        """
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
         inst_msg = INST_MSG_LIST[inst_idx]
 
@@ -248,6 +320,7 @@ class TtmUi():
 
             # ---------- compose Tree View ----------
             flg = df_base.index.get_level_values(COL_GAP_TYP) == GAP_TYP_CO
+            """
             df = df_base[flg]
             for index, row in df.iterrows():
                 items = [
@@ -256,6 +329,28 @@ class TtmUi():
                     QStandardItem(GOTODAY_ID_DICT[index[3]]),
                 ]
                 self._qstd_itm_mdl.appendRow(items)
+            """
+            mat = []
+            for index, row in df_base[flg].iterrows():
+                items = [
+                    index[0],  # date
+                    WEEKDAY_ID_DICT[index[2]],
+                    GOTODAY_ID_DICT[index[3]],
+                    0
+                ]
+                mat.append(items)
+            df = pd.DataFrame(mat,
+                              columns=self._TREEVIEW_HEADERS)
+            df.set_index([self._TREEVIEW_ITEM_DATE], inplace=True)
+
+            model = PandasModel(df)
+            proxy = CustomProxyModel()
+            proxy.setSourceModel(model)
+            self._ui.treeView_ttm.setModel(proxy)
+
+            selmdl = self._ui.treeView_ttm.selectionModel()
+            callback = self._on_selection_ttm_changed
+            selmdl.selectionChanged.connect(callback)
 
             header = self._ui.treeView_ttm.header()
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -274,7 +369,9 @@ class TtmUi():
         if qisr0 is not None:
 
             model_index = qisr0.indexes()[0]
-            date_str = self._qstd_itm_mdl.item(model_index.row()).text()
+            r = model_index.row()
+            proxy = self._ui.treeView_ttm.model()
+            date_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
 
             df_ohlc = self._df_ohlc
             flg = df_ohlc.index.get_level_values(COL_DATE) == date_str
@@ -307,6 +404,36 @@ class TtmUi():
                                       # self._df_month_goto,
                                       self._gran_id,
                                       decimal_digit)
+
+    def on_actionAll_triggered(self):
+        print("--- on_actionAll_triggered ---")
+        filterColumn = self.logicalIndex
+        proxy = self._ui.treeView_ttm.model()
+        proxy.setFilter("", filterColumn)
+
+        model = self._ui.treeView_ttm.model().sourceModel()
+        model.setFiltered(filterColumn, False)
+
+    def on_actionOrderAsc_triggered(self):
+        print("--- on_actionOrderAsc_triggered ---")
+        orderColumn = self.logicalIndex
+        model = self._ui.treeView_ttm.model().sourceModel()
+        model.sortColumn(orderColumn, True)
+
+    def on_actionOrderDes_triggered(self):
+        print("--- on_actionOrderDes_triggered ---")
+        orderColumn = self.logicalIndex
+        model = self._ui.treeView_ttm.model().sourceModel()
+        model.sortColumn(orderColumn, False)
+
+    def on_signalMapper_mapped(self, i):
+        print("--- on_signalMapper_mapped[{}] ---".format(i))
+        stringAction = self.signalMapper.mapping(i).text()
+        filterColumn = self.logicalIndex
+        proxy = self._ui.treeView_ttm.model()
+        proxy.setFilter(stringAction, filterColumn)
+        model = proxy.sourceModel()
+        model.setFiltered(filterColumn, True)
 
     """
     def __make_statistics_dataframe(self,

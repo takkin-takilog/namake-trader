@@ -2,14 +2,123 @@ import pandas as pd
 from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtCharts import QtCharts
+from PySide2.QtCore import QAbstractTableModel, QSortFilterProxyModel
 from PySide2.QtCore import Qt, QPointF, QRectF, QRect, QLineF
-from PySide2.QtCore import QDateTime, QDate, QTime
+from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
 from PySide2.QtGui import QPalette, QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QPen
 from trade_monitor.utilities import GRAN_FREQ_DICT
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 CALLOUT_DATE_COLOR = QColor(0, 204, 51)
+
+
+class PandasModel(QAbstractTableModel):
+
+    def __init__(self, df=pd.DataFrame(), parent=None):
+        super().__init__(parent)
+        self._df_index_names = df.index.names
+        print("----- index_names -----")
+        print(" {}".format(self._df_index_names))
+        self._df = df.reset_index()
+        self._bolds = dict()
+        self._colors = dict()
+
+    def toDataFrame(self):
+        print("--- toDataFrame ---")
+        return self._df.set_index(self._df_index_names)
+
+    def getColumnUnique(self, column_index):
+        print("--- getColumnUnique ---")
+        return self._df.iloc[:, column_index].unique()
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation == Qt.Horizontal:
+            if role == Qt.DisplayRole:
+                try:
+                    return self._df.columns.tolist()[section]
+                except (IndexError,):
+                    return None
+            elif role == Qt.FontRole:
+                return self._bolds.get(section, None)
+
+            elif role == Qt.ForegroundRole:
+                return self._colors.get(section, None)
+
+        elif orientation == Qt.Vertical:
+            if role == Qt.DisplayRole:
+                try:
+                    return self._df.index.tolist()[section]
+                except (IndexError,):
+                    return None
+        return None
+
+    def setFiltered(self, section, isFiltered):
+        print("--- setIsFiltered ---")
+        font = QFont()
+        color = QColor()
+        if isFiltered:
+            font.setBold(True)
+            color.setBlue(255)
+        self._bolds[section] = font
+        self._colors[section] = color
+        self.headerDataChanged.emit(Qt.Horizontal, 0, self.columnCount())
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            if not index.isValid():
+                return None
+            return str(self._df.iloc[index.row(), index.column()])
+
+        elif role == Qt.UserRole:
+            if not index.isValid():
+                return None
+            return self._df.iloc[index.row(), index.column()]
+        else:
+            return None
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self._df.index)
+
+    def columnCount(self, parent=QModelIndex()):
+        return len(self._df.columns)
+
+    def sortColumn(self, column, ascending):
+        print("--- sortColumn ---")
+        colname = self._df.columns.tolist()[column]
+        self.layoutAboutToBeChanged.emit()
+        self._df.sort_values(colname, ascending=ascending, inplace=True)
+        self._df.reset_index(inplace=True, drop=True)
+        print(self._df)
+        self.layoutChanged.emit()
+
+
+class CustomProxyModel(QSortFilterProxyModel):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._filters = dict()
+
+    @property
+    def filters(self):
+        return self._filters
+
+    def setFilter(self, expresion, column):
+        if expresion:
+            self.filters[column] = expresion
+        elif column in self.filters:
+            del self.filters[column]
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        for column, expresion in self.filters.items():
+            text = self.sourceModel().index(source_row, column, source_parent).data()
+            regex = QRegExp(
+                expresion, Qt.CaseInsensitive, QRegExp.RegExp
+            )
+            if regex.indexIn(text) == -1:
+                return False
+        return True
 
 
 class BaseCalloutChart(QGraphicsItem):
