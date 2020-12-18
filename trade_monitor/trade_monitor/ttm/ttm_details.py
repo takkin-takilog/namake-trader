@@ -107,13 +107,15 @@ class TtmDetails(QMainWindow):
             header.setSectionResizeMode(i, QHeaderView.ResizeToContents)
 
         vHeaderView = ui.tableWidget.verticalHeader()
-        hHeaderView = ui.tableWidget.horizontalHeader()
-        vHeaderView.setDefaultSectionSize(100)
+        # hHeaderView = ui.tableWidget.horizontalHeader()
+        vHeaderView.setDefaultSectionSize(300)
 
         callback = self._on_vHeaderView_sectionResized
         vHeaderView.sectionResized.connect(callback)
+        """
         callback = self._on_hHeaderView_sectionResized
         hHeaderView.sectionResized.connect(callback)
+        """
 
         self._CHECKSTATE_WEEKDAY_DICT = {
             WEEKDAY_ID_MON: ui.checkBox_Weekday_mon.checkState,
@@ -178,19 +180,21 @@ class TtmDetails(QMainWindow):
         self._ui.ScrollBar_DateRange.blockSignals(wasBlocked4)
 
     def _on_vHeaderView_sectionResized(self, index, oldSize, newSize):
-        self._logger.debug("--- on_tableWidget_rowResized ----------")
+        # self._logger.debug("--- on_tableWidget_rowResized ----------")
 
         vHeaderView = self._ui.tableWidget.verticalHeader()
         vHeaderView.setDefaultSectionSize(newSize)
 
+    """
     def _on_hHeaderView_sectionResized(self, index, oldSize, newSize):
         self._logger.debug("--- on_tableWidget_columnResized ----------")
+    """
 
     def _on_pushButton_update_clicked(self, checked):
         self._update_table()
 
     def _on_checkBox_autoupdate_stateChanged(self, state):
-        self._logger.debug("---on_checkBox_autoupdate_stateChanged ----------")
+        # self._logger.debug("---on_checkBox_autoupdate_stateChanged ----------")
         # self._logger.debug("state:{}".format(state))
 
         if state == Qt.Checked:
@@ -201,7 +205,7 @@ class TtmDetails(QMainWindow):
             self._ui.pushButton_update.setEnabled(True)
 
     def _on_lower_date_changed(self, qdate):
-        self._logger.debug("---[1]on_start_date_changed ----------")
+        # self._logger.debug("---[1]on_start_date_changed ----------")
 
         sdt_str = qdate.toString(FMT_QT_DATE_YMD)
         self._drm.set_lower(sdt_str)
@@ -224,7 +228,7 @@ class TtmDetails(QMainWindow):
         self._ui.ScrollBar_DateRange.blockSignals(wasBlocked3)
 
     def _on_upper_date_changed(self, qdate):
-        self._logger.debug("---[2]on_end_date_changed ----------")
+        # self._logger.debug("---[2]on_end_date_changed ----------")
 
         sdt_str = qdate.toString(FMT_QT_DATE_YMD)
         self._drm.set_upper(sdt_str)
@@ -247,7 +251,7 @@ class TtmDetails(QMainWindow):
         self._ui.ScrollBar_DateRange.blockSignals(wasBlocked3)
 
     def _on_spinBox_step_value_changed(self, value):
-        self._logger.debug("---[3]on_spinBox_step_value_changed ----------")
+        # self._logger.debug("---[3]on_spinBox_step_value_changed ----------")
 
         slide_cnt = value - self._drm.count
 
@@ -279,7 +283,7 @@ class TtmDetails(QMainWindow):
         self._ui.ScrollBar_DateRange.blockSignals(wasBlocked3)
 
     def _on_ScrollBar_DateRange_value_changed(self, value):
-        self._logger.debug("---[4]on_ScrollBar_DateRange_value_changed ----------")
+        # self._logger.debug("---[4]on_ScrollBar_DateRange_value_changed ----------")
 
         step = value - self._drm.lower_pos
         self._drm.slide(step)
@@ -303,7 +307,7 @@ class TtmDetails(QMainWindow):
         self._ui.dateEdit_upper.blockSignals(wasBlocked2)
 
     def _on_checkBox_ShowItem_stateChanged(self, state):
-        self._logger.debug("--- on_checkBox_ShowItem_stateChanged ----------")
+        # self._logger.debug("--- on_checkBox_ShowItem_stateChanged ----------")
 
         self._is_require_reconstruct_table = True
 
@@ -321,7 +325,7 @@ class TtmDetails(QMainWindow):
         self._update_chart(df_wg)
 
     def _get_latest_dataframe(self):
-        self._logger.debug("---[99]update_dataframe ----------")
+        # self._logger.debug("---[99]update_dataframe ----------")
 
         sdt_str = self._drm.lower_date
         sdt_end = self._drm.upper_date

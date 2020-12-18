@@ -17,19 +17,25 @@ class PandasModel(QAbstractTableModel):
 
     def __init__(self, df=pd.DataFrame(), parent=None):
         super().__init__(parent)
-        self._df_index_names = df.index.names
-        print("----- index_names -----")
-        print(" {}".format(self._df_index_names))
+
+        if df.index.names[0] is None:
+            self._df_index_names = None
+        else:
+            self._df_index_names = df.index.names
+
         self._df = df.reset_index()
         self._bolds = dict()
         self._colors = dict()
 
     def toDataFrame(self):
-        print("--- toDataFrame ---")
-        return self._df.set_index(self._df_index_names)
+        if self._df_index_names is None:
+            df = self._df
+        else:
+            df = self._df.set_index(self._df_index_names)
+
+        return df
 
     def getColumnUnique(self, column_index):
-        print("--- getColumnUnique ---")
         return self._df.iloc[:, column_index].unique()
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -54,7 +60,6 @@ class PandasModel(QAbstractTableModel):
         return None
 
     def setFiltered(self, section, isFiltered):
-        print("--- setIsFiltered ---")
         font = QFont()
         color = QColor()
         if isFiltered:
@@ -84,12 +89,10 @@ class PandasModel(QAbstractTableModel):
         return len(self._df.columns)
 
     def sortColumn(self, column, ascending):
-        print("--- sortColumn ---")
         colname = self._df.columns.tolist()[column]
         self.layoutAboutToBeChanged.emit()
         self._df.sort_values(colname, ascending=ascending, inplace=True)
         self._df.reset_index(inplace=True, drop=True)
-        print(self._df)
         self.layoutChanged.emit()
 
 

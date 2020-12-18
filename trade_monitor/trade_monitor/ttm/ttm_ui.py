@@ -1,13 +1,9 @@
 import pandas as pd
 import datetime as dt
-
 from PySide2.QtWidgets import QHeaderView, QGridLayout
 from PySide2.QtWidgets import QAction, QMenu
-from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtCore import QItemSelectionModel, QSignalMapper, QPoint, Qt
-
+from PySide2.QtCore import QSignalMapper, QPoint, Qt
 from trade_apl_msgs.srv import TtmMntSrv
-from trade_apl_msgs.msg import TtmTblOhlcRecMsg, TtmTblBaseRecMsg
 from trade_monitor.base import PandasModel, CustomProxyModel
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import INST_MSG_LIST
@@ -35,7 +31,6 @@ from trade_monitor.ttm.ttm_common import (COL_DATE,
 from trade_monitor.ttm.ttm_common import GAP_TYP_CO
 from trade_monitor.ttm.ttm_common import WEEKDAY_ID_DICT
 from trade_monitor.ttm.ttm_common import GOTODAY_ID_DICT
-from trade_monitor.ttm import ttm_common as ttmcom
 
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
@@ -131,9 +126,8 @@ class TtmUi():
         header = ui.treeView_ttm.header()
         header.setSectionsClickable(True)
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
-        callback = self.on_view_header_sectionClicked
+        callback = self._on_view_header_sectionClicked
         header.sectionClicked.connect(callback)
-
 
         # set header
         """
@@ -168,50 +162,47 @@ class TtmUi():
         self._srv_cli_list = srv_cli_list
         self._logger = utl.get_logger()
 
-    def on_view_header_sectionClicked(self, logicalIndex):
-        print("--- on_view_header_sectionClicked ---")
-
-        self.logicalIndex = logicalIndex
-        self.menuValues = QMenu()
-        self.menuValues.setStyleSheet("QMenu { menu-scrollable: 1; }")
-        self.signalMapper = QSignalMapper()
+    def _on_view_header_sectionClicked(self, logicalIndex):
+        self._logicalIndex = logicalIndex
+        self._menu = QMenu()
+        self._menu.setStyleSheet("QMenu { menu-scrollable: 1; }")
+        self._signal_mapper = QSignalMapper()
 
         model = self._ui.treeView_ttm.model().sourceModel()
-        # valuesUnique = model._df.iloc[:, self.logicalIndex].unique()
-        valuesUnique = model.getColumnUnique(self.logicalIndex)
+        # valuesUnique = model._df.iloc[:, self._logicalIndex].unique()
+        valuesUnique = model.getColumnUnique(self._logicalIndex)
 
         # actAll = QAction("All", self)
         parent = self._ui.treeView_ttm
         actAll = QAction("All", parent)
-        actAll.triggered.connect(self.on_actionAll_triggered)
-        self.menuValues.addAction(actAll)
-        self.menuValues.addSeparator()
+        actAll.triggered.connect(self._on_actionAll_triggered)
+        self._menu.addAction(actAll)
+        self._menu.addSeparator()
 
         actOrderAsc = QAction("Order Asc", parent)
-        actOrderAsc.triggered.connect(self.on_actionOrderAsc_triggered)
-        self.menuValues.addAction(actOrderAsc)
+        actOrderAsc.triggered.connect(self._on_actionOrderAsc_triggered)
+        self._menu.addAction(actOrderAsc)
         actOrderDes = QAction("Order Des", parent)
-        actOrderDes.triggered.connect(self.on_actionOrderDes_triggered)
-        self.menuValues.addAction(actOrderDes)
-        self.menuValues.addSeparator()
+        actOrderDes.triggered.connect(self._on_actionOrderDes_triggered)
+        self._menu.addAction(actOrderDes)
+        self._menu.addSeparator()
 
-        for actNumber, actName in enumerate(sorted(list(set(valuesUnique)))):
-            action = QAction(str(actName), parent)
-            self.signalMapper.setMapping(action, actNumber)
-            action.triggered.connect(self.signalMapper.map)
-            self.menuValues.addAction(action)
-        self.signalMapper.mapped.connect(self.on_signalMapper_mapped)
+        for act_no, act_name in enumerate(sorted(list(set(valuesUnique)))):
+            action = QAction(str(act_name), parent)
+            self._signal_mapper.setMapping(action, act_no)
+            action.triggered.connect(self._signal_mapper.map)
+            self._menu.addAction(action)
+        self._signal_mapper.mapped.connect(self._on_signalMapper_mapped)
 
         header = self._ui.treeView_ttm.header()
 
         headerPos = self._ui.treeView_ttm.mapToGlobal(header.pos())
         posY = headerPos.y() + header.height()
-        posX = headerPos.x() + header.sectionPosition(self.logicalIndex)
+        posX = headerPos.x() + header.sectionPosition(self._logicalIndex)
 
-        self.menuValues.exec_(QPoint(posX, posY))
+        self._menu.exec_(QPoint(posX, posY))
 
     def _on_fetch_ttm_clicked(self):
-
         """
         self._qstd_itm_mdl.clear()
         self._qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
@@ -396,44 +387,59 @@ class TtmUi():
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
 
-        #self._widget_htmap.set_param(inst_idx, self._df_param)
+        date_list = sorted(self._get_selected_date_list())
+        if not date_list:
+            df = self._df_base
+        else:
+            df = self._df_base.loc[(date_list), :]
+
+        # self._widget_htmap.set_param(inst_idx, self._df_param)
         self._widget_details.show()
         self._widget_details.init_resize()
-        self._widget_details.set_data(self._df_base,
+        self._widget_details.set_data(df,
                                       # self._df_week_goto,
                                       # self._df_month_goto,
                                       self._gran_id,
                                       decimal_digit)
 
-    def on_actionAll_triggered(self):
-        print("--- on_actionAll_triggered ---")
-        filterColumn = self.logicalIndex
+    def _on_actionAll_triggered(self):
+        filterColumn = self._logicalIndex
         proxy = self._ui.treeView_ttm.model()
         proxy.setFilter("", filterColumn)
 
         model = self._ui.treeView_ttm.model().sourceModel()
         model.setFiltered(filterColumn, False)
 
-    def on_actionOrderAsc_triggered(self):
-        print("--- on_actionOrderAsc_triggered ---")
-        orderColumn = self.logicalIndex
+    def _on_actionOrderAsc_triggered(self):
+        orderColumn = self._logicalIndex
         model = self._ui.treeView_ttm.model().sourceModel()
         model.sortColumn(orderColumn, True)
 
-    def on_actionOrderDes_triggered(self):
-        print("--- on_actionOrderDes_triggered ---")
-        orderColumn = self.logicalIndex
+    def _on_actionOrderDes_triggered(self):
+        orderColumn = self._logicalIndex
         model = self._ui.treeView_ttm.model().sourceModel()
         model.sortColumn(orderColumn, False)
 
-    def on_signalMapper_mapped(self, i):
-        print("--- on_signalMapper_mapped[{}] ---".format(i))
-        stringAction = self.signalMapper.mapping(i).text()
-        filterColumn = self.logicalIndex
+    def _on_signalMapper_mapped(self, i):
+        stringAction = self._signal_mapper.mapping(i).text()
+        filterColumn = self._logicalIndex
         proxy = self._ui.treeView_ttm.model()
         proxy.setFilter(stringAction, filterColumn)
         model = proxy.sourceModel()
         model.setFiltered(filterColumn, True)
+
+    def _get_selected_date_list(self):
+        tv = self._ui.treeView_ttm
+        model_index_list = tv.selectionModel().selectedRows()
+        proxy = tv.model()
+
+        date_list = []
+        for model_index in model_index_list:
+            r = model_index.row()
+            date = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
+            date_list.append(date)
+
+        return date_list
 
     """
     def __make_statistics_dataframe(self,
