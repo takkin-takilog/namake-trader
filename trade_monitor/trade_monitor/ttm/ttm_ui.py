@@ -355,11 +355,9 @@ class TtmUi():
 
     def _on_selection_ttm_changed(self, selected, _):
 
-        qisr0 = selected.at(0)
+        if not selected.isEmpty():
 
-        if qisr0 is not None:
-
-            model_index = qisr0.indexes()[0]
+            model_index = selected.at(0).indexes()[0]
             r = model_index.row()
             proxy = self._ui.treeView_ttm.model()
             date_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
@@ -389,9 +387,10 @@ class TtmUi():
 
         date_list = sorted(self._get_selected_date_list())
         if not date_list:
-            df = self._df_base
-        else:
-            df = self._df_base.loc[(date_list), :]
+            df_tv = self._get_treeview_dataframe()
+            date_list = sorted(df_tv.index.values.tolist())
+
+        df = self._df_base.loc[(date_list), :]
 
         # self._widget_htmap.set_param(inst_idx, self._df_param)
         self._widget_details.show()
@@ -427,6 +426,26 @@ class TtmUi():
         proxy.setFilter(stringAction, filterColumn)
         model = proxy.sourceModel()
         model.setFiltered(filterColumn, True)
+
+    def _get_treeview_dataframe(self):
+        proxy = self._ui.treeView_ttm.model()
+        rowCnt = proxy.rowCount()
+        colCnt = proxy.columnCount()
+        map_ = []
+        for row in range(rowCnt):
+            tbl = []
+            for col in range(colCnt):
+                modelIndex = proxy.index(row, col)
+                data = modelIndex.data(role=Qt.UserRole)
+                tbl.append(data)
+            map_.append(tbl)
+
+        model = proxy.sourceModel()
+        df = pd.DataFrame(map_,
+                          columns=model.getDataFrameColumnsName())
+        df.set_index([self._TREEVIEW_ITEM_DATE], inplace=True)
+
+        return df
 
     def _get_selected_date_list(self):
         tv = self._ui.treeView_ttm

@@ -27,6 +27,9 @@ class PandasModel(QAbstractTableModel):
         self._bolds = dict()
         self._colors = dict()
 
+    def getDataFrameColumnsName(self):
+        return list(self._df.columns)
+
     def toDataFrame(self):
         if self._df_index_names is None:
             df = self._df
