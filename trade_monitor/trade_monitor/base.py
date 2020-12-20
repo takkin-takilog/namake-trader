@@ -239,12 +239,11 @@ class PandasTreeView(QTreeView):
         self._menu.exec_(QPoint(posX, posY))
 
     def is_selected(self):
-        df = self._get_selected_dataframe()
-        if df.empty:
-            flg = False
+        if self.selectionModel().selectedRows():
+            flag = True
         else:
-            flg = True
-        return flg
+            flag = False
+        return flag
 
     def get_dataframe(self, is_selected=False):
 
