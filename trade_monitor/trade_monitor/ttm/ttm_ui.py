@@ -1,6 +1,5 @@
 import pandas as pd
 import datetime as dt
-from PySide2.QtWidgets import QGridLayout
 from PySide2.QtCore import Qt
 from trade_apl_msgs.srv import TtmMntSrv
 from trade_monitor.base import PandasTreeView
@@ -123,10 +122,7 @@ class TtmUi():
         callback = self._on_view_header_sectionClicked
         header.sectionClicked.connect(callback)
 
-        lay = QGridLayout(ui.widget_ttm_chart1m)
-        lay.setMargin(0)
-        chart = CandlestickChartTtm(ui.widget_ttm_chart1m)
-        lay.addWidget(chart, 0, 0, 1, 1)
+        chart = CandlestickChartTtm(ui.widget_ChartView_ttm)
 
         # Create service client "ttm_monitor"
         srv_type = TtmMntSrv
@@ -323,9 +319,8 @@ class TtmUi():
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
 
-        dftv = self._pdtreeview.get_dataframe(is_selected=True)
-        if dftv.empty:
-            dftv = self._pdtreeview.get_dataframe(is_selected=False)
+        is_selected = self._pdtreeview.is_selected()
+        dftv = self._pdtreeview.get_dataframe(is_selected=is_selected)
 
         date_list = sorted(dftv.index.to_list())
         df = self._df_base.loc[(date_list), :]

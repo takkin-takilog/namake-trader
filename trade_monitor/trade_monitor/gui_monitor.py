@@ -153,7 +153,7 @@ class GuiMonitor(QMainWindow):
         if tab_index == 0:
             self._main_ui.resize_chart_widget()
         elif tab_index == 1:
-            self._gapfill_ui.resize_chart_widget()
+            pass
         elif tab_index == 2:
             pass
 

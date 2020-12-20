@@ -386,12 +386,6 @@ class GapFillUi():
             self._df_prev = df_prev
             self._df_curr = df_curr
 
-    def resize_chart_widget(self):
-        fs = self._ui.widget_gapfill_chart_prev.frameSize()
-        self._chart_prev.resize(fs)
-        fs = self._ui.widget_gapfill_chart_curr.frameSize()
-        self._chart_curr.resize(fs)
-
     def _comboBox_gapfill_spread_prev_changed(self, idx):
 
         if self._is_update:

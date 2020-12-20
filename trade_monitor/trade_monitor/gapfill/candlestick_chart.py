@@ -5,8 +5,8 @@ from trade_monitor.base import BaseCandlestickChart
 
 class BaseCandlestickChartGapFill(BaseCandlestickChart):
 
-    def __init__(self, widget):
-        super().__init__(widget)
+    def __init__(self, parent):
+        super().__init__(parent)
 
         # ---------- Add PreviousClosePriceLine on scene ----------
         self._hl_prev_cls = QGraphicsLineItem()
@@ -90,8 +90,8 @@ class BaseCandlestickChartGapFill(BaseCandlestickChart):
 
 class CandlestickChartGapFillPrev(BaseCandlestickChartGapFill):
 
-    def __init__(self, widget):
-        super().__init__(widget)
+    def __init__(self, parent):
+        super().__init__(parent)
 
     def update(self,
                df,
@@ -118,8 +118,8 @@ class CandlestickChartGapFillPrev(BaseCandlestickChartGapFill):
 
 class CandlestickChartGapFillCurr(BaseCandlestickChartGapFill):
 
-    def __init__(self, widget):
-        super().__init__(widget)
+    def __init__(self, parent):
+        super().__init__(parent)
 
         # ---------- Add EndVerticalLine on scene ----------
         self._vl_endhour = QGraphicsLineItem()

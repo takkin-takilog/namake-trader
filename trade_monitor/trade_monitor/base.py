@@ -167,9 +167,10 @@ class PandasTreeView(QTreeView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        lay = QGridLayout(parent)
-        lay.setMargin(0)
-        lay.addWidget(self, 0, 0, 1, 1)
+        if parent is not None:
+            lay = QGridLayout(parent)
+            lay.setMargin(0)
+            lay.addWidget(self, 0, 0, 1, 1)
 
         self.setAlternatingRowColors(True)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -236,6 +237,14 @@ class PandasTreeView(QTreeView):
         posX = headerPos.x() + header.sectionPosition(self._logical_index)
 
         self._menu.exec_(QPoint(posX, posY))
+
+    def is_selected(self):
+        df = self._get_selected_dataframe()
+        if df.empty:
+            flg = False
+        else:
+            flg = True
+        return flg
 
     def get_dataframe(self, is_selected=False):
 
@@ -439,10 +448,15 @@ class BaseCandlestickChart(QtCharts.QChartView):
     COL_NAME_LO = "low"
     COL_NAME_CL = "close"
 
-    def __init__(self, widget=None):
-        super().__init__(widget)
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
+
+        if parent is not None:
+            lay = QGridLayout(parent)
+            lay.setMargin(0)
+            lay.addWidget(self, 0, 0, 1, 1)
 
         # ---------- Create Chart ----------
         chart = QtCharts.QChart()
@@ -624,10 +638,15 @@ class BaseLineChart(QtCharts.QChartView):
     COL_NAME_LO = "low"
     COL_NAME_CL = "close"
 
-    def __init__(self, widget=None):
-        super().__init__(widget)
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
+
+        if parent is not None:
+            lay = QGridLayout(parent)
+            lay.setMargin(0)
+            lay.addWidget(self, 0, 0, 1, 1)
 
         # ---------- Create Chart ----------
         chart = QtCharts.QChart()
