@@ -200,15 +200,15 @@ class PandasTreeView(QTreeView):
         proxy.setSourceModel(model)
         self.setModel(proxy)
 
-    def show_header_menu(self, logicalIndex):
+    def show_header_menu(self, logical_index):
 
-        self._logicalIndex = logicalIndex
+        self._logical_index = logical_index
         self._menu = QMenu()
         self._menu.setStyleSheet("QMenu { menu-scrollable: 1; }")
         self._signal_mapper = QSignalMapper()
 
-        # valuesUnique = model._df.iloc[:, self._logicalIndex].unique()
-        valuesUnique = self.pandas_model.getColumnUnique(self._logicalIndex)
+        # valuesUnique = model._df.iloc[:, self._logical_index].unique()
+        valuesUnique = self.pandas_model.getColumnUnique(self._logical_index)
 
         actAll = QAction("All", self)
         actAll.triggered.connect(self._on_actionAll_triggered)
@@ -233,7 +233,7 @@ class PandasTreeView(QTreeView):
         header = self.header()
         headerPos = self.mapToGlobal(header.pos())
         posY = headerPos.y() + header.height()
-        posX = headerPos.x() + header.sectionPosition(self._logicalIndex)
+        posX = headerPos.x() + header.sectionPosition(self._logical_index)
 
         self._menu.exec_(QPoint(posX, posY))
 
@@ -279,8 +279,6 @@ class PandasTreeView(QTreeView):
 
     def _convert_dataframe(self, table):
 
-        print(table)
-
         index_names = self.pandas_model.df_index_names
         column_names = self.pandas_model.df_column_names
 
@@ -296,21 +294,21 @@ class PandasTreeView(QTreeView):
         return df
 
     def _on_actionAll_triggered(self):
-        filterColumn = self._logicalIndex
+        filterColumn = self._logical_index
         self.proxy.setFilter("", filterColumn)
         self.pandas_model.setFiltered(filterColumn, False)
 
     def _on_actionOrderAsc_triggered(self):
-        orderColumn = self._logicalIndex
+        orderColumn = self._logical_index
         self.pandas_model.sortColumn(orderColumn, True)
 
     def _on_actionOrderDes_triggered(self):
-        orderColumn = self._logicalIndex
+        orderColumn = self._logical_index
         self.pandas_model.sortColumn(orderColumn, False)
 
     def _on_signalMapper_mapped(self, i):
         stringAction = self._signal_mapper.mapping(i).text()
-        filterColumn = self._logicalIndex
+        filterColumn = self._logical_index
         self.proxy.setFilter(stringAction, filterColumn)
         self.pandas_model.setFiltered(filterColumn, True)
 
