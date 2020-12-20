@@ -1,10 +1,18 @@
 import pandas as pd
-from PySide2.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
+from PySide2.QtWidgets import QGraphicsItem
+from PySide2.QtWidgets import QWidget
+from PySide2.QtWidgets import QStyleOptionGraphicsItem
 from PySide2.QtWidgets import QGraphicsLineItem
+from PySide2.QtWidgets import QAction, QMenu
+from PySide2.QtWidgets import QTreeView
+from PySide2.QtWidgets import QHeaderView
+from PySide2.QtWidgets import QGridLayout
+from PySide2.QtWidgets import QAbstractItemView
 from PySide2.QtCharts import QtCharts
 from PySide2.QtCore import QAbstractTableModel, QSortFilterProxyModel
 from PySide2.QtCore import Qt, QPointF, QRectF, QRect, QLineF
 from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
+from PySide2.QtCore import QSignalMapper, QPoint
 from PySide2.QtGui import QPalette, QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QPen
 from trade_monitor.utilities import GRAN_FREQ_DICT
@@ -20,12 +28,23 @@ class PandasModel(QAbstractTableModel):
 
         if df.index.names[0] is None:
             self._df_index_names = None
+            is_drop = True
         else:
             self._df_index_names = df.index.names
+            is_drop = False
 
-        self._df = df.reset_index()
+        self._df_column_names = df.columns.tolist()
+        self._df = df.reset_index(drop=is_drop)
         self._bolds = dict()
         self._colors = dict()
+
+    @property
+    def df_index_names(self):
+        return self._df_index_names
+
+    @property
+    def df_column_names(self):
+        return self._df_column_names
 
     def getDataFrameColumnsName(self):
         return list(self._df.columns)
@@ -85,11 +104,27 @@ class PandasModel(QAbstractTableModel):
         else:
             return None
 
+    def setData(self, index, value, role):
+        row = self._df.index[index.row()]
+        col = self._df.columns[index.column()]
+        dtype = self._df[col].dtype
+        if dtype != object:
+            value = None if value == '' else dtype.type(value)
+        self._df.set_value(row, col, value)
+        return True
+
     def rowCount(self, parent=QModelIndex()):
         return len(self._df.index)
 
     def columnCount(self, parent=QModelIndex()):
         return len(self._df.columns)
+
+    def sort(self, column, order):
+        colname = self._df.columns.tolist()[column]
+        self.layoutAboutToBeChanged.emit()
+        self._df.sort_values(colname, ascending=order == Qt.AscendingOrder, inplace=True)
+        self._df.reset_index(inplace=True, drop=True)
+        self.layoutChanged.emit()
 
     def sortColumn(self, column, ascending):
         colname = self._df.columns.tolist()[column]
@@ -125,6 +160,159 @@ class CustomProxyModel(QSortFilterProxyModel):
             if regex.indexIn(text) == -1:
                 return False
         return True
+
+
+class PandasTreeView(QTreeView):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        lay = QGridLayout(parent)
+        lay.setMargin(0)
+        lay.addWidget(self, 0, 0, 1, 1)
+
+        self.setAlternatingRowColors(True)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerItem)
+
+        header = self.header()
+        header.setSectionsClickable(True)
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+
+        model = PandasModel()
+        proxy = CustomProxyModel()
+        proxy.setSourceModel(model)
+        self.setModel(proxy)
+
+    @property
+    def pandas_model(self):
+        return self.model().sourceModel()
+
+    @property
+    def proxy(self):
+        return self.model()
+
+    def set_dataframe(self, df: pd.DataFrame):
+        model = PandasModel(df)
+        proxy = CustomProxyModel()
+        proxy.setSourceModel(model)
+        self.setModel(proxy)
+
+    def show_header_menu(self, logicalIndex):
+
+        self._logicalIndex = logicalIndex
+        self._menu = QMenu()
+        self._menu.setStyleSheet("QMenu { menu-scrollable: 1; }")
+        self._signal_mapper = QSignalMapper()
+
+        # valuesUnique = model._df.iloc[:, self._logicalIndex].unique()
+        valuesUnique = self.pandas_model.getColumnUnique(self._logicalIndex)
+
+        actAll = QAction("All", self)
+        actAll.triggered.connect(self._on_actionAll_triggered)
+        self._menu.addAction(actAll)
+        self._menu.addSeparator()
+
+        actOrderAsc = QAction("Order Asc", self)
+        actOrderAsc.triggered.connect(self._on_actionOrderAsc_triggered)
+        self._menu.addAction(actOrderAsc)
+        actOrderDes = QAction("Order Des", self)
+        actOrderDes.triggered.connect(self._on_actionOrderDes_triggered)
+        self._menu.addAction(actOrderDes)
+        self._menu.addSeparator()
+
+        for act_no, act_name in enumerate(sorted(list(set(valuesUnique)))):
+            action = QAction(str(act_name), self)
+            self._signal_mapper.setMapping(action, act_no)
+            action.triggered.connect(self._signal_mapper.map)
+            self._menu.addAction(action)
+        self._signal_mapper.mapped.connect(self._on_signalMapper_mapped)
+
+        header = self.header()
+        headerPos = self.mapToGlobal(header.pos())
+        posY = headerPos.y() + header.height()
+        posX = headerPos.x() + header.sectionPosition(self._logicalIndex)
+
+        self._menu.exec_(QPoint(posX, posY))
+
+    def get_dataframe(self, is_selected=False):
+
+        if is_selected:
+            df = self._get_selected_dataframe()
+        else:
+            df = self._get_all_dataframe()
+
+        return df
+
+    def _get_selected_dataframe(self):
+        model_index_list = self.selectionModel().selectedRows()
+        col_cnt = self.proxy.columnCount()
+        tbl = []
+        for model_index in model_index_list:
+            r = model_index.row()
+            rec = []
+            for c in range(col_cnt):
+                model = self.proxy.index(r, c, model_index)
+                data = model.data(role=Qt.UserRole)
+                rec.append(data)
+            tbl.append(rec)
+
+        df = self._convert_dataframe(tbl)
+        return df
+
+    def _get_all_dataframe(self):
+        row_cnt = self.proxy.rowCount()
+        col_cnt = self.proxy.columnCount()
+        tbl = []
+        for row in range(row_cnt):
+            rec = []
+            for col in range(col_cnt):
+                modelIndex = self.proxy.index(row, col)
+                data = modelIndex.data(role=Qt.UserRole)
+                rec.append(data)
+            tbl.append(rec)
+
+        df = self._convert_dataframe(tbl)
+        return df
+
+    def _convert_dataframe(self, table):
+
+        print(table)
+
+        index_names = self.pandas_model.df_index_names
+        column_names = self.pandas_model.df_column_names
+
+        if index_names:
+            labels = index_names + column_names
+            df = pd.DataFrame(table,
+                              columns=labels)
+            df.set_index(index_names, inplace=True)
+        else:
+            df = pd.DataFrame(table,
+                              columns=column_names)
+
+        return df
+
+    def _on_actionAll_triggered(self):
+        filterColumn = self._logicalIndex
+        self.proxy.setFilter("", filterColumn)
+        self.pandas_model.setFiltered(filterColumn, False)
+
+    def _on_actionOrderAsc_triggered(self):
+        orderColumn = self._logicalIndex
+        self.pandas_model.sortColumn(orderColumn, True)
+
+    def _on_actionOrderDes_triggered(self):
+        orderColumn = self._logicalIndex
+        self.pandas_model.sortColumn(orderColumn, False)
+
+    def _on_signalMapper_mapped(self, i):
+        stringAction = self._signal_mapper.mapping(i).text()
+        filterColumn = self._logicalIndex
+        self.proxy.setFilter(stringAction, filterColumn)
+        self.pandas_model.setFiltered(filterColumn, True)
 
 
 class BaseCalloutChart(QGraphicsItem):
