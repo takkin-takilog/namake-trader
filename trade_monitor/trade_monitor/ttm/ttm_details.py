@@ -72,7 +72,7 @@ class TtmDetails(QMainWindow):
     _CHARTTYP_ID_CUMSUM = 1
 
     _WEEKDAY_ID_DICT = {
-        WEEKDAY_ID_MON: TableItemConfig("Mon", background_color="#f4cccc"),
+        WEEKDAY_ID_MON: TableItemConfig("Mon", background_color="#f5dcdc"),
         WEEKDAY_ID_TUE: TableItemConfig("Tue", background_color="#d9ead3"),
         WEEKDAY_ID_WED: TableItemConfig("Wed", background_color="#fce5cd"),
         WEEKDAY_ID_THU: TableItemConfig("Thu", background_color="#cfe2f3"),
