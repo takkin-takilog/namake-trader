@@ -440,7 +440,7 @@ class CallouPrice(BaseCalloutChart):
         painter.drawText(self._textRect, self._text)
 
 
-class BaseCandlestickChart(QtCharts.QChartView):
+class BaseCandlestickChartView(QtCharts.QChartView):
 
     COL_NAME_OP = "open"
     COL_NAME_HI = "high"
@@ -630,7 +630,7 @@ class BaseCandlestickChart(QtCharts.QChartView):
             self._callout_hl.hide()
 
 
-class BaseLineChart(QtCharts.QChartView):
+class BaseLineChartView(QtCharts.QChartView):
 
     COL_NAME_OP = "open"
     COL_NAME_HI = "high"
@@ -649,6 +649,7 @@ class BaseLineChart(QtCharts.QChartView):
 
         # ---------- Create Chart ----------
         chart = QtCharts.QChart()
+        chart.setBackgroundBrush(Qt.red)
         chart.layout().setContentsMargins(0, 0, 0, 0)
         chart.setBackgroundRoundness(0)
 
@@ -660,9 +661,11 @@ class BaseLineChart(QtCharts.QChartView):
         """
 
         # ---------- Set palette on chart ----------
+        """
         palette = QPalette()
         palette.setColor(QPalette.Text, Qt.red)
         chart.setPalette(palette)
+        """
 
         # ---------- Set PlotAreaBackground on chart ----------
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)

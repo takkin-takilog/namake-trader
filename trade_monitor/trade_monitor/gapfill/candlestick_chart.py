@@ -1,9 +1,9 @@
 from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
 from PySide2.QtWidgets import QGraphicsLineItem
-from trade_monitor.base import BaseCandlestickChart
+from trade_monitor.base import BaseCandlestickChartView
 
 
-class BaseCandlestickChartGapFill(BaseCandlestickChart):
+class BaseCandlestickChartViewGapFill(BaseCandlestickChartView):
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -88,7 +88,7 @@ class BaseCandlestickChartGapFill(BaseCandlestickChart):
         self._hl_curr_opn.show()
 
 
-class CandlestickChartGapFillPrev(BaseCandlestickChartGapFill):
+class CandlestickChartViewGapFillPrev(BaseCandlestickChartViewGapFill):
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -116,7 +116,7 @@ class CandlestickChartGapFillPrev(BaseCandlestickChartGapFill):
         self.chart().axisX().setRange(min_x, max_x)
 
 
-class CandlestickChartGapFillCurr(BaseCandlestickChartGapFill):
+class CandlestickChartViewGapFillCurr(BaseCandlestickChartViewGapFill):
 
     def __init__(self, parent):
         super().__init__(parent)

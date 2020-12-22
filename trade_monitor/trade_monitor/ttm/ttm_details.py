@@ -19,8 +19,8 @@ from trade_monitor.ttm.ttm_common import (WEEKDAY_ID_MON,
                                           WEEKDAY_ID_WED,
                                           WEEKDAY_ID_THU,
                                           WEEKDAY_ID_FRI)
-from trade_monitor.ttm.chart import LineChartTtmStats
-from trade_monitor.ttm.chart import LineChartTtmCumsum
+from trade_monitor.ttm.chart import LineChartViewTtmStats
+from trade_monitor.ttm.chart import LineChartViewTtmCumsum
 from trade_monitor.ttm import ttm_common as ttmcom
 
 
@@ -61,7 +61,7 @@ class TtmDetails(QMainWindow):
     _TBL_COL_WEEKDAY = 0
     _TBL_COL_GOTODAY = 1
     _TBL_COL_CHARTTYP = 2
-    _TBL_COL_CHART = 3
+    _TBL_COL_CHARTVIEW = 3
 
     # define Goto-Day ID
     _GOTODAY_ID_T = 0
@@ -439,12 +439,13 @@ class TtmDetails(QMainWindow):
             item_ct.setBackground(back_color)
             self._ui.tableWidget.setItem(i, self._TBL_COL_CHARTTYP, item_ct)
 
+            # set Table Item "Chart View"
             if charttyp_id == self._CHARTTYP_ID_STATS:
-                chart = LineChartTtmStats()
+                chartview = LineChartViewTtmStats()
             else:
-                chart = LineChartTtmCumsum()
-            # chart.setBackgroundBrush(QBrush(QColor(back_color)))
-            self._ui.tableWidget.setCellWidget(i, self._TBL_COL_CHART, chart)
+                chartview = LineChartViewTtmCumsum()
+            chartview.chart().setBackgroundBrush(back_color)
+            self._ui.tableWidget.setCellWidget(i, self._TBL_COL_CHARTVIEW, chartview)
 
         self._chart_idx_list = chart_idx_list
         self._is_require_reconstruct_table = False
@@ -485,7 +486,7 @@ class TtmDetails(QMainWindow):
                 df_trg = df_wg_cs
                 max_y = wg_cs_max
 
-            chart = self._ui.tableWidget.cellWidget(i, self._TBL_COL_CHART)
+            chart = self._ui.tableWidget.cellWidget(i, self._TBL_COL_CHARTVIEW)
             chart.set_max_y(max_y)
             chart.set_min_y(-max_y)
             idxloc = (weekday_id, is_goto)

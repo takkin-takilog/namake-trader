@@ -46,8 +46,8 @@ from trade_monitor.gapfill.heatmap_manager import (COL_NAME_DATE,
                                                    COL_NAME_MAX_OPEN_RANGE,
                                                    COL_NAME_END_CLOSE_PRICE)
 
-from trade_monitor.gapfill.candlestick_chart import CandlestickChartGapFillPrev
-from trade_monitor.gapfill.candlestick_chart import CandlestickChartGapFillCurr
+from trade_monitor.gapfill.candlestick_chart import CandlestickChartViewGapFillPrev
+from trade_monitor.gapfill.candlestick_chart import CandlestickChartViewGapFillCurr
 
 
 class GapFillUi():
@@ -113,10 +113,10 @@ class GapFillUi():
                    COL_NAME_BID_CL
                    ]
 
-    CDL_COLUMNS = [CandlestickChartGapFillPrev.COL_NAME_OP,
-                   CandlestickChartGapFillPrev.COL_NAME_HI,
-                   CandlestickChartGapFillPrev.COL_NAME_LO,
-                   CandlestickChartGapFillPrev.COL_NAME_CL
+    CDL_COLUMNS = [CandlestickChartViewGapFillPrev.COL_NAME_OP,
+                   CandlestickChartViewGapFillPrev.COL_NAME_HI,
+                   CandlestickChartViewGapFillPrev.COL_NAME_LO,
+                   CandlestickChartViewGapFillPrev.COL_NAME_CL
                    ]
 
     SPREAD_COLUMNS_LIST = [MID_COLUMNS,
@@ -161,8 +161,8 @@ class GapFillUi():
         header = ui.treeView_gapfill.header()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-        chart_prev = CandlestickChartGapFillPrev(ui.widget_gapfill_chart_prev)
-        chart_curr = CandlestickChartGapFillCurr(ui.widget_gapfill_chart_curr)
+        chartview_prev = CandlestickChartViewGapFillPrev(ui.widget_ChartView_gapfill_prev)
+        chartview_curr = CandlestickChartViewGapFillCurr(ui.widget_ChartView_gapfill_curr)
 
         # Create service client "gapfill_monitor"
         srv_type = GapFillMntSrv
@@ -175,8 +175,8 @@ class GapFillUi():
 
         self._widget_htmap = GapFillHeatMap()
 
-        self._chart_prev = chart_prev
-        self._chart_curr = chart_curr
+        self._chartview_prev = chartview_prev
+        self._chartview_curr = chartview_curr
         self._qstd_itm_mdl = qstd_itm_mdl
 
         self._ui = ui
@@ -369,10 +369,10 @@ class GapFillUi():
             max_y = max(max_prev, max_curr)
             min_y = min(min_prev, min_curr)
 
-            self._chart_prev.set_max_y(max_y)
-            self._chart_prev.set_min_y(min_y)
-            self._chart_curr.set_max_y(max_y)
-            self._chart_curr.set_min_y(min_y)
+            self._chartview_prev.set_max_y(max_y)
+            self._chartview_prev.set_min_y(min_y)
+            self._chartview_curr.set_max_y(max_y)
+            self._chartview_curr.set_min_y(min_y)
 
             decimal_digit = inst_msg.decimal_digit
 
@@ -407,19 +407,19 @@ class GapFillUi():
         df_prev = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
         df_prev.columns = GapFillUi.CDL_COLUMNS
 
-        self._chart_prev.update(df_prev,
-                                self._gran_id,
-                                sr_gf[COL_NAME_GPA_CLOSE_PRICE],
-                                sr_gf[COL_NAME_GPA_OPEN_PRICE],
-                                decimal_digit)
+        self._chartview_prev.update(df_prev,
+                                    self._gran_id,
+                                    sr_gf[COL_NAME_GPA_CLOSE_PRICE],
+                                    sr_gf[COL_NAME_GPA_OPEN_PRICE],
+                                    decimal_digit)
 
     def _update_curr_chart(self, idx, df, sr_gf, decimal_digit):
 
         df_curr = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
         df_curr.columns = GapFillUi.CDL_COLUMNS
 
-        self._chart_curr.update(df_curr,
-                                self._gran_id,
-                                sr_gf[COL_NAME_GPA_CLOSE_PRICE],
-                                sr_gf[COL_NAME_GPA_OPEN_PRICE],
-                                decimal_digit, self._end_time)
+        self._chartview_curr.update(df_curr,
+                                    self._gran_id,
+                                    sr_gf[COL_NAME_GPA_CLOSE_PRICE],
+                                    sr_gf[COL_NAME_GPA_OPEN_PRICE],
+                                    decimal_digit, self._end_time)

@@ -11,7 +11,7 @@ from trade_monitor.utilities import (FMT_DTTM_API,
                                      FMT_TIME_HM,
                                      FMT_TIME_HMS
                                      )
-from trade_monitor.ttm.chart import CandlestickChartTtm
+from trade_monitor.ttm.chart import CandlestickChartViewTtm
 from trade_monitor.ttm.ttm_details import TtmDetails
 from trade_monitor.ttm.ttm_common import (COL_DATE,
                                           COL_TIME,
@@ -85,10 +85,10 @@ class TtmUi():
     _DATA_TYP_CO_CSUM = 7   # Cumsum of Close - Open price
     """
 
-    _CDL_COLUMNS = [CandlestickChartTtm.COL_NAME_OP,
-                    CandlestickChartTtm.COL_NAME_HI,
-                    CandlestickChartTtm.COL_NAME_LO,
-                    CandlestickChartTtm.COL_NAME_CL
+    _CDL_COLUMNS = [CandlestickChartViewTtm.COL_NAME_OP,
+                    CandlestickChartViewTtm.COL_NAME_HI,
+                    CandlestickChartViewTtm.COL_NAME_LO,
+                    CandlestickChartViewTtm.COL_NAME_CL
                     ]
 
     def __init__(self, ui) -> None:
@@ -122,7 +122,7 @@ class TtmUi():
         callback = self._on_view_header_sectionClicked
         header.sectionClicked.connect(callback)
 
-        chart = CandlestickChartTtm(ui.widget_ChartView_ttm)
+        chartview = CandlestickChartViewTtm(ui.widget_ChartView_ttm)
 
         # Create service client "ttm_monitor"
         srv_type = TtmMntSrv
@@ -136,7 +136,7 @@ class TtmUi():
         self._widget_details = TtmDetails()
 
         # self._qstd_itm_mdl = qstd_itm_mdl
-        self._chart = chart
+        self._chartview = chartview
 
         self._ui = ui
         self._pdtreeview = pdtreeview
@@ -303,16 +303,16 @@ class TtmUi():
             df = df.rename(index=lambda t: dt.datetime.strptime(date_str + t, fmt))
             df.columns = self._CDL_COLUMNS
 
-            max_y = df[CandlestickChartTtm.COL_NAME_HI].max()
-            min_y = df[CandlestickChartTtm.COL_NAME_LO].min()
+            max_y = df[CandlestickChartViewTtm.COL_NAME_HI].max()
+            min_y = df[CandlestickChartViewTtm.COL_NAME_LO].min()
             dif = (max_y - min_y) * 0.05
-            self._chart.set_max_y(max_y + dif)
-            self._chart.set_min_y(min_y - dif)
+            self._chartview.set_max_y(max_y + dif)
+            self._chartview.set_min_y(min_y - dif)
 
             inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
 
-            self._chart.update(df, self._gran_id, decimal_digit)
+            self._chartview.update(df, self._gran_id, decimal_digit)
 
     def _on_ttm_details_clicked(self):
 
