@@ -4,19 +4,49 @@ from PySide2.QtWidgets import QMainWindow, QHeaderView
 from PySide2.QtWidgets import QTableWidgetItem
 from PySide2.QtCore import QFile, QDate, Qt
 from PySide2.QtUiTools import QUiLoader
+from PySide2.QtGui import QColor, QBrush
 from trade_monitor import utilities as utl
 from trade_monitor.utilities import FMT_QT_DATE_YMD
 from trade_monitor.utilities import DateRangeManager
-from trade_monitor.ttm.ttm_common import COL_DATE, COL_DATA_TYP, DATA_TYP_CO_CSUM,\
-    DATA_TYP_CO_MEAN, DATA_TYP_HO_MEAN, DATA_TYP_LO_MEAN
+from trade_monitor.ttm.ttm_common import (COL_DATE,
+                                          COL_DATA_TYP,
+                                          DATA_TYP_CO_CSUM,
+                                          DATA_TYP_CO_MEAN,
+                                          DATA_TYP_HO_MEAN,
+                                          DATA_TYP_LO_MEAN)
 from trade_monitor.ttm.ttm_common import (WEEKDAY_ID_MON,
                                           WEEKDAY_ID_TUE,
                                           WEEKDAY_ID_WED,
                                           WEEKDAY_ID_THU,
                                           WEEKDAY_ID_FRI)
-from trade_monitor.ttm.chart import LineChartTtmStatistics
+from trade_monitor.ttm.chart import LineChartTtmStats
 from trade_monitor.ttm.chart import LineChartTtmCumsum
 from trade_monitor.ttm import ttm_common as ttmcom
+
+
+class TableItemConfig():
+
+    def __init__(self,
+                 text: str,
+                 foreground_color=QColor(Qt.black),
+                 background_color=QColor(Qt.white)
+                 ):
+
+        self._text = text
+        self._fore_brush = QBrush(QColor(foreground_color))
+        self._back_brush = QBrush(QColor(background_color))
+
+    @property
+    def text(self):
+        return self._text
+
+    @property
+    def foreground(self):
+        return self._fore_brush
+
+    @property
+    def background(self):
+        return self._back_brush
 
 
 class TtmDetails(QMainWindow):
@@ -27,30 +57,36 @@ class TtmDetails(QMainWindow):
     _COL_TBLPOS = "TblPos_Row"
     _COL_CHART_OBJ = "Chart_Obj"
 
+    # Table Column Type
+    _TBL_COL_WEEKDAY = 0
+    _TBL_COL_GOTODAY = 1
+    _TBL_COL_CHARTTYP = 2
+    _TBL_COL_CHART = 3
+
     # define Goto-Day ID
     _GOTODAY_ID_T = 0
     _GOTODAY_ID_F = 1
 
-    # define Chart Type
-    _CHART_TYP_STATISTICS = 0
-    _CHART_TYP_CUMSUM = 1
+    # define Chart Type ID
+    _CHARTTYP_ID_STATS = 0
+    _CHARTTYP_ID_CUMSUM = 1
 
     _WEEKDAY_ID_DICT = {
-        WEEKDAY_ID_MON: "Mon",
-        WEEKDAY_ID_TUE: "Tue",
-        WEEKDAY_ID_WED: "Wed",
-        WEEKDAY_ID_THU: "Thu",
-        WEEKDAY_ID_FRI: "Fri",
+        WEEKDAY_ID_MON: TableItemConfig("Mon", background_color="#f4cccc"),
+        WEEKDAY_ID_TUE: TableItemConfig("Tue", background_color="#d9ead3"),
+        WEEKDAY_ID_WED: TableItemConfig("Wed", background_color="#fce5cd"),
+        WEEKDAY_ID_THU: TableItemConfig("Thu", background_color="#cfe2f3"),
+        WEEKDAY_ID_FRI: TableItemConfig("Fri", background_color="#fff2cc")
     }
 
     _GOTO_ID_DICT = {
-        _GOTODAY_ID_T: "T",
-        _GOTODAY_ID_F: "F"
+        _GOTODAY_ID_T: TableItemConfig("Yes", foreground_color=Qt.red),
+        _GOTODAY_ID_F: TableItemConfig("No", foreground_color=Qt.blue)
     }
 
-    _CHARTTYP_LIST = {
-        _CHART_TYP_STATISTICS,
-        _CHART_TYP_CUMSUM
+    _CHARTTYP_ID_DICT = {
+        _CHARTTYP_ID_STATS: TableItemConfig("Stats"),
+        _CHARTTYP_ID_CUMSUM: TableItemConfig("CumSum")
     }
 
     def __init__(self, parent=None):
@@ -131,8 +167,8 @@ class TtmDetails(QMainWindow):
         }
 
         self._CHECKSTATE_CHARTTYP_DICT = {
-            self._CHART_TYP_STATISTICS: ui.checkBox_ChartTyp_stat.checkState,
-            self._CHART_TYP_CUMSUM: ui.checkBox_ChartTyp_cumsum.checkState,
+            self._CHARTTYP_ID_STATS: ui.checkBox_ChartTyp_stat.checkState,
+            self._CHARTTYP_ID_CUMSUM: ui.checkBox_ChartTyp_cumsum.checkState,
         }
 
         self._drm = DateRangeManager()
@@ -354,7 +390,7 @@ class TtmDetails(QMainWindow):
                 if gd_stat != Qt.Checked:
                     continue
 
-                for charttyp_id in self._CHARTTYP_LIST:
+                for charttyp_id in self._CHARTTYP_ID_DICT.keys():
                     checkState = self._CHECKSTATE_CHARTTYP_DICT[charttyp_id]
                     gd_stat = checkState()
                     if gd_stat != Qt.Checked:
@@ -369,19 +405,46 @@ class TtmDetails(QMainWindow):
 
             self._ui.tableWidget.insertRow(i)
 
-            item_wd = QTableWidgetItem(self._WEEKDAY_ID_DICT[weekday_id])
+            # set Table Item "Weekday"
+            tbl_itm_cnf = self._WEEKDAY_ID_DICT[weekday_id]
+            back_color = tbl_itm_cnf.background
+            item_wd = QTableWidgetItem(tbl_itm_cnf.text)
             item_wd.setTextAlignment(Qt.AlignCenter)
-            self._ui.tableWidget.setItem(i, 0, item_wd)
+            item_wd.setForeground(tbl_itm_cnf.foreground)
+            item_wd.setBackground(back_color)
+            self._ui.tableWidget.setItem(i, self._TBL_COL_WEEKDAY, item_wd)
 
-            item_gt = QTableWidgetItem(self._GOTO_ID_DICT[gotoday_id])
+            # set Table Item "Goto-Day"
+            tbl_itm_cnf = self._GOTO_ID_DICT[gotoday_id]
+            item_gt = QTableWidgetItem(tbl_itm_cnf.text)
             item_gt.setTextAlignment(Qt.AlignCenter)
-            self._ui.tableWidget.setItem(i, 1, item_gt)
+            item_gt.setForeground(tbl_itm_cnf.foreground)
+            item_gt.setBackground(back_color)
+            if gotoday_id == self._GOTODAY_ID_T:
+                color = Qt.red
+            else:
+                color = Qt.blue
+            item_gt.setForeground(color)
+            item_gt.setForeground(color)
+            font = item_gt.font()
+            font.setBold(True)
+            item_gt.setFont(font)
+            self._ui.tableWidget.setItem(i, self._TBL_COL_GOTODAY, item_gt)
 
-            if charttyp_id == self._CHART_TYP_STATISTICS:
-                chart = LineChartTtmStatistics()
+            # set Table Item "Chart Type"
+            tbl_itm_cnf = self._CHARTTYP_ID_DICT[charttyp_id]
+            item_ct = QTableWidgetItem(tbl_itm_cnf.text)
+            item_ct.setTextAlignment(Qt.AlignCenter)
+            item_ct.setForeground(tbl_itm_cnf.foreground)
+            item_ct.setBackground(back_color)
+            self._ui.tableWidget.setItem(i, self._TBL_COL_CHARTTYP, item_ct)
+
+            if charttyp_id == self._CHARTTYP_ID_STATS:
+                chart = LineChartTtmStats()
             else:
                 chart = LineChartTtmCumsum()
-            self._ui.tableWidget.setCellWidget(i, 2, chart)
+            # chart.setBackgroundBrush(QBrush(QColor(back_color)))
+            self._ui.tableWidget.setCellWidget(i, self._TBL_COL_CHART, chart)
 
         self._chart_idx_list = chart_idx_list
         self._is_require_reconstruct_table = False
@@ -415,14 +478,14 @@ class TtmDetails(QMainWindow):
             else:
                 is_goto = False
 
-            if charttyp_id == self._CHART_TYP_STATISTICS:
+            if charttyp_id == self._CHARTTYP_ID_STATS:
                 df_trg = df_wg_st
                 max_y = wg_st_max
             else:
                 df_trg = df_wg_cs
                 max_y = wg_cs_max
 
-            chart = self._ui.tableWidget.cellWidget(i, 2)
+            chart = self._ui.tableWidget.cellWidget(i, self._TBL_COL_CHART)
             chart.set_max_y(max_y)
             chart.set_min_y(-max_y)
             idxloc = (weekday_id, is_goto)

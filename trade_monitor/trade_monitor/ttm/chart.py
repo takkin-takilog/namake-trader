@@ -249,7 +249,7 @@ class LineChartTtm(BaseLineChart):
         self._hl_zero.show()
 
 
-class LineChartTtmStatistics(LineChartTtm):
+class LineChartTtmStats(LineChartTtm):
 
     def __init__(self, parent=None):
         super().__init__(parent)

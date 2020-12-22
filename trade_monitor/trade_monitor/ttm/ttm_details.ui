@@ -286,7 +286,7 @@
          <number>0</number>
         </property>
         <property name="columnCount">
-         <number>3</number>
+         <number>4</number>
         </property>
         <attribute name="horizontalHeaderVisible">
          <bool>true</bool>
@@ -309,7 +309,12 @@
         </column>
         <column>
          <property name="text">
-          <string>Graph</string>
+          <string>Type</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Chart</string>
          </property>
         </column>
        </widget>
