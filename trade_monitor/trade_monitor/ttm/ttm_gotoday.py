@@ -49,7 +49,7 @@ class TableItemConfig():
         return self._back_brush
 
 
-class TtmWeekday(QMainWindow):
+class TtmGotoday(QMainWindow):
 
     _COL_WEEKDAY_ID = "Weekday_id"
     _COL_IS_GOTO = "Is_Goto"
@@ -495,7 +495,7 @@ class TtmWeekday(QMainWindow):
 
     def _load_ui(self, parent):
         loader = QUiLoader()
-        path = os.path.join(os.path.dirname(__file__), "ttm_weekday.ui")
+        path = os.path.join(os.path.dirname(__file__), "ttm_gotoday.ui")
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)
         ui = loader.load(ui_file, parent)

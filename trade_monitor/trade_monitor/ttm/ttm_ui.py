@@ -13,6 +13,7 @@ from trade_monitor.utilities import (FMT_DTTM_API,
                                      )
 from trade_monitor.ttm.chart import CandlestickChartViewTtm
 from trade_monitor.ttm.ttm_weekday import TtmWeekday
+from trade_monitor.ttm.ttm_gotoday import TtmGotoday
 from trade_monitor.ttm.ttm_common import (COL_DATE,
                                           COL_TIME,
                                           COL_O,
@@ -111,6 +112,9 @@ class TtmUi():
         callback = self._on_ttm_weekday_clicked
         ui.pushButton_ttm_weekday.clicked.connect(callback)
 
+        callback = self._on_ttm_gotoday_clicked
+        ui.pushButton_ttm_gotoday.clicked.connect(callback)
+
         # set Tree View
         pdtreeview = PandasTreeView(ui.widget_TreeView_ttm)
 
@@ -134,6 +138,7 @@ class TtmUi():
             srv_cli_list.append(srv_cli)
 
         self._win_weekday = TtmWeekday()
+        self._win_gotoday = TtmGotoday()
 
         # self._qstd_itm_mdl = qstd_itm_mdl
         self._chartview = chartview
@@ -282,6 +287,9 @@ class TtmUi():
 
             self._df_ohlc = df_ohlc
             self._df_base = df_base
+
+            self._ui.pushButton_ttm_weekday.setEnabled(True)
+            self._ui.pushButton_ttm_gotoday.setEnabled(True)
             """
             self._df_week_goto = df_week_goto
             self._df_month_goto = df_month_goto
@@ -313,11 +321,35 @@ class TtmUi():
             decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
 
             self._chartview.update(df, self._gran_id, decimal_digit)
+            self._ui.widget_ChartView_ttm.setEnabled(True)
 
     def _on_ttm_weekday_clicked(self):
 
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+
+        df = self._get_dataframe()
+
+        self._win_weekday.show()
+        self._win_weekday.init_resize()
+        self._win_weekday.set_data(df,
+                                   self._gran_id,
+                                   decimal_digit)
+
+    def _on_ttm_gotoday_clicked(self):
+
+        inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
+        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+
+        df = self._get_dataframe()
+
+        self._win_gotoday.show()
+        self._win_gotoday.init_resize()
+        self._win_gotoday.set_data(df,
+                                   self._gran_id,
+                                   decimal_digit)
+
+    def _get_dataframe(self):
 
         is_selected = self._pdtreeview.is_selected()
         dftv = self._pdtreeview.get_dataframe(is_selected=is_selected)
@@ -325,13 +357,7 @@ class TtmUi():
         date_list = sorted(dftv.index.to_list())
         df = self._df_base.loc[(date_list), :]
 
-        self._win_weekday.show()
-        self._win_weekday.init_resize()
-        self._win_weekday.set_data(df,
-                                   # self._df_week_goto,
-                                   # self._df_month_goto,
-                                   self._gran_id,
-                                   decimal_digit)
+        return df
 
     """
     def __make_statistics_dataframe(self,
