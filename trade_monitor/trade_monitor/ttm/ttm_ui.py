@@ -12,7 +12,7 @@ from trade_monitor.utilities import (FMT_DTTM_API,
                                      FMT_TIME_HMS
                                      )
 from trade_monitor.ttm.chart import CandlestickChartViewTtm
-from trade_monitor.ttm.ttm_details import TtmDetails
+from trade_monitor.ttm.ttm_weekday import TtmWeekday
 from trade_monitor.ttm.ttm_common import (COL_DATE,
                                           COL_TIME,
                                           COL_O,
@@ -108,8 +108,8 @@ class TtmUi():
         sel_mdl.selectionChanged.connect(callback)
         """
 
-        callback = self._on_ttm_details_clicked
-        ui.pushButton_ttm_details.clicked.connect(callback)
+        callback = self._on_ttm_weekday_clicked
+        ui.pushButton_ttm_weekday.clicked.connect(callback)
 
         # set Tree View
         pdtreeview = PandasTreeView(ui.widget_TreeView_ttm)
@@ -133,7 +133,7 @@ class TtmUi():
             srv_cli = utl.get_node().create_client(srv_type, fullname)
             srv_cli_list.append(srv_cli)
 
-        self._widget_details = TtmDetails()
+        self._win_weekday = TtmWeekday()
 
         # self._qstd_itm_mdl = qstd_itm_mdl
         self._chartview = chartview
@@ -314,7 +314,7 @@ class TtmUi():
 
             self._chartview.update(df, self._gran_id, decimal_digit)
 
-    def _on_ttm_details_clicked(self):
+    def _on_ttm_weekday_clicked(self):
 
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
@@ -325,13 +325,13 @@ class TtmUi():
         date_list = sorted(dftv.index.to_list())
         df = self._df_base.loc[(date_list), :]
 
-        self._widget_details.show()
-        self._widget_details.init_resize()
-        self._widget_details.set_data(df,
-                                      # self._df_week_goto,
-                                      # self._df_month_goto,
-                                      self._gran_id,
-                                      decimal_digit)
+        self._win_weekday.show()
+        self._win_weekday.init_resize()
+        self._win_weekday.set_data(df,
+                                   # self._df_week_goto,
+                                   # self._df_month_goto,
+                                   self._gran_id,
+                                   decimal_digit)
 
     """
     def __make_statistics_dataframe(self,

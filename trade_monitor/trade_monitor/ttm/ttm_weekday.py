@@ -49,7 +49,7 @@ class TableItemConfig():
         return self._back_brush
 
 
-class TtmDetails(QMainWindow):
+class TtmWeekday(QMainWindow):
 
     _COL_WEEKDAY_ID = "Weekday_id"
     _COL_IS_GOTO = "Is_Goto"
@@ -96,7 +96,7 @@ class TtmDetails(QMainWindow):
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
 
-        self.setWindowTitle("TTM Details")
+        self.setWindowTitle("TTM Weekday")
 
         callback = self._on_pushButton_update_clicked
         ui.pushButton_update.clicked.connect(callback)
@@ -498,7 +498,7 @@ class TtmDetails(QMainWindow):
 
     def _load_ui(self, parent):
         loader = QUiLoader()
-        path = os.path.join(os.path.dirname(__file__), "ttm_details.ui")
+        path = os.path.join(os.path.dirname(__file__), "ttm_weekday.ui")
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)
         ui = loader.load(ui_file, parent)
