@@ -51,12 +51,6 @@ class TableItemConfig():
 
 class TtmWeekday(QMainWindow):
 
-    _COL_WEEKDAY_ID = "Weekday_id"
-    _COL_IS_GOTO = "Is_Goto"
-    _COL_CHART_TYP = "Chart_type"
-    _COL_TBLPOS = "TblPos_Row"
-    _COL_CHART_OBJ = "Chart_Obj"
-
     # Table Column Type
     _TBL_COL_WEEKDAY = 0
     _TBL_COL_GOTODAY = 1
@@ -148,10 +142,6 @@ class TtmWeekday(QMainWindow):
 
         callback = self._on_vHeaderView_sectionResized
         vHeaderView.sectionResized.connect(callback)
-        """
-        callback = self._on_hHeaderView_sectionResized
-        hHeaderView.sectionResized.connect(callback)
-        """
 
         self._CHECKSTATE_WEEKDAY_DICT = {
             WEEKDAY_ID_MON: ui.checkBox_Weekday_mon.checkState,

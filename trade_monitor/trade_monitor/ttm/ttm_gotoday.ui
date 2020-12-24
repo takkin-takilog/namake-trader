@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>737</width>
-    <height>748</height>
+    <height>726</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -141,13 +141,13 @@
          <item>
           <widget class="QGroupBox" name="groupBox_6">
            <property name="title">
-            <string>GotoDay</string>
+            <string>Goto Day Type</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
-            <item row="0" column="0">
-             <widget class="QCheckBox" name="checkBox_GotoDay_true">
+            <item row="4" column="0">
+             <widget class="QCheckBox" name="checkBox_GotoDayTyp_20d">
               <property name="text">
-               <string>Goto-day</string>
+               <string>20 Days</string>
               </property>
               <property name="checked">
                <bool>true</bool>
@@ -155,28 +155,29 @@
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QCheckBox" name="checkBox_GotoDay_false">
+             <widget class="QCheckBox" name="checkBox_GotoDayTyp_5d">
               <property name="text">
-               <string>Not Goto-day</string>
+               <string>5 Days</string>
               </property>
               <property name="checked">
                <bool>true</bool>
               </property>
              </widget>
             </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupBox_5">
-           <property name="title">
-            <string>WeekDay</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout">
-            <item row="1" column="1">
-             <widget class="QCheckBox" name="checkBox_Weekday_thu">
+            <item row="3" column="0">
+             <widget class="QCheckBox" name="checkBox_GotoDayTyp_15d">
               <property name="text">
-               <string>Thu</string>
+               <string>15 Days</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QCheckBox" name="checkBox_GotoDayTyp_25d">
+              <property name="text">
+               <string>25 Days</string>
               </property>
               <property name="checked">
                <bool>true</bool>
@@ -184,29 +185,9 @@
              </widget>
             </item>
             <item row="0" column="0">
-             <widget class="QCheckBox" name="checkBox_Weekday_mon">
+             <widget class="QCheckBox" name="checkBox_GotoDayTyp_Nd">
               <property name="text">
-               <string>Mon</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QCheckBox" name="checkBox_Weekday_wed">
-              <property name="text">
-               <string>Wed</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QCheckBox" name="checkBox_Weekday_tue">
-              <property name="text">
-               <string>Tue</string>
+               <string>Not Goto Days</string>
               </property>
               <property name="checked">
                <bool>true</bool>
@@ -214,9 +195,19 @@
              </widget>
             </item>
             <item row="2" column="0">
-             <widget class="QCheckBox" name="checkBox_Weekday_fri">
+             <widget class="QCheckBox" name="checkBox_GotoDayTyp_10d">
               <property name="text">
-               <string>Fri</string>
+               <string>10 Days</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QCheckBox" name="checkBox_GotoDayTyp_Ld">
+              <property name="text">
+               <string>Last Day</string>
               </property>
               <property name="checked">
                <bool>true</bool>
@@ -286,7 +277,7 @@
          <number>0</number>
         </property>
         <property name="columnCount">
-         <number>4</number>
+         <number>3</number>
         </property>
         <attribute name="horizontalHeaderVisible">
          <bool>true</bool>
@@ -299,12 +290,7 @@
         </attribute>
         <column>
          <property name="text">
-          <string>Weekday</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Goto</string>
+          <string>Gotoday</string>
          </property>
         </column>
         <column>

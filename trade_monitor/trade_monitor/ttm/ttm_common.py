@@ -76,7 +76,8 @@ def convert_base2weekgoto(df_base: pd.DataFrame) -> pd.DataFrame:
 
 def convert_base2monthgoto(df_base: pd.DataFrame) -> pd.DataFrame:
 
-    level = [COL_MONTH, COL_GOTO_ID, COL_GAP_TYP]
+    # level = [COL_MONTH, COL_GOTO_ID, COL_GAP_TYP]
+    level = [COL_GOTO_ID, COL_GAP_TYP]
     df = _make_statistics_dataframe(df_base, level)
 
     return df
