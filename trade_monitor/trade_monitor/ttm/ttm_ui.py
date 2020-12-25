@@ -1,3 +1,4 @@
+from enum import Enum
 import pandas as pd
 import datetime as dt
 from PySide2.QtCore import Qt
@@ -16,14 +17,60 @@ from trade_monitor.ttm.weekday_ui import WeekdayUi
 from trade_monitor.ttm.gotoday_ui import GotodayUi
 from trade_monitor.ttm.constant import ColumnName
 from trade_monitor.ttm.constant import GAP_TYP_CO
-from trade_monitor.ttm.constant import WEEKDAY_ID_DICT
-from trade_monitor.ttm.constant import GOTODAY_ID_DICT
 from trade_monitor import ros_common as ros_com
 
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
 pd.set_option("display.width", 200)
 pd.options.display.float_format = '{:.3f}'.format
+
+
+class _WeekdayId(Enum):
+    """
+    Weekday ID.
+    """
+    MON = (0, "Mon")
+    TUE = (1, "Tue")
+    WED = (2, "Wed")
+    THU = (3, "Thu")
+    FRI = (4, "Fri")
+    SAT = (5, "Sat")
+    SUN = (6, "Sun")
+
+    def __init__(self, id_: int, label: str):
+        self.id = id_
+        self.label = label
+
+    @classmethod
+    def get_member_by_id(cls, id_: int):
+        for m in cls:
+            if id_ == m.id:
+                return m
+        return None
+
+
+class _GotodayId(Enum):
+    """
+    Gotoday ID.
+    """
+    NON = (0, "-")
+    D05 = (1, "5")
+    D10 = (2, "10")
+    D15 = (3, "15")
+    D20 = (4, "20")
+    D25 = (5, "25")
+    LSD = (6, "L/D")
+
+    def __init__(self, id_: int, label: str):
+        self.id = id_
+        self.label = label
+
+    @classmethod
+    def get_member_by_id(cls, id_: int):
+        for m in cls:
+            if id_ == m.id:
+                return m
+        return None
 
 
 class TtmUi():
@@ -259,10 +306,13 @@ class TtmUi():
             """
             tbl = []
             for index, row in df_base[flg].iterrows():
+                wdmem = _WeekdayId.get_member_by_id(index[2])
+                gdmem = _GotodayId.get_member_by_id(index[3])
                 items = [
                     index[0],  # date
-                    WEEKDAY_ID_DICT[index[2]],
-                    GOTODAY_ID_DICT[index[3]],
+                    # WEEKDAY_ID_DICT[index[2]],
+                    wdmem.label,
+                    gdmem.label,
                     0
                 ]
                 tbl.append(items)

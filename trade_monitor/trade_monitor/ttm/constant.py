@@ -1,5 +1,6 @@
 import pandas as pd
 from enum import Enum, IntEnum
+from PySide2.QtGui import QColor, QBrush, Qt
 
 
 class ColumnName(Enum):
@@ -19,53 +20,6 @@ class ColumnName(Enum):
     DATA_TYP = "Data_type"
     MONTH = "Month"
 
-
-class WeekdayId(IntEnum):
-    """
-    Weekday ID.
-    """
-    MON = 0
-    TUE = 1
-    WED = 2
-    THU = 3
-    FRI = 4
-    SAT = 5
-    SUN = 6
-
-
-WEEKDAY_ID_DICT = {
-    WeekdayId.MON.value: "Mon",
-    WeekdayId.TUE.value: "Tue",
-    WeekdayId.WED.value: "Wed",
-    WeekdayId.THU.value: "Thu",
-    WeekdayId.FRI.value: "Fri",
-    WeekdayId.SAT.value: "Sat",
-    WeekdayId.SUN.value: "Sun"
-}
-
-
-class GotodayId(IntEnum):
-    """
-    Gotoday ID.
-    """
-    NON = 0
-    D05 = 1
-    D10 = 2
-    D15 = 3
-    D20 = 4
-    D25 = 5
-    LSD = 6
-
-
-GOTODAY_ID_DICT = {
-    GotodayId.NON.value: "-",
-    GotodayId.D05.value: "5",
-    GotodayId.D10.value: "10",
-    GotodayId.D15.value: "15",
-    GotodayId.D20.value: "20",
-    GotodayId.D25.value: "25",
-    GotodayId.LSD.value: "L/D"
-}
 
 # define data type
 GAP_TYP_HO = 1    # High - Open price

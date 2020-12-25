@@ -1,4 +1,5 @@
 import os
+from enum import Enum, IntEnum, auto
 import pandas as pd
 from PySide2.QtWidgets import QMainWindow, QHeaderView
 from PySide2.QtWidgets import QTableWidgetItem
@@ -12,71 +13,73 @@ from trade_monitor.ttm.constant import (DATA_TYP_CO_CSUM,
                                         DATA_TYP_CO_MEAN,
                                         DATA_TYP_HO_MEAN,
                                         DATA_TYP_LO_MEAN)
-from trade_monitor.ttm.constant import WeekdayId
 from trade_monitor.ttm.widget import LineChartViewStats
 from trade_monitor.ttm.widget import LineChartViewCumsum
 from trade_monitor.ttm import constant as ttmcom
 from trade_monitor import ros_common as ros_com
 
 
-class TableItemConfig():
+class _WeekdayId(Enum):
+    """
+    Weekday ID.
+    """
+    MON = (0, "Mon", QColor(Qt.black), "#f5dcdc")
+    TUE = (1, "Tue", QColor(Qt.black), "#d9ead3")
+    WED = (2, "Wed", QColor(Qt.black), "#fce5cd")
+    THU = (3, "Thu", QColor(Qt.black), "#cfe2f3")
+    FRI = (4, "Fri", QColor(Qt.black), "#fff2cc")
 
     def __init__(self,
-                 text: str,
-                 foreground_color=QColor(Qt.black),
-                 background_color=QColor(Qt.white)
-                 ):
+                 id_: int,
+                 label: str,
+                 foreground_color: QColor,
+                 background_color: QColor
+                 ) -> None:
+        self.id = id_
+        self.label = label
+        self.foreground_color = QBrush(QColor(foreground_color))
+        self.background_color = QBrush(QColor(background_color))
 
-        self._text = text
-        self._fore_brush = QBrush(QColor(foreground_color))
-        self._back_brush = QBrush(QColor(background_color))
 
-    @property
-    def text(self):
-        return self._text
+class _Gotoday(Enum):
+    """
+    Gotoday.
+    """
+    TRUE = ("Yes", Qt.red)
+    FALSE = ("No", Qt.blue)
 
-    @property
-    def foreground(self):
-        return self._fore_brush
+    def __init__(self,
+                 label: str,
+                 foreground_color: QColor,
+                 ) -> None:
+        self.label = label
+        self.foreground_color = QBrush(QColor(foreground_color))
 
-    @property
-    def background(self):
-        return self._back_brush
+
+class _ChartType(Enum):
+    """
+    Chart type.
+    """
+    STATS = "Stats"
+    CUMSUM = "CumSum"
+
+    def __init__(self,
+                 label: str,
+                 ) -> None:
+        self.label = label
+
+
+class _TblColPos(IntEnum):
+    """
+    Table Column Position.
+    """
+    WEEKDAY = 0
+    GOTODAY = auto()
+    CHARTTYP = auto()
+    CHARTVIEW = auto()
 
 
 class WeekdayUi(QMainWindow):
-
-    # Table Column Type
-    _TBL_COL_WEEKDAY = 0
-    _TBL_COL_GOTODAY = 1
-    _TBL_COL_CHARTTYP = 2
-    _TBL_COL_CHARTVIEW = 3
-
-    # define Goto-Day ID
-    _GOTODAY_ID_T = 0
-    _GOTODAY_ID_F = 1
-
-    # define Chart Type ID
-    _CHARTTYP_ID_STATS = 0
-    _CHARTTYP_ID_CUMSUM = 1
-
-    _WEEKDAY_ID_DICT = {
-        WeekdayId.MON: TableItemConfig("Mon", background_color="#f5dcdc"),
-        WeekdayId.TUE: TableItemConfig("Tue", background_color="#d9ead3"),
-        WeekdayId.WED: TableItemConfig("Wed", background_color="#fce5cd"),
-        WeekdayId.THU: TableItemConfig("Thu", background_color="#cfe2f3"),
-        WeekdayId.FRI: TableItemConfig("Fri", background_color="#fff2cc")
-    }
-
-    _GOTO_ID_DICT = {
-        _GOTODAY_ID_T: TableItemConfig("Yes", foreground_color=Qt.red),
-        _GOTODAY_ID_F: TableItemConfig("No", foreground_color=Qt.blue)
-    }
-
-    _CHARTTYP_ID_DICT = {
-        _CHARTTYP_ID_STATS: TableItemConfig("Stats"),
-        _CHARTTYP_ID_CUMSUM: TableItemConfig("CumSum")
-    }
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -139,21 +142,21 @@ class WeekdayUi(QMainWindow):
         vHeaderView.sectionResized.connect(callback)
 
         self._CHECKSTATE_WEEKDAY_DICT = {
-            WeekdayId.MON: ui.checkBox_Weekday_mon.checkState,
-            WeekdayId.TUE: ui.checkBox_Weekday_tue.checkState,
-            WeekdayId.WED: ui.checkBox_Weekday_wed.checkState,
-            WeekdayId.THU: ui.checkBox_Weekday_thu.checkState,
-            WeekdayId.FRI: ui.checkBox_Weekday_fri.checkState
+            _WeekdayId.MON: ui.checkBox_Weekday_mon.checkState,
+            _WeekdayId.TUE: ui.checkBox_Weekday_tue.checkState,
+            _WeekdayId.WED: ui.checkBox_Weekday_wed.checkState,
+            _WeekdayId.THU: ui.checkBox_Weekday_thu.checkState,
+            _WeekdayId.FRI: ui.checkBox_Weekday_fri.checkState
         }
 
         self._CHECKSTATE_GOTODAY_DICT = {
-            self._GOTODAY_ID_T: ui.checkBox_GotoDay_true.checkState,
-            self._GOTODAY_ID_F: ui.checkBox_GotoDay_false.checkState,
+            _Gotoday.TRUE: ui.checkBox_GotoDay_true.checkState,
+            _Gotoday.FALSE: ui.checkBox_GotoDay_false.checkState,
         }
 
         self._CHECKSTATE_CHARTTYP_DICT = {
-            self._CHARTTYP_ID_STATS: ui.checkBox_ChartTyp_stat.checkState,
-            self._CHARTTYP_ID_CUMSUM: ui.checkBox_ChartTyp_cumsum.checkState,
+            _ChartType.STATS: ui.checkBox_ChartTyp_stat.checkState,
+            _ChartType.CUMSUM: ui.checkBox_ChartTyp_cumsum.checkState,
         }
 
         self._drm = DateRangeManager()
@@ -361,74 +364,68 @@ class WeekdayUi(QMainWindow):
             self._ui.tableWidget.removeRow(i)
 
         chart_idx_list = []
-        for weekday_id in self._WEEKDAY_ID_DICT.keys():
-            checkState = self._CHECKSTATE_WEEKDAY_DICT[weekday_id]
+        for weekday_m in _WeekdayId:
+            checkState = self._CHECKSTATE_WEEKDAY_DICT[weekday_m]
             wd_stat = checkState()
             if wd_stat != Qt.Checked:
                 continue
 
-            for gotoday_id in self._GOTO_ID_DICT.keys():
-                checkState = self._CHECKSTATE_GOTODAY_DICT[gotoday_id]
+            for gotoday_m in _Gotoday:
+                checkState = self._CHECKSTATE_GOTODAY_DICT[gotoday_m]
                 gd_stat = checkState()
                 if gd_stat != Qt.Checked:
                     continue
 
-                for charttyp_id in self._CHARTTYP_ID_DICT.keys():
-                    checkState = self._CHECKSTATE_CHARTTYP_DICT[charttyp_id]
+                for charttyp_m in _ChartType:
+                    checkState = self._CHECKSTATE_CHARTTYP_DICT[charttyp_m]
                     gd_stat = checkState()
                     if gd_stat != Qt.Checked:
                         continue
 
-                    chart_idx_list.append([weekday_id, gotoday_id, charttyp_id])
+                    chart_idx_list.append([weekday_m, gotoday_m, charttyp_m])
 
         for i, chart_idx in enumerate(chart_idx_list):
-            weekday_id = chart_idx[0]
-            gotoday_id = chart_idx[1]
-            charttyp_id = chart_idx[2]
+            weekday_m = chart_idx[0]
+            gotoday_m = chart_idx[1]
+            charttyp_m = chart_idx[2]
 
             self._ui.tableWidget.insertRow(i)
 
             # set Table Item "Weekday"
-            tbl_itm_cnf = self._WEEKDAY_ID_DICT[weekday_id]
-            back_color = tbl_itm_cnf.background
-            item_wd = QTableWidgetItem(tbl_itm_cnf.text)
+            back_color = weekday_m.background_color
+            item_wd = QTableWidgetItem(weekday_m.label)
             item_wd.setTextAlignment(Qt.AlignCenter)
-            item_wd.setForeground(tbl_itm_cnf.foreground)
+            item_wd.setForeground(weekday_m.foreground_color)
             item_wd.setBackground(back_color)
-            self._ui.tableWidget.setItem(i, self._TBL_COL_WEEKDAY, item_wd)
+            pos = _TblColPos.WEEKDAY.value
+            self._ui.tableWidget.setItem(i, pos, item_wd)
 
             # set Table Item "Goto-Day"
-            tbl_itm_cnf = self._GOTO_ID_DICT[gotoday_id]
-            item_gt = QTableWidgetItem(tbl_itm_cnf.text)
+            item_gt = QTableWidgetItem(gotoday_m.label)
             item_gt.setTextAlignment(Qt.AlignCenter)
-            item_gt.setForeground(tbl_itm_cnf.foreground)
+            item_gt.setForeground(gotoday_m.foreground_color)
             item_gt.setBackground(back_color)
-            if gotoday_id == self._GOTODAY_ID_T:
-                color = Qt.red
-            else:
-                color = Qt.blue
-            item_gt.setForeground(color)
-            item_gt.setForeground(color)
             font = item_gt.font()
             font.setBold(True)
             item_gt.setFont(font)
-            self._ui.tableWidget.setItem(i, self._TBL_COL_GOTODAY, item_gt)
+            pos = _TblColPos.GOTODAY.value
+            self._ui.tableWidget.setItem(i, pos, item_gt)
 
             # set Table Item "Chart Type"
-            tbl_itm_cnf = self._CHARTTYP_ID_DICT[charttyp_id]
-            item_ct = QTableWidgetItem(tbl_itm_cnf.text)
+            item_ct = QTableWidgetItem(charttyp_m.label)
             item_ct.setTextAlignment(Qt.AlignCenter)
-            item_ct.setForeground(tbl_itm_cnf.foreground)
             item_ct.setBackground(back_color)
-            self._ui.tableWidget.setItem(i, self._TBL_COL_CHARTTYP, item_ct)
+            pos = _TblColPos.CHARTTYP.value
+            self._ui.tableWidget.setItem(i, pos, item_ct)
 
             # set Table Item "Chart View"
-            if charttyp_id == self._CHARTTYP_ID_STATS:
+            if charttyp_m == _ChartType.STATS:
                 chartview = LineChartViewStats()
             else:
                 chartview = LineChartViewCumsum()
             chartview.chart().setBackgroundBrush(back_color)
-            self._ui.tableWidget.setCellWidget(i, self._TBL_COL_CHARTVIEW, chartview)
+            pos = _TblColPos.CHARTVIEW.value
+            self._ui.tableWidget.setCellWidget(i, pos, chartview)
 
         self._chart_idx_list = chart_idx_list
         self._is_require_reconstruct_table = False
@@ -453,26 +450,26 @@ class WeekdayUi(QMainWindow):
         csum_max = max(abs(max_), abs(min_))
 
         for i, chart_idx in enumerate(self._chart_idx_list):
-            weekday_id = chart_idx[0]
-            gotoday_id = chart_idx[1]
-            charttyp_id = chart_idx[2]
+            weekday_m = chart_idx[0]
+            is_gotoday_m = chart_idx[1]
+            charttyp_m = chart_idx[2]
 
-            if gotoday_id == self._GOTODAY_ID_T:
+            if is_gotoday_m == _Gotoday.TRUE:
                 is_goto = True
             else:
                 is_goto = False
 
-            if charttyp_id == self._CHARTTYP_ID_STATS:
+            if charttyp_m == _ChartType.STATS:
                 df_trg = df_stats
                 max_y = stats_max
             else:
                 df_trg = df_csum
                 max_y = csum_max
 
-            chart = self._ui.tableWidget.cellWidget(i, self._TBL_COL_CHARTVIEW)
+            chart = self._ui.tableWidget.cellWidget(i, _TblColPos.CHARTVIEW)
             chart.set_max_y(max_y)
             chart.set_min_y(-max_y)
-            idxloc = (weekday_id, is_goto)
+            idxloc = (weekday_m.id, is_goto)
             if idxloc in df_trg.index:
                 chart.update(df_trg.loc[idxloc], self._gran_id, self._decimal_digit)
             else:
