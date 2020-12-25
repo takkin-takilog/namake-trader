@@ -288,7 +288,6 @@ class TtmUi():
         df = self._get_dataframe()
 
         self._weekday_ui.show()
-        self._weekday_ui.init_resize()
         self._weekday_ui.set_data(df,
                                   self._gran_id,
                                   decimal_digit)
@@ -301,7 +300,6 @@ class TtmUi():
         df = self._get_dataframe()
 
         self._gotoday_ui.show()
-        self._gotoday_ui.init_resize()
         self._gotoday_ui.set_data(df,
                                   self._gran_id,
                                   decimal_digit)

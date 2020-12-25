@@ -1,19 +1,17 @@
-import os
 from enum import Enum, IntEnum, auto
 import pandas as pd
-from PySide2.QtWidgets import QMainWindow, QHeaderView
+from PySide2.QtWidgets import QHeaderView
 from PySide2.QtWidgets import QTableWidgetItem
-from PySide2.QtCore import QFile, QDate, Qt
-from PySide2.QtUiTools import QUiLoader
+from PySide2.QtCore import QDate, Qt
 from PySide2.QtGui import QColor, QBrush
+from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import FMT_QT_DATE_YMD
 from trade_monitor.utility import DateRangeManager
 from trade_monitor.ttm.constant import ColumnName
 from trade_monitor.ttm.constant import DataType
 from trade_monitor.ttm.widget import LineChartViewStats
 from trade_monitor.ttm.widget import LineChartViewCumsum
-from trade_monitor.ttm import constant as ttmcom
-from trade_monitor import ros_common as ros_com
+from trade_monitor.ttm.widget import BaseUi
 
 
 class _GotodayId(Enum):
@@ -25,8 +23,8 @@ class _GotodayId(Enum):
     D10 = (2, "10Day", QColor(Qt.black), "#fce5cd")
     D15 = (3, "15Day", QColor(Qt.black), "#cfe2f3")
     D20 = (4, "20Day", QColor(Qt.black), "#fff2cc")
-    D25 = (5, "25Day", QColor(Qt.black), "#fff2cc")
-    LSD = (6, "LstDay", QColor(Qt.black), "#fff2cc")
+    D25 = (5, "25Day", QColor(Qt.black), "#ead1dc")
+    LSD = (6, "LstDay", QColor(Qt.black), "#d0e0e3")
 
     def __init__(self,
                  id_: int,
@@ -62,12 +60,12 @@ class _TblColPos(IntEnum):
     CHARTVIEW = auto()
 
 
-class GotodayUi(QMainWindow):
+class GotodayUi(BaseUi):
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        ui = self._load_ui(parent)
+        ui = self._load_ui(parent, "gotoday.ui")
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
 
@@ -185,11 +183,6 @@ class GotodayUi(QMainWindow):
 
         vHeaderView = self._ui.tableWidget.verticalHeader()
         vHeaderView.setDefaultSectionSize(newSize)
-
-    """
-    def _on_hHeaderView_sectionResized(self, index, oldSize, newSize):
-        self._logger.debug("--- on_tableWidget_columnResized ----------")
-    """
 
     def _on_pushButton_update_clicked(self, checked):
         self._update_table()
@@ -332,9 +325,16 @@ class GotodayUi(QMainWindow):
         sdt_end = self._drm.upper_date
         mst_list = self._df_base.index.get_level_values(level=ColumnName.DATE.value)
         df_base = self._df_base[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
-        df = ttmcom.convert_base2monthgoto(df_base)
+        return self._convert_base2gotoday(df_base)
 
-        return df
+    def _convert_base2gotoday(self,
+                              df_base: pd.DataFrame
+                              ) -> pd.DataFrame:
+
+        level = [ColumnName.GOTO_ID.value,
+                 ColumnName.GAP_TYP.value
+                 ]
+        return self._make_statistics_dataframe(df_base, level)
 
     def _reconstruct_table(self):
 
@@ -429,19 +429,6 @@ class GotodayUi(QMainWindow):
                 chart.update(df_trg.loc[idxloc], self._gran_id, self._decimal_digit)
             else:
                 chart.clear()
-
-    def _load_ui(self, parent):
-        loader = QUiLoader()
-        path = os.path.join(os.path.dirname(__file__), "gotoday.ui")
-        ui_file = QFile(path)
-        ui_file.open(QFile.ReadOnly)
-        ui = loader.load(ui_file, parent)
-        ui_file.close()
-
-        return ui
-
-    def init_resize(self):
-        pass
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

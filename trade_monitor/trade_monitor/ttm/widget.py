@@ -1,24 +1,81 @@
+import os
 import pandas as pd
 from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
 from PySide2.QtGui import QColor, QPen
+from PySide2.QtWidgets import QMainWindow
 from PySide2.QtWidgets import QGraphicsLineItem
+from PySide2.QtUiTools import QUiLoader
+from PySide2.QtCore import QFile
 from PySide2.QtCharts import QtCharts
+from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import BaseCandlestickChartView
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
-from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import FMT_QT_TIME
-from trade_monitor.ttm.constant import DataType
-"""
-from trade_monitor.ttm.constant import (DATA_TYP_HO_MEAN,
-                                        DATA_TYP_HO_STD,
-                                        DATA_TYP_LO_MEAN,
-                                        DATA_TYP_LO_STD,
-                                        DATA_TYP_CO_MEAN,
-                                        DATA_TYP_CO_STD,
-                                        DATA_TYP_CO_CSUM
-                                        )
-"""
+from trade_monitor.ttm.constant import ColumnName, GapType, DataType
+
+
+class BaseUi(QMainWindow):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def _load_ui(self, parent, ui_name: str):
+        loader = QUiLoader()
+        path = os.path.join(os.path.dirname(__file__), ui_name)
+        ui_file = QFile(path)
+        ui_file.open(QFile.ReadOnly)
+        ui = loader.load(ui_file, parent)
+        ui_file.close()
+
+        return ui
+
+    def _make_statistics_dataframe(self,
+                                   df_base: pd.DataFrame,
+                                   level: list
+                                   ) -> pd.DataFrame:
+
+        # ----- make DataFrame "Mean" -----
+        df_mean = df_base.mean(level=level).sort_index()
+        df_mean.reset_index(ColumnName.GAP_TYP.value, inplace=True)
+
+        df_mean[ColumnName.DATA_TYP.value] = 0
+        cond = df_mean[ColumnName.GAP_TYP.value] == GapType.HO.value
+        df_mean.loc[cond, ColumnName.DATA_TYP.value] = DataType.HO_MEAN.value
+        cond = df_mean[ColumnName.GAP_TYP.value] == GapType.LO.value
+        df_mean.loc[cond, ColumnName.DATA_TYP.value] = DataType.LO_MEAN.value
+        cond = df_mean[ColumnName.GAP_TYP.value] == GapType.CO.value
+        df_mean.loc[cond, ColumnName.DATA_TYP.value] = DataType.CO_MEAN.value
+
+        df_mean.drop(columns=ColumnName.GAP_TYP.value, inplace=True)
+        index = ColumnName.DATA_TYP.value
+        df_mean.set_index(index, append=True, inplace=True)
+
+        # ----- make DataFrame "Std" -----
+        df_std = df_base.std(level=level).sort_index()
+        df_std.reset_index(ColumnName.GAP_TYP.value, inplace=True)
+
+        df_std[ColumnName.DATA_TYP.value] = 0
+        cond = df_std[ColumnName.GAP_TYP.value] == GapType.HO.value
+        df_std.loc[cond, ColumnName.DATA_TYP.value] = DataType.HO_STD.value
+        cond = df_std[ColumnName.GAP_TYP.value] == GapType.LO.value
+        df_std.loc[cond, ColumnName.DATA_TYP.value] = DataType.LO_STD.value
+        cond = df_std[ColumnName.GAP_TYP.value] == GapType.CO.value
+        df_std.loc[cond, ColumnName.DATA_TYP.value] = DataType.CO_STD.value
+
+        df_std.drop(columns=ColumnName.GAP_TYP.value, inplace=True)
+        index = ColumnName.DATA_TYP.value
+        df_std.set_index(index, append=True, inplace=True)
+
+        # ----- make DataFrame "Cumulative Sum" -----
+        cond = df_mean.index.get_level_values(ColumnName.DATA_TYP.value) == DataType.CO_MEAN.value
+        df_csum = df_mean[cond].rename(index={DataType.CO_MEAN.value: DataType.CO_CSUM.value},
+                                       level=ColumnName.DATA_TYP.value)
+        df_csum = df_csum.cumsum(axis=1)
+
+        # concat "df_mean" and "df_std" and "df_csum"
+        return pd.concat([df_mean, df_std, df_csum]).sort_index()
+
 
 class CandlestickChartView(BaseCandlestickChartView):
 
@@ -271,16 +328,6 @@ class LineChartViewStats(BaseLineChartViewTtm):
         pen_c_s.setWidth(1)
         pen_c_s.setStyle(Qt.DashLine)
 
-        """
-        data_list = [
-            [DATA_TYP_HO_MEAN, pen_hl_m, QtCharts.QLineSeries()],
-            # [DATA_TYP_HO_STD, Qt.blue, QtCharts.QLineSeries()],
-            [DATA_TYP_LO_MEAN, pen_hl_m, QtCharts.QLineSeries()],
-            # [DATA_TYP_LO_STD, Qt.green, QtCharts.QLineSeries()],
-            [DATA_TYP_CO_MEAN, pen_c_m, QtCharts.QLineSeries()],
-            [DATA_TYP_CO_STD, pen_c_s, QtCharts.QLineSeries()]
-        ]
-        """
         data_list = [
             [DataType.HO_MEAN.value, pen_hl_m, QtCharts.QLineSeries()],
             # [DataType.HO_STD.value, Qt.blue, QtCharts.QLineSeries()],
