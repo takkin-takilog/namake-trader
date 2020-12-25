@@ -26,22 +26,22 @@ from trade_monitor.gapfill.widget import CandlestickChartViewCurr as ChartViewCu
 
 class GapFillUi():
 
-    GAP_DIR_DICT = {
+    _GAP_DIR_DICT = {
         GapFillMsg.GAP_DIR_UP: "Up",
         GapFillMsg.GAP_DIR_DOWN: "Down"
     }
 
-    GAP_FILL_VALID_DICT = {
+    _GAP_FILL_VALID_DICT = {
         True: "Valid",
         False: "Invalid"
     }
 
-    GAP_FILL_SUCC_DICT = {
+    _GAP_FILL_SUCC_DICT = {
         True: "Success",
         False: "Failure"
     }
 
-    TREEVIEW_HEADERS = [
+    _TREEVIEW_HEADERS = [
         "Date",
         "Gap dir",
         "Previous close price",
@@ -55,37 +55,37 @@ class GapFillUi():
         "End close price"
     ]
 
-    ALL_COLUMNS = [CdlColNm.ASK_OP.value,
-                   CdlColNm.ASK_HI.value,
-                   CdlColNm.ASK_LO.value,
-                   CdlColNm.ASK_CL.value,
-                   CdlColNm.MID_OP.value,
-                   CdlColNm.MID_HI.value,
-                   CdlColNm.MID_LO.value,
-                   CdlColNm.MID_CL.value,
-                   CdlColNm.BID_OP.value,
-                   CdlColNm.BID_HI.value,
-                   CdlColNm.BID_LO.value,
-                   CdlColNm.BID_CL.value
-                   ]
+    _ALL_COLUMNS = [CdlColNm.ASK_OP.value,
+                    CdlColNm.ASK_HI.value,
+                    CdlColNm.ASK_LO.value,
+                    CdlColNm.ASK_CL.value,
+                    CdlColNm.MID_OP.value,
+                    CdlColNm.MID_HI.value,
+                    CdlColNm.MID_LO.value,
+                    CdlColNm.MID_CL.value,
+                    CdlColNm.BID_OP.value,
+                    CdlColNm.BID_HI.value,
+                    CdlColNm.BID_LO.value,
+                    CdlColNm.BID_CL.value
+                    ]
 
-    ASK_COLUMNS = [CdlColNm.ASK_OP.value,
-                   CdlColNm.ASK_HI.value,
-                   CdlColNm.ASK_LO.value,
-                   CdlColNm.ASK_CL.value
-                   ]
+    _ASK_COLUMNS = [CdlColNm.ASK_OP.value,
+                    CdlColNm.ASK_HI.value,
+                    CdlColNm.ASK_LO.value,
+                    CdlColNm.ASK_CL.value
+                    ]
 
-    MID_COLUMNS = [CdlColNm.MID_OP.value,
-                   CdlColNm.MID_HI.value,
-                   CdlColNm.MID_LO.value,
-                   CdlColNm.MID_CL.value
-                   ]
+    _MID_COLUMNS = [CdlColNm.MID_OP.value,
+                    CdlColNm.MID_HI.value,
+                    CdlColNm.MID_LO.value,
+                    CdlColNm.MID_CL.value
+                    ]
 
-    BID_COLUMNS = [CdlColNm.BID_OP.value,
-                   CdlColNm.BID_HI.value,
-                   CdlColNm.BID_LO.value,
-                   CdlColNm.BID_CL.value
-                   ]
+    _BID_COLUMNS = [CdlColNm.BID_OP.value,
+                    CdlColNm.BID_HI.value,
+                    CdlColNm.BID_LO.value,
+                    CdlColNm.BID_CL.value
+                    ]
 
     """
     CDL_COLUMNS = [CandlestickChartViewPrev.CdlColNm.OP,
@@ -95,11 +95,11 @@ class GapFillUi():
                    ]
     """
 
-    SPREAD_COLUMNS_LIST = [MID_COLUMNS,
-                           ASK_COLUMNS,
-                           BID_COLUMNS]
+    _SPREAD_COLUMNS_LIST = [_MID_COLUMNS,
+                            _ASK_COLUMNS,
+                            _BID_COLUMNS]
 
-    DRAW_CANDLE_COUNT = 50
+    _DRAW_CANDLE_COUNT = 50
 
     def __init__(self, ui) -> None:
 
@@ -131,7 +131,7 @@ class GapFillUi():
         sel_mdl.selectionChanged.connect(callback)
 
         # set header
-        qstd_itm_mdl.setHorizontalHeaderLabels(self.TREEVIEW_HEADERS)
+        qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
         ui.treeView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
         header = ui.treeView_gapfill.header()
@@ -169,7 +169,7 @@ class GapFillUi():
     def _on_fetch_gapfill_clicked(self):
 
         self._qstd_itm_mdl.clear()
-        self._qstd_itm_mdl.setHorizontalHeaderLabels(self.TREEVIEW_HEADERS)
+        self._qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
         inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
         inst_msg = INST_MSG_LIST[inst_idx]
 
@@ -201,14 +201,14 @@ class GapFillUi():
             for gapfillmsg in rsp.gapfillmsg_list:
                 items = [
                     QStandardItem(gapfillmsg.date),
-                    QStandardItem(self.GAP_DIR_DICT[gapfillmsg.gap_dir]),
+                    QStandardItem(self._GAP_DIR_DICT[gapfillmsg.gap_dir]),
                     QStandardItem(fmt.format(gapfillmsg.gap_close_price)),
                     QStandardItem(fmt.format(gapfillmsg.gap_open_price)),
                     QStandardItem(fmt.format(gapfillmsg.gap_price_mid)),
                     QStandardItem(fmt.format(gapfillmsg.gap_price_real)),
-                    QStandardItem(self.GAP_FILL_VALID_DICT[
+                    QStandardItem(self._GAP_FILL_VALID_DICT[
                         gapfillmsg.is_valid]),
-                    QStandardItem(self.GAP_FILL_SUCC_DICT[
+                    QStandardItem(self._GAP_FILL_SUCC_DICT[
                         gapfillmsg.is_gapfill_success]),
                     QStandardItem(gapfillmsg.gap_filled_time),
                     QStandardItem(fmt.format(gapfillmsg.max_open_range)),
@@ -315,14 +315,14 @@ class GapFillUi():
 
             sr_gf = self._df_param.loc[trg_date_str]
 
-            df_prev = df.loc[:, GapFillUi.ALL_COLUMNS]
-            df_curr = df.loc[:, GapFillUi.ALL_COLUMNS]
+            df_prev = df.loc[:, self._ALL_COLUMNS]
+            df_curr = df.loc[:, self._ALL_COLUMNS]
 
             th = df_prev.index[-1] - dt.timedelta(days=1)
-            df_prev = df_prev[df_prev.index < th].tail(self.DRAW_CANDLE_COUNT)
+            df_prev = df_prev[df_prev.index < th].tail(self._DRAW_CANDLE_COUNT)
 
             th = df_curr.index[-1] - dt.timedelta(days=1)
-            df_curr = df_curr[th < df_curr.index].head(self.DRAW_CANDLE_COUNT)
+            df_curr = df_curr[th < df_curr.index].head(self._DRAW_CANDLE_COUNT)
 
             max_prev = df_prev[CdlColNm.ASK_HI.value].max()
             min_prev = df_prev[CdlColNm.BID_LO.value].min()
@@ -367,7 +367,7 @@ class GapFillUi():
 
     def _update_prev_chart(self, idx, df, sr_gf, decimal_digit):
 
-        df_prev = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
+        df_prev = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
         df_prev.columns = self._chartview_prev.CandleLabel.to_list()
 
         self._chartview_prev.update(df_prev,
@@ -378,7 +378,7 @@ class GapFillUi():
 
     def _update_curr_chart(self, idx, df, sr_gf, decimal_digit):
 
-        df_curr = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
+        df_curr = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
         df_curr.columns = self._chartview_curr.CandleLabel.to_list()
 
         self._chartview_curr.update(df_curr,
