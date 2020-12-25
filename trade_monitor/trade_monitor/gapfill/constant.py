@@ -1,11 +1,22 @@
-COL_NAME_DATE = "date"
-COL_NAME_GPA_DIR = "gap dir"
-COL_NAME_GPA_CLOSE_PRICE = "gap close price"
-COL_NAME_GPA_OPEN_PRICE = "gap open price"
-COL_NAME_GPA_PRICE_MID = "gap price(mid)"
-COL_NAME_GPA_PRICE_REAL = "gap price(real)"
-COL_NAME_VALID_FLAG = "valid flag"
-COL_NAME_SUCCESS_FLAG = "success flag"
-COL_NAME_GAP_FILLED_TIME = "gap filled time"
-COL_NAME_MAX_OPEN_RANGE = "max open range"
-COL_NAME_END_CLOSE_PRICE = "end close price"
+from enum import Enum
+
+
+class ColumnName(Enum):
+    """
+    Pandas dataframe column name.
+    """
+    DATE = "date"
+    GPA_DIR = "gap dir"
+    GPA_CLOSE_PRICE = "gap close price"
+    GPA_OPEN_PRICE = "gap open price"
+    GPA_PRICE_MID = "gap price(mid)"
+    GPA_PRICE_REAL = "gap price(real)"
+    VALID_FLAG = "valid flag"
+    SUCCESS_FLAG = "success flag"
+    GAP_FILLED_TIME = "gap filled time"
+    MAX_OPEN_RANGE = "max open range"
+    END_CLOSE_PRICE = "end close price"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]

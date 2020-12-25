@@ -1,54 +1,53 @@
 import math
+from enum import IntEnum, auto
 import pandas as pd
 from trade_monitor import utility as utl
 from trade_monitor.constant import INST_MSG_LIST
 from trade_apl_msgs.msg import GapFillMsg
-from trade_monitor.gapfill.constant import (COL_NAME_DATE,
-                                            COL_NAME_GPA_DIR,
-                                            COL_NAME_GPA_PRICE_MID,
-                                            COL_NAME_GPA_PRICE_REAL,
-                                            COL_NAME_VALID_FLAG,
-                                            COL_NAME_SUCCESS_FLAG,
-                                            COL_NAME_MAX_OPEN_RANGE)
+from trade_monitor.gapfill.constant import ColumnName as GfColNm
 
-COL_GPA_PRICE_TH = "gap price thresh"
+
+class _GapDir(IntEnum):
+    """
+    Gap direction.
+    """
+    ALL = auto()
+    UP = auto()
+    DOWN = auto()
 
 
 class HeatMap():
 
-    GAP_DIR_ALL = 1
-    GAP_DIR_UP = 2
-    GAP_DIR_DOWN = 3
-
-    GAP_UPPER_LIMIT = 500   # pips
+    _COL_GPA_PRICE_TH = "gap price thresh"
+    _GAP_UPPER_LIMIT = 500   # pips
 
     def __init__(self, sts_bar):
         self._sts_bar = sts_bar
 
     def set_param(self, df_param: pd.DataFrame, inst_idx):
 
-        df_valid = df_param[df_param[COL_NAME_VALID_FLAG]]
+        df_valid = df_param[df_param[GfColNm.VALID_FLAG.value]]
 
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
         lsb = math.pow(10, decimal_digit)
 
-        gap_upper_limit = self.GAP_UPPER_LIMIT / lsb
-        flg = df_valid[COL_NAME_GPA_PRICE_MID] < gap_upper_limit
+        gap_upper_limit = self._GAP_UPPER_LIMIT / lsb
+        flg = df_valid[GfColNm.GPA_PRICE_MID.value] < gap_upper_limit
         df_valid = df_valid[flg]
 
-        flg = df_valid[COL_NAME_SUCCESS_FLAG]
+        flg = df_valid[GfColNm.SUCCESS_FLAG.value]
         df_succ = df_valid[flg]
-        max_open_price_max = df_succ[COL_NAME_MAX_OPEN_RANGE].max()
+        max_open_price_max = df_succ[GfColNm.MAX_OPEN_RANGE.value].max()
 
         margin = 5
         max_open_pips_max = utl.roundi(max_open_price_max * lsb) + margin
-        hmap_col = [COL_NAME_DATE] + list(range(1, max_open_pips_max + 1))
+        hmap_col = [GfColNm.DATE.value] + list(range(1, max_open_pips_max + 1))
 
         roslist = []
         for date, is_succ, mop, gpr in zip(df_valid.index,
-                                           df_valid[COL_NAME_SUCCESS_FLAG],
-                                           df_valid[COL_NAME_MAX_OPEN_RANGE],
-                                           df_valid[COL_NAME_GPA_PRICE_REAL]):
+                                           df_valid[GfColNm.SUCCESS_FLAG.value],
+                                           df_valid[GfColNm.MAX_OPEN_RANGE.value],
+                                           df_valid[GfColNm.GPA_PRICE_REAL.value]):
             if is_succ:
                 max_open_pips = utl.roundi(mop * lsb)
             else:
@@ -61,10 +60,10 @@ class HeatMap():
             roslist.append([date] + row_left + row_right)
 
         df_htbl = pd.DataFrame(roslist, columns=hmap_col)
-        df_htbl.set_index(COL_NAME_DATE, inplace=True)
+        df_htbl.set_index(GfColNm.DATE.value, inplace=True)
 
         df_hmap_base = self._make_basemap(df_valid, df_htbl, inst_idx)
-        df_hmap = df_hmap_base.sum(level=COL_GPA_PRICE_TH).sort_index()
+        df_hmap = df_hmap_base.sum(level=self._COL_GPA_PRICE_TH).sort_index()
 
         zero_idx = list(range(1, df_hmap.index[0]))
         df_tmp = pd.DataFrame(index=zero_idx,
@@ -88,7 +87,7 @@ class HeatMap():
 
         self._date_step = len(df_valid)
         self._date_pos = 0
-        self._gap_dir = self.GAP_DIR_ALL
+        self._gap_dir = _GapDir.ALL
 
     def reset_hmap(self, deci: int):
         self._df_param = self._df_param_mst
@@ -108,7 +107,7 @@ class HeatMap():
         date_list = self._df_param.index[start:end].tolist()
         df_hmap_base = self._df_hmap_base.loc[(date_list), :]
 
-        df_hmap = df_hmap_base.sum(level=COL_GPA_PRICE_TH)
+        df_hmap = df_hmap_base.sum(level=self._COL_GPA_PRICE_TH)
         df_hmap = pd.concat([df_hmap, self._df_hmap_zero]).sum(level=0)
         df_hmap.sort_index(inplace=True)
 
@@ -120,25 +119,25 @@ class HeatMap():
         return df_new
 
     def switch_dir_all(self):
-        self._gap_dir = self.GAP_DIR_ALL
+        self._gap_dir = _GapDir.ALL
         self._update_param()
 
     def switch_dir_up(self):
-        self._gap_dir = self.GAP_DIR_UP
+        self._gap_dir = _GapDir.UP
         self._update_param()
 
     def switch_dir_down(self):
-        self._gap_dir = self.GAP_DIR_DOWN
+        self._gap_dir = _GapDir.DOWN
         self._update_param()
 
     def _update_param(self):
 
         df = self._df_param_mst
 
-        if self._gap_dir == self.GAP_DIR_UP:
-            df_param = df[df[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_UP]
-        elif self._gap_dir == self.GAP_DIR_DOWN:
-            df_param = df[df[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_DOWN]
+        if self._gap_dir == _GapDir.UP:
+            df_param = df[df[GfColNm.GPA_DIR.value] == GapFillMsg.GAP_DIR_UP]
+        elif self._gap_dir == _GapDir.DOWN:
+            df_param = df[df[GfColNm.GPA_DIR.value] == GapFillMsg.GAP_DIR_DOWN]
         else:
             df_param = df
 
@@ -200,7 +199,7 @@ class HeatMap():
                       inst_idx: int
                       ):
 
-        label = COL_NAME_GPA_PRICE_MID
+        label = GfColNm.GPA_PRICE_MID.value
         gap_price_real_max = df_param[label].max()
         decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
         lsb = math.pow(10, decimal_digit)
@@ -216,9 +215,9 @@ class HeatMap():
 
             df = pd.DataFrame(collist,
                               columns=df_htbl.columns)
-            df[COL_GPA_PRICE_TH] = gpt_col
-            df[COL_NAME_DATE] = date
-            df.set_index([COL_NAME_DATE, COL_GPA_PRICE_TH], inplace=True)
+            df[self._COL_GPA_PRICE_TH] = gpt_col
+            df[GfColNm.DATE.value] = date
+            df.set_index([GfColNm.DATE.value, self._COL_GPA_PRICE_TH], inplace=True)
             df_base = pd.concat([df_base, df])
 
         return df_base
