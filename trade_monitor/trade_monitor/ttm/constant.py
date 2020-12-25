@@ -34,13 +34,13 @@ class WeekdayId(IntEnum):
 
 
 WEEKDAY_ID_DICT = {
-    WeekdayId.MON: "Mon",
-    WeekdayId.TUE: "Tue",
-    WeekdayId.WED: "Wed",
-    WeekdayId.THU: "Thu",
-    WeekdayId.FRI: "Fri",
-    WeekdayId.SAT: "Sat",
-    WeekdayId.SUN: "Sun"
+    WeekdayId.MON.value: "Mon",
+    WeekdayId.TUE.value: "Tue",
+    WeekdayId.WED.value: "Wed",
+    WeekdayId.THU.value: "Thu",
+    WeekdayId.FRI.value: "Fri",
+    WeekdayId.SAT.value: "Sat",
+    WeekdayId.SUN.value: "Sun"
 }
 
 
@@ -58,13 +58,13 @@ class GotodayId(IntEnum):
 
 
 GOTODAY_ID_DICT = {
-    GotodayId.NON: "-",
-    GotodayId.D05: "5",
-    GotodayId.D10: "10",
-    GotodayId.D15: "15",
-    GotodayId.D20: "20",
-    GotodayId.D25: "25",
-    GotodayId.LSD: "L/D"
+    GotodayId.NON.value: "-",
+    GotodayId.D05.value: "5",
+    GotodayId.D10.value: "10",
+    GotodayId.D15.value: "15",
+    GotodayId.D20.value: "20",
+    GotodayId.D25.value: "25",
+    GotodayId.LSD.value: "L/D"
 }
 
 # define data type
