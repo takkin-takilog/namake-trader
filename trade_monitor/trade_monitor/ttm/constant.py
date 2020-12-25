@@ -1,6 +1,5 @@
 import pandas as pd
 from enum import Enum, IntEnum
-from PySide2.QtGui import QColor, QBrush, Qt
 
 
 class ColumnName(Enum):
@@ -21,18 +20,26 @@ class ColumnName(Enum):
     MONTH = "Month"
 
 
-# define data type
-GAP_TYP_HO = 1    # High - Open price
-GAP_TYP_LO = 2    # Low - Open price
-GAP_TYP_CO = 3    # Close - Open price
+class GapType(IntEnum):
+    """
+    Gap type.
+    """
+    HO = 1    # High - Open price
+    LO = 2    # Low - Open price
+    CO = 3    # Close - Open price
 
-DATA_TYP_HO_MEAN = 1   # Mean of High - Open price
-DATA_TYP_HO_STD = 2    # Std of High - Open price
-DATA_TYP_LO_MEAN = 3   # Mean of Low - Open price
-DATA_TYP_LO_STD = 4    # Std of Low - Open price
-DATA_TYP_CO_MEAN = 5   # Mean of Close - Open price
-DATA_TYP_CO_STD = 6    # Std of Close - Open price
-DATA_TYP_CO_CSUM = 7   # Cumsum of Close - Open price
+
+class DataType(IntEnum):
+    """
+    Data type.
+    """
+    HO_MEAN = 1   # Mean of High - Open price
+    HO_STD = 2    # Std of High - Open price
+    LO_MEAN = 3   # Mean of Low - Open price
+    LO_STD = 4    # Std of Low - Open price
+    CO_MEAN = 5   # Mean of Close - Open price
+    CO_STD = 6    # Std of Close - Open price
+    CO_CSUM = 7   # Cumsum of Close - Open price
 
 
 def convert_base2weekgoto(df_base: pd.DataFrame) -> pd.DataFrame:
@@ -66,12 +73,12 @@ def _make_statistics_dataframe(df_base: pd.DataFrame,
     df_mean.reset_index(ColumnName.GAP_TYP.value, inplace=True)
 
     df_mean[ColumnName.DATA_TYP.value] = 0
-    cond = df_mean[ColumnName.GAP_TYP.value] == GAP_TYP_HO
-    df_mean.loc[cond, ColumnName.DATA_TYP.value] = DATA_TYP_HO_MEAN
-    cond = df_mean[ColumnName.GAP_TYP.value] == GAP_TYP_LO
-    df_mean.loc[cond, ColumnName.DATA_TYP.value] = DATA_TYP_LO_MEAN
-    cond = df_mean[ColumnName.GAP_TYP.value] == GAP_TYP_CO
-    df_mean.loc[cond, ColumnName.DATA_TYP.value] = DATA_TYP_CO_MEAN
+    cond = df_mean[ColumnName.GAP_TYP.value] == GapType.HO.value
+    df_mean.loc[cond, ColumnName.DATA_TYP.value] = DataType.HO_MEAN.value
+    cond = df_mean[ColumnName.GAP_TYP.value] == GapType.LO.value
+    df_mean.loc[cond, ColumnName.DATA_TYP.value] = DataType.LO_MEAN.value
+    cond = df_mean[ColumnName.GAP_TYP.value] == GapType.CO.value
+    df_mean.loc[cond, ColumnName.DATA_TYP.value] = DataType.CO_MEAN.value
 
     df_mean.drop(columns=ColumnName.GAP_TYP.value, inplace=True)
     index = ColumnName.DATA_TYP.value
@@ -82,20 +89,20 @@ def _make_statistics_dataframe(df_base: pd.DataFrame,
     df_std.reset_index(ColumnName.GAP_TYP.value, inplace=True)
 
     df_std[ColumnName.DATA_TYP.value] = 0
-    cond = df_std[ColumnName.GAP_TYP.value] == GAP_TYP_HO
-    df_std.loc[cond, ColumnName.DATA_TYP.value] = DATA_TYP_HO_STD
-    cond = df_std[ColumnName.GAP_TYP.value] == GAP_TYP_LO
-    df_std.loc[cond, ColumnName.DATA_TYP.value] = DATA_TYP_LO_STD
-    cond = df_std[ColumnName.GAP_TYP.value] == GAP_TYP_CO
-    df_std.loc[cond, ColumnName.DATA_TYP.value] = DATA_TYP_CO_STD
+    cond = df_std[ColumnName.GAP_TYP.value] == GapType.HO.value
+    df_std.loc[cond, ColumnName.DATA_TYP.value] = DataType.HO_STD.value
+    cond = df_std[ColumnName.GAP_TYP.value] == GapType.LO.value
+    df_std.loc[cond, ColumnName.DATA_TYP.value] = DataType.LO_STD.value
+    cond = df_std[ColumnName.GAP_TYP.value] == GapType.CO.value
+    df_std.loc[cond, ColumnName.DATA_TYP.value] = DataType.CO_STD.value
 
     df_std.drop(columns=ColumnName.GAP_TYP.value, inplace=True)
     index = ColumnName.DATA_TYP.value
     df_std.set_index(index, append=True, inplace=True)
 
     # ----- make DataFrame "Cumulative Sum" -----
-    cond = df_mean.index.get_level_values(ColumnName.DATA_TYP.value) == DATA_TYP_CO_MEAN
-    df_csum = df_mean[cond].rename(index={DATA_TYP_CO_MEAN: DATA_TYP_CO_CSUM},
+    cond = df_mean.index.get_level_values(ColumnName.DATA_TYP.value) == DataType.CO_MEAN.value
+    df_csum = df_mean[cond].rename(index={DataType.CO_MEAN.value: DataType.CO_CSUM.value},
                                    level=ColumnName.DATA_TYP.value)
     df_csum = df_csum.cumsum(axis=1)
 

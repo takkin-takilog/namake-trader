@@ -8,6 +8,8 @@ from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
 from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import FMT_QT_TIME
+from trade_monitor.ttm.constant import DataType
+"""
 from trade_monitor.ttm.constant import (DATA_TYP_HO_MEAN,
                                         DATA_TYP_HO_STD,
                                         DATA_TYP_LO_MEAN,
@@ -16,7 +18,7 @@ from trade_monitor.ttm.constant import (DATA_TYP_HO_MEAN,
                                         DATA_TYP_CO_STD,
                                         DATA_TYP_CO_CSUM
                                         )
-
+"""
 
 class CandlestickChartView(BaseCandlestickChartView):
 
@@ -269,6 +271,7 @@ class LineChartViewStats(BaseLineChartViewTtm):
         pen_c_s.setWidth(1)
         pen_c_s.setStyle(Qt.DashLine)
 
+        """
         data_list = [
             [DATA_TYP_HO_MEAN, pen_hl_m, QtCharts.QLineSeries()],
             # [DATA_TYP_HO_STD, Qt.blue, QtCharts.QLineSeries()],
@@ -276,6 +279,15 @@ class LineChartViewStats(BaseLineChartViewTtm):
             # [DATA_TYP_LO_STD, Qt.green, QtCharts.QLineSeries()],
             [DATA_TYP_CO_MEAN, pen_c_m, QtCharts.QLineSeries()],
             [DATA_TYP_CO_STD, pen_c_s, QtCharts.QLineSeries()]
+        ]
+        """
+        data_list = [
+            [DataType.HO_MEAN.value, pen_hl_m, QtCharts.QLineSeries()],
+            # [DataType.HO_STD.value, Qt.blue, QtCharts.QLineSeries()],
+            [DataType.LO_MEAN.value, pen_hl_m, QtCharts.QLineSeries()],
+            # [DataType.LO_STD.value, Qt.green, QtCharts.QLineSeries()],
+            [DataType.CO_MEAN.value, pen_c_m, QtCharts.QLineSeries()],
+            [DataType.CO_STD.value, pen_c_s, QtCharts.QLineSeries()]
         ]
 
         self._init_chart(data_list)
@@ -292,7 +304,7 @@ class LineChartViewCumsum(BaseLineChartViewTtm):
         pen.setStyle(Qt.SolidLine)
 
         data_list = [
-            [DATA_TYP_CO_CSUM, pen, QtCharts.QLineSeries()]
+            [DataType.CO_CSUM.value, pen, QtCharts.QLineSeries()]
         ]
 
         self._init_chart(data_list)

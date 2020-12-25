@@ -15,8 +15,7 @@ from trade_monitor.constant import (FMT_DTTM_API,
 from trade_monitor.ttm.widget import CandlestickChartView as ChartView
 from trade_monitor.ttm.weekday_ui import WeekdayUi
 from trade_monitor.ttm.gotoday_ui import GotodayUi
-from trade_monitor.ttm.constant import ColumnName
-from trade_monitor.ttm.constant import GAP_TYP_CO
+from trade_monitor.ttm.constant import ColumnName, GapType
 from trade_monitor import ros_common as ros_com
 
 pd.set_option("display.max_columns", 1000)
@@ -221,32 +220,8 @@ class TtmUi():
                      ]
             df_base.set_index(index, inplace=True)
 
-            # ---------- compose Table "week_goto" ----------
-            """
-            level = [ColumnName.WEEKDAY_ID,
-                     ColumnName.IS_GOTO,
-                     ColumnName.GAP_TYP,
-                     ]
-            df_week_goto = self.__make_statistics_dataframe(df_base, level)
-            """
-            """
-            df_week_goto = ttmcom.convert_base2weekgoto(df_base)
-            """
-
-            # ---------- compose Table "month_goto" ----------
-            """
-            level = [ColumnName.MONTH,
-                     ColumnName.GOTO_ID,
-                     ColumnName.GAP_TYP,
-                     ]
-            df_month_goto = self.__make_statistics_dataframe(df_base, level)
-            """
-            """
-            df_month_goto = ttmcom.convert_base2monthgoto(df_base)
-            """
-
             # ---------- compose Tree View ----------
-            flg = df_base.index.get_level_values(ColumnName.GAP_TYP.value) == GAP_TYP_CO
+            flg = df_base.index.get_level_values(ColumnName.GAP_TYP.value) == GapType.CO.value
 
             tbl = []
             for index, row in df_base[flg].iterrows():
@@ -274,10 +249,6 @@ class TtmUi():
 
             self._ui.pushButton_ttm_weekday.setEnabled(True)
             self._ui.pushButton_ttm_gotoday.setEnabled(True)
-            """
-            self._df_week_goto = df_week_goto
-            self._df_month_goto = df_month_goto
-            """
 
     def _on_selection_ttm_changed(self, selected, _):
 
@@ -296,10 +267,6 @@ class TtmUi():
             # df.columns = self._CDL_COLUMNS
             df.columns = self._chartview.get_candle_labels_list()
 
-            """
-            max_y = df[CandlestickChartView.COL_NAME_HI].max()
-            min_y = df[CandlestickChartView.COL_NAME_LO].min()
-            """
             max_y = df[ChartView.CandleLabel.HI.value].max()
             min_y = df[ChartView.CandleLabel.LO.value].min()
 
@@ -348,51 +315,3 @@ class TtmUi():
         df = self._df_base.loc[(date_list), :]
 
         return df
-
-    """
-    def __make_statistics_dataframe(self,
-                                    df_base: pd.DataFrame,
-                                    level: list
-                                    ) -> pd.DataFrame:
-
-        # ----- make DataFrame "Mean" -----
-        df_mean = df_base.mean(level=level).sort_index()
-        df_mean.reset_index(COL_GAP_TYP, inplace=True)
-
-        df_mean[COL_DATA_TYP] = 0
-        cond = df_mean[COL_GAP_TYP] == self._GAP_TYP_HO
-        df_mean.loc[cond, COL_DATA_TYP] = self._DATA_TYP_HO_MEAN
-        cond = df_mean[COL_GAP_TYP] == self._GAP_TYP_LO
-        df_mean.loc[cond, COL_DATA_TYP] = self._DATA_TYP_LO_MEAN
-        cond = df_mean[COL_GAP_TYP] == self._GAP_TYP_CO
-        df_mean.loc[cond, COL_DATA_TYP] = self._DATA_TYP_CO_MEAN
-
-        df_mean.drop(columns=COL_GAP_TYP, inplace=True)
-        index = COL_DATA_TYP
-        df_mean.set_index(index, append=True, inplace=True)
-
-        # ----- make DataFrame "Std" -----
-        df_std = df_base.std(level=level).sort_index()
-        df_std.reset_index(COL_GAP_TYP, inplace=True)
-
-        df_std[COL_DATA_TYP] = 0
-        cond = df_std[COL_GAP_TYP] == self._GAP_TYP_HO
-        df_std.loc[cond, COL_DATA_TYP] = self._DATA_TYP_HO_STD
-        cond = df_std[COL_GAP_TYP] == self._GAP_TYP_LO
-        df_std.loc[cond, COL_DATA_TYP] = self._DATA_TYP_LO_STD
-        cond = df_std[COL_GAP_TYP] == self._GAP_TYP_CO
-        df_std.loc[cond, COL_DATA_TYP] = self._DATA_TYP_CO_STD
-
-        df_std.drop(columns=COL_GAP_TYP, inplace=True)
-        index = COL_DATA_TYP
-        df_std.set_index(index, append=True, inplace=True)
-
-        # ----- make DataFrame "Cumulative Sum" -----
-        cond = df_mean.index.get_level_values(COL_DATA_TYP) == self._DATA_TYP_CO_MEAN
-        df_csum = df_mean[cond].rename(index={self._DATA_TYP_CO_MEAN: self._DATA_TYP_CO_CSUM},
-                                       level=COL_DATA_TYP)
-        df_csum = df_csum.cumsum(axis=1)
-
-        # concat "df_mean" and "df_std" and "df_csum"
-        return pd.concat([df_mean, df_std, df_csum]).sort_index()
-        """

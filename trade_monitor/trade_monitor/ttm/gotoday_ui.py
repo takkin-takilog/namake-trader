@@ -1,4 +1,5 @@
 import os
+from enum import Enum, IntEnum, auto
 import pandas as pd
 from PySide2.QtWidgets import QMainWindow, QHeaderView
 from PySide2.QtWidgets import QTableWidgetItem
@@ -8,75 +9,60 @@ from PySide2.QtGui import QColor, QBrush
 from trade_monitor.constant import FMT_QT_DATE_YMD
 from trade_monitor.utility import DateRangeManager
 from trade_monitor.ttm.constant import ColumnName
-from trade_monitor.ttm.constant import (DATA_TYP_CO_CSUM,
-                                        DATA_TYP_CO_MEAN,
-                                        DATA_TYP_HO_MEAN,
-                                        DATA_TYP_LO_MEAN)
+from trade_monitor.ttm.constant import DataType
 from trade_monitor.ttm.widget import LineChartViewStats
 from trade_monitor.ttm.widget import LineChartViewCumsum
 from trade_monitor.ttm import constant as ttmcom
 from trade_monitor import ros_common as ros_com
 
 
-class TableItemConfig():
+class _GotodayId(Enum):
+    """
+    Gotoday ID.
+    """
+    NTD = (0, "Not", QColor(Qt.black), "#f5dcdc")
+    D05 = (1, "5Day", QColor(Qt.black), "#d9ead3")
+    D10 = (2, "10Day", QColor(Qt.black), "#fce5cd")
+    D15 = (3, "15Day", QColor(Qt.black), "#cfe2f3")
+    D20 = (4, "20Day", QColor(Qt.black), "#fff2cc")
+    D25 = (5, "25Day", QColor(Qt.black), "#fff2cc")
+    LSD = (6, "LstDay", QColor(Qt.black), "#fff2cc")
 
     def __init__(self,
-                 text: str,
-                 foreground_color=QColor(Qt.black),
-                 background_color=QColor(Qt.white)
-                 ):
+                 id_: int,
+                 label: str,
+                 foreground_color: QColor,
+                 background_color: QColor
+                 ) -> None:
+        self.id = id_
+        self.label = label
+        self.foreground_color = QBrush(QColor(foreground_color))
+        self.background_color = QBrush(QColor(background_color))
 
-        self._text = text
-        self._fore_brush = QBrush(QColor(foreground_color))
-        self._back_brush = QBrush(QColor(background_color))
 
-    @property
-    def text(self):
-        return self._text
+class _ChartType(Enum):
+    """
+    Chart type.
+    """
+    STATS = "Stats"
+    CUMSUM = "CumSum"
 
-    @property
-    def foreground(self):
-        return self._fore_brush
+    def __init__(self,
+                 label: str,
+                 ) -> None:
+        self.label = label
 
-    @property
-    def background(self):
-        return self._back_brush
+
+class _TblColPos(IntEnum):
+    """
+    Table Column Position.
+    """
+    GOTODAY = 0
+    CHARTTYP = auto()
+    CHARTVIEW = auto()
 
 
 class GotodayUi(QMainWindow):
-
-    # Table Column Type
-    _TBL_COL_GOTODAYTYP = 0
-    _TBL_COL_CHARTTYP = 1
-    _TBL_COL_CHARTVIEW = 2
-
-    # define Goto-Day Type ID
-    _GOTODAYTYP_ID_NTD = 0
-    _GOTODAYTYP_ID_05D = 1
-    _GOTODAYTYP_ID_10D = 2
-    _GOTODAYTYP_ID_15D = 3
-    _GOTODAYTYP_ID_20D = 4
-    _GOTODAYTYP_ID_25D = 5
-    _GOTODAYTYP_ID_LSD = 6
-
-    # define Chart Type ID
-    _CHARTTYP_ID_STATS = 0
-    _CHARTTYP_ID_CUMSUM = 1
-
-    _GOTODAYTYP_ID_DICT = {
-        _GOTODAYTYP_ID_NTD: TableItemConfig("N/D", background_color="#f5dcdc"),
-        _GOTODAYTYP_ID_05D: TableItemConfig("5Days", background_color="#d9ead3"),
-        _GOTODAYTYP_ID_10D: TableItemConfig("10Days", background_color="#fce5cd"),
-        _GOTODAYTYP_ID_15D: TableItemConfig("15Days", background_color="#cfe2f3"),
-        _GOTODAYTYP_ID_20D: TableItemConfig("20Days", background_color="#fff2cc"),
-        _GOTODAYTYP_ID_25D: TableItemConfig("25Days", background_color="#fff2cc"),
-        _GOTODAYTYP_ID_LSD: TableItemConfig("L/D", background_color="#fff2cc")
-    }
-
-    _CHARTTYP_ID_DICT = {
-        _CHARTTYP_ID_STATS: TableItemConfig("Stats"),
-        _CHARTTYP_ID_CUMSUM: TableItemConfig("CumSum")
-    }
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -138,18 +124,18 @@ class GotodayUi(QMainWindow):
         vHeaderView.sectionResized.connect(callback)
 
         self._CHECKSTATE_GOTODAYTYP_DICT = {
-            self._GOTODAYTYP_ID_NTD: ui.checkBox_GotoDayTyp_Nd.checkState,
-            self._GOTODAYTYP_ID_05D: ui.checkBox_GotoDayTyp_5d.checkState,
-            self._GOTODAYTYP_ID_10D: ui.checkBox_GotoDayTyp_10d.checkState,
-            self._GOTODAYTYP_ID_15D: ui.checkBox_GotoDayTyp_15d.checkState,
-            self._GOTODAYTYP_ID_20D: ui.checkBox_GotoDayTyp_20d.checkState,
-            self._GOTODAYTYP_ID_25D: ui.checkBox_GotoDayTyp_25d.checkState,
-            self._GOTODAYTYP_ID_LSD: ui.checkBox_GotoDayTyp_Ld.checkState
+            _GotodayId.NTD: ui.checkBox_GotoDayTyp_Nd.checkState,
+            _GotodayId.D05: ui.checkBox_GotoDayTyp_5d.checkState,
+            _GotodayId.D10: ui.checkBox_GotoDayTyp_10d.checkState,
+            _GotodayId.D15: ui.checkBox_GotoDayTyp_15d.checkState,
+            _GotodayId.D20: ui.checkBox_GotoDayTyp_20d.checkState,
+            _GotodayId.D25: ui.checkBox_GotoDayTyp_25d.checkState,
+            _GotodayId.LSD: ui.checkBox_GotoDayTyp_Ld.checkState
         }
 
         self._CHECKSTATE_CHARTTYP_DICT = {
-            self._CHARTTYP_ID_STATS: ui.checkBox_ChartTyp_stat.checkState,
-            self._CHARTTYP_ID_CUMSUM: ui.checkBox_ChartTyp_cumsum.checkState,
+            _ChartType.STATS: ui.checkBox_ChartTyp_stat.checkState,
+            _ChartType.CUMSUM: ui.checkBox_ChartTyp_cumsum.checkState,
         }
 
         self._drm = DateRangeManager()
@@ -357,50 +343,50 @@ class GotodayUi(QMainWindow):
             self._ui.tableWidget.removeRow(i)
 
         chart_idx_list = []
-        for gotodaytyp_id in self._GOTODAYTYP_ID_DICT.keys():
-            checkState = self._CHECKSTATE_GOTODAYTYP_DICT[gotodaytyp_id]
+        for gotoday_m in _GotodayId:
+            checkState = self._CHECKSTATE_GOTODAYTYP_DICT[gotoday_m]
             wd_stat = checkState()
             if wd_stat != Qt.Checked:
                 continue
 
-            for charttyp_id in self._CHARTTYP_ID_DICT.keys():
-                checkState = self._CHECKSTATE_CHARTTYP_DICT[charttyp_id]
+            for charttyp_m in _ChartType:
+                checkState = self._CHECKSTATE_CHARTTYP_DICT[charttyp_m]
                 gd_stat = checkState()
                 if gd_stat != Qt.Checked:
                     continue
 
-                chart_idx_list.append([gotodaytyp_id, charttyp_id])
+                chart_idx_list.append([gotoday_m, charttyp_m])
 
         for i, chart_idx in enumerate(chart_idx_list):
-            gotodaytyp_id = chart_idx[0]
-            charttyp_id = chart_idx[1]
+            gotoday_m = chart_idx[0]
+            charttyp_m = chart_idx[1]
 
             self._ui.tableWidget.insertRow(i)
 
             # set Table Item "Goto-Day Type"
-            tbl_itm_cnf = self._GOTODAYTYP_ID_DICT[gotodaytyp_id]
-            back_color = tbl_itm_cnf.background
-            item_wd = QTableWidgetItem(tbl_itm_cnf.text)
+            back_color = gotoday_m.background_color
+            item_wd = QTableWidgetItem(gotoday_m.label)
             item_wd.setTextAlignment(Qt.AlignCenter)
-            item_wd.setForeground(tbl_itm_cnf.foreground)
+            item_wd.setForeground(gotoday_m.foreground_color)
             item_wd.setBackground(back_color)
-            self._ui.tableWidget.setItem(i, self._TBL_COL_GOTODAYTYP, item_wd)
+            pos = _TblColPos.GOTODAY.value
+            self._ui.tableWidget.setItem(i, pos, item_wd)
 
             # set Table Item "Chart Type"
-            tbl_itm_cnf = self._CHARTTYP_ID_DICT[charttyp_id]
-            item_ct = QTableWidgetItem(tbl_itm_cnf.text)
+            item_ct = QTableWidgetItem(charttyp_m.label)
             item_ct.setTextAlignment(Qt.AlignCenter)
-            item_ct.setForeground(tbl_itm_cnf.foreground)
             item_ct.setBackground(back_color)
-            self._ui.tableWidget.setItem(i, self._TBL_COL_CHARTTYP, item_ct)
+            pos = _TblColPos.CHARTTYP.value
+            self._ui.tableWidget.setItem(i, pos, item_ct)
 
             # set Table Item "Chart View"
-            if charttyp_id == self._CHARTTYP_ID_STATS:
+            if charttyp_m == _ChartType.STATS:
                 chartview = LineChartViewStats()
             else:
                 chartview = LineChartViewCumsum()
             chartview.chart().setBackgroundBrush(back_color)
-            self._ui.tableWidget.setCellWidget(i, self._TBL_COL_CHARTVIEW, chartview)
+            pos = _TblColPos.CHARTVIEW.value
+            self._ui.tableWidget.setCellWidget(i, pos, chartview)
 
         self._chart_idx_list = chart_idx_list
         self._is_require_reconstruct_table = False
@@ -408,37 +394,37 @@ class GotodayUi(QMainWindow):
     def _update_chart(self, df):
 
         mst_list = df.index.get_level_values(level=ColumnName.DATA_TYP.value)
-        df_stats = df[mst_list < DATA_TYP_CO_CSUM]
+        df_stats = df[mst_list < DataType.CO_CSUM.value]
 
-        cond = ((mst_list == DATA_TYP_CO_MEAN) |
-                (mst_list == DATA_TYP_HO_MEAN) |
-                (mst_list == DATA_TYP_LO_MEAN))
+        cond = ((mst_list == DataType.CO_MEAN.value) |
+                (mst_list == DataType.HO_MEAN.value) |
+                (mst_list == DataType.LO_MEAN.value))
         df_stats_max = df[cond]
 
         max_ = df_stats_max.max().max()
         min_ = df_stats_max.min().min()
         stats_max = max(abs(max_), abs(min_))
 
-        df_csum = df[mst_list == DATA_TYP_CO_CSUM]
+        df_csum = df[mst_list == DataType.CO_CSUM.value]
         max_ = df_csum.max().max()
         min_ = df_csum.min().min()
         csum_max = max(abs(max_), abs(min_))
 
         for i, chart_idx in enumerate(self._chart_idx_list):
-            gotodaytyp_id = chart_idx[0]
-            charttyp_id = chart_idx[1]
+            gotoday_m = chart_idx[0]
+            charttyp_m = chart_idx[1]
 
-            if charttyp_id == self._CHARTTYP_ID_STATS:
+            if charttyp_m == _ChartType.STATS:
                 df_trg = df_stats
                 max_y = stats_max
             else:
                 df_trg = df_csum
                 max_y = csum_max
 
-            chart = self._ui.tableWidget.cellWidget(i, self._TBL_COL_CHARTVIEW)
+            chart = self._ui.tableWidget.cellWidget(i, _TblColPos.CHARTVIEW)
             chart.set_max_y(max_y)
             chart.set_min_y(-max_y)
-            idxloc = (gotodaytyp_id)
+            idxloc = (gotoday_m.id)
             if idxloc in df_trg.index:
                 chart.update(df_trg.loc[idxloc], self._gran_id, self._decimal_digit)
             else:

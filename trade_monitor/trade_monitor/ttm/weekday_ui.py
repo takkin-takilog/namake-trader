@@ -9,10 +9,7 @@ from PySide2.QtGui import QColor, QBrush
 from trade_monitor.constant import FMT_QT_DATE_YMD
 from trade_monitor.utility import DateRangeManager
 from trade_monitor.ttm.constant import ColumnName
-from trade_monitor.ttm.constant import (DATA_TYP_CO_CSUM,
-                                        DATA_TYP_CO_MEAN,
-                                        DATA_TYP_HO_MEAN,
-                                        DATA_TYP_LO_MEAN)
+from trade_monitor.ttm.constant import DataType
 from trade_monitor.ttm.widget import LineChartViewStats
 from trade_monitor.ttm.widget import LineChartViewCumsum
 from trade_monitor.ttm import constant as ttmcom
@@ -428,28 +425,28 @@ class WeekdayUi(QMainWindow):
     def _update_chart(self, df):
 
         mst_list = df.index.get_level_values(level=ColumnName.DATA_TYP.value)
-        df_stats = df[mst_list < DATA_TYP_CO_CSUM]
+        df_stats = df[mst_list < DataType.CO_CSUM.value]
 
-        cond = ((mst_list == DATA_TYP_CO_MEAN) |
-                (mst_list == DATA_TYP_HO_MEAN) |
-                (mst_list == DATA_TYP_LO_MEAN))
+        cond = ((mst_list == DataType.CO_MEAN.value) |
+                (mst_list == DataType.HO_MEAN.value) |
+                (mst_list == DataType.LO_MEAN.value))
         df_stats_max = df[cond]
 
         max_ = df_stats_max.max().max()
         min_ = df_stats_max.min().min()
         stats_max = max(abs(max_), abs(min_))
 
-        df_csum = df[mst_list == DATA_TYP_CO_CSUM]
+        df_csum = df[mst_list == DataType.CO_CSUM.value]
         max_ = df_csum.max().max()
         min_ = df_csum.min().min()
         csum_max = max(abs(max_), abs(min_))
 
         for i, chart_idx in enumerate(self._chart_idx_list):
             weekday_m = chart_idx[0]
-            is_gotoday_m = chart_idx[1]
+            gotoday_m = chart_idx[1]
             charttyp_m = chart_idx[2]
 
-            if is_gotoday_m == _Gotoday.TRUE:
+            if gotoday_m == _Gotoday.TRUE:
                 is_goto = True
             else:
                 is_goto = False
