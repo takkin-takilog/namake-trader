@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum, IntEnum, auto
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
 
@@ -10,37 +11,30 @@ FMT_TIME_HMS = "%H:%M:%S"
 FMT_QT_DATE_YMD = "yyyy-MM-dd"
 FMT_QT_TIME = "HH:mm"
 
-# Candlestick data frame column name
-COL_NAME_TIME = "time"
-COL_NAME_ASK_OP = "open(Ask)"
-COL_NAME_ASK_HI = "high(Ask)"
-COL_NAME_ASK_LO = "low(Ask)"
-COL_NAME_ASK_CL = "close(Ask)"
-COL_NAME_MID_OP = "open(Mid)"
-COL_NAME_MID_HI = "high(Mid)"
-COL_NAME_MID_LO = "low(Mid)"
-COL_NAME_MID_CL = "close(Mid)"
-COL_NAME_BID_OP = "open(Bid)"
-COL_NAME_BID_HI = "high(Bid)"
-COL_NAME_BID_LO = "low(Bid)"
-COL_NAME_BID_CL = "close(Bid)"
-COL_NAME_COMP = "complete"
 
-CANDLE_COL_NAME_LIST = [COL_NAME_TIME,
-                        COL_NAME_ASK_OP,
-                        COL_NAME_ASK_HI,
-                        COL_NAME_ASK_LO,
-                        COL_NAME_ASK_CL,
-                        COL_NAME_MID_OP,
-                        COL_NAME_MID_HI,
-                        COL_NAME_MID_LO,
-                        COL_NAME_MID_CL,
-                        COL_NAME_BID_OP,
-                        COL_NAME_BID_HI,
-                        COL_NAME_BID_LO,
-                        COL_NAME_BID_CL,
-                        COL_NAME_COMP
-                        ]
+class CandleColumnName(Enum):
+    """
+    Candlestick dataframe column name.
+    """
+    TIME = "time"
+    ASK_OP = "open(Ask)"
+    ASK_HI = "high(Ask)"
+    ASK_LO = "low(Ask)"
+    ASK_CL = "close(Ask)"
+    MID_OP = "open(Mid)"
+    MID_HI = "high(Mid)"
+    MID_LO = "low(Mid)"
+    MID_CL = "close(Mid)"
+    BID_OP = "open(Bid)"
+    BID_HI = "high(Bid)"
+    BID_LO = "low(Bid)"
+    BID_CL = "close(Bid)"
+    COMP = "complete"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
 
 GRAN_FREQ_DICT = {
     Gran.GRAN_M1: "1min",
@@ -96,5 +90,3 @@ SPREAD_MSG_LIST = [
     "Ask",
     "Bid"
 ]
-
-

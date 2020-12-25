@@ -1,28 +1,12 @@
 import datetime as dt
 import pandas as pd
 
-import rclpy
-
 from trade_monitor.candlestick_chart import CandlestickChart
 from trade_manager_msgs.srv import CandlesMntSrv
-from trade_monitor import utility as utl
+from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import INST_MSG_LIST, GRAN_MSG_LIST
 from trade_monitor.constant import FMT_DTTM_API
-from trade_monitor.constant import CANDLE_COL_NAME_LIST
-from trade_monitor.constant import (COL_NAME_TIME,
-                                    COL_NAME_ASK_OP,
-                                    COL_NAME_ASK_HI,
-                                    COL_NAME_ASK_LO,
-                                    COL_NAME_ASK_CL,
-                                    COL_NAME_BID_OP,
-                                    COL_NAME_BID_HI,
-                                    COL_NAME_BID_LO,
-                                    COL_NAME_BID_CL,
-                                    COL_NAME_MID_OP,
-                                    COL_NAME_MID_HI,
-                                    COL_NAME_MID_LO,
-                                    COL_NAME_MID_CL
-                                    )
+from trade_monitor.constant import CandleColumnName as ColName
 
 
 class MainUi():
@@ -65,7 +49,7 @@ class MainUi():
         req.dt_from = dt_from.strftime(FMT_DTTM_API)
         req.dt_to = dt_to.strftime(FMT_DTTM_API)
 
-        rsp = utl.call_servive_sync_candle(req, timeout_sec=10.0)
+        rsp = ros_com.call_servive_sync_candle(req, timeout_sec=10.0)
         data = []
         for cndl_msg in rsp.cndl_msg_list:
             dt_ = dt.datetime.strptime(cndl_msg.time, FMT_DTTM_API)
@@ -82,18 +66,18 @@ class MainUi():
                          ])
 
         df = pd.DataFrame(data)
-        df.columns = CANDLE_COL_NAME_LIST
-        df = df.set_index(COL_NAME_TIME)
+        df.columns = ColName.to_list()
+        df = df.set_index(ColName.TIME.value)
 
-        df[COL_NAME_MID_OP] = (df[COL_NAME_ASK_OP] + df[COL_NAME_BID_OP]) / 2
-        df[COL_NAME_MID_HI] = (df[COL_NAME_ASK_HI] + df[COL_NAME_BID_HI]) / 2
-        df[COL_NAME_MID_LO] = (df[COL_NAME_ASK_LO] + df[COL_NAME_BID_LO]) / 2
-        df[COL_NAME_MID_CL] = (df[COL_NAME_ASK_CL] + df[COL_NAME_BID_CL]) / 2
+        df[ColName.MID_OP.value] = (df[ColName.ASK_OP.value] + df[ColName.BID_OP.value]) / 2
+        df[ColName.MID_HI.value] = (df[ColName.ASK_HI.value] + df[ColName.BID_HI.value]) / 2
+        df[ColName.MID_LO.value] = (df[ColName.ASK_LO.value] + df[ColName.BID_LO.value]) / 2
+        df[ColName.MID_CL.value] = (df[ColName.ASK_CL.value] + df[ColName.BID_CL.value]) / 2
 
-        dftmp = df.loc[:, [COL_NAME_MID_OP,
-                           COL_NAME_MID_HI,
-                           COL_NAME_MID_LO,
-                           COL_NAME_MID_CL
+        dftmp = df.loc[:, [ColName.MID_OP.value,
+                           ColName.MID_HI.value,
+                           ColName.MID_LO.value,
+                           ColName.MID_CL.value
                            ]]
         dftmp.columns = [CandlestickChart.COL_NAME_OP,
                          CandlestickChart.COL_NAME_HI,

@@ -17,22 +17,7 @@ from trade_monitor.constant import (FMT_DTTM_API,
                                     FMT_DATE_YMD,
                                     FMT_TIME_HMS
                                     )
-from trade_monitor.constant import CANDLE_COL_NAME_LIST
-from trade_monitor.constant import (COL_NAME_TIME,
-                                    COL_NAME_ASK_OP,
-                                    COL_NAME_ASK_HI,
-                                    COL_NAME_ASK_LO,
-                                    COL_NAME_ASK_CL,
-                                    COL_NAME_MID_OP,
-                                    COL_NAME_MID_HI,
-                                    COL_NAME_MID_LO,
-                                    COL_NAME_MID_CL,
-                                    COL_NAME_BID_OP,
-                                    COL_NAME_BID_HI,
-                                    COL_NAME_BID_LO,
-                                    COL_NAME_BID_CL
-                                    )
-
+from trade_monitor.constant import CandleColumnName as ColName
 from trade_monitor.gapfill.heatmap_ui import HeatMapUi
 
 from trade_monitor.gapfill.constant import (COL_NAME_DATE,
@@ -82,43 +67,43 @@ class GapFillUi():
         "End close price"
     ]
 
-    ALL_COLUMNS = [COL_NAME_ASK_OP,
-                   COL_NAME_ASK_HI,
-                   COL_NAME_ASK_LO,
-                   COL_NAME_ASK_CL,
-                   COL_NAME_MID_OP,
-                   COL_NAME_MID_HI,
-                   COL_NAME_MID_LO,
-                   COL_NAME_MID_CL,
-                   COL_NAME_BID_OP,
-                   COL_NAME_BID_HI,
-                   COL_NAME_BID_LO,
-                   COL_NAME_BID_CL
+    ALL_COLUMNS = [ColName.ASK_OP.value,
+                   ColName.ASK_HI.value,
+                   ColName.ASK_LO.value,
+                   ColName.ASK_CL.value,
+                   ColName.MID_OP.value,
+                   ColName.MID_HI.value,
+                   ColName.MID_LO.value,
+                   ColName.MID_CL.value,
+                   ColName.BID_OP.value,
+                   ColName.BID_HI.value,
+                   ColName.BID_LO.value,
+                   ColName.BID_CL.value
                    ]
 
-    ASK_COLUMNS = [COL_NAME_ASK_OP,
-                   COL_NAME_ASK_HI,
-                   COL_NAME_ASK_LO,
-                   COL_NAME_ASK_CL
+    ASK_COLUMNS = [ColName.ASK_OP.value,
+                   ColName.ASK_HI.value,
+                   ColName.ASK_LO.value,
+                   ColName.ASK_CL.value
                    ]
 
-    MID_COLUMNS = [COL_NAME_MID_OP,
-                   COL_NAME_MID_HI,
-                   COL_NAME_MID_LO,
-                   COL_NAME_MID_CL
+    MID_COLUMNS = [ColName.MID_OP.value,
+                   ColName.MID_HI.value,
+                   ColName.MID_LO.value,
+                   ColName.MID_CL.value
                    ]
 
-    BID_COLUMNS = [COL_NAME_BID_OP,
-                   COL_NAME_BID_HI,
-                   COL_NAME_BID_LO,
-                   COL_NAME_BID_CL
+    BID_COLUMNS = [ColName.BID_OP.value,
+                   ColName.BID_HI.value,
+                   ColName.BID_LO.value,
+                   ColName.BID_CL.value
                    ]
 
     """
-    CDL_COLUMNS = [CandlestickChartViewPrev.COL_NAME_OP,
-                   CandlestickChartViewPrev.COL_NAME_HI,
-                   CandlestickChartViewPrev.COL_NAME_LO,
-                   CandlestickChartViewPrev.COL_NAME_CL
+    CDL_COLUMNS = [CandlestickChartViewPrev.ColName.OP,
+                   CandlestickChartViewPrev.ColName.HI,
+                   CandlestickChartViewPrev.ColName.LO,
+                   CandlestickChartViewPrev.ColName.CL
                    ]
     """
 
@@ -350,8 +335,8 @@ class GapFillUi():
                              ])
 
             df = pd.DataFrame(data)
-            df.columns = CANDLE_COL_NAME_LIST
-            df = df.set_index(COL_NAME_TIME)
+            df.columns = ColName.to_list()
+            df = df.set_index(ColName.TIME.value)
 
             sr_gf = self._df_param.loc[trg_date_str]
 
@@ -364,10 +349,10 @@ class GapFillUi():
             th = df_curr.index[-1] - dt.timedelta(days=1)
             df_curr = df_curr[th < df_curr.index].head(self.DRAW_CANDLE_COUNT)
 
-            max_prev = df_prev[COL_NAME_ASK_HI].max()
-            min_prev = df_prev[COL_NAME_BID_LO].min()
-            max_curr = df_curr[COL_NAME_ASK_HI].max()
-            min_curr = df_curr[COL_NAME_BID_LO].min()
+            max_prev = df_prev[ColName.ASK_HI.value].max()
+            min_prev = df_prev[ColName.BID_LO.value].min()
+            max_curr = df_curr[ColName.ASK_HI.value].max()
+            min_curr = df_curr[ColName.BID_LO.value].min()
 
             max_y = max(max_prev, max_curr)
             min_y = min(min_prev, min_curr)
