@@ -1,4 +1,3 @@
-import pandas as pd
 from enum import Enum, IntEnum
 
 
@@ -40,27 +39,3 @@ class DataType(IntEnum):
     CO_MEAN = 5   # Mean of Close - Open price
     CO_STD = 6    # Std of Close - Open price
     CO_CSUM = 7   # Cumsum of Close - Open price
-
-
-def convert_base2weekgoto(df_base: pd.DataFrame) -> pd.DataFrame:
-
-    level = [ColumnName.WEEKDAY_ID.value,
-             ColumnName.IS_GOTO.value,
-             ColumnName.GAP_TYP.value
-             ]
-    df = _make_statistics_dataframe(df_base, level)
-
-    return df
-
-
-def convert_base2monthgoto(df_base: pd.DataFrame) -> pd.DataFrame:
-
-    # level = [ColumnName.MONTH, ColumnName.GOTO_ID, ColumnName.GAP_TYP]
-    level = [ColumnName.GOTO_ID.value,
-             ColumnName.GAP_TYP.value
-             ]
-    df = _make_statistics_dataframe(df_base, level)
-
-    return df
-
-
