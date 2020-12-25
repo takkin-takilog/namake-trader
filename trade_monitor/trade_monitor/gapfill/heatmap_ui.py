@@ -13,10 +13,10 @@ from PySide2.QtGui import QColor, QPen, QPainter, QPainterPath, QPixmap
 from PySide2.QtGui import QLinearGradient, QFontMetrics
 from PySide2.QtCharts import QtCharts
 
-from trade_monitor.base import BaseCalloutChart
-from trade_monitor import utilities as utl
-from trade_monitor.utilities import GradientManager
-from trade_monitor.gapfill.heatmap_manager import HeatMapManager
+from trade_monitor.widget_base import BaseCalloutChart
+from trade_monitor import utility as utl
+from trade_monitor.utility import GradientManager
+from trade_monitor.gapfill.heatmap import HeatMap
 
 _g_gradMng = GradientManager()
 
@@ -451,7 +451,7 @@ class HeatMapChartView(HeatMapChartViewAbs):
                 self._sts_bar.set_bar_value(itr)
 
 
-class GapFillHeatMap(QMainWindow):
+class HeatMapUi(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -518,7 +518,7 @@ class GapFillHeatMap(QMainWindow):
         callback = self._on_radioButtonGapDirDown_clicked
         ui.radioButton_GapDirLo.clicked.connect(callback)
 
-        self._hmapmng = HeatMapManager(sts_bar)
+        self._hmap = HeatMap(sts_bar)
 
         self._ui = ui
         self._chart_view = chart_view
@@ -530,9 +530,9 @@ class GapFillHeatMap(QMainWindow):
                   inst_idx: int,
                   df_param: pd.DataFrame):
 
-        self._hmapmng.set_param(df_param, inst_idx)
+        self._hmap.set_param(df_param, inst_idx)
 
-        shape = self._hmapmng.shape
+        shape = self._hmap.shape
         lenmax = max(shape)
         val = math.ceil(lenmax / 100)
 
@@ -544,7 +544,7 @@ class GapFillHeatMap(QMainWindow):
 
     def _on_spinBoxDateStep_changed(self, value):
         if self._is_chart_updatable:
-            self._hmapmng.date_step = value
+            self._hmap.date_step = value
             maxval = self._ui.spinBox_DateStep.maximum()
             self._ui.scrollBar_Date.setMaximum(maxval - value)
             if self._ui.pushButton_AutoUpdate.isChecked():
@@ -552,33 +552,33 @@ class GapFillHeatMap(QMainWindow):
 
     def _on_scrollBarDate_changed(self, value):
         if self._is_chart_updatable:
-            self._hmapmng.date_pos = value
+            self._hmap.date_pos = value
             if self._ui.pushButton_AutoUpdate.isChecked():
                 self._update_hmap()
 
     def _on_radioButtonGapDirAll_clicked(self):
-        self._hmapmng.switch_dir_all()
+        self._hmap.switch_dir_all()
         self._update_status()
         if self._ui.pushButton_AutoUpdate.isChecked():
             self._update_hmap()
 
     def _on_radioButtonGapDirUp_clicked(self):
-        self._hmapmng.switch_dir_up()
+        self._hmap.switch_dir_up()
         self._update_status()
         if self._ui.pushButton_AutoUpdate.isChecked():
             self._update_hmap()
 
     def _on_radioButtonGapDirDown_clicked(self):
-        self._hmapmng.switch_dir_down()
+        self._hmap.switch_dir_down()
         self._update_status()
         if self._ui.pushButton_AutoUpdate.isChecked():
             self._update_hmap()
 
     def _update_status(self):
         self._is_chart_updatable = False
-        date_pos = self._hmapmng.date_pos
-        date_step = self._hmapmng.date_step
-        data_len = self._hmapmng.data_len
+        date_pos = self._hmap.date_pos
+        date_step = self._hmap.date_step
+        data_len = self._hmap.data_len
         self._ui.spinBox_DateStep.setMaximum(data_len)
         self._ui.spinBox_DateStep.setValue(date_step)
         self._ui.scrollBar_Date.setMaximum(data_len - date_step)
@@ -587,7 +587,7 @@ class GapFillHeatMap(QMainWindow):
         self._is_chart_updatable = True
 
     def _update_hmap(self):
-        df = self._hmapmng.tuned_hmap()
+        df = self._hmap.tuned_hmap()
         self._chart_view.update_hmap(df)
         self._update_date_list()
         self._color_map.update_intensity_range()
@@ -597,7 +597,7 @@ class GapFillHeatMap(QMainWindow):
         self._ui.pushButton_AutoUpdate.setChecked(False)
 
         deci = self._ui.spinBox_Decim.value()
-        df = self._hmapmng.reset_hmap(deci)
+        df = self._hmap.reset_hmap(deci)
 
         self._chart_view.rebuild_hmap(df)
         self._color_map.update_intensity_range()
@@ -608,7 +608,7 @@ class GapFillHeatMap(QMainWindow):
 
     def _update_date_list(self):
         text = ""
-        for date in self._hmapmng.date_list:
+        for date in self._hmap.date_list:
             text += date + "\n"
         self._ui.plainTextEdit_DateList.setPlainText(text)
 
@@ -635,7 +635,7 @@ class GapFillHeatMap(QMainWindow):
         self._color_map.update_color_scale()
 
     def _on_spinBoxDecim_changed(self, decim):
-        shape = self._hmapmng.shape
+        shape = self._hmap.shape
 
         row_len = math.ceil(shape[0] / decim)
         col_len = math.ceil(shape[1] / decim)
@@ -644,7 +644,7 @@ class GapFillHeatMap(QMainWindow):
 
     def _load_ui(self, parent):
         loader = QUiLoader()
-        path = os.path.join(os.path.dirname(__file__), "gapfill_heatmap.ui")
+        path = os.path.join(os.path.dirname(__file__), "heatmap.ui")
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)
         ui = loader.load(ui_file, parent)
@@ -727,7 +727,7 @@ if __name__ == "__main__":
 
     df_param, inst_idx = gen_sample_gapdata()
 
-    widget = GapFillHeatMap()
+    widget = HeatMap()
     widget.set_param(inst_idx, df_param)
     widget.show()
     widget.init_resize()

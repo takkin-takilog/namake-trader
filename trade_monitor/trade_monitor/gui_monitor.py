@@ -15,9 +15,10 @@ from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor.gapfill.gapfill_ui import GapFillUi
 from trade_monitor.ttm.ttm_ui import TtmUi
 from trade_monitor.main_ui import MainUi
-from trade_monitor import utilities as utl
-from trade_monitor.utilities import INST_MSG_LIST
-from trade_monitor.utilities import GRAN_MSG_LIST
+from trade_monitor import utility as utl
+from trade_monitor.constant import INST_MSG_LIST
+from trade_monitor.constant import GRAN_MSG_LIST
+from trade_monitor import ros_common as ros_com
 
 
 class GuiMonitor(QMainWindow):
@@ -74,8 +75,8 @@ class GuiMonitor(QMainWindow):
                                  reliability=QoSReliabilityPolicy.RELIABLE)
         pub_alive = node.create_publisher(msg_type, topic, qos_profile)
 
-        utl.set_node(node)
-        utl.set_service_client_candle(cli_cdl)
+        ros_com.set_node(node)
+        ros_com.set_service_client_candle(cli_cdl)
 
         self._ui = ui
         self._node = node

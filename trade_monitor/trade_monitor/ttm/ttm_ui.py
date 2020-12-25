@@ -2,34 +2,23 @@ import pandas as pd
 import datetime as dt
 from PySide2.QtCore import Qt
 from trade_apl_msgs.srv import TtmMntSrv
-from trade_monitor.base import PandasTreeView
-from trade_monitor import utilities as utl
-from trade_monitor.utilities import INST_MSG_LIST
-from trade_monitor.utilities import GRAN_FREQ_DICT
-from trade_monitor.utilities import (FMT_DTTM_API,
-                                     FMT_DATE_YMD,
-                                     FMT_TIME_HM,
-                                     FMT_TIME_HMS
-                                     )
-from trade_monitor.ttm.chart import CandlestickChartViewTtm
-from trade_monitor.ttm.ttm_weekday import TtmWeekday
-from trade_monitor.ttm.ttm_gotoday import TtmGotoday
-from trade_monitor.ttm.ttm_common import (COL_DATE,
-                                          COL_TIME,
-                                          COL_O,
-                                          COL_H,
-                                          COL_L,
-                                          COL_C,
-                                          COL_WEEKDAY_ID,
-                                          COL_GOTO_ID,
-                                          COL_IS_GOTO,
-                                          COL_GAP_TYP,
-                                          COL_DATA_TYP,
-                                          COL_MONTH
-                                          )
-from trade_monitor.ttm.ttm_common import GAP_TYP_CO
-from trade_monitor.ttm.ttm_common import WEEKDAY_ID_DICT
-from trade_monitor.ttm.ttm_common import GOTODAY_ID_DICT
+from trade_monitor.widget_base import PandasTreeView
+from trade_monitor import utility as utl
+from trade_monitor.constant import INST_MSG_LIST
+from trade_monitor.constant import GRAN_FREQ_DICT
+from trade_monitor.constant import (FMT_DTTM_API,
+                                    FMT_DATE_YMD,
+                                    FMT_TIME_HM,
+                                    FMT_TIME_HMS
+                                    )
+from trade_monitor.ttm.widget import CandlestickChartView
+from trade_monitor.ttm.weekday_ui import WeekdayUi
+from trade_monitor.ttm.gotoday_ui import GotodayUi
+from trade_monitor.ttm.constant import ColumnName
+from trade_monitor.ttm.constant import GAP_TYP_CO
+from trade_monitor.ttm.constant import WEEKDAY_ID_DICT
+from trade_monitor.ttm.constant import GOTODAY_ID_DICT
+from trade_monitor import ros_common as ros_com
 
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
@@ -86,10 +75,10 @@ class TtmUi():
     _DATA_TYP_CO_CSUM = 7   # Cumsum of Close - Open price
     """
 
-    _CDL_COLUMNS = [CandlestickChartViewTtm.COL_NAME_OP,
-                    CandlestickChartViewTtm.COL_NAME_HI,
-                    CandlestickChartViewTtm.COL_NAME_LO,
-                    CandlestickChartViewTtm.COL_NAME_CL
+    _CDL_COLUMNS = [CandlestickChartView.COL_NAME_OP,
+                    CandlestickChartView.COL_NAME_HI,
+                    CandlestickChartView.COL_NAME_LO,
+                    CandlestickChartView.COL_NAME_CL
                     ]
 
     def __init__(self, ui) -> None:
@@ -126,7 +115,7 @@ class TtmUi():
         callback = self._on_view_header_sectionClicked
         header.sectionClicked.connect(callback)
 
-        chartview = CandlestickChartViewTtm(ui.widget_ChartView_ttm)
+        chartview = CandlestickChartView(ui.widget_ChartView_ttm)
 
         # Create service client "ttm_monitor"
         srv_type = TtmMntSrv
@@ -134,11 +123,11 @@ class TtmUi():
         srv_cli_list = []
         for obj in INST_MSG_LIST:
             fullname = obj.namespace + "/" + srv_name
-            srv_cli = utl.get_node().create_client(srv_type, fullname)
+            srv_cli = ros_com.get_node().create_client(srv_type, fullname)
             srv_cli_list.append(srv_cli)
 
-        self._win_weekday = TtmWeekday()
-        self._win_gotoday = TtmGotoday()
+        self._weekday_ui = WeekdayUi()
+        self._gotoday_ui = GotodayUi()
 
         # self._qstd_itm_mdl = qstd_itm_mdl
         self._chartview = chartview
@@ -147,7 +136,7 @@ class TtmUi():
         self._pdtreeview = pdtreeview
         self._gran_id = 0
         self._srv_cli_list = srv_cli_list
-        self._logger = utl.get_logger()
+        self._logger = ros_com.get_logger()
 
     def _on_view_header_sectionClicked(self, logical_index):
         self._pdtreeview.show_header_menu(logical_index)
@@ -165,7 +154,7 @@ class TtmUi():
                                .format(inst_msg.text))
         else:
 
-            rsp = utl.call_servive_sync(srv_cli, req, timeout_sec=10.0)
+            rsp = ros_com.call_servive_sync(srv_cli, req, timeout_sec=10.0)
             self._gran_id = rsp.gran_id
 
             start_time_str = rsp.start_time
@@ -188,17 +177,17 @@ class TtmUi():
                           ]
                 tbl.append(record)
 
-            columns = [COL_DATE,
-                       COL_TIME,
-                       COL_O,
-                       COL_H,
-                       COL_L,
-                       COL_C,
+            columns = [ColumnName.DATE.value,
+                       ColumnName.TIME.value,
+                       ColumnName.CDL_O.value,
+                       ColumnName.CDL_H.value,
+                       ColumnName.CDL_L.value,
+                       ColumnName.CDL_C.value,
                        ]
             df_ohlc = pd.DataFrame(tbl, columns=columns)
 
-            index = [COL_DATE,
-                     COL_TIME
+            index = [ColumnName.DATE.value,
+                     ColumnName.TIME.value
                      ]
             df_ohlc.set_index(index, inplace=True)
 
@@ -214,28 +203,29 @@ class TtmUi():
                           ] + rec.data_list.tolist()
                 tbl.append(record)
 
-            columns = [COL_DATE,
-                       COL_MONTH,
-                       COL_WEEKDAY_ID,
-                       COL_GOTO_ID,
-                       COL_IS_GOTO,
-                       COL_GAP_TYP] + time_range_list
+            columns = [ColumnName.DATE.value,
+                       ColumnName.MONTH.value,
+                       ColumnName.WEEKDAY_ID.value,
+                       ColumnName.GOTO_ID.value,
+                       ColumnName.IS_GOTO.value,
+                       ColumnName.GAP_TYP.value
+                       ] + time_range_list
             df_base = pd.DataFrame(tbl, columns=columns)
 
-            index = [COL_DATE,
-                     COL_MONTH,
-                     COL_WEEKDAY_ID,
-                     COL_GOTO_ID,
-                     COL_IS_GOTO,
-                     COL_GAP_TYP,
+            index = [ColumnName.DATE.value,
+                     ColumnName.MONTH.value,
+                     ColumnName.WEEKDAY_ID.value,
+                     ColumnName.GOTO_ID.value,
+                     ColumnName.IS_GOTO.value,
+                     ColumnName.GAP_TYP.value,
                      ]
             df_base.set_index(index, inplace=True)
 
             # ---------- compose Table "week_goto" ----------
             """
-            level = [COL_WEEKDAY_ID,
-                     COL_IS_GOTO,
-                     COL_GAP_TYP,
+            level = [ColumnName.WEEKDAY_ID,
+                     ColumnName.IS_GOTO,
+                     ColumnName.GAP_TYP,
                      ]
             df_week_goto = self.__make_statistics_dataframe(df_base, level)
             """
@@ -245,9 +235,9 @@ class TtmUi():
 
             # ---------- compose Table "month_goto" ----------
             """
-            level = [COL_MONTH,
-                     COL_GOTO_ID,
-                     COL_GAP_TYP,
+            level = [ColumnName.MONTH,
+                     ColumnName.GOTO_ID,
+                     ColumnName.GAP_TYP,
                      ]
             df_month_goto = self.__make_statistics_dataframe(df_base, level)
             """
@@ -256,7 +246,7 @@ class TtmUi():
             """
 
             # ---------- compose Tree View ----------
-            flg = df_base.index.get_level_values(COL_GAP_TYP) == GAP_TYP_CO
+            flg = df_base.index.get_level_values(ColumnName.GAP_TYP.value) == GAP_TYP_CO
             """
             df = df_base[flg]
             for index, row in df.iterrows():
@@ -305,14 +295,14 @@ class TtmUi():
             date_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
 
             df_ohlc = self._df_ohlc
-            flg = df_ohlc.index.get_level_values(COL_DATE) == date_str
-            df = df_ohlc[flg].reset_index(level=COL_DATE, drop=True)
+            flg = df_ohlc.index.get_level_values(ColumnName.DATE.value) == date_str
+            df = df_ohlc[flg].reset_index(level=ColumnName.DATE.value, drop=True)
             fmt = FMT_DATE_YMD + FMT_TIME_HM
             df = df.rename(index=lambda t: dt.datetime.strptime(date_str + t, fmt))
             df.columns = self._CDL_COLUMNS
 
-            max_y = df[CandlestickChartViewTtm.COL_NAME_HI].max()
-            min_y = df[CandlestickChartViewTtm.COL_NAME_LO].min()
+            max_y = df[CandlestickChartView.COL_NAME_HI].max()
+            min_y = df[CandlestickChartView.COL_NAME_LO].min()
             dif = (max_y - min_y) * 0.05
             self._chartview.set_max_y(max_y + dif)
             self._chartview.set_min_y(min_y - dif)
@@ -330,11 +320,11 @@ class TtmUi():
 
         df = self._get_dataframe()
 
-        self._win_weekday.show()
-        self._win_weekday.init_resize()
-        self._win_weekday.set_data(df,
-                                   self._gran_id,
-                                   decimal_digit)
+        self._weekday_ui.show()
+        self._weekday_ui.init_resize()
+        self._weekday_ui.set_data(df,
+                                  self._gran_id,
+                                  decimal_digit)
 
     def _on_ttm_gotoday_clicked(self):
 
@@ -343,11 +333,11 @@ class TtmUi():
 
         df = self._get_dataframe()
 
-        self._win_gotoday.show()
-        self._win_gotoday.init_resize()
-        self._win_gotoday.set_data(df,
-                                   self._gran_id,
-                                   decimal_digit)
+        self._gotoday_ui.show()
+        self._gotoday_ui.init_resize()
+        self._gotoday_ui.set_data(df,
+                                  self._gran_id,
+                                  decimal_digit)
 
     def _get_dataframe(self):
 

@@ -3,22 +3,22 @@ from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
 from PySide2.QtGui import QColor, QPen
 from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtCharts import QtCharts
-from trade_monitor.base import BaseCandlestickChartView
-from trade_monitor.base import CalloutDataTime
-from trade_monitor.base import BaseLineChartView
-from trade_monitor import utilities as utl
-from trade_monitor.utilities import FMT_QT_TIME
-from trade_monitor.ttm.ttm_common import (DATA_TYP_HO_MEAN,
-                                          DATA_TYP_HO_STD,
-                                          DATA_TYP_LO_MEAN,
-                                          DATA_TYP_LO_STD,
-                                          DATA_TYP_CO_MEAN,
-                                          DATA_TYP_CO_STD,
-                                          DATA_TYP_CO_CSUM
-                                          )
+from trade_monitor.widget_base import BaseCandlestickChartView
+from trade_monitor.widget_base import CalloutDataTime
+from trade_monitor.widget_base import BaseLineChartView
+from trade_monitor import ros_common as ros_com
+from trade_monitor.constant import FMT_QT_TIME
+from trade_monitor.ttm.constant import (DATA_TYP_HO_MEAN,
+                                        DATA_TYP_HO_STD,
+                                        DATA_TYP_LO_MEAN,
+                                        DATA_TYP_LO_STD,
+                                        DATA_TYP_CO_MEAN,
+                                        DATA_TYP_CO_STD,
+                                        DATA_TYP_CO_CSUM
+                                        )
 
 
-class CandlestickChartViewTtm(BaseCandlestickChartView):
+class CandlestickChartView(BaseCandlestickChartView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -104,7 +104,7 @@ class CandlestickChartViewTtm(BaseCandlestickChartView):
         self._callout_ttm_dt.show()
 
 
-class LineChartViewTtm(BaseLineChartView):
+class BaseLineChartViewTtm(BaseLineChartView):
 
     _COL_DATA_TYP = "DataType"
     _COL_PEN = "Pen"
@@ -146,7 +146,7 @@ class LineChartViewTtm(BaseLineChartView):
         self._QDT_BASE = QDate(2010, 1, 1)
         self._QDTTM_TTM = QDateTime(self._QDT_BASE, QTime(9, 55))
 
-        self._logger = utl.get_logger()
+        self._logger = ros_com.get_logger()
         self._is_update = False
 
     def _init_chart(self, data_list):
@@ -249,7 +249,7 @@ class LineChartViewTtm(BaseLineChartView):
         self._hl_zero.show()
 
 
-class LineChartViewTtmStats(LineChartViewTtm):
+class LineChartViewStats(BaseLineChartViewTtm):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -281,7 +281,7 @@ class LineChartViewTtmStats(LineChartViewTtm):
         self._init_chart(data_list)
 
 
-class LineChartViewTtmCumsum(LineChartViewTtm):
+class LineChartViewCumsum(BaseLineChartViewTtm):
 
     def __init__(self, parent=None):
         super().__init__(parent)

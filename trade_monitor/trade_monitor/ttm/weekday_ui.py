@@ -5,23 +5,18 @@ from PySide2.QtWidgets import QTableWidgetItem
 from PySide2.QtCore import QFile, QDate, Qt
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtGui import QColor, QBrush
-from trade_monitor import utilities as utl
-from trade_monitor.utilities import FMT_QT_DATE_YMD
-from trade_monitor.utilities import DateRangeManager
-from trade_monitor.ttm.ttm_common import (COL_DATE,
-                                          COL_DATA_TYP,
-                                          DATA_TYP_CO_CSUM,
-                                          DATA_TYP_CO_MEAN,
-                                          DATA_TYP_HO_MEAN,
-                                          DATA_TYP_LO_MEAN)
-from trade_monitor.ttm.ttm_common import (WEEKDAY_ID_MON,
-                                          WEEKDAY_ID_TUE,
-                                          WEEKDAY_ID_WED,
-                                          WEEKDAY_ID_THU,
-                                          WEEKDAY_ID_FRI)
-from trade_monitor.ttm.chart import LineChartViewTtmStats
-from trade_monitor.ttm.chart import LineChartViewTtmCumsum
-from trade_monitor.ttm import ttm_common as ttmcom
+from trade_monitor.constant import FMT_QT_DATE_YMD
+from trade_monitor.utility import DateRangeManager
+from trade_monitor.ttm.constant import ColumnName
+from trade_monitor.ttm.constant import (DATA_TYP_CO_CSUM,
+                                        DATA_TYP_CO_MEAN,
+                                        DATA_TYP_HO_MEAN,
+                                        DATA_TYP_LO_MEAN)
+from trade_monitor.ttm.constant import WeekdayId
+from trade_monitor.ttm.widget import LineChartViewStats
+from trade_monitor.ttm.widget import LineChartViewCumsum
+from trade_monitor.ttm import constant as ttmcom
+from trade_monitor import ros_common as ros_com
 
 
 class TableItemConfig():
@@ -49,7 +44,7 @@ class TableItemConfig():
         return self._back_brush
 
 
-class TtmWeekday(QMainWindow):
+class WeekdayUi(QMainWindow):
 
     # Table Column Type
     _TBL_COL_WEEKDAY = 0
@@ -66,11 +61,11 @@ class TtmWeekday(QMainWindow):
     _CHARTTYP_ID_CUMSUM = 1
 
     _WEEKDAY_ID_DICT = {
-        WEEKDAY_ID_MON: TableItemConfig("Mon", background_color="#f5dcdc"),
-        WEEKDAY_ID_TUE: TableItemConfig("Tue", background_color="#d9ead3"),
-        WEEKDAY_ID_WED: TableItemConfig("Wed", background_color="#fce5cd"),
-        WEEKDAY_ID_THU: TableItemConfig("Thu", background_color="#cfe2f3"),
-        WEEKDAY_ID_FRI: TableItemConfig("Fri", background_color="#fff2cc")
+        WeekdayId.MON: TableItemConfig("Mon", background_color="#f5dcdc"),
+        WeekdayId.TUE: TableItemConfig("Tue", background_color="#d9ead3"),
+        WeekdayId.WED: TableItemConfig("Wed", background_color="#fce5cd"),
+        WeekdayId.THU: TableItemConfig("Thu", background_color="#cfe2f3"),
+        WeekdayId.FRI: TableItemConfig("Fri", background_color="#fff2cc")
     }
 
     _GOTO_ID_DICT = {
@@ -144,11 +139,11 @@ class TtmWeekday(QMainWindow):
         vHeaderView.sectionResized.connect(callback)
 
         self._CHECKSTATE_WEEKDAY_DICT = {
-            WEEKDAY_ID_MON: ui.checkBox_Weekday_mon.checkState,
-            WEEKDAY_ID_TUE: ui.checkBox_Weekday_tue.checkState,
-            WEEKDAY_ID_WED: ui.checkBox_Weekday_wed.checkState,
-            WEEKDAY_ID_THU: ui.checkBox_Weekday_thu.checkState,
-            WEEKDAY_ID_FRI: ui.checkBox_Weekday_fri.checkState
+            WeekdayId.MON: ui.checkBox_Weekday_mon.checkState,
+            WeekdayId.TUE: ui.checkBox_Weekday_tue.checkState,
+            WeekdayId.WED: ui.checkBox_Weekday_wed.checkState,
+            WeekdayId.THU: ui.checkBox_Weekday_thu.checkState,
+            WeekdayId.FRI: ui.checkBox_Weekday_fri.checkState
         }
 
         self._CHECKSTATE_GOTODAY_DICT = {
@@ -162,7 +157,7 @@ class TtmWeekday(QMainWindow):
         }
 
         self._drm = DateRangeManager()
-        self._logger = utl.get_logger()
+        self._logger = ros_com.get_logger()
         self._ui = ui
         self._df_base = pd.DataFrame()
         self._gran_id = None
@@ -172,7 +167,7 @@ class TtmWeekday(QMainWindow):
 
     def set_data(self, df_base, gran_id, decimal_digit):
 
-        date_list = list(df_base.groupby(COL_DATE).groups.keys())
+        date_list = list(df_base.groupby(ColumnName.DATE.value).groups.keys())
 
         self._drm.init_date_list(date_list)
 
@@ -353,7 +348,7 @@ class TtmWeekday(QMainWindow):
 
         sdt_str = self._drm.lower_date
         sdt_end = self._drm.upper_date
-        mst_list = self._df_base.index.get_level_values(level=COL_DATE)
+        mst_list = self._df_base.index.get_level_values(level=ColumnName.DATE.value)
         df_base = self._df_base[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
         df = ttmcom.convert_base2weekgoto(df_base)
 
@@ -429,9 +424,9 @@ class TtmWeekday(QMainWindow):
 
             # set Table Item "Chart View"
             if charttyp_id == self._CHARTTYP_ID_STATS:
-                chartview = LineChartViewTtmStats()
+                chartview = LineChartViewStats()
             else:
-                chartview = LineChartViewTtmCumsum()
+                chartview = LineChartViewCumsum()
             chartview.chart().setBackgroundBrush(back_color)
             self._ui.tableWidget.setCellWidget(i, self._TBL_COL_CHARTVIEW, chartview)
 
@@ -440,7 +435,7 @@ class TtmWeekday(QMainWindow):
 
     def _update_chart(self, df):
 
-        mst_list = df.index.get_level_values(level=COL_DATA_TYP)
+        mst_list = df.index.get_level_values(level=ColumnName.DATA_TYP.value)
         df_stats = df[mst_list < DATA_TYP_CO_CSUM]
 
         cond = ((mst_list == DATA_TYP_CO_MEAN) |
@@ -485,7 +480,7 @@ class TtmWeekday(QMainWindow):
 
     def _load_ui(self, parent):
         loader = QUiLoader()
-        path = os.path.join(os.path.dirname(__file__), "ttm_weekday.ui")
+        path = os.path.join(os.path.dirname(__file__), "weekday.ui")
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)
         ui = loader.load(ui_file, parent)

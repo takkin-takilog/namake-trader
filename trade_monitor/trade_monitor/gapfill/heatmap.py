@@ -1,25 +1,20 @@
 import math
 import pandas as pd
-from trade_monitor import utilities as utl
-from trade_monitor.utilities import INST_MSG_LIST
+from trade_monitor import utility as utl
+from trade_monitor.constant import INST_MSG_LIST
 from trade_apl_msgs.msg import GapFillMsg
-
-COL_NAME_DATE = "date"
-COL_NAME_GPA_DIR = "gap dir"
-COL_NAME_GPA_CLOSE_PRICE = "gap close price"
-COL_NAME_GPA_OPEN_PRICE = "gap open price"
-COL_NAME_GPA_PRICE_MID = "gap price(mid)"
-COL_NAME_GPA_PRICE_REAL = "gap price(real)"
-COL_NAME_VALID_FLAG = "valid flag"
-COL_NAME_SUCCESS_FLAG = "success flag"
-COL_NAME_GAP_FILLED_TIME = "gap filled time"
-COL_NAME_MAX_OPEN_RANGE = "max open range"
-COL_NAME_END_CLOSE_PRICE = "end close price"
+from trade_monitor.gapfill.constant import (COL_NAME_DATE,
+                                            COL_NAME_GPA_DIR,
+                                            COL_NAME_GPA_PRICE_MID,
+                                            COL_NAME_GPA_PRICE_REAL,
+                                            COL_NAME_VALID_FLAG,
+                                            COL_NAME_SUCCESS_FLAG,
+                                            COL_NAME_MAX_OPEN_RANGE)
 
 COL_GPA_PRICE_TH = "gap price thresh"
 
 
-class HeatMapManager():
+class HeatMap():
 
     GAP_DIR_ALL = 1
     GAP_DIR_UP = 2

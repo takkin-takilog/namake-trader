@@ -9,45 +9,46 @@ from trade_apl_msgs.srv import GapFillMntSrv
 from trade_apl_msgs.msg import GapFillMsg
 from trade_manager_msgs.srv import CandlesMntSrv
 
-from trade_monitor import utilities as utl
-from trade_monitor.utilities import SPREAD_MSG_LIST
-from trade_monitor.utilities import INST_MSG_LIST
-from trade_monitor.utilities import (FMT_DTTM_API,
-                                     FMT_DATE_YMD,
-                                     FMT_TIME_HMS
-                                     )
-from trade_monitor.utilities import CANDLE_COL_NAME_LIST
-from trade_monitor.utilities import (COL_NAME_TIME,
-                                     COL_NAME_ASK_OP,
-                                     COL_NAME_ASK_HI,
-                                     COL_NAME_ASK_LO,
-                                     COL_NAME_ASK_CL,
-                                     COL_NAME_MID_OP,
-                                     COL_NAME_MID_HI,
-                                     COL_NAME_MID_LO,
-                                     COL_NAME_MID_CL,
-                                     COL_NAME_BID_OP,
-                                     COL_NAME_BID_HI,
-                                     COL_NAME_BID_LO,
-                                     COL_NAME_BID_CL
-                                     )
+from trade_monitor import utility as utl
+from trade_monitor import ros_common as ros_com
+from trade_monitor.constant import SPREAD_MSG_LIST
+from trade_monitor.constant import INST_MSG_LIST
+from trade_monitor.constant import (FMT_DTTM_API,
+                                    FMT_DATE_YMD,
+                                    FMT_TIME_HMS
+                                    )
+from trade_monitor.constant import CANDLE_COL_NAME_LIST
+from trade_monitor.constant import (COL_NAME_TIME,
+                                    COL_NAME_ASK_OP,
+                                    COL_NAME_ASK_HI,
+                                    COL_NAME_ASK_LO,
+                                    COL_NAME_ASK_CL,
+                                    COL_NAME_MID_OP,
+                                    COL_NAME_MID_HI,
+                                    COL_NAME_MID_LO,
+                                    COL_NAME_MID_CL,
+                                    COL_NAME_BID_OP,
+                                    COL_NAME_BID_HI,
+                                    COL_NAME_BID_LO,
+                                    COL_NAME_BID_CL
+                                    )
 
-from trade_monitor.gapfill.gapfill_heatmap import GapFillHeatMap
+from trade_monitor.gapfill.heatmap_ui import HeatMapUi
 
-from trade_monitor.gapfill.heatmap_manager import (COL_NAME_DATE,
-                                                   COL_NAME_GPA_DIR,
-                                                   COL_NAME_GPA_CLOSE_PRICE,
-                                                   COL_NAME_GPA_OPEN_PRICE,
-                                                   COL_NAME_GPA_PRICE_MID,
-                                                   COL_NAME_GPA_PRICE_REAL,
-                                                   COL_NAME_VALID_FLAG,
-                                                   COL_NAME_SUCCESS_FLAG,
-                                                   COL_NAME_GAP_FILLED_TIME,
-                                                   COL_NAME_MAX_OPEN_RANGE,
-                                                   COL_NAME_END_CLOSE_PRICE)
+from trade_monitor.gapfill.constant import (COL_NAME_DATE,
+                                            COL_NAME_GPA_DIR,
+                                            COL_NAME_GPA_CLOSE_PRICE,
+                                            COL_NAME_GPA_OPEN_PRICE,
+                                            COL_NAME_GPA_PRICE_MID,
+                                            COL_NAME_GPA_PRICE_REAL,
+                                            COL_NAME_VALID_FLAG,
+                                            COL_NAME_SUCCESS_FLAG,
+                                            COL_NAME_GAP_FILLED_TIME,
+                                            COL_NAME_MAX_OPEN_RANGE,
+                                            COL_NAME_END_CLOSE_PRICE)
 
-from trade_monitor.gapfill.candlestick_chart import CandlestickChartViewGapFillPrev
-from trade_monitor.gapfill.candlestick_chart import CandlestickChartViewGapFillCurr
+from trade_monitor.gapfill.widget import CandlestickChartViewPrev
+from trade_monitor.gapfill.widget import CandlestickChartViewCurr
 
 
 class GapFillUi():
@@ -113,10 +114,10 @@ class GapFillUi():
                    COL_NAME_BID_CL
                    ]
 
-    CDL_COLUMNS = [CandlestickChartViewGapFillPrev.COL_NAME_OP,
-                   CandlestickChartViewGapFillPrev.COL_NAME_HI,
-                   CandlestickChartViewGapFillPrev.COL_NAME_LO,
-                   CandlestickChartViewGapFillPrev.COL_NAME_CL
+    CDL_COLUMNS = [CandlestickChartViewPrev.COL_NAME_OP,
+                   CandlestickChartViewPrev.COL_NAME_HI,
+                   CandlestickChartViewPrev.COL_NAME_LO,
+                   CandlestickChartViewPrev.COL_NAME_CL
                    ]
 
     SPREAD_COLUMNS_LIST = [MID_COLUMNS,
@@ -161,8 +162,8 @@ class GapFillUi():
         header = ui.treeView_gapfill.header()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-        chartview_prev = CandlestickChartViewGapFillPrev(ui.widget_ChartView_gapfill_prev)
-        chartview_curr = CandlestickChartViewGapFillCurr(ui.widget_ChartView_gapfill_curr)
+        chartview_prev = CandlestickChartViewPrev(ui.widget_ChartView_gapfill_prev)
+        chartview_curr = CandlestickChartViewCurr(ui.widget_ChartView_gapfill_curr)
 
         # Create service client "gapfill_monitor"
         srv_type = GapFillMntSrv
@@ -170,10 +171,10 @@ class GapFillUi():
         srv_cli_list = []
         for obj in INST_MSG_LIST:
             fullname = obj.namespace + "/" + srv_name
-            srv_cli = utl.get_node().create_client(srv_type, fullname)
+            srv_cli = ros_com.get_node().create_client(srv_type, fullname)
             srv_cli_list.append(srv_cli)
 
-        self._widget_htmap = GapFillHeatMap()
+        self._htmap_ui = HeatMapUi()
 
         self._chartview_prev = chartview_prev
         self._chartview_curr = chartview_curr
@@ -188,6 +189,7 @@ class GapFillUi():
         self._sr_gf = pd.Series()
         self._df_prev = pd.DataFrame()
         self._df_curr = pd.DataFrame()
+        self._logger = ros_com.get_logger()
 
     def _on_fetch_gapfill_clicked(self):
 
@@ -204,11 +206,11 @@ class GapFillUi():
 
         srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
-            utl.logger().error("service server [{}] not to become ready"
+            self._logger.error("service server [{}] not to become ready"
                                .format(inst_msg.text))
         else:
 
-            rsp = utl.call_servive_sync(srv_cli, req, timeout_sec=10.0)
+            rsp = ros_com.call_servive_sync(srv_cli, req, timeout_sec=10.0)
             self._gran_id = rsp.gran_id
             """
             future = srv_cli.call_async(req)
@@ -292,14 +294,13 @@ class GapFillUi():
             self._end_time = dt.datetime.strptime(rsp.end_time,
                                                   FMT_TIME_HMS).time()
             self._is_update = True
-            self._logger = utl.get_logger()
 
     def _on_gapfill_heatmap_clicked(self):
 
         inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-        self._widget_htmap.set_param(inst_idx, self._df_param)
-        self._widget_htmap.show()
-        self._widget_htmap.init_resize()
+        self._htmap_ui.set_param(inst_idx, self._df_param)
+        self._htmap_ui.show()
+        self._htmap_ui.init_resize()
 
     def _on_selection_gapfill_changed(self, selected, _):
 
@@ -326,7 +327,7 @@ class GapFillUi():
             self._logger.debug("dt_from: " + req.dt_from)
             self._logger.debug("dt_to: " + req.dt_to)
 
-            rsp = utl.call_servive_sync_candle(req, timeout_sec=10.0)
+            rsp = ros_com.call_servive_sync_candle(req, timeout_sec=10.0)
             data = []
             for cndl_msg in rsp.cndl_msg_list:
                 dt_ = dt.datetime.strptime(cndl_msg.time, FMT_DTTM_API)
