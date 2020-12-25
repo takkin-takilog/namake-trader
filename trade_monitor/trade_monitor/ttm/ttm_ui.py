@@ -12,7 +12,7 @@ from trade_monitor.constant import (FMT_DTTM_API,
                                     FMT_TIME_HM,
                                     FMT_TIME_HMS
                                     )
-from trade_monitor.ttm.widget import CandlestickChartView
+from trade_monitor.ttm.widget import CandlestickChartView as ChartView
 from trade_monitor.ttm.weekday_ui import WeekdayUi
 from trade_monitor.ttm.gotoday_ui import GotodayUi
 from trade_monitor.ttm.constant import ColumnName
@@ -73,60 +73,21 @@ class _GotodayId(Enum):
         return None
 
 
+class _TreeViewColumn(Enum):
+    """
+    Tree view column.
+    """
+    DATE = "Date"
+    WEEKDAY = "Weekday"
+    GOTODAY = "Goto day"
+    DATATYP = "Data type"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
 class TtmUi():
-
-    """
-    _GAP_TYP_DICT = {
-        1: "High  - Open",
-        2: "Low   - Open",
-        3: "Close - Open"
-    }
-    """
-
-    _TREEVIEW_ITEM_DATE = "Date"
-    _TREEVIEW_ITEM_WEEKDAY = "Weekday"
-    _TREEVIEW_ITEM_GOTODAY = "Goto day"
-    _TREEVIEW_ITEM_DATATYP = "Data type"
-
-    _TREEVIEW_HEADERS = [
-        _TREEVIEW_ITEM_DATE,
-        _TREEVIEW_ITEM_WEEKDAY,
-        _TREEVIEW_ITEM_GOTODAY,
-        _TREEVIEW_ITEM_DATATYP
-    ]
-
-    """
-    _COL_DATE = "Date"
-    _COL_TIME = "Time"
-    _COL_O = "O"
-    _COL_H = "H"
-    _COL_L = "L"
-    _COL_C = "C"
-    _COL_WEEKDAY_ID = "Weekday_id"
-    _COL_GOTO_ID = "Goto_id"
-    _COL_IS_GOTO = "Is_Goto"
-    _COL_GAP_TYP = "Gap_type"
-    _COL_DATA_TYP = "Data_type"
-    _COL_MONTH = "Month"
-
-    _GAP_TYP_HO = 1    # High - Open price
-    _GAP_TYP_LO = 2    # Low - Open price
-    _GAP_TYP_CO = 3    # Close - Open price
-
-    _DATA_TYP_HO_MEAN = 1   # Mean of High - Open price
-    _DATA_TYP_HO_STD = 2    # Std of High - Open price
-    _DATA_TYP_LO_MEAN = 3   # Mean of Low - Open price
-    _DATA_TYP_LO_STD = 4    # Std of Low - Open price
-    _DATA_TYP_CO_MEAN = 5   # Mean of Close - Open price
-    _DATA_TYP_CO_STD = 6    # Std of Close - Open price
-    _DATA_TYP_CO_CSUM = 7   # Cumsum of Close - Open price
-    """
-
-    _CDL_COLUMNS = [CandlestickChartView.COL_NAME_OP,
-                    CandlestickChartView.COL_NAME_HI,
-                    CandlestickChartView.COL_NAME_LO,
-                    CandlestickChartView.COL_NAME_CL
-                    ]
 
     def __init__(self, ui) -> None:
 
@@ -136,14 +97,6 @@ class TtmUi():
 
         callback = self._on_fetch_ttm_clicked
         ui.pushButton_ttm_fetch.clicked.connect(callback)
-
-        """
-        qstd_itm_mdl = QStandardItemModel()
-        sel_mdl = QItemSelectionModel(qstd_itm_mdl)
-
-        callback = self._on_selection_ttm_changed
-        sel_mdl.selectionChanged.connect(callback)
-        """
 
         callback = self._on_ttm_weekday_clicked
         ui.pushButton_ttm_weekday.clicked.connect(callback)
@@ -162,7 +115,7 @@ class TtmUi():
         callback = self._on_view_header_sectionClicked
         header.sectionClicked.connect(callback)
 
-        chartview = CandlestickChartView(ui.widget_ChartView_ttm)
+        chartview = ChartView(ui.widget_ChartView_ttm)
 
         # Create service client "ttm_monitor"
         srv_type = TtmMntSrv
@@ -294,31 +247,22 @@ class TtmUi():
 
             # ---------- compose Tree View ----------
             flg = df_base.index.get_level_values(ColumnName.GAP_TYP.value) == GAP_TYP_CO
-            """
-            df = df_base[flg]
-            for index, row in df.iterrows():
-                items = [
-                    QStandardItem(index[0]),  # date
-                    QStandardItem(WEEKDAY_ID_DICT[index[2]]),
-                    QStandardItem(GOTODAY_ID_DICT[index[3]]),
-                ]
-                self._qstd_itm_mdl.appendRow(items)
-            """
+
             tbl = []
             for index, row in df_base[flg].iterrows():
                 wdmem = _WeekdayId.get_member_by_id(index[2])
                 gdmem = _GotodayId.get_member_by_id(index[3])
                 items = [
                     index[0],  # date
-                    # WEEKDAY_ID_DICT[index[2]],
                     wdmem.label,
                     gdmem.label,
                     0
                 ]
                 tbl.append(items)
             df = pd.DataFrame(tbl,
-                              columns=self._TREEVIEW_HEADERS)
-            df.set_index([self._TREEVIEW_ITEM_DATE], inplace=True)
+                              columns=_TreeViewColumn.to_list())
+            label_date = _TreeViewColumn.DATE.value
+            df.set_index([label_date], inplace=True)
 
             self._pdtreeview.set_dataframe(df)
             selmdl = self._pdtreeview.selectionModel()
@@ -349,10 +293,16 @@ class TtmUi():
             df = df_ohlc[flg].reset_index(level=ColumnName.DATE.value, drop=True)
             fmt = FMT_DATE_YMD + FMT_TIME_HM
             df = df.rename(index=lambda t: dt.datetime.strptime(date_str + t, fmt))
-            df.columns = self._CDL_COLUMNS
+            # df.columns = self._CDL_COLUMNS
+            df.columns = self._chartview.get_candle_labels_list()
 
+            """
             max_y = df[CandlestickChartView.COL_NAME_HI].max()
             min_y = df[CandlestickChartView.COL_NAME_LO].min()
+            """
+            max_y = df[ChartView.CandleLabel.HI.value].max()
+            min_y = df[ChartView.CandleLabel.LO.value].min()
+
             dif = (max_y - min_y) * 0.05
             self._chartview.set_max_y(max_y + dif)
             self._chartview.set_min_y(min_y - dif)

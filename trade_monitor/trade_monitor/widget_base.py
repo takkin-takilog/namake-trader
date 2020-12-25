@@ -1,3 +1,4 @@
+from enum import Enum
 import pandas as pd
 from PySide2.QtWidgets import QGraphicsItem
 from PySide2.QtWidgets import QWidget
@@ -442,10 +443,18 @@ class CallouPrice(BaseCalloutChart):
 
 class BaseCandlestickChartView(QtCharts.QChartView):
 
-    COL_NAME_OP = "open"
-    COL_NAME_HI = "high"
-    COL_NAME_LO = "low"
-    COL_NAME_CL = "close"
+    class CandleLabel(Enum):
+        """
+        Candlestick data label.
+        """
+        OP = "open"
+        HI = "high"
+        LO = "low"
+        CL = "close"
+
+        @classmethod
+        def to_list(cls):
+            return [m.value for m in cls]
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -565,14 +574,14 @@ class BaseCandlestickChartView(QtCharts.QChartView):
 
         self._ser_cdl.clear()
         for dt_, sr in df.iterrows():
-            o_ = sr[self.COL_NAME_OP]
-            h_ = sr[self.COL_NAME_HI]
-            l_ = sr[self.COL_NAME_LO]
-            c_ = sr[self.COL_NAME_CL]
+            op = sr[self.CandleLabel.OP.value]
+            hi = sr[self.CandleLabel.HI.value]
+            lo = sr[self.CandleLabel.LO.value]
+            cl = sr[self.CandleLabel.CL.value]
             qd = QDate(dt_.year, dt_.month, dt_.day)
             qt = QTime(dt_.hour, dt_.minute)
             qdt = QDateTime(qd, qt)
-            cnd = QtCharts.QCandlestickSet(o_, h_, l_, c_,
+            cnd = QtCharts.QCandlestickSet(op, hi, lo, cl,
                                            qdt.toMSecsSinceEpoch())
             self._ser_cdl.append(cnd)
 
@@ -581,6 +590,9 @@ class BaseCandlestickChartView(QtCharts.QChartView):
 
         self._decimal_digit = decimal_digit
         self._freq = GRAN_FREQ_DICT[gran_id]
+
+    def get_candle_labels_list(self):
+        return self.CandleLabel.to_list()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -631,11 +643,6 @@ class BaseCandlestickChartView(QtCharts.QChartView):
 
 
 class BaseLineChartView(QtCharts.QChartView):
-
-    COL_NAME_OP = "open"
-    COL_NAME_HI = "high"
-    COL_NAME_LO = "low"
-    COL_NAME_CL = "close"
 
     def __init__(self, parent=None):
         super().__init__(parent)

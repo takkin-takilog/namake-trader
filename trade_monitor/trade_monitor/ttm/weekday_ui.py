@@ -207,11 +207,6 @@ class WeekdayUi(QMainWindow):
         vHeaderView = self._ui.tableWidget.verticalHeader()
         vHeaderView.setDefaultSectionSize(newSize)
 
-    """
-    def _on_hHeaderView_sectionResized(self, index, oldSize, newSize):
-        self._logger.debug("--- on_tableWidget_columnResized ----------")
-    """
-
     def _on_pushButton_update_clicked(self, checked):
         self._update_table()
 

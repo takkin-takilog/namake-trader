@@ -47,8 +47,8 @@ from trade_monitor.gapfill.constant import (COL_NAME_DATE,
                                             COL_NAME_MAX_OPEN_RANGE,
                                             COL_NAME_END_CLOSE_PRICE)
 
-from trade_monitor.gapfill.widget import CandlestickChartViewPrev
-from trade_monitor.gapfill.widget import CandlestickChartViewCurr
+from trade_monitor.gapfill.widget import CandlestickChartViewPrev as ChartViewPrev
+from trade_monitor.gapfill.widget import CandlestickChartViewCurr as ChartViewCurr
 
 
 class GapFillUi():
@@ -114,11 +114,13 @@ class GapFillUi():
                    COL_NAME_BID_CL
                    ]
 
+    """
     CDL_COLUMNS = [CandlestickChartViewPrev.COL_NAME_OP,
                    CandlestickChartViewPrev.COL_NAME_HI,
                    CandlestickChartViewPrev.COL_NAME_LO,
                    CandlestickChartViewPrev.COL_NAME_CL
                    ]
+    """
 
     SPREAD_COLUMNS_LIST = [MID_COLUMNS,
                            ASK_COLUMNS,
@@ -162,8 +164,8 @@ class GapFillUi():
         header = ui.treeView_gapfill.header()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-        chartview_prev = CandlestickChartViewPrev(ui.widget_ChartView_gapfill_prev)
-        chartview_curr = CandlestickChartViewCurr(ui.widget_ChartView_gapfill_curr)
+        chartview_prev = ChartViewPrev(ui.widget_ChartView_gapfill_prev)
+        chartview_curr = ChartViewCurr(ui.widget_ChartView_gapfill_curr)
 
         # Create service client "gapfill_monitor"
         srv_type = GapFillMntSrv
@@ -406,7 +408,7 @@ class GapFillUi():
     def _update_prev_chart(self, idx, df, sr_gf, decimal_digit):
 
         df_prev = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
-        df_prev.columns = GapFillUi.CDL_COLUMNS
+        df_prev.columns = self._chartview_prev.CandleLabel.to_list()
 
         self._chartview_prev.update(df_prev,
                                     self._gran_id,
@@ -417,7 +419,7 @@ class GapFillUi():
     def _update_curr_chart(self, idx, df, sr_gf, decimal_digit):
 
         df_curr = df.loc[:, GapFillUi.SPREAD_COLUMNS_LIST[idx]]
-        df_curr.columns = GapFillUi.CDL_COLUMNS
+        df_curr.columns = self._chartview_curr.CandleLabel.to_list()
 
         self._chartview_curr.update(df_curr,
                                     self._gran_id,
