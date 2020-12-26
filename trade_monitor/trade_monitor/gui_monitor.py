@@ -16,7 +16,7 @@ from trade_monitor.gapfill.gapfill_ui import GapFillUi
 from trade_monitor.ttm.ttm_ui import TtmUi
 from trade_monitor.main_ui import MainUi
 from trade_monitor import utility as utl
-from trade_monitor.constant import INST_MSG_LIST
+# from trade_monitor.constant import INST_MSG_LIST
 from trade_monitor.constant import GRAN_MSG_LIST
 from trade_monitor import ros_common as ros_com
 
@@ -31,6 +31,7 @@ class GuiMonitor(QMainWindow):
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
 
+        """
         # set comboBox of Instrument
         utl.remove_all_items_of_comboBox(ui.comboBox_inst_main)
         for obj in INST_MSG_LIST:
@@ -40,6 +41,7 @@ class GuiMonitor(QMainWindow):
         utl.remove_all_items_of_comboBox(ui.comboBox_gran_main)
         for obj in GRAN_MSG_LIST:
             ui.comboBox_gran_main.addItem(obj.text)
+        """
 
         # QTimer
         self.timer = QTimer(self)

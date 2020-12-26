@@ -5,7 +5,7 @@ from PySide2.QtCore import Qt
 from trade_apl_msgs.srv import TtmMntSrv
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor import utility as utl
-from trade_monitor.constant import INST_MSG_LIST
+from trade_monitor.ttm.constant import VALID_INST_LIST
 from trade_monitor.constant import GRAN_FREQ_DICT
 from trade_monitor.constant import (FMT_DTTM_API,
                                     FMT_DATE_YMD,
@@ -91,7 +91,7 @@ class TtmUi():
     def __init__(self, ui) -> None:
 
         utl.remove_all_items_of_comboBox(ui.comboBox_ttm_inst)
-        for obj in INST_MSG_LIST:
+        for obj in VALID_INST_LIST:
             ui.comboBox_ttm_inst.addItem(obj.text)
 
         callback = self._on_fetch_ttm_clicked
@@ -120,7 +120,7 @@ class TtmUi():
         srv_type = TtmMntSrv
         srv_name = "ttm_monitor"
         srv_cli_list = []
-        for obj in INST_MSG_LIST:
+        for obj in VALID_INST_LIST:
             fullname = obj.namespace + "/" + srv_name
             srv_cli = ros_com.get_node().create_client(srv_type, fullname)
             srv_cli_list.append(srv_cli)
@@ -142,7 +142,7 @@ class TtmUi():
 
     def _on_fetch_ttm_clicked(self):
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
-        inst_msg = INST_MSG_LIST[inst_idx]
+        inst_info = VALID_INST_LIST[inst_idx]
 
         # fetch TTM data
         req = TtmMntSrv.Request()
@@ -150,7 +150,7 @@ class TtmUi():
         srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
             self._logger.error("service server [{}] not to become ready"
-                               .format(inst_msg.text))
+                               .format(inst_info.text))
         else:
 
             rsp = ros_com.call_servive_sync(srv_cli, req, timeout_sec=10.0)
@@ -275,34 +275,30 @@ class TtmUi():
             self._chartview.set_min_y(min_y - dif)
 
             inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
-            decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+            digit = VALID_INST_LIST[inst_idx].digit
 
-            self._chartview.update(df, self._gran_id, decimal_digit)
+            self._chartview.update(df, self._gran_id, digit)
             self._ui.widget_ChartView_ttm.setEnabled(True)
 
     def _on_ttm_weekday_clicked(self):
 
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
-        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+        digit = VALID_INST_LIST[inst_idx].digit
 
         df = self._get_dataframe()
 
         self._weekday_ui.show()
-        self._weekday_ui.set_data(df,
-                                  self._gran_id,
-                                  decimal_digit)
+        self._weekday_ui.set_data(df, self._gran_id, digit)
 
     def _on_ttm_gotoday_clicked(self):
 
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
-        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
+        digit = VALID_INST_LIST[inst_idx].digit
 
         df = self._get_dataframe()
 
         self._gotoday_ui.show()
-        self._gotoday_ui.set_data(df,
-                                  self._gran_id,
-                                  decimal_digit)
+        self._gotoday_ui.set_data(df, self._gran_id, digit)
 
     def _get_dataframe(self):
 

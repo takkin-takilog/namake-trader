@@ -66,13 +66,13 @@ class _MsgInstDict:
     decimal_digit: int
     min_unit: str
 
-
+"""
 INST_MSG_LIST = [
     _MsgInstDict(Inst.INST_USD_JPY, "usdjpy", "USD/JPY", 3, "0.001"),
     _MsgInstDict(Inst.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3, "0.001"),
     _MsgInstDict(Inst.INST_EUR_USD, "eurusd", "EUR/USD", 5, "0.00001"),
 ]
-
+"""
 
 class InstInfo(Enum):
     """

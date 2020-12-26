@@ -1,4 +1,10 @@
 from enum import Enum, IntEnum
+from trade_monitor.constant import InstInfo
+
+VALID_INST_LIST = [InstInfo.USDJPY,
+                   InstInfo.EURJPY,
+                   InstInfo.EURUSD
+                   ]
 
 
 class ColumnName(Enum):

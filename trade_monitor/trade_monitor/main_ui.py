@@ -4,7 +4,8 @@ import pandas as pd
 from trade_monitor.candlestick_chart import CandlestickChart
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor import ros_common as ros_com
-from trade_monitor.constant import INST_MSG_LIST, GRAN_MSG_LIST
+# from trade_monitor.constant import INST_MSG_LIST
+from trade_monitor.constant import GRAN_MSG_LIST
 from trade_monitor.constant import FMT_DTTM_API
 from trade_monitor.constant import CandleColumnName as ColName
 
@@ -36,6 +37,7 @@ class MainUi():
 
     def _draw_chart(self, inst_idx, gran_idx):
 
+        """
         dt_now = dt.datetime.now()
         dt_from = dt_now - dt.timedelta(days=20)
         dt_to = dt_now
@@ -86,6 +88,7 @@ class MainUi():
                          ]
 
         self._cs_chart.update(dftmp, gran_id)
+        """
 
     def resize_chart_widget(self):
         fs = self._ui.widget_chart_main.frameSize()
