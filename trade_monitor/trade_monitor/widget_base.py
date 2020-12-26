@@ -16,7 +16,8 @@ from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
 from PySide2.QtCore import QSignalMapper, QPoint
 from PySide2.QtGui import QPalette, QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QPen
-from trade_monitor.constant import GRAN_FREQ_DICT
+from trade_monitor.constant import GranInfo
+
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 CALLOUT_DATE_COLOR = QColor(0, 204, 51)
@@ -587,9 +588,10 @@ class BaseCandlestickChartView(QtCharts.QChartView):
 
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)
+        gran_info = GranInfo.get_member_by_msgid(gran_id)
 
         self._digit = digit
-        self._freq = GRAN_FREQ_DICT[gran_id]
+        self._freq = gran_info.freq
 
     def get_candle_labels_list(self):
         return self.CandleLabel.to_list()
@@ -756,9 +758,10 @@ class BaseLineChartView(QtCharts.QChartView):
 
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)
+        gran_info = GranInfo.get_member_by_msgid(gran_id)
 
         self._digit = digit
-        self._freq = GRAN_FREQ_DICT[gran_id]
+        self._freq = gran_info.freq
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

@@ -17,7 +17,7 @@ from trade_monitor.ttm.ttm_ui import TtmUi
 from trade_monitor.main_ui import MainUi
 from trade_monitor import utility as utl
 # from trade_monitor.constant import INST_MSG_LIST
-from trade_monitor.constant import GRAN_MSG_LIST
+# from trade_monitor.constant import GRAN_MSG_LIST
 from trade_monitor import ros_common as ros_com
 
 

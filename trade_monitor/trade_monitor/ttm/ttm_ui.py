@@ -6,7 +6,7 @@ from trade_apl_msgs.srv import TtmMntSrv
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor import utility as utl
 from trade_monitor.ttm.constant import VALID_INST_LIST
-from trade_monitor.constant import GRAN_FREQ_DICT
+from trade_monitor.constant import GranInfo
 from trade_monitor.constant import (FMT_DTTM_API,
                                     FMT_DATE_YMD,
                                     FMT_TIME_HM,
@@ -158,10 +158,10 @@ class TtmUi():
 
             start_time_str = rsp.start_time
             end_time_str = rsp.end_time
-            freq = GRAN_FREQ_DICT[rsp.gran_id]
+            gran_info = GranInfo.get_member_by_msgid(rsp.gran_id)
             time_range_list = pd.date_range(start_time_str,
                                             end_time_str,
-                                            freq=freq
+                                            freq=gran_info.freq
                                             ).strftime(FMT_TIME_HM).to_list()
 
             # ---------- compose Table "OHLC" ----------

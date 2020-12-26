@@ -5,7 +5,7 @@ from trade_monitor.candlestick_chart import CandlestickChart
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor import ros_common as ros_com
 # from trade_monitor.constant import INST_MSG_LIST
-from trade_monitor.constant import GRAN_MSG_LIST
+# from trade_monitor.constant import GRAN_MSG_LIST
 from trade_monitor.constant import FMT_DTTM_API
 from trade_monitor.constant import CandleColumnName as ColName
 

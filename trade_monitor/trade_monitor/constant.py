@@ -1,6 +1,5 @@
 import math
-from dataclasses import dataclass
-from enum import Enum, IntEnum, auto
+from enum import Enum
 from trade_monitor import utility as utl
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
@@ -38,42 +37,6 @@ class CandleColumnName(Enum):
         return [m.value for m in cls]
 
 
-GRAN_FREQ_DICT = {
-    Gran.GRAN_M1: "1min",
-    Gran.GRAN_M2: "2min",
-    Gran.GRAN_M3: "3min",
-    Gran.GRAN_M4: "4min",
-    Gran.GRAN_M5: "5min",
-    Gran.GRAN_M10: "10min",
-    Gran.GRAN_M15: "15min",
-    Gran.GRAN_M30: "30min",
-    Gran.GRAN_H1: "1H",
-    Gran.GRAN_H2: "2H",
-    Gran.GRAN_H3: "3H",
-    Gran.GRAN_H4: "4H",
-    Gran.GRAN_H6: "6H",
-    Gran.GRAN_H8: "8H",
-    Gran.GRAN_H12: "12H",
-    Gran.GRAN_D: "D"
-}
-
-
-"""
-@dataclass
-class _MsgInstDict:
-    msg_id: int
-    namespace: str
-    text: str
-    decimal_digit: int
-    min_unit: str
-
-INST_MSG_LIST = [
-    _MsgInstDict(Inst.INST_USD_JPY, "usdjpy", "USD/JPY", 3, "0.001"),
-    _MsgInstDict(Inst.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3, "0.001"),
-    _MsgInstDict(Inst.INST_EUR_USD, "eurusd", "EUR/USD", 5, "0.00001"),
-]
-"""
-
 class InstInfo(Enum):
     """
     Instrument info.
@@ -93,6 +56,13 @@ class InstInfo(Enum):
         self.text = text
         self.digit = digit
 
+    @classmethod
+    def get_member_by_msgid(cls, msg_id: int):
+        for m in cls:
+            if msg_id == m.msg_id:
+                return m
+        return None
+
     @property
     def lsb_value(self) -> float:
         """
@@ -110,31 +80,55 @@ class InstInfo(Enum):
         return format(self.lsb_value, "." + str(self.digit) + "f")
 
     def convert_raw2phy(self, raw_value: int) -> float:
+        """
+        convert raw value to physical value.
+        """
         return raw_value * self.lsb_value
 
     def convert_phy2raw(self, physical_value: float) -> int:
+        """
+        convert physical value to raw value.
+        """
         return utl.roundi(physical_value / self.lsb_value)
 
 
+class GranInfo(Enum):
+    """
+    Granularity info.
+    """
+    M1 = (Gran.GRAN_M1, "1分足", "1min")
+    M2 = (Gran.GRAN_M2, "2分足", "2min")
+    M3 = (Gran.GRAN_M3, "3分足", "3min")
+    M4 = (Gran.GRAN_M4, "4分足", "4min")
+    M5 = (Gran.GRAN_M5, "5分足", "5min")
+    M10 = (Gran.GRAN_M10, "10分足", "10min")
+    M15 = (Gran.GRAN_M15, "15分足", "15min")
+    M30 = (Gran.GRAN_M30, "30分足", "30min")
+    H1 = (Gran.GRAN_H1, "1時間足", "1H")
+    H2 = (Gran.GRAN_H2, "2時間足", "2H")
+    H3 = (Gran.GRAN_H3, "3時間足", "3H")
+    H4 = (Gran.GRAN_H4, "4時間足", "4H")
+    H6 = (Gran.GRAN_H6, "6時間足", "6H")
+    H8 = (Gran.GRAN_H8, "8時間足", "8H")
+    H12 = (Gran.GRAN_H12, "12時間足", "12H")
+    D = (Gran.GRAN_D, "日足", "D")
 
+    def __init__(self,
+                 msg_id: int,       # ROS message ID
+                 text: str,         # For text shown on the widget
+                 freq: str,         # Frequency
+                 ) -> None:
+        self.msg_id = msg_id
+        self.text = text
+        self.freq = freq
 
+    @classmethod
+    def get_member_by_msgid(cls, msg_id: int):
+        for m in cls:
+            if msg_id == m.msg_id:
+                return m
+        return None
 
-
-
-
-
-@dataclass
-class _MsgGranDict:
-    msg_id: int
-    text: str
-
-
-GRAN_MSG_LIST = [
-    _MsgGranDict(Gran.GRAN_D, "日足"),
-    _MsgGranDict(Gran.GRAN_H4, "４時間足"),
-    _MsgGranDict(Gran.GRAN_H1, "１時間足"),
-    _MsgGranDict(Gran.GRAN_M10, "１０分足"),
-]
 
 SPREAD_MSG_LIST = [
     "Mid",
