@@ -12,7 +12,7 @@ from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import SPREAD_MSG_LIST
-from trade_monitor.constant import INST_MSG_LIST
+from trade_monitor.gapfill.constant import VALID_INST_LIST
 from trade_monitor.constant import (FMT_DTTM_API,
                                     FMT_DATE_YMD,
                                     FMT_TIME_HMS
@@ -104,7 +104,7 @@ class GapFillUi():
     def __init__(self, ui) -> None:
 
         utl.remove_all_items_of_comboBox(ui.comboBox_gapfill_inst)
-        for obj in INST_MSG_LIST:
+        for obj in VALID_INST_LIST:
             ui.comboBox_gapfill_inst.addItem(obj.text)
 
         utl.remove_all_items_of_comboBox(ui.comboBox_gapfill_spread_prev)
@@ -144,7 +144,7 @@ class GapFillUi():
         srv_type = GapFillMntSrv
         srv_name = "gapfill_monitor"
         srv_cli_list = []
-        for obj in INST_MSG_LIST:
+        for obj in VALID_INST_LIST:
             fullname = obj.namespace + "/" + srv_name
             srv_cli = ros_com.get_node().create_client(srv_type, fullname)
             srv_cli_list.append(srv_cli)
@@ -171,10 +171,8 @@ class GapFillUi():
         self._qstd_itm_mdl.clear()
         self._qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
         inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-        inst_msg = INST_MSG_LIST[inst_idx]
-
-        decimal_digit = inst_msg.decimal_digit
-        fmt = "{:." + str(decimal_digit) + "f}"
+        inst_info = VALID_INST_LIST[inst_idx]
+        fmt = "{:." + str(inst_info.digit) + "f}"
 
         # fetch Gap-fill data
         req = GapFillMntSrv.Request()
@@ -182,7 +180,7 @@ class GapFillUi():
         srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
             self._logger.error("service server [{}] not to become ready"
-                               .format(inst_msg.text))
+                               .format(inst_info.text))
         else:
 
             rsp = ros_com.call_servive_sync(srv_cli, req, timeout_sec=10.0)
@@ -278,16 +276,13 @@ class GapFillUi():
             dt_to = trg_date + dt.timedelta(hours=12)
 
             inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-            inst_msg = INST_MSG_LIST[inst_idx]
+            inst_info = VALID_INST_LIST[inst_idx]
 
             req = CandlesMntSrv.Request()
             req.gran_msg.gran_id = self._gran_id
-            req.inst_msg.inst_id = inst_msg.msg_id
+            req.inst_msg.inst_id = inst_info.msg_id
             req.dt_from = dt_from.strftime(FMT_DTTM_API)
             req.dt_to = dt_to.strftime(FMT_DTTM_API)
-
-            self._logger.debug("dt_from: " + req.dt_from)
-            self._logger.debug("dt_to: " + req.dt_to)
 
             rsp = ros_com.call_servive_sync_candle(req, timeout_sec=10.0)
             data = []
@@ -337,13 +332,13 @@ class GapFillUi():
             self._chartview_curr.set_max_y(max_y)
             self._chartview_curr.set_min_y(min_y)
 
-            decimal_digit = inst_msg.decimal_digit
+            digit = inst_info.digit
 
             idx = self._ui.comboBox_gapfill_spread_prev.currentIndex()
-            self._update_prev_chart(idx, df_prev, sr_gf, decimal_digit)
+            self._update_prev_chart(idx, df_prev, sr_gf, digit)
 
             idx = self._ui.comboBox_gapfill_spread_curr.currentIndex()
-            self._update_curr_chart(idx, df_curr, sr_gf, decimal_digit)
+            self._update_curr_chart(idx, df_curr, sr_gf, digit)
 
             self._sr_gf = sr_gf
             self._df_prev = df_prev
@@ -353,19 +348,17 @@ class GapFillUi():
 
         if self._is_update:
             inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-            decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-            self._update_prev_chart(idx, self._df_prev, self._sr_gf,
-                                    decimal_digit)
+            digit = VALID_INST_LIST[inst_idx].digit
+            self._update_prev_chart(idx, self._df_prev, self._sr_gf, digit)
 
     def _comboBox_gapfill_spread_curr_changed(self, idx):
 
         if self._is_update:
             inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-            decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-            self._update_curr_chart(idx, self._df_curr, self._sr_gf,
-                                    decimal_digit)
+            digit = VALID_INST_LIST[inst_idx].digit
+            self._update_curr_chart(idx, self._df_curr, self._sr_gf, digit)
 
-    def _update_prev_chart(self, idx, df, sr_gf, decimal_digit):
+    def _update_prev_chart(self, idx, df, sr_gf, digit):
 
         df_prev = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
         df_prev.columns = self._chartview_prev.CandleLabel.to_list()
@@ -374,9 +367,9 @@ class GapFillUi():
                                     self._gran_id,
                                     sr_gf[GfColNm.GPA_CLOSE_PRICE.value],
                                     sr_gf[GfColNm.GPA_OPEN_PRICE.value],
-                                    decimal_digit)
+                                    digit)
 
-    def _update_curr_chart(self, idx, df, sr_gf, decimal_digit):
+    def _update_curr_chart(self, idx, df, sr_gf, digit):
 
         df_curr = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
         df_curr.columns = self._chartview_curr.CandleLabel.to_list()
@@ -385,4 +378,5 @@ class GapFillUi():
                                     self._gran_id,
                                     sr_gf[GfColNm.GPA_CLOSE_PRICE.value],
                                     sr_gf[GfColNm.GPA_OPEN_PRICE.value],
-                                    decimal_digit, self._end_time)
+                                    digit,
+                                    self._end_time)
