@@ -1,10 +1,9 @@
-import math
 from enum import IntEnum, auto
 import pandas as pd
 from trade_apl_msgs.msg import GapFillMsg
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
-from trade_monitor.constant import INST_MSG_LIST
+from trade_monitor.gapfill.constant import VALID_INST_LIST
 from trade_monitor.gapfill.constant import ColumnName as GfColNm
 
 
@@ -20,7 +19,9 @@ class _GapDir(IntEnum):
 class HeatMap():
 
     _COL_GPA_PRICE_TH = "gap price thresh"
-    _GAP_UPPER_LIMIT = 500   # Raw value
+    _GAP_UPPER_LIMIT_RAW = 500
+    _MAX_OPEN_MARGIN_RAW = 5
+    _GAP_MARGIN_RAW = 10
 
     def __init__(self, sts_bar):
         self._sts_bar = sts_bar
@@ -29,11 +30,9 @@ class HeatMap():
     def set_param(self, df_param: pd.DataFrame, inst_idx):
 
         df_valid = df_param[df_param[GfColNm.VALID_FLAG.value]]
+        inst_info = VALID_INST_LIST[inst_idx]
 
-        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-        lsb = math.pow(10, decimal_digit)
-
-        gap_upper_limit = self._GAP_UPPER_LIMIT / lsb
+        gap_upper_limit = inst_info.convert_raw2phy(self._GAP_UPPER_LIMIT_RAW)
         flg = df_valid[GfColNm.GPA_PRICE_MID.value] < gap_upper_limit
         df_valid = df_valid[flg]
 
@@ -41,9 +40,10 @@ class HeatMap():
         df_succ = df_valid[flg]
         max_open_price_max = df_succ[GfColNm.MAX_OPEN_RANGE.value].max()
 
-        margin = 5
-        max_open_pips_max = utl.roundi(max_open_price_max * lsb) + margin
-        hmap_col = [GfColNm.DATE.value] + list(range(1, max_open_pips_max + 1))
+        max_open_max_raw = inst_info.convert_phy2raw(max_open_price_max)
+        max_open_max_raw += self._MAX_OPEN_MARGIN_RAW
+
+        hmap_col = [GfColNm.DATE.value] + list(range(1, max_open_max_raw + 1))
 
         roslist = []
         for date, is_succ, mop, gpr in zip(df_valid.index,
@@ -51,14 +51,14 @@ class HeatMap():
                                            df_valid[GfColNm.MAX_OPEN_RANGE.value],
                                            df_valid[GfColNm.GPA_PRICE_REAL.value]):
             if is_succ:
-                max_open_pips = utl.roundi(mop * lsb)
+                max_open_raw = inst_info.convert_phy2raw(mop)
             else:
-                max_open_pips = max_open_pips_max
+                max_open_raw = max_open_max_raw
 
-            row_left = list(range(-1, -max_open_pips - 1, -1))
-            gap_pips = utl.roundi(gpr * lsb)
+            row_left = list(range(-1, -max_open_raw - 1, -1))
+            gap_raw = inst_info.convert_phy2raw(gpr)
 
-            row_right = [gap_pips] * (max_open_pips_max - max_open_pips)
+            row_right = [gap_raw] * (max_open_max_raw - max_open_raw)
             roslist.append([date] + row_left + row_right)
 
         df_htbl = pd.DataFrame(roslist, columns=hmap_col)
@@ -203,17 +203,17 @@ class HeatMap():
 
         label = GfColNm.GPA_PRICE_MID.value
         gap_price_real_max = df_param[label].max()
-        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-        lsb = math.pow(10, decimal_digit)
+        inst_info = VALID_INST_LIST[inst_idx]
 
-        margin = 10
-        gap_pips_max = utl.roundi(gap_price_real_max * lsb) + margin
+        gap_max_raw = inst_info.convert_phy2raw(gap_price_real_max)
+        gap_max_raw += self._GAP_MARGIN_RAW
 
         df_base = pd.DataFrame()
         for date, htbl in df_htbl.iterrows():
-            gap_pips = utl.roundi(df_param.loc[date][label] * lsb)
-            collist = [htbl.to_list()] * (gap_pips_max - (gap_pips - 1))
-            gpt_col = list(range(gap_pips, gap_pips_max + 1))
+            gap_pips_raw = inst_info.convert_phy2raw(df_param.loc[date][label])
+
+            collist = [htbl.to_list()] * (gap_max_raw - (gap_pips_raw - 1))
+            gpt_col = list(range(gap_pips_raw, gap_max_raw + 1))
 
             df = pd.DataFrame(collist,
                               columns=df_htbl.columns)

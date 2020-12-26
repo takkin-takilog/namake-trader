@@ -23,7 +23,7 @@ def limit(val, min_val, max_val):
     return ret_val
 
 
-def roundi(a: float):
+def roundi(a: float) -> int:
 
     if 0 < a:
         ans = int(a + 0.5)

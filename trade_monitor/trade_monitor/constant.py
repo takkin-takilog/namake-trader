@@ -1,6 +1,7 @@
 import math
 from dataclasses import dataclass
 from enum import Enum, IntEnum, auto
+from trade_monitor import utility as utl
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
 
@@ -108,11 +109,11 @@ class InstInfo(Enum):
         """
         return format(self.lsb_value, "." + str(self.digit) + "f")
 
-    def convert_raw2phy(self, raw_value):
+    def convert_raw2phy(self, raw_value: int) -> float:
         return raw_value * self.lsb_value
 
-    def convert_phy2raw(self, physical_value):
-        return round(physical_value / self.lsb_value)
+    def convert_phy2raw(self, physical_value: float) -> int:
+        return utl.roundi(physical_value / self.lsb_value)
 
 
 
