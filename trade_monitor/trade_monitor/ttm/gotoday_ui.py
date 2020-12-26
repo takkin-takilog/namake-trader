@@ -421,14 +421,14 @@ class GotodayUi(BaseUi):
                 df_trg = df_csum
                 max_y = csum_max
 
-            chart = self._ui.tableWidget.cellWidget(i, _TblColPos.CHARTVIEW)
-            chart.set_max_y(max_y)
-            chart.set_min_y(-max_y)
+            chartview = self._ui.tableWidget.cellWidget(i, _TblColPos.CHARTVIEW)
+            chartview.set_max_y(max_y)
+            chartview.set_min_y(-max_y)
             idxloc = (gotoday_m.id)
             if idxloc in df_trg.index:
-                chart.update(df_trg.loc[idxloc], self._gran_id, self._digit)
+                chartview.update(df_trg.loc[idxloc], self._gran_id, self._digit)
             else:
-                chart.clear()
+                chartview.clear()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
