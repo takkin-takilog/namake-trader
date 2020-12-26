@@ -104,8 +104,8 @@ class CandlestickChartView(BaseCandlestickChartView):
 
         self._is_update = False
 
-    def update(self, df, gran_id, decimal_digit):
-        super().update(df, gran_id, decimal_digit)
+    def update(self, df, gran_id, digit):
+        super().update(df, gran_id, digit)
 
         dt_ = df.index[-1]
         qd = QDate(dt_.year, dt_.month, dt_.day)
@@ -238,8 +238,8 @@ class BaseLineChartViewTtm(BaseLineChartView):
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)
 
-    def update(self, df, gran_id, decimal_digit):
-        super().update(gran_id, decimal_digit)
+    def update(self, df, gran_id, digit):
+        super().update(gran_id, digit)
 
         for data_type, row in self._chart_tbl.iterrows():
             series = row[self._COL_SERIES]

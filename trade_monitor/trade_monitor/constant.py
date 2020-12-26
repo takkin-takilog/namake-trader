@@ -58,6 +58,7 @@ GRAN_FREQ_DICT = {
 }
 
 
+"""
 @dataclass
 class _MsgInstDict:
     msg_id: int
@@ -66,7 +67,6 @@ class _MsgInstDict:
     decimal_digit: int
     min_unit: str
 
-"""
 INST_MSG_LIST = [
     _MsgInstDict(Inst.INST_USD_JPY, "usdjpy", "USD/JPY", 3, "0.001"),
     _MsgInstDict(Inst.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3, "0.001"),

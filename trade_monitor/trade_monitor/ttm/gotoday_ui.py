@@ -141,11 +141,11 @@ class GotodayUi(BaseUi):
         self._ui = ui
         self._df_base = pd.DataFrame()
         self._gran_id = None
-        self._decimal_digit = None
+        self._digit = None
         self._chart_idx_list = []
         self._is_require_reconstruct_table = True
 
-    def set_data(self, df_base, gran_id, decimal_digit):
+    def set_data(self, df_base, gran_id, digit):
 
         date_list = list(df_base.groupby(ColumnName.DATE.value).groups.keys())
 
@@ -156,7 +156,7 @@ class GotodayUi(BaseUi):
 
         self._df_base = df_base
         self._gran_id = gran_id
-        self._decimal_digit = decimal_digit
+        self._digit = digit
 
         wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
         wasBlocked2 = self._ui.dateEdit_upper.blockSignals(True)
@@ -426,7 +426,7 @@ class GotodayUi(BaseUi):
             chart.set_min_y(-max_y)
             idxloc = (gotoday_m.id)
             if idxloc in df_trg.index:
-                chart.update(df_trg.loc[idxloc], self._gran_id, self._decimal_digit)
+                chart.update(df_trg.loc[idxloc], self._gran_id, self._digit)
             else:
                 chart.clear()
 

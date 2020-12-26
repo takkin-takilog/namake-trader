@@ -561,7 +561,7 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         self.scene().addItem(self._callout_hl)
 
         self._ser_cdl = ser_cdl
-        self._decimal_digit = 0
+        self._digit = 0
         self._freq = "D"
 
     def set_max_y(self, max_y):
@@ -570,7 +570,7 @@ class BaseCandlestickChartView(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, df, gran_id, decimal_digit):
+    def update(self, df, gran_id, digit):
 
         self._ser_cdl.clear()
         for dt_, sr in df.iterrows():
@@ -588,7 +588,7 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)
 
-        self._decimal_digit = decimal_digit
+        self._digit = digit
         self._freq = GRAN_FREQ_DICT[gran_id]
 
     def get_candle_labels_list(self):
@@ -617,7 +617,7 @@ class BaseCandlestickChartView(QtCharts.QChartView):
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
-            fmt = "{:." + str(self._decimal_digit) + "f}"
+            fmt = "{:." + str(self._digit) + "f}"
             prstr = fmt.format(m2v.y())
             self._callout_pr.updateGeometry(prstr, event.pos())
             self._callout_pr.show()
@@ -743,7 +743,7 @@ class BaseLineChartView(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
-        self._decimal_digit = 0
+        self._digit = 0
         self._freq = "D"
 
     def set_max_y(self, max_y):
@@ -752,12 +752,12 @@ class BaseLineChartView(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, gran_id, decimal_digit):
+    def update(self, gran_id, digit):
 
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)
 
-        self._decimal_digit = decimal_digit
+        self._digit = digit
         self._freq = GRAN_FREQ_DICT[gran_id]
 
     def resizeEvent(self, event):
@@ -783,7 +783,7 @@ class BaseLineChartView(QtCharts.QChartView):
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
-            fmt = "{:." + str(self._decimal_digit) + "f}"
+            fmt = "{:." + str(self._digit) + "f}"
             prstr = fmt.format(m2v.y())
             self._callout_pr.updateGeometry(prstr, event.pos())
             self._callout_pr.show()
