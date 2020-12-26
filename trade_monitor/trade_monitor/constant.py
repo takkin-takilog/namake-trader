@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass
 from enum import Enum, IntEnum, auto
 from trade_manager_msgs.msg import Instrument as Inst
@@ -70,6 +71,55 @@ INST_MSG_LIST = [
     _MsgInstDict(Inst.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3, "0.001"),
     _MsgInstDict(Inst.INST_EUR_USD, "eurusd", "EUR/USD", 5, "0.00001"),
 ]
+
+
+class InstInfo(Enum):
+    """
+    Instrument info.
+    """
+    USDJPY = (Inst.INST_USD_JPY, "usdjpy", "USD/JPY", 3)
+    EURJPY = (Inst.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3)
+    EURUSD = (Inst.INST_EUR_USD, "eurusd", "EUR/USD", 5)
+
+    def __init__(self,
+                 msg_id: int,       # ROS message ID
+                 namespace: str,    # ROS message namespace
+                 text: str,         # For text shown on the widget
+                 digit: int,        # Number of digits after the decimal point
+                 ) -> None:
+        self.msg_id = msg_id
+        self.namespace = namespace
+        self.text = text
+        self.digit = digit
+
+    @property
+    def lsb_value(self) -> float:
+        """
+        Least significant bit (Resolution).
+        return type is "float".
+        """
+        return math.pow(10, -self.digit)
+
+    @property
+    def lsb_str(self) -> str:
+        """
+        Least significant bit (Resolution).
+        return type is "string".
+        """
+        return format(self.lsb_value, "." + str(self.digit) + "f")
+
+    def convert_raw2phy(self, raw_value):
+        return raw_value * self.lsb_value
+
+    def convert_phy2raw(self, physical_value):
+        return round(physical_value / self.lsb_value)
+
+
+
+
+
+
+
 
 
 @dataclass

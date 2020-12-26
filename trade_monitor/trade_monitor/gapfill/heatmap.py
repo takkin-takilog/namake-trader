@@ -1,9 +1,10 @@
 import math
 from enum import IntEnum, auto
 import pandas as pd
-from trade_monitor import utility as utl
-from trade_monitor.constant import INST_MSG_LIST
 from trade_apl_msgs.msg import GapFillMsg
+from trade_monitor import utility as utl
+from trade_monitor import ros_common as ros_com
+from trade_monitor.constant import INST_MSG_LIST
 from trade_monitor.gapfill.constant import ColumnName as GfColNm
 
 
@@ -19,10 +20,11 @@ class _GapDir(IntEnum):
 class HeatMap():
 
     _COL_GPA_PRICE_TH = "gap price thresh"
-    _GAP_UPPER_LIMIT = 500   # pips
+    _GAP_UPPER_LIMIT = 500   # Raw value
 
     def __init__(self, sts_bar):
         self._sts_bar = sts_bar
+        self._logger = ros_com.get_logger()
 
     def set_param(self, df_param: pd.DataFrame, inst_idx):
 
