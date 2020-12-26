@@ -311,12 +311,12 @@ class GotodayUi(BaseUi):
 
     def _update_table(self):
 
-        df = self._get_latest_dataframe()
+        df_base = self._get_latest_dataframe()
 
         if self._is_require_reconstruct_table:
             self._reconstruct_table()
 
-        self._update_chart(df)
+        self._update_chart(df_base)
 
     def _get_latest_dataframe(self):
         # self._logger.debug("---[99]update_dataframe ----------")
@@ -325,7 +325,7 @@ class GotodayUi(BaseUi):
         sdt_end = self._drm.upper_date
         mst_list = self._df_base.index.get_level_values(level=ColumnName.DATE.value)
         df_base = self._df_base[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
-        return self._convert_base2gotoday(df_base)
+        return df_base
 
     def _convert_base2gotoday(self,
                               df_base: pd.DataFrame
@@ -391,7 +391,10 @@ class GotodayUi(BaseUi):
         self._chart_idx_list = chart_idx_list
         self._is_require_reconstruct_table = False
 
-    def _update_chart(self, df):
+    def _update_chart(self, df_base):
+
+        df = self._convert_base2gotoday(df_base)
+        df_base_r = self._reconstruct_dataframe_base(df_base)
 
         mst_list = df.index.get_level_values(level=ColumnName.DATA_TYP.value)
         df_stats = df[mst_list < DataType.CO_CSUM.value]
@@ -424,11 +427,29 @@ class GotodayUi(BaseUi):
             chartview = self._ui.tableWidget.cellWidget(i, _TblColPos.CHARTVIEW)
             chartview.set_max_y(max_y)
             chartview.set_min_y(-max_y)
-            idxloc = (gotoday_m.id)
+            idxloc = gotoday_m.id
             if idxloc in df_trg.index:
                 chartview.update(df_trg.loc[idxloc], self._gran_id, self._digit)
+                level = [ColumnName.GOTO_ID.value]
+                df_date = df_base_r.xs([idxloc], level=level)
+                chartview.set_dataframe_date(df_date)
             else:
                 chartview.clear()
+
+    def _reconstruct_dataframe_base(self, df_base):
+
+        df_base_r = df_base.reset_index()
+        columns = [ColumnName.MONTH.value,
+                   ColumnName.WEEKDAY_ID.value,
+                   ColumnName.IS_GOTO.value]
+        df_base_r.drop(columns=columns, inplace=True)
+        index = [ColumnName.GOTO_ID.value,
+                 ColumnName.DATE.value,
+                 ColumnName.GAP_TYP.value]
+        df_base_r.set_index(index, inplace=True)
+        df_base_r.sort_index(inplace=True)
+
+        return df_base_r
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

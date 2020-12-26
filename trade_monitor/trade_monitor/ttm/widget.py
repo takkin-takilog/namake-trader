@@ -205,8 +205,9 @@ class BaseLineChartViewTtm(BaseLineChartView):
         self._QDT_BASE = QDate(2010, 1, 1)
         self._QDTTM_TTM = QDateTime(self._QDT_BASE, QTime(9, 55))
 
-        self._logger = ros_com.get_logger()
+        self._df_date = pd.DataFrame()
         self._is_update = False
+        self._logger = ros_com.get_logger()
 
     def _init_chart(self, data_list):
 
@@ -262,6 +263,11 @@ class BaseLineChartViewTtm(BaseLineChartView):
 
         self._update_callout_ttm(self._QDTTM_TTM)
         self._is_update = True
+
+    def set_dataframe_date(self, df_date):
+        self._df_date = df_date
+        self._logger.debug("============================================================")
+        self._logger.debug("{}".format(df_date))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
