@@ -28,12 +28,12 @@ class _GotodayId(Enum):
 
     def __init__(self,
                  id_: int,
-                 label: str,
+                 text: str,
                  foreground_color: QColor,
                  background_color: QColor
                  ) -> None:
         self.id = id_
-        self.label = label
+        self.text = text
         self.foreground_color = QBrush(QColor(foreground_color))
         self.background_color = QBrush(QColor(background_color))
 
@@ -46,9 +46,9 @@ class _ChartType(Enum):
     CUMSUM = "CumSum"
 
     def __init__(self,
-                 label: str,
+                 text: str,
                  ) -> None:
-        self.label = label
+        self.text = text
 
 
 class _TblColPos(IntEnum):
@@ -365,7 +365,7 @@ class GotodayUi(BaseUi):
 
             # set Table Item "Goto-Day Type"
             back_color = gotoday_m.background_color
-            item_wd = QTableWidgetItem(gotoday_m.label)
+            item_wd = QTableWidgetItem(gotoday_m.text)
             item_wd.setTextAlignment(Qt.AlignCenter)
             item_wd.setForeground(gotoday_m.foreground_color)
             item_wd.setBackground(back_color)
@@ -373,7 +373,7 @@ class GotodayUi(BaseUi):
             self._ui.tableWidget.setItem(i, pos, item_wd)
 
             # set Table Item "Chart Type"
-            item_ct = QTableWidgetItem(charttyp_m.label)
+            item_ct = QTableWidgetItem(charttyp_m.text)
             item_ct.setTextAlignment(Qt.AlignCenter)
             item_ct.setBackground(back_color)
             pos = _TblColPos.CHARTTYP.value

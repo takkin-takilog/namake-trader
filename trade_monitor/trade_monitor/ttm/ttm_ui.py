@@ -36,9 +36,9 @@ class _WeekdayId(Enum):
     SAT = (5, "Sat")
     SUN = (6, "Sun")
 
-    def __init__(self, id_: int, label: str):
+    def __init__(self, id_: int, text: str):
         self.id = id_
-        self.label = label
+        self.text = text
 
     @classmethod
     def get_member_by_id(cls, id_: int):
@@ -60,9 +60,9 @@ class _GotodayId(Enum):
     D25 = (5, "25")
     LSD = (6, "L/D")
 
-    def __init__(self, id_: int, label: str):
+    def __init__(self, id_: int, text: str):
         self.id = id_
-        self.label = label
+        self.text = text
 
     @classmethod
     def get_member_by_id(cls, id_: int):
@@ -229,8 +229,8 @@ class TtmUi():
                 gdmem = _GotodayId.get_member_by_id(index[3])
                 items = [
                     index[0],  # date
-                    wdmem.label,
-                    gdmem.label,
+                    wdmem.text,
+                    gdmem.text,
                     0
                 ]
                 tbl.append(items)

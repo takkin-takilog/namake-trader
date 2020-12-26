@@ -26,12 +26,12 @@ class _WeekdayId(Enum):
 
     def __init__(self,
                  id_: int,
-                 label: str,
+                 text: str,
                  foreground_color: QColor,
                  background_color: QColor
                  ) -> None:
         self.id = id_
-        self.label = label
+        self.text = text
         self.foreground_color = QBrush(QColor(foreground_color))
         self.background_color = QBrush(QColor(background_color))
 
@@ -44,10 +44,10 @@ class _Gotoday(Enum):
     FALSE = ("No", Qt.blue)
 
     def __init__(self,
-                 label: str,
+                 text: str,
                  foreground_color: QColor,
                  ) -> None:
-        self.label = label
+        self.text = text
         self.foreground_color = QBrush(QColor(foreground_color))
 
 
@@ -59,9 +59,9 @@ class _ChartType(Enum):
     CUMSUM = "CumSum"
 
     def __init__(self,
-                 label: str,
+                 text: str,
                  ) -> None:
-        self.label = label
+        self.text = text
 
 
 class _TblColPos(IntEnum):
@@ -391,7 +391,7 @@ class WeekdayUi(BaseUi):
 
             # set Table Item "Weekday"
             back_color = weekday_m.background_color
-            item_wd = QTableWidgetItem(weekday_m.label)
+            item_wd = QTableWidgetItem(weekday_m.text)
             item_wd.setTextAlignment(Qt.AlignCenter)
             item_wd.setForeground(weekday_m.foreground_color)
             item_wd.setBackground(back_color)
@@ -399,7 +399,7 @@ class WeekdayUi(BaseUi):
             self._ui.tableWidget.setItem(i, pos, item_wd)
 
             # set Table Item "Goto-Day"
-            item_gt = QTableWidgetItem(gotoday_m.label)
+            item_gt = QTableWidgetItem(gotoday_m.text)
             item_gt.setTextAlignment(Qt.AlignCenter)
             item_gt.setForeground(gotoday_m.foreground_color)
             item_gt.setBackground(back_color)
@@ -410,7 +410,7 @@ class WeekdayUi(BaseUi):
             self._ui.tableWidget.setItem(i, pos, item_gt)
 
             # set Table Item "Chart Type"
-            item_ct = QTableWidgetItem(charttyp_m.label)
+            item_ct = QTableWidgetItem(charttyp_m.text)
             item_ct.setTextAlignment(Qt.AlignCenter)
             item_ct.setBackground(back_color)
             pos = _TblColPos.CHARTTYP.value
