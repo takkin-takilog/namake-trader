@@ -23,6 +23,7 @@ def limit(val, min_val, max_val):
     return ret_val
 
 
+"""
 def roundi(a: float) -> int:
 
     if 0 < a:
@@ -31,6 +32,16 @@ def roundi(a: float) -> int:
         ans = int(a - 0.5)
 
     return ans
+"""
+
+
+def roundi(val: float) -> int:
+    return int((val * 2 + 1) // 2)
+
+
+def roundf(val: float, digit: int=0) -> float:
+    p = 10 ** digit
+    return (val * p * 2 + 1) // 2 / p
 
 
 class GradientManager():

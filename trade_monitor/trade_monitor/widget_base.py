@@ -17,7 +17,7 @@ from PySide2.QtCore import QSignalMapper, QPoint
 from PySide2.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QPen
 from trade_monitor.constant import GranInfo
-
+from trade_monitor import utility as utl
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 CALLOUT_DATE_COLOR = QColor(0, 204, 51)
@@ -792,6 +792,194 @@ class BaseLineChartView(QtCharts.QChartView):
                                             event.pos().y()))
             self._callout_hl.show()
 
+        else:
+            self._callout_dt.hide()
+            self._callout_pr.hide()
+            self._callout_vl.hide()
+            self._callout_hl.hide()
+
+
+class BaseCandlestickChartView2(QtCharts.QChartView):
+
+    class CandleLabel(Enum):
+        """
+        Candlestick data label.
+        """
+        OP = "open"
+        HI = "high"
+        LO = "low"
+        CL = "close"
+
+        @classmethod
+        def to_list(cls):
+            return [m.value for m in cls]
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
+
+        if parent is not None:
+            lay = QGridLayout(parent)
+            lay.setMargin(0)
+            lay.addWidget(self, 0, 0, 1, 1)
+
+        # ---------- Create Chart ----------
+        chart = QtCharts.QChart()
+        chart.layout().setContentsMargins(0, 0, 0, 0)
+        chart.setBackgroundRoundness(0)
+
+        # ---------- Add Series on chart ----------
+        ser_cdl = QtCharts.QCandlestickSeries()
+        ser_cdl.setDecreasingColor(Qt.red)
+        ser_cdl.setIncreasingColor(Qt.green)
+        chart.addSeries(ser_cdl)
+
+        """
+        # ---------- Set font on chart ----------
+        font = QFont("Sans Serif", )
+        font.setPixelSize(18)
+        chart.setTitleFont(font)
+        """
+
+        # ---------- Set PlotAreaBackground on chart ----------
+        plotAreaGradient = QLinearGradient(0, 100, 0, 400)
+        plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
+        plotAreaGradient.setColorAt(1.0, QColor("#ffffff"))
+        chart.setPlotAreaBackgroundBrush(plotAreaGradient)
+        chart.setPlotAreaBackgroundVisible(True)
+
+        # ---------- Set X Axis on chart ----------
+        axis_x = QtCharts.QBarCategoryAxis()
+        # axis_x.setTickCount(2)
+        axis_x.setTitleText("Date")
+        # axis_x.setFormat("h:mm")
+        axis_x.setLabelsAngle(0)
+        chart.addAxis(axis_x, Qt.AlignBottom)
+        ser_cdl.attachAxis(axis_x)
+        axis_x.setLabelsVisible(False)
+        axis_x.setMinorGridLineVisible(False)
+        axis_x.setLineVisible(False)
+        axis_x.setGridLineVisible(False)
+
+        # ---------- Set Y Axis on chart ----------
+        axis_y = QtCharts.QValueAxis()
+        chart.addAxis(axis_y, Qt.AlignLeft)
+        ser_cdl.attachAxis(axis_y)
+
+        # ---------- Set Animation on chart ----------
+        chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
+
+        # ---------- Set Legend on chart ----------
+        chart.legend().hide()
+        chart.legend().setVisible(False)
+
+        self.setChart(chart)
+
+        # ---------- Add CalloutDataTime on scene ----------
+        self._callout_dt = CalloutDataTime(chart)
+        self._callout_dt.setBackgroundColor(CALLOUT_DATE_COLOR)
+        self._callout_dt.setZValue(100)
+        self.scene().addItem(self._callout_dt)
+
+        # ---------- Add CallouPrice on scene ----------
+        self._callout_pr = CallouPrice(chart)
+        self._callout_pr.setBackgroundColor(CALLOUT_PRICE_COLOR)
+        self._callout_pr.setZValue(100)
+        self.scene().addItem(self._callout_pr)
+
+        # ---------- Add CallouVerticalLine on scene ----------
+        self._callout_vl = QGraphicsLineItem()
+        pen = self._callout_vl.pen()
+        pen.setColor(CALLOUT_DATE_COLOR)
+        pen.setWidth(1)
+        self._callout_vl.setPen(pen)
+        self._callout_vl.setZValue(100)
+        self.scene().addItem(self._callout_vl)
+
+        # ---------- Add CallouHorizontalLine on scene ----------
+        self._callout_hl = QGraphicsLineItem()
+        pen = self._callout_hl.pen()
+        pen.setColor(CALLOUT_PRICE_COLOR)
+        pen.setWidth(1)
+        self._callout_hl.setPen(pen)
+        self._callout_hl.setZValue(100)
+        self.scene().addItem(self._callout_hl)
+
+        # self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
+
+        self._ser_cdl = ser_cdl
+        self._digit = 0
+        # self._freq = "D"
+
+    def set_max_y(self, max_y):
+        self._max_y = max_y
+
+    def set_min_y(self, min_y):
+        self._min_y = min_y
+
+    # def update(self, df, gran_id, digit):
+    def update(self, df, digit):
+
+        x_axis_label = []
+        self._ser_cdl.clear()
+        for idx, sr in df.iterrows():
+            op = sr[self.CandleLabel.OP.value]
+            hi = sr[self.CandleLabel.HI.value]
+            lo = sr[self.CandleLabel.LO.value]
+            cl = sr[self.CandleLabel.CL.value]
+            x_axis_label.append(idx)
+            cnd = QtCharts.QCandlestickSet(op, hi, lo, cl)
+            self._ser_cdl.append(cnd)
+
+        chart = self.chart()
+        chart.axisX().setCategories(x_axis_label)
+        chart.axisY().setRange(self._min_y, self._max_y)
+        # gran_info = GranInfo.get_member_by_msgid(gran_id)
+
+        self._digit = digit
+        # self._freq = gran_info.freq
+
+    def get_candle_labels_list(self):
+        return self.CandleLabel.to_list()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+        chart = self.chart()
+        flag = chart.plotArea().contains(event.pos())
+        if flag:
+            m2v = chart.mapToValue(event.pos())
+            xpos = utl.roundi(m2v.x())
+            ypos = utl.roundf(m2v.y(), digit=self._digit)
+            new_pos = QPointF(xpos, ypos)
+            m2p = chart.mapToPosition(new_pos)
+
+            x_label_list = chart.axisX().categories()
+            dtstr = x_label_list[xpos]
+            self._callout_dt.updateGeometry(dtstr, m2p)
+            self._callout_dt.show()
+
+            fmt = "{:." + str(self._digit) + "f}"
+            prstr = fmt.format(new_pos.y())
+            self._callout_pr.updateGeometry(prstr, m2p)
+            self._callout_pr.show()
+
+            plotAreaRect = chart.plotArea()
+            self._callout_vl.setLine(QLineF(m2p.x(),
+                                            plotAreaRect.top(),
+                                            m2p.x(),
+                                            plotAreaRect.bottom()))
+            self._callout_vl.show()
+
+            self._callout_hl.setLine(QLineF(plotAreaRect.left(),
+                                            m2p.y(),
+                                            plotAreaRect.right(),
+                                            m2p.y()))
+            self._callout_hl.show()
         else:
             self._callout_dt.hide()
             self._callout_pr.hide()
