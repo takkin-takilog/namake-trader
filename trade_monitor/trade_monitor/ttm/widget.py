@@ -11,7 +11,7 @@ from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import BaseCandlestickChartView
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
-from trade_monitor.constant import FMT_QT_TIME
+from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
 from trade_monitor.ttm.constant import ColumnName, GapType, DataType
 
 
@@ -266,8 +266,6 @@ class BaseLineChartViewTtm(BaseLineChartView):
 
     def set_dataframe_date(self, df_date):
         self._df_date = df_date
-        self._logger.debug("============================================================")
-        self._logger.debug("{}".format(df_date))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -281,6 +279,25 @@ class BaseLineChartViewTtm(BaseLineChartView):
         self._vl_ttm.show()
         self._callout_ttm_dt.show()
         self._hl_zero.show()
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+
+        chart = self.chart()
+        flag = chart.plotArea().contains(event.pos())
+        if flag and (event.buttons() == Qt.LeftButton):
+            m2v = chart.mapToValue(event.pos())
+            pdt = QDateTime.fromMSecsSinceEpoch(round(m2v.x())).toPython()
+            pdt = pd.to_datetime(pdt).round(self._freq)
+            stm = pdt.strftime(FMT_TIME_HM)
+
+            self._logger.debug("============================================================")
+            self._logger.debug("buttons:{}".format(event.buttons()))
+            self._logger.debug("pdt:{}".format(pdt))
+            self._logger.debug("type(pdt):{}".format(type(pdt)))
+            self._logger.debug("stm:{}".format(stm))
+            self._logger.debug("df:{}".format(self._df_date))
+            self._logger.debug("df[{}]:{}".format(stm, self._df_date[stm]))
 
     def _update_callout_ttm(self, qdttm):
 
