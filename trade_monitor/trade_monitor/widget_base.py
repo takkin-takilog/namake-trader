@@ -14,7 +14,7 @@ from PySide2.QtCore import QAbstractTableModel, QSortFilterProxyModel
 from PySide2.QtCore import Qt, QPointF, QRectF, QRect, QLineF
 from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
 from PySide2.QtCore import QSignalMapper, QPoint
-from PySide2.QtGui import QPalette, QColor, QFont, QFontMetrics, QPainter, QPainterPath
+from PySide2.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QPen
 from trade_monitor.constant import GranInfo
 
@@ -485,11 +485,6 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         chart.setTitleFont(font)
         """
 
-        # ---------- Set palette on chart ----------
-        palette = QPalette()
-        palette.setColor(QPalette.Text, Qt.red)
-        chart.setPalette(palette)
-
         # ---------- Set PlotAreaBackground on chart ----------
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
@@ -667,13 +662,6 @@ class BaseLineChartView(QtCharts.QChartView):
         font = QFont("Sans Serif", )
         font.setPixelSize(18)
         chart.setTitleFont(font)
-        """
-
-        # ---------- Set palette on chart ----------
-        """
-        palette = QPalette()
-        palette.setColor(QPalette.Text, Qt.red)
-        chart.setPalette(palette)
         """
 
         # ---------- Set PlotAreaBackground on chart ----------
