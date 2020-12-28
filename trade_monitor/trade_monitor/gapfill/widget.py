@@ -1,9 +1,9 @@
 from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
 from PySide2.QtWidgets import QGraphicsLineItem
-from trade_monitor.widget_base import BaseCandlestickChartView
+from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 
 
-class BaseCandlestickChartViewGapFill(BaseCandlestickChartView):
+class BaseCandlestickChartViewGapFill(CandlestickChartViewDateTimeAxis):
 
     def __init__(self, parent):
         super().__init__(parent)

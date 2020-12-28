@@ -460,8 +460,6 @@ class BaseCandlestickChartView(QtCharts.QChartView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
-
         if parent is not None:
             lay = QGridLayout(parent)
             lay.setMargin(0)
@@ -473,10 +471,10 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         chart.setBackgroundRoundness(0)
 
         # ---------- Add Series on chart ----------
-        ser_cdl = QtCharts.QCandlestickSeries()
-        ser_cdl.setDecreasingColor(Qt.red)
-        ser_cdl.setIncreasingColor(Qt.green)
-        chart.addSeries(ser_cdl)
+        series = QtCharts.QCandlestickSeries()
+        series.setDecreasingColor(Qt.red)
+        series.setIncreasingColor(Qt.green)
+        chart.addSeries(series)
 
         """
         # ---------- Set font on chart ----------
@@ -493,35 +491,16 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         chart.setPlotAreaBackgroundVisible(True)
 
         # ---------- Set X Axis on chart ----------
-        axis_x = QtCharts.QDateTimeAxis()
-        axis_x.setTickCount(2)
-        axis_x.setTitleText("Date")
-        axis_x.setFormat("h:mm")
-        axis_x.setLabelsAngle(0)
-
-        now = QDateTime.currentDateTime()
-        yesterday = QDateTime(QDate(now.date().year(),
-                                    now.date().month(),
-                                    now.date().day() - 1),
-                              QTime(0, 0))
-        today = QDateTime(QDate(now.date().year(),
-                                now.date().month(),
-                                now.date().day()),
-                          QTime(0, 0))
-        axis_x.setRange(yesterday, today)
-        chart.addAxis(axis_x, Qt.AlignBottom)
-        ser_cdl.attachAxis(axis_x)
+        """ override """
 
         # ---------- Set Y Axis on chart ----------
-        axis_y = QtCharts.QValueAxis()
-        chart.addAxis(axis_y, Qt.AlignLeft)
-        ser_cdl.attachAxis(axis_y)
+        """ override """
 
         # ---------- Set Animation on chart ----------
         chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
         # ---------- Set Legend on chart ----------
-        chart.legend().hide()
+        # chart.legend().hide()
         chart.legend().setVisible(False)
 
         self.setChart(chart)
@@ -556,9 +535,10 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
-        self._ser_cdl = ser_cdl
+        self._series = series
         self._digit = 0
-        self._freq = "D"
+        self._max_y = None
+        self._min_y = None
 
     def set_max_y(self, max_y):
         self._max_y = max_y
@@ -566,33 +546,71 @@ class BaseCandlestickChartView(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, df, gran_id, digit):
+    def update(self):
 
-        self._ser_cdl.clear()
-        for dt_, sr in df.iterrows():
-            op = sr[self.CandleLabel.OP.value]
-            hi = sr[self.CandleLabel.HI.value]
-            lo = sr[self.CandleLabel.LO.value]
-            cl = sr[self.CandleLabel.CL.value]
-            qd = QDate(dt_.year, dt_.month, dt_.day)
-            qt = QTime(dt_.hour, dt_.minute)
-            qdt = QDateTime(qd, qt)
-            cnd = QtCharts.QCandlestickSet(op, hi, lo, cl,
-                                           qdt.toMSecsSinceEpoch())
-            self._ser_cdl.append(cnd)
+        if self._max_y is not None:
+            self.chart().axisY().setMax(self._max_y)
 
-        chart = self.chart()
-        chart.axisY().setRange(self._min_y, self._max_y)
-        gran_info = GranInfo.get_member_by_msgid(gran_id)
-
-        self._digit = digit
-        self._freq = gran_info.freq
+        if self._min_y is not None:
+            self.chart().axisY().setMin(self._min_y)
 
     def get_candle_labels_list(self):
         return self.CandleLabel.to_list()
 
+    """
     def resizeEvent(self, event):
         super().resizeEvent(event)
+    """
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+
+class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
+
+        chart = self.chart()
+
+        # ---------- Set X Axis on chart ----------
+        axis_x = QtCharts.QBarCategoryAxis()
+        # axis_x.setTickCount(2)
+        axis_x.setTitleText("Date")
+        # axis_x.setFormat("h:mm")
+        axis_x.setLabelsAngle(0)
+        axis_x.setLabelsVisible(False)
+        axis_x.setMinorGridLineVisible(False)
+        axis_x.setLineVisible(False)
+        axis_x.setGridLineVisible(False)
+        chart.addAxis(axis_x, Qt.AlignBottom)
+        self._series.attachAxis(axis_x)
+
+        # ---------- Set Y Axis on chart ----------
+        axis_y = QtCharts.QValueAxis()
+        chart.addAxis(axis_y, Qt.AlignLeft)
+        self._series.attachAxis(axis_y)
+
+    def update(self, df, digit):
+        super().update()
+
+        x_axis_label = []
+        self._series.clear()
+        for idx, sr in df.iterrows():
+            op = sr[self.CandleLabel.OP.value]
+            hi = sr[self.CandleLabel.HI.value]
+            lo = sr[self.CandleLabel.LO.value]
+            cl = sr[self.CandleLabel.CL.value]
+            x_axis_label.append(idx)
+            cnd = QtCharts.QCandlestickSet(op, hi, lo, cl)
+            self._series.append(cnd)
+
+        chart = self.chart()
+        chart.axisX().setCategories(x_axis_label)
+
+        self._digit = digit
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -601,22 +619,19 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         flag = chart.plotArea().contains(event.pos())
         if flag:
             m2v = chart.mapToValue(event.pos())
-            pdt = QDateTime.fromMSecsSinceEpoch(round(m2v.x())).toPython()
-            pdt = pd.to_datetime(pdt).round(self._freq)
+            xpos = utl.roundi(m2v.x())
+            ypos = utl.roundf(m2v.y(), digit=self._digit)
+            new_pos = QPointF(xpos, ypos)
+            m2p = chart.mapToPosition(new_pos)
 
-            qd = QDate(pdt.year, pdt.month, pdt.day)
-            qt = QTime(pdt.hour, pdt.minute, pdt.second)
-            qdttm = QDateTime(qd, qt)
-
-            m2v.setX(qdttm.toMSecsSinceEpoch())
-            m2p = chart.mapToPosition(m2v)
-            dtstr = qdttm.toString(self._CALLOUT_DT_FMT)
+            x_label_list = chart.axisX().categories()
+            dtstr = x_label_list[xpos]
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
             fmt = "{:." + str(self._digit) + "f}"
-            prstr = fmt.format(m2v.y())
-            self._callout_pr.updateGeometry(prstr, event.pos())
+            prstr = fmt.format(new_pos.y())
+            self._callout_pr.updateGeometry(prstr, m2p)
             self._callout_pr.show()
 
             plotAreaRect = chart.plotArea()
@@ -627,9 +642,108 @@ class BaseCandlestickChartView(QtCharts.QChartView):
             self._callout_vl.show()
 
             self._callout_hl.setLine(QLineF(plotAreaRect.left(),
-                                            event.pos().y(),
+                                            m2p.y(),
                                             plotAreaRect.right(),
-                                            event.pos().y()))
+                                            m2p.y()))
+            self._callout_hl.show()
+        else:
+            self._callout_dt.hide()
+            self._callout_pr.hide()
+            self._callout_vl.hide()
+            self._callout_hl.hide()
+
+
+class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
+
+        chart = self.chart()
+
+        # ---------- Set X Axis on chart ----------
+        axis_x = QtCharts.QDateTimeAxis()
+        axis_x.setTickCount(2)
+        axis_x.setTitleText("Date")
+        axis_x.setFormat("h:mm")
+        axis_x.setLabelsAngle(0)
+
+        now = QDateTime.currentDateTime()
+        today = QDateTime(now.date())
+        yesterday = today.addDays(-1)
+        axis_x.setRange(yesterday, today)
+        chart.addAxis(axis_x, Qt.AlignBottom)
+        self._series.attachAxis(axis_x)
+
+        # ---------- Set Y Axis on chart ----------
+        axis_y = QtCharts.QValueAxis()
+        chart.addAxis(axis_y, Qt.AlignLeft)
+        self._series.attachAxis(axis_y)
+
+        # self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
+
+        self._freq = "D"
+
+    def update(self, df, gran_id, digit):
+        super().update()
+
+        self._series.clear()
+        for dt_, sr in df.iterrows():
+            op = sr[self.CandleLabel.OP.value]
+            hi = sr[self.CandleLabel.HI.value]
+            lo = sr[self.CandleLabel.LO.value]
+            cl = sr[self.CandleLabel.CL.value]
+            qd = QDate(dt_.year, dt_.month, dt_.day)
+            qt = QTime(dt_.hour, dt_.minute)
+            qdt = QDateTime(qd, qt)
+            cnd = QtCharts.QCandlestickSet(op, hi, lo, cl,
+                                           qdt.toMSecsSinceEpoch())
+            self._series.append(cnd)
+
+        gran_info = GranInfo.get_member_by_msgid(gran_id)
+
+        self._digit = digit
+        self._freq = gran_info.freq
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+        chart = self.chart()
+        flag = chart.plotArea().contains(event.pos())
+        if flag:
+            m2v = chart.mapToValue(event.pos())
+            xpos = utl.roundi(m2v.x())
+            pdt = QDateTime.fromMSecsSinceEpoch(xpos).toPython()
+            pdt = pd.to_datetime(pdt).round(self._freq)
+            qd = QDate(pdt.year, pdt.month, pdt.day)
+            qt = QTime(pdt.hour, pdt.minute, pdt.second)
+            qdttm = QDateTime(qd, qt)
+            xpos = qdttm.toMSecsSinceEpoch()
+            ypos = utl.roundf(m2v.y(), digit=self._digit)
+            new_pos = QPointF(xpos, ypos)
+            m2p = chart.mapToPosition(new_pos)
+
+            dtstr = qdttm.toString(self._CALLOUT_DT_FMT)
+            self._callout_dt.updateGeometry(dtstr, m2p)
+            self._callout_dt.show()
+
+            fmt = "{:." + str(self._digit) + "f}"
+            prstr = fmt.format(new_pos.y())
+            self._callout_pr.updateGeometry(prstr, m2p)
+            self._callout_pr.show()
+
+            plotAreaRect = chart.plotArea()
+            self._callout_vl.setLine(QLineF(m2p.x(),
+                                            plotAreaRect.top(),
+                                            m2p.x(),
+                                            plotAreaRect.bottom()))
+            self._callout_vl.show()
+
+            self._callout_hl.setLine(QLineF(plotAreaRect.left(),
+                                            m2p.y(),
+                                            plotAreaRect.right(),
+                                            m2p.y()))
             self._callout_hl.show()
 
         else:
@@ -792,194 +906,6 @@ class BaseLineChartView(QtCharts.QChartView):
                                             event.pos().y()))
             self._callout_hl.show()
 
-        else:
-            self._callout_dt.hide()
-            self._callout_pr.hide()
-            self._callout_vl.hide()
-            self._callout_hl.hide()
-
-
-class BaseCandlestickChartView2(QtCharts.QChartView):
-
-    class CandleLabel(Enum):
-        """
-        Candlestick data label.
-        """
-        OP = "open"
-        HI = "high"
-        LO = "low"
-        CL = "close"
-
-        @classmethod
-        def to_list(cls):
-            return [m.value for m in cls]
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        # self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
-
-        if parent is not None:
-            lay = QGridLayout(parent)
-            lay.setMargin(0)
-            lay.addWidget(self, 0, 0, 1, 1)
-
-        # ---------- Create Chart ----------
-        chart = QtCharts.QChart()
-        chart.layout().setContentsMargins(0, 0, 0, 0)
-        chart.setBackgroundRoundness(0)
-
-        # ---------- Add Series on chart ----------
-        ser_cdl = QtCharts.QCandlestickSeries()
-        ser_cdl.setDecreasingColor(Qt.red)
-        ser_cdl.setIncreasingColor(Qt.green)
-        chart.addSeries(ser_cdl)
-
-        """
-        # ---------- Set font on chart ----------
-        font = QFont("Sans Serif", )
-        font.setPixelSize(18)
-        chart.setTitleFont(font)
-        """
-
-        # ---------- Set PlotAreaBackground on chart ----------
-        plotAreaGradient = QLinearGradient(0, 100, 0, 400)
-        plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
-        plotAreaGradient.setColorAt(1.0, QColor("#ffffff"))
-        chart.setPlotAreaBackgroundBrush(plotAreaGradient)
-        chart.setPlotAreaBackgroundVisible(True)
-
-        # ---------- Set X Axis on chart ----------
-        axis_x = QtCharts.QBarCategoryAxis()
-        # axis_x.setTickCount(2)
-        axis_x.setTitleText("Date")
-        # axis_x.setFormat("h:mm")
-        axis_x.setLabelsAngle(0)
-        chart.addAxis(axis_x, Qt.AlignBottom)
-        ser_cdl.attachAxis(axis_x)
-        axis_x.setLabelsVisible(False)
-        axis_x.setMinorGridLineVisible(False)
-        axis_x.setLineVisible(False)
-        axis_x.setGridLineVisible(False)
-
-        # ---------- Set Y Axis on chart ----------
-        axis_y = QtCharts.QValueAxis()
-        chart.addAxis(axis_y, Qt.AlignLeft)
-        ser_cdl.attachAxis(axis_y)
-
-        # ---------- Set Animation on chart ----------
-        chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
-
-        # ---------- Set Legend on chart ----------
-        chart.legend().hide()
-        chart.legend().setVisible(False)
-
-        self.setChart(chart)
-
-        # ---------- Add CalloutDataTime on scene ----------
-        self._callout_dt = CalloutDataTime(chart)
-        self._callout_dt.setBackgroundColor(CALLOUT_DATE_COLOR)
-        self._callout_dt.setZValue(100)
-        self.scene().addItem(self._callout_dt)
-
-        # ---------- Add CallouPrice on scene ----------
-        self._callout_pr = CallouPrice(chart)
-        self._callout_pr.setBackgroundColor(CALLOUT_PRICE_COLOR)
-        self._callout_pr.setZValue(100)
-        self.scene().addItem(self._callout_pr)
-
-        # ---------- Add CallouVerticalLine on scene ----------
-        self._callout_vl = QGraphicsLineItem()
-        pen = self._callout_vl.pen()
-        pen.setColor(CALLOUT_DATE_COLOR)
-        pen.setWidth(1)
-        self._callout_vl.setPen(pen)
-        self._callout_vl.setZValue(100)
-        self.scene().addItem(self._callout_vl)
-
-        # ---------- Add CallouHorizontalLine on scene ----------
-        self._callout_hl = QGraphicsLineItem()
-        pen = self._callout_hl.pen()
-        pen.setColor(CALLOUT_PRICE_COLOR)
-        pen.setWidth(1)
-        self._callout_hl.setPen(pen)
-        self._callout_hl.setZValue(100)
-        self.scene().addItem(self._callout_hl)
-
-        # self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
-
-        self._ser_cdl = ser_cdl
-        self._digit = 0
-        # self._freq = "D"
-
-    def set_max_y(self, max_y):
-        self._max_y = max_y
-
-    def set_min_y(self, min_y):
-        self._min_y = min_y
-
-    # def update(self, df, gran_id, digit):
-    def update(self, df, digit):
-
-        x_axis_label = []
-        self._ser_cdl.clear()
-        for idx, sr in df.iterrows():
-            op = sr[self.CandleLabel.OP.value]
-            hi = sr[self.CandleLabel.HI.value]
-            lo = sr[self.CandleLabel.LO.value]
-            cl = sr[self.CandleLabel.CL.value]
-            x_axis_label.append(idx)
-            cnd = QtCharts.QCandlestickSet(op, hi, lo, cl)
-            self._ser_cdl.append(cnd)
-
-        chart = self.chart()
-        chart.axisX().setCategories(x_axis_label)
-        chart.axisY().setRange(self._min_y, self._max_y)
-        # gran_info = GranInfo.get_member_by_msgid(gran_id)
-
-        self._digit = digit
-        # self._freq = gran_info.freq
-
-    def get_candle_labels_list(self):
-        return self.CandleLabel.to_list()
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-
-        chart = self.chart()
-        flag = chart.plotArea().contains(event.pos())
-        if flag:
-            m2v = chart.mapToValue(event.pos())
-            xpos = utl.roundi(m2v.x())
-            ypos = utl.roundf(m2v.y(), digit=self._digit)
-            new_pos = QPointF(xpos, ypos)
-            m2p = chart.mapToPosition(new_pos)
-
-            x_label_list = chart.axisX().categories()
-            dtstr = x_label_list[xpos]
-            self._callout_dt.updateGeometry(dtstr, m2p)
-            self._callout_dt.show()
-
-            fmt = "{:." + str(self._digit) + "f}"
-            prstr = fmt.format(new_pos.y())
-            self._callout_pr.updateGeometry(prstr, m2p)
-            self._callout_pr.show()
-
-            plotAreaRect = chart.plotArea()
-            self._callout_vl.setLine(QLineF(m2p.x(),
-                                            plotAreaRect.top(),
-                                            m2p.x(),
-                                            plotAreaRect.bottom()))
-            self._callout_vl.show()
-
-            self._callout_hl.setLine(QLineF(plotAreaRect.left(),
-                                            m2p.y(),
-                                            plotAreaRect.right(),
-                                            m2p.y()))
-            self._callout_hl.show()
         else:
             self._callout_dt.hide()
             self._callout_pr.hide()

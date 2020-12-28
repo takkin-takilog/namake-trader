@@ -8,7 +8,7 @@ from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QFile
 from PySide2.QtCharts import QtCharts
 from trade_monitor import ros_common as ros_com
-from trade_monitor.widget_base import BaseCandlestickChartView
+from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
 from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
@@ -77,7 +77,7 @@ class BaseUi(QMainWindow):
         return pd.concat([df_mean, df_std, df_csum]).sort_index()
 
 
-class CandlestickChartView(BaseCandlestickChartView):
+class CandlestickChartView(CandlestickChartViewDateTimeAxis):
 
     def __init__(self, parent=None):
         super().__init__(parent)
