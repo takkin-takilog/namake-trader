@@ -26,6 +26,8 @@ class BaseCandlestickChartViewGapFill(CandlestickChartViewDateTimeAxis):
         self._hl_curr_opn.setPen(pen)
         self.scene().addItem(self._hl_curr_opn)
 
+        self.set_callout_dt_format("hh:mm")
+
         self._gap_close_price = 0
         self._gap_open_price = 0
         self._is_update = False

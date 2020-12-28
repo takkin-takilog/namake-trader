@@ -82,8 +82,6 @@ class CandlestickChartView(CandlestickChartViewDateTimeAxis):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._CALLOUT_DT_FMT = "hh:mm"
-
         color = QColor(Qt.blue)
 
         # ---------- Add CurrentOpenPriceLine on scene ----------
@@ -102,6 +100,10 @@ class CandlestickChartView(CandlestickChartViewDateTimeAxis):
         self._callout_ttm_dt.setZValue(0)
         self.scene().addItem(self._callout_ttm_dt)
 
+        self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
+
+        self.set_callout_dt_format("hh:mm")
+
         self._is_update = False
 
     def update(self, df, gran_id, digit):
@@ -118,7 +120,6 @@ class CandlestickChartView(CandlestickChartViewDateTimeAxis):
         min_x = QDateTime(qd, qt)
 
         dtstr = dt_.strftime("%Y/%m/%d")
-
         chart = self.chart()
         chart.axisX().setTitleText(dtstr)
         chart.axisX().setRange(min_x, max_x)
@@ -172,8 +173,6 @@ class BaseLineChartViewTtm(BaseLineChartView):
     def __init__(self, widget=None):
         super().__init__(widget)
 
-        self._CALLOUT_DT_FMT = "hh:mm"
-
         color = QColor(Qt.blue)
 
         # ---------- Add CurrentOpenPriceLine on scene ----------
@@ -201,6 +200,8 @@ class BaseLineChartViewTtm(BaseLineChartView):
         self._hl_zero.setPen(pen)
         self._hl_zero.setZValue(1)
         self.scene().addItem(self._hl_zero)
+
+        self.set_callout_dt_format("hh:mm")
 
         self._QDT_BASE = QDate(2010, 1, 1)
         self._QDTTM_TTM = QDateTime(self._QDT_BASE, QTime(9, 55))

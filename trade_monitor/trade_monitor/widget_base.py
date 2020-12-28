@@ -497,10 +497,9 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         """ override """
 
         # ---------- Set Animation on chart ----------
-        chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
+        # chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
         # ---------- Set Legend on chart ----------
-        # chart.legend().hide()
         chart.legend().setVisible(False)
 
         self.setChart(chart)
@@ -535,6 +534,8 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
+        # self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
+
         self._series = series
         self._digit = 0
         self._max_y = None
@@ -557,21 +558,11 @@ class BaseCandlestickChartView(QtCharts.QChartView):
     def get_candle_labels_list(self):
         return self.CandleLabel.to_list()
 
-    """
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-    """
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-
 
 class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        # self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
 
         chart = self.chart()
 
@@ -658,8 +649,6 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
-
         chart = self.chart()
 
         # ---------- Set X Axis on chart ----------
@@ -673,6 +662,7 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
         today = QDateTime(now.date())
         yesterday = today.addDays(-1)
         axis_x.setRange(yesterday, today)
+
         chart.addAxis(axis_x, Qt.AlignBottom)
         self._series.attachAxis(axis_x)
 
@@ -681,9 +671,11 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
         chart.addAxis(axis_y, Qt.AlignLeft)
         self._series.attachAxis(axis_y)
 
-        # self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
-
+        self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
         self._freq = "D"
+
+    def set_callout_dt_format(self, fmt: str):
+        self._callout_dt_fmt = fmt
 
     def update(self, df, gran_id, digit):
         super().update()
@@ -724,7 +716,7 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
             new_pos = QPointF(xpos, ypos)
             m2p = chart.mapToPosition(new_pos)
 
-            dtstr = qdttm.toString(self._CALLOUT_DT_FMT)
+            dtstr = qdttm.toString(self._callout_dt_fmt)
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
@@ -758,8 +750,6 @@ class BaseLineChartView(QtCharts.QChartView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._CALLOUT_DT_FMT = "yyyy/MM/dd hh:mm"
-
         if parent is not None:
             lay = QGridLayout(parent)
             lay.setMargin(0)
@@ -770,6 +760,9 @@ class BaseLineChartView(QtCharts.QChartView):
         chart.setBackgroundBrush(Qt.red)
         chart.layout().setContentsMargins(0, 0, 0, 0)
         chart.setBackgroundRoundness(0)
+
+        # ---------- Add Series on chart ----------
+        """ override """
 
         """
         # ---------- Set font on chart ----------
@@ -793,15 +786,10 @@ class BaseLineChartView(QtCharts.QChartView):
         axis_x.setLabelsAngle(0)
 
         now = QDateTime.currentDateTime()
-        yesterday = QDateTime(QDate(now.date().year(),
-                                    now.date().month(),
-                                    now.date().day() - 1),
-                              QTime(0, 0))
-        today = QDateTime(QDate(now.date().year(),
-                                now.date().month(),
-                                now.date().day()),
-                          QTime(0, 0))
+        today = QDateTime(now.date())
+        yesterday = today.addDays(-1)
         axis_x.setRange(yesterday, today)
+
         chart.addAxis(axis_x, Qt.AlignBottom)
 
         # ---------- Set Y Axis on chart ----------
@@ -812,7 +800,6 @@ class BaseLineChartView(QtCharts.QChartView):
         # chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
         # ---------- Set Legend on chart ----------
-        chart.legend().hide()
         chart.legend().setVisible(False)
 
         self.setChart(chart)
@@ -847,8 +834,14 @@ class BaseLineChartView(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
+        self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
         self._digit = 0
         self._freq = "D"
+        self._max_y = None
+        self._min_y = None
+
+    def set_callout_dt_format(self, fmt: str):
+        self._callout_dt_fmt = fmt
 
     def set_max_y(self, max_y):
         self._max_y = max_y
@@ -858,15 +851,16 @@ class BaseLineChartView(QtCharts.QChartView):
 
     def update(self, gran_id, digit):
 
-        chart = self.chart()
-        chart.axisY().setRange(self._min_y, self._max_y)
+        if self._max_y is not None:
+            self.chart().axisY().setMax(self._max_y)
+
+        if self._min_y is not None:
+            self.chart().axisY().setMin(self._min_y)
+
         gran_info = GranInfo.get_member_by_msgid(gran_id)
 
         self._digit = digit
         self._freq = gran_info.freq
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -875,22 +869,24 @@ class BaseLineChartView(QtCharts.QChartView):
         flag = chart.plotArea().contains(event.pos())
         if flag:
             m2v = chart.mapToValue(event.pos())
-            pdt = QDateTime.fromMSecsSinceEpoch(round(m2v.x())).toPython()
+            xpos = utl.roundi(m2v.x())
+            pdt = QDateTime.fromMSecsSinceEpoch(xpos).toPython()
             pdt = pd.to_datetime(pdt).round(self._freq)
-
             qd = QDate(pdt.year, pdt.month, pdt.day)
             qt = QTime(pdt.hour, pdt.minute, pdt.second)
             qdttm = QDateTime(qd, qt)
+            xpos = qdttm.toMSecsSinceEpoch()
+            ypos = utl.roundf(m2v.y(), digit=self._digit)
+            new_pos = QPointF(xpos, ypos)
+            m2p = chart.mapToPosition(new_pos)
 
-            m2v.setX(qdttm.toMSecsSinceEpoch())
-            m2p = chart.mapToPosition(m2v)
-            dtstr = qdttm.toString(self._CALLOUT_DT_FMT)
+            dtstr = qdttm.toString(self._callout_dt_fmt)
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
             fmt = "{:." + str(self._digit) + "f}"
-            prstr = fmt.format(m2v.y())
-            self._callout_pr.updateGeometry(prstr, event.pos())
+            prstr = fmt.format(new_pos.y())
+            self._callout_pr.updateGeometry(prstr, m2p)
             self._callout_pr.show()
 
             plotAreaRect = chart.plotArea()
@@ -901,9 +897,9 @@ class BaseLineChartView(QtCharts.QChartView):
             self._callout_vl.show()
 
             self._callout_hl.setLine(QLineF(plotAreaRect.left(),
-                                            event.pos().y(),
+                                            m2p.y(),
                                             plotAreaRect.right(),
-                                            event.pos().y()))
+                                            m2p.y()))
             self._callout_hl.show()
 
         else:
