@@ -1,11 +1,13 @@
 import os
 from enum import Enum, IntEnum
 import pandas as pd
-from PySide2.QtWidgets import QMainWindow, QSizePolicy
+from PySide2.QtCore import QPointF, QLineF, QFile, Qt
+from PySide2.QtGui import QColor
+from PySide2.QtWidgets import QMainWindow
+from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtCore import QFile, Qt
 from trade_monitor.widget_base import PandasTreeView
-from trade_monitor.widget_base import BaseCandlestickChartView2
+from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
 from PySide2.QtCharts import QtCharts
 
 
@@ -20,15 +22,32 @@ class ColumnName(Enum):
         return [m.value for m in cls]
 
 
-class ChartView(BaseCandlestickChartView2):
+class ChartView(CandlestickChartViewBarCategoryAxis):
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        axis_x = self.chart().axes(Qt.Horizontal)[0]
+        axis_x.setTitleVisible(False)
+
+        # ---------- Set Candlestick color ----------
+        self._series.setDecreasingColor(Qt.blue)
+        self._series.setIncreasingColor(Qt.red)
+
+        # ---------- Add Horizon Zero Line on scene ----------
+        self._hl_zero = QGraphicsLineItem()
+        pen = self._hl_zero.pen()
+        pen.setColor(QColor(Qt.black))
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._hl_zero.setPen(pen)
+        self._hl_zero.setZValue(1)
+        self.scene().addItem(self._hl_zero)
+
     def update(self, df, digit):
 
         x_axis_label = []
-        self._ser_cdl.clear()
+        self._series.clear()
         for idx, sr in df.iterrows():
             op = 0.0
             hi = sr[ColumnName.PRICE_HIOP.value]
@@ -36,17 +55,42 @@ class ChartView(BaseCandlestickChartView2):
             cl = sr[ColumnName.PRICE_CLOP.value]
             x_axis_label.append(idx)
             cnd = QtCharts.QCandlestickSet(op, hi, lo, cl)
-            self._ser_cdl.append(cnd)
+            self._series.append(cnd)
 
         chart = self.chart()
-        chart.axisX(self._ser_cdl).setCategories(x_axis_label)
+        chart.axisX(self._series).setCategories(x_axis_label)
         chart.axisY().setRange(self._min_y, self._max_y)
         # gran_info = GranInfo.get_member_by_msgid(gran_id)
 
         self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
 
         self._digit = digit
+        self._is_update = True
         # self._freq = gran_info.freq
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        if self._is_update:
+            self._update_callout()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        self._hl_zero.show()
+
+    def _update_callout(self):
+
+        chart = self.chart()
+
+        # drow Horizontal Zreo Line
+        zero_point = QPointF(0, 0)
+        m2p = chart.mapToPosition(zero_point)
+        plotAreaRect = chart.plotArea()
+        self._hl_zero.setLine(QLineF(plotAreaRect.left(),
+                                     m2p.y(),
+                                     plotAreaRect.right(),
+                                     m2p.y()))
+        self._hl_zero.show()
 
 
 class HistogramUi(QMainWindow):
@@ -87,10 +131,13 @@ class HistogramUi(QMainWindow):
         self._pdtreeview.set_dataframe(df)
 
         # set ChartView
-        max_y = df[ColumnName.PRICE_HIOP.value].max()
-        min_y = df[ColumnName.PRICE_LOOP.value].min()
+        max_val = df[ColumnName.PRICE_HIOP.value].max()
+        min_val = df[ColumnName.PRICE_LOOP.value].min()
 
-        dif = (max_y - min_y) * 0.05
+        max_y = max(abs(max_val), abs(min_val))
+        min_y = -max_y
+
+        dif = max_y * 0.05
         self._chartview.set_max_y(max_y + dif)
         self._chartview.set_min_y(min_y - dif)
 
