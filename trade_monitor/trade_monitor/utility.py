@@ -1,4 +1,6 @@
+import datetime as dt
 from PySide2.QtCore import Qt, QRectF
+from PySide2.QtCore import QDateTime, QDate, QTime
 from PySide2.QtGui import QImage, QPixmap, QBrush, QIcon, QPainter
 from PySide2.QtGui import QLinearGradient, QColor
 
@@ -23,18 +25,6 @@ def limit(val, min_val, max_val):
     return ret_val
 
 
-"""
-def roundi(a: float) -> int:
-
-    if 0 < a:
-        ans = int(a + 0.5)
-    else:
-        ans = int(a - 0.5)
-
-    return ans
-"""
-
-
 def roundi(val: float) -> int:
     return int((val * 2 + 1) // 2)
 
@@ -42,6 +32,13 @@ def roundi(val: float) -> int:
 def roundf(val: float, digit: int=0) -> float:
     p = 10 ** digit
     return (val * p * 2 + 1) // 2 / p
+
+
+def convert_to_qdatetime(dt_: dt.datetime):
+
+    qd = QDate(dt_.year, dt_.month, dt_.day)
+    qt = QTime(dt_.hour, dt_.minute, dt_.second)
+    return QDateTime(qd, qt)
 
 
 class GradientManager():

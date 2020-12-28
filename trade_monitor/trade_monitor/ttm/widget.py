@@ -13,6 +13,7 @@ from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
 from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
 from trade_monitor.ttm.constant import ColumnName, GapType, DataType
+from trade_monitor import utility as utl
 
 
 class BaseUi(QMainWindow):
@@ -109,15 +110,10 @@ class CandlestickChartView(CandlestickChartViewDateTimeAxis):
     def update(self, df, gran_id, digit):
         super().update(df, gran_id, digit)
 
-        dt_ = df.index[-1]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute)
-        max_x = QDateTime(qd, qt)
+        max_x = utl.convert_to_qdatetime(df.index[-1])
 
         dt_ = df.index[0]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute)
-        min_x = QDateTime(qd, qt)
+        min_x = utl.convert_to_qdatetime(dt_)
 
         dtstr = dt_.strftime("%Y/%m/%d")
         chart = self.chart()

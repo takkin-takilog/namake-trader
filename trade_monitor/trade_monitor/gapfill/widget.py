@@ -1,6 +1,7 @@
-from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
+from PySide2.QtCore import Qt, QDateTime, QTime, QPointF, QLineF
 from PySide2.QtWidgets import QGraphicsLineItem
 from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
+from trade_monitor import utility as utl
 
 
 class BaseCandlestickChartViewGapFill(CandlestickChartViewDateTimeAxis):
@@ -103,15 +104,12 @@ class CandlestickChartViewPrev(BaseCandlestickChartViewGapFill):
                digit):
         super().update(df, gran_id, gap_close_price, gap_open_price, digit)
 
-        dt_ = df.index[-1]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute).addSecs(60 * 10)
-        max_x = QDateTime(qd, qt)
+        qdttm_x = utl.convert_to_qdatetime(df.index[-1])
+        max_x = qdttm_x.addSecs(60 * 10)
 
         dt_ = df.index[0]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute)
-        min_x = QDateTime(qd, qt)
+        min_x = utl.convert_to_qdatetime(dt_)
+
         dtstr = dt_.strftime("%Y/%m/%d (Fri)")
 
         self.chart().axisX().setTitleText(dtstr)
@@ -143,15 +141,10 @@ class CandlestickChartViewCurr(BaseCandlestickChartViewGapFill):
                end_time):
         super().update(df, gran_id, gap_close_price, gap_open_price, digit)
 
-        dt_ = df.index[-1]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute)
-        max_x = QDateTime(qd, qt)
-
+        max_x = utl.convert_to_qdatetime(df.index[-1])
         dt_ = df.index[0]
-        qd = QDate(dt_.year, dt_.month, dt_.day)
-        qt = QTime(dt_.hour, dt_.minute).addSecs(-60 * 10)
-        min_x = QDateTime(qd, qt)
+        qdttm = utl.convert_to_qdatetime(dt_)
+        min_x = qdttm.addSecs(-60 * 10)
         dtstr = dt_.strftime("%Y/%m/%d (Mon)")
 
         self.chart().axisX().setTitleText(dtstr)
