@@ -1,6 +1,8 @@
 import os
+import math
 from enum import Enum, IntEnum
 import pandas as pd
+import numpy as np
 from PySide2.QtCore import QPointF, QLineF, QFile, Qt
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QMainWindow
@@ -177,22 +179,17 @@ class HistogramUi(QMainWindow):
     def set_data(self, df: pd.DataFrame, digit):
         print("========== df ==========")
         print(df)
+        df_i = (df * math.pow(10, digit)).astype(int)
+        print(df_i)
 
         print("========== df.hist ==========")
-        df_hist = df.apply(pd.value_counts)
+        df_hist = df_i.apply(pd.value_counts)
         counts_max = df_hist.max().max()
         print(df_hist)
-        print(counts_max)
+
         sr_hi = df_hist[ColumnName.PRICE_HIOP.value].fillna(0)
         sr_cl = df_hist[ColumnName.PRICE_CLOP.value].fillna(0)
         sr_lo = df_hist[ColumnName.PRICE_LOOP.value].fillna(0)
-        print(sr_lo)
-
-        print("========== df_csum ==========")
-        """
-        df_csum = df.cumsum()
-        print(df_csum)
-        """
 
         # set TreeView
         self._pdtreeview.set_dataframe(df)
