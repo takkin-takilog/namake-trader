@@ -496,9 +496,6 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         # ---------- Set Y Axis on chart ----------
         """ override """
 
-        # ---------- Set Animation on chart ----------
-        # chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
-
         # ---------- Set Legend on chart ----------
         chart.legend().setVisible(False)
 
@@ -900,3 +897,66 @@ class BaseLineChartView(QtCharts.QChartView):
             self._callout_pr.hide()
             self._callout_vl.hide()
             self._callout_hl.hide()
+
+
+class BaseHistogramView(QtCharts.QChartView):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        if parent is not None:
+            lay = QGridLayout(parent)
+            lay.setMargin(0)
+            lay.addWidget(self, 0, 0, 1, 1)
+
+        # ---------- Create Chart ----------
+        chart = QtCharts.QChart()
+        chart.layout().setContentsMargins(0, 0, 0, 0)
+        chart.setBackgroundRoundness(0)
+
+        # ---------- Add Series on chart ----------
+        """ override """
+
+        """
+        # ---------- Set font on chart ----------
+        font = QFont("Sans Serif", )
+        font.setPixelSize(18)
+        chart.setTitleFont(font)
+        """
+
+        # ---------- Set PlotAreaBackground on chart ----------
+        plotAreaGradient = QLinearGradient(0, 100, 0, 400)
+        plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
+        plotAreaGradient.setColorAt(1.0, QColor("#ffffff"))
+        chart.setPlotAreaBackgroundBrush(plotAreaGradient)
+        chart.setPlotAreaBackgroundVisible(True)
+
+        # ---------- Set X Axis on chart ----------
+        """ override """
+
+        # ---------- Set Y Axis on chart ----------
+        """ override """
+
+        # ---------- Set Legend on chart ----------
+        chart.legend().setVisible(False)
+
+        self.setChart(chart)
+
+        # self._series = series
+        self._digit = 0
+        self._max_x = None
+        self._min_x = None
+
+    def set_max_x(self, max_x):
+        self._max_x = max_x
+
+    def set_min_x(self, min_x):
+        self._min_x = min_x
+
+    def update(self):
+
+        if self._max_x is not None:
+            self.chart().axisX().setMax(self._max_x)
+
+        if self._min_x is not None:
+            self.chart().axisX().setMin(self._min_x)

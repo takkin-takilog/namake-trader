@@ -47,21 +47,21 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QWidget" name="widget_Hist_ho" native="true">
+         <widget class="QWidget" name="widget_HistView_hi" native="true">
           <property name="styleSheet">
            <string notr="true">background-color: rgb(255, 255, 255);</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QWidget" name="widget_Hist_co" native="true">
+         <widget class="QWidget" name="widget_HistView_cl" native="true">
           <property name="styleSheet">
            <string notr="true">background-color: rgb(255, 255, 255);</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QWidget" name="widget_Hist_lo" native="true">
+         <widget class="QWidget" name="widget_HistView_lo" native="true">
           <property name="styleSheet">
            <string notr="true">background-color: rgb(255, 255, 255);</string>
           </property>

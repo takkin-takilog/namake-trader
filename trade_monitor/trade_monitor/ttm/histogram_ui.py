@@ -6,9 +6,10 @@ from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QMainWindow
 from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtUiTools import QUiLoader
+from PySide2.QtCharts import QtCharts
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
-from PySide2.QtCharts import QtCharts
+from trade_monitor.widget_base import BaseHistogramView
 
 
 class ColumnName(Enum):
@@ -20,6 +21,54 @@ class ColumnName(Enum):
     @classmethod
     def to_list(cls):
         return [m.value for m in cls]
+
+
+class HistogramView(BaseHistogramView):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        chart = self.chart()
+
+        # ---------- Add Series on chart ----------
+        series = QtCharts.QHorizontalBarSeries()
+        chart.addSeries(series)
+
+        # ---------- Set X Axis on chart ----------
+        axis_x = QtCharts.QValueAxis()
+        axis_x.setTitleText("Price")
+        chart.addAxis(axis_x, Qt.AlignBottom)
+        series.attachAxis(axis_x)
+
+        # ---------- Set Y Axis on chart ----------
+        axis_y = QtCharts.QBarCategoryAxis()
+        # axis_y.setFormat("h:mm")
+        axis_y.setLabelsAngle(0)
+        axis_y.setLabelsVisible(True)
+        axis_y.setMinorGridLineVisible(True)
+        axis_y.setLineVisible(False)
+        axis_y.setGridLineVisible(False)
+        chart.addAxis(axis_y, Qt.AlignLeft)
+        series.attachAxis(axis_y)
+
+        self._series = series
+        self._color = Qt.red
+
+    def set_bar_color(self, color: QColor):
+        self._color = color
+
+    def update(self, sr_hist: pd.Series):
+        super().update()
+
+        self._series.clear()
+
+        barset = QtCharts.QBarSet("Red")
+        barset.setColor(self._color)
+        barset.append(sr_hist.fillna(0).to_list())
+        self._series.append(barset)
+
+        self.chart().axisX().setRange(self._min_x, self._max_x)
+        self.chart().axisY().setCategories(str(sr_hist.index.to_list()))
 
 
 class ChartView(CandlestickChartViewBarCategoryAxis):
@@ -58,7 +107,7 @@ class ChartView(CandlestickChartViewBarCategoryAxis):
             self._series.append(cnd)
 
         chart = self.chart()
-        chart.axisX(self._series).setCategories(x_axis_label)
+        chart.axisX().setCategories(x_axis_label)
         chart.axisY().setRange(self._min_y, self._max_y)
         # gran_info = GranInfo.get_member_by_msgid(gran_id)
 
@@ -109,17 +158,35 @@ class HistogramUi(QMainWindow):
         callback = self._on_view_header_sectionClicked
         header.sectionClicked.connect(callback)
 
+        # set HistogramView
+        histview_hi = HistogramView(ui.widget_HistView_hi)
+        histview_cl = HistogramView(ui.widget_HistView_cl)
+        histview_lo = HistogramView(ui.widget_HistView_lo)
+
         # set ChartView
         chartview = ChartView(ui.widget_ChartView)
 
         # self._logger = ros_com.get_logger()
         self._ui = ui
         self._pdtreeview = pdtreeview
+        self._histview_hi = histview_hi
+        self._histview_cl = histview_cl
+        self._histview_lo = histview_lo
         self._chartview = chartview
 
     def set_data(self, df: pd.DataFrame, digit):
         print("========== df ==========")
         print(df)
+
+        print("========== df.hist ==========")
+        df_hist = df.apply(pd.value_counts)
+        counts_max = df_hist.max().max()
+        print(df_hist)
+        print(counts_max)
+        sr_hi = df_hist[ColumnName.PRICE_HIOP.value].fillna(0)
+        sr_cl = df_hist[ColumnName.PRICE_CLOP.value].fillna(0)
+        sr_lo = df_hist[ColumnName.PRICE_LOOP.value].fillna(0)
+        print(sr_lo)
 
         print("========== df_csum ==========")
         """
@@ -141,6 +208,19 @@ class HistogramUi(QMainWindow):
         self._chartview.set_max_y(max_y + dif)
         self._chartview.set_min_y(min_y - dif)
 
+        self._histview_hi.set_bar_color(Qt.magenta)
+        self._histview_hi.set_max_x(counts_max)
+        self._histview_hi.set_min_x(0)
+        self._histview_cl.set_bar_color(Qt.green)
+        self._histview_cl.set_max_x(counts_max)
+        self._histview_cl.set_min_x(0)
+        self._histview_lo.set_bar_color(Qt.cyan)
+        self._histview_lo.set_max_x(counts_max)
+        self._histview_lo.set_min_x(0)
+
+        self._histview_hi.update(sr_hi)
+        self._histview_cl.update(sr_cl)
+        self._histview_lo.update(sr_lo)
         self._chartview.update(df, digit)
 
     def _on_view_header_sectionClicked(self, logical_index):
