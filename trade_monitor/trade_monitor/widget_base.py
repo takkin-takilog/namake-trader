@@ -953,6 +953,12 @@ class BaseHistogramView(QtCharts.QChartView):
     def set_min_x(self, min_x):
         self._min_x = min_x
 
+    def set_max_y(self, max_y):
+        self._max_y = max_y
+
+    def set_min_y(self, min_y):
+        self._min_y = min_y
+
     def update(self):
 
         if self._max_x is not None:
@@ -960,3 +966,9 @@ class BaseHistogramView(QtCharts.QChartView):
 
         if self._min_x is not None:
             self.chart().axisX().setMin(self._min_x)
+
+        if self._max_y is not None:
+            self.chart().axisY().setMax(self._max_y)
+
+        if self._min_y is not None:
+            self.chart().axisY().setMin(self._min_y)
