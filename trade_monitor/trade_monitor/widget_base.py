@@ -794,9 +794,6 @@ class BaseLineChartView(QtCharts.QChartView):
         axis_y = QtCharts.QValueAxis()
         chart.addAxis(axis_y, Qt.AlignLeft)
 
-        # ---------- Set Animation on chart ----------
-        # chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
-
         # ---------- Set Legend on chart ----------
         chart.legend().setVisible(False)
 

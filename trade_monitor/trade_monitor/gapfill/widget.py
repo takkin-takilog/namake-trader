@@ -1,5 +1,6 @@
 from PySide2.QtCore import Qt, QDateTime, QTime, QPointF, QLineF
 from PySide2.QtWidgets import QGraphicsLineItem
+from PySide2.QtCharts import QtCharts
 from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor import utility as utl
 
@@ -26,6 +27,8 @@ class BaseCandlestickChartViewGapFill(CandlestickChartViewDateTimeAxis):
         pen.setStyle(Qt.DashLine)
         self._hl_curr_opn.setPen(pen)
         self.scene().addItem(self._hl_curr_opn)
+
+        self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
         self.set_callout_dt_format("hh:mm")
 
