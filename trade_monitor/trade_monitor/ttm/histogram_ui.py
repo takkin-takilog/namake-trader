@@ -1,8 +1,6 @@
 import os
-import math
-from enum import Enum, IntEnum
+from enum import Enum
 import pandas as pd
-import numpy as np
 from PySide2.QtCore import QPointF, QLineF, QFile, Qt
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QMainWindow
@@ -12,57 +10,79 @@ from PySide2.QtCharts import QtCharts
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
 from trade_monitor.widget_base import BaseHistogramView
+from trade_monitor.widget_base import CallouPrice
 from trade_monitor.constant import InstParam
+from trade_monitor import utility as utl
 
 
 class ColumnName(Enum):
     DATE = "date"
-    PRICE_HIOP = "price hi-op"
-    PRICE_LOOP = "price lo-op"
-    PRICE_CLOP = "price cl-op"
+    PRICE_HIOP = "high-open price"
+    PRICE_LOOP = "low-open price"
+    PRICE_CLOP = "close-open price"
 
     @classmethod
     def to_list(cls):
         return [m.value for m in cls]
 
 
-class HistogramView(BaseHistogramView):
+class BaseHistogramViewTtm(BaseHistogramView):
+
+    _CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
         chart = self.chart()
 
-        # ---------- Add Series on chart ----------
-        # series = QtCharts.QHorizontalBarSeries()
-        # chart.addSeries(series)
-
         # ---------- Set X Axis on chart ----------
         axis_x = QtCharts.QValueAxis()
-        axis_x.setTitleText("Price")
+        axis_x.setTitleText("Count")
+        axis_x.setLabelFormat("%d")
         chart.addAxis(axis_x, Qt.AlignBottom)
-        # series.attachAxis(axis_x)
 
         # ---------- Set Y Axis on chart ----------
         axis_y = QtCharts.QValueAxis()
-        # axis_y.setFormat("h:mm")
-        """
-        axis_y.setLabelsAngle(0)
-        axis_y.setLabelsVisible(True)
-        axis_y.setMinorGridLineVisible(True)
-        axis_y.setLineVisible(False)
-        axis_y.setGridLineVisible(False)
-        """
+        axis_y.setTitleText("Price")
         chart.addAxis(axis_y, Qt.AlignLeft)
-        # series.attachAxis(axis_y)
 
-        # self._series = series
+        # ---------- Add Horizon Zero Line on scene ----------
+        self._hl_zero = QGraphicsLineItem()
+        pen = self._hl_zero.pen()
+        pen.setColor(QColor(Qt.black))
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._hl_zero.setPen(pen)
+        self._hl_zero.setZValue(1)
+        self.scene().addItem(self._hl_zero)
+
+        # ---------- Add CallouPrice on scene ----------
+        self._callout_pr = CallouPrice(chart)
+        self._callout_pr.setBackgroundColor(self._CALLOUT_PRICE_COLOR)
+        self._callout_pr.setZValue(100)
+        self.scene().addItem(self._callout_pr)
+
+        # ---------- Add CallouHorizontalLine on scene ----------
+        self._callout_hl = QGraphicsLineItem()
+        pen = self._callout_hl.pen()
+        pen.setColor(self._CALLOUT_PRICE_COLOR)
+        pen.setWidth(1)
+        self._callout_hl.setPen(pen)
+        self._callout_hl.setZValue(100)
+        self.scene().addItem(self._callout_hl)
+
         self._axis_x = axis_x
         self._axis_y = axis_y
-        self._color = Qt.red
+        self._bar_color = Qt.white
+        self._pen_color = Qt.black
+        self._is_update = False
+        self._inst_param = InstParam.USDJPY
+
+    def set_pen_color(self, color: QColor):
+        self._pen_color = color
 
     def set_bar_color(self, color: QColor):
-        self._color = color
+        self._bar_color = color
 
     def update(self, sr_hist: pd.Series, inst_param: InstParam):
         super().update()
@@ -84,15 +104,96 @@ class HistogramView(BaseHistogramView):
             series_l.append(QPointF(sr_hist[idx], idx - ofs))
             series = QtCharts.QAreaSeries(series_u, series_l)
             pen = series.pen()
-            # pen.setWidth(0)
-            pen.setStyle(Qt.NoPen)
+            pen.setWidth(1)
+            # pen.setStyle(Qt.NoPen)
+            pen.setColor(self._pen_color)
             series.setPen(pen)
             chart.addSeries(series)
             self._LineSeriesList.append(series_u)
             self._LineSeriesList.append(series_l)
-            series.setColor(self._color)
+            series.setColor(self._bar_color)
             series.attachAxis(self._axis_x)
             series.attachAxis(self._axis_y)
+
+        self._is_update = True
+        self._inst_param = inst_param
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        if self._is_update:
+            self._update_callout()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+        chart = self.chart()
+        flag = chart.plotArea().contains(event.pos())
+        if flag:
+            m2v = chart.mapToValue(event.pos())
+            xpos = utl.roundi(m2v.x())
+            ypos = utl.roundf(m2v.y(), digit=self._inst_param.digit)
+            new_pos = QPointF(xpos, ypos)
+            m2p = chart.mapToPosition(new_pos)
+
+            fmt = "{:." + str(self._inst_param.digit) + "f}"
+            prstr = fmt.format(new_pos.y())
+            self._callout_pr.updateGeometry(prstr, m2p)
+            self._callout_pr.show()
+
+            plotAreaRect = chart.plotArea()
+            self._callout_hl.setLine(QLineF(plotAreaRect.left(),
+                                            m2p.y(),
+                                            plotAreaRect.right(),
+                                            m2p.y()))
+            self._callout_hl.show()
+        else:
+            self._callout_pr.hide()
+            self._callout_hl.hide()
+
+    def _update_callout(self):
+
+        chart = self.chart()
+
+        # drow Horizontal Zreo Line
+        zero_point = QPointF(0, 0)
+        m2p = chart.mapToPosition(zero_point)
+        plotAreaRect = chart.plotArea()
+        self._hl_zero.setLine(QLineF(plotAreaRect.left(),
+                                     m2p.y(),
+                                     plotAreaRect.right(),
+                                     m2p.y()))
+        self._hl_zero.show()
+
+
+class HistogramViewHigh(BaseHistogramViewTtm):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.chart().setTitle("High - Open Price")
+
+        self.set_pen_color(Qt.darkMagenta)
+        self.set_bar_color(Qt.magenta)
+
+
+class HistogramViewClose(BaseHistogramViewTtm):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.chart().setTitle("Close - Open Price")
+
+        self.set_pen_color(Qt.darkGreen)
+        self.set_bar_color(Qt.green)
+
+
+class HistogramViewLow(BaseHistogramViewTtm):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.chart().setTitle("Low - Open Price")
+
+        self.set_pen_color(Qt.darkCyan)
+        self.set_bar_color(Qt.cyan)
 
 
 class ChartView(CandlestickChartViewBarCategoryAxis):
@@ -100,8 +201,13 @@ class ChartView(CandlestickChartViewBarCategoryAxis):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.chart().setTitle("Date Lines chart")
+
         axis_x = self.chart().axes(Qt.Horizontal)[0]
-        axis_x.setTitleVisible(False)
+        axis_x.setTitleText("Date")
+
+        axis_y = self.chart().axes(Qt.Vertical)[0]
+        axis_y.setTitleText("Price")
 
         # ---------- Set Candlestick color ----------
         self._series.setDecreasingColor(Qt.blue)
@@ -116,6 +222,8 @@ class ChartView(CandlestickChartViewBarCategoryAxis):
         self._hl_zero.setPen(pen)
         self._hl_zero.setZValue(1)
         self.scene().addItem(self._hl_zero)
+
+        self._is_update = False
 
     def update(self, df: pd.DataFrame, inst_param: InstParam):
 
@@ -145,9 +253,11 @@ class ChartView(CandlestickChartViewBarCategoryAxis):
         if self._is_update:
             self._update_callout()
 
+    """
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         self._hl_zero.show()
+    """
 
     def _update_callout(self):
 
@@ -172,7 +282,7 @@ class HistogramUi(QMainWindow):
         ui = self._load_ui(parent, "histogram.ui")
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
-        self.setWindowTitle("TTM Histogram")
+        # self.setWindowTitle("TTM Histogram")
 
         # set TreeView
         pdtreeview = PandasTreeView(ui.widget_TreeView)
@@ -181,9 +291,9 @@ class HistogramUi(QMainWindow):
         header.sectionClicked.connect(callback)
 
         # set HistogramView
-        histview_hi = HistogramView(ui.widget_HistView_hi)
-        histview_cl = HistogramView(ui.widget_HistView_cl)
-        histview_lo = HistogramView(ui.widget_HistView_lo)
+        histview_hi = HistogramViewHigh(ui.widget_HistView_hi)
+        histview_cl = HistogramViewClose(ui.widget_HistView_cl)
+        histview_lo = HistogramViewLow(ui.widget_HistView_lo)
 
         # set ChartView
         chartview = ChartView(ui.widget_ChartView)
@@ -202,7 +312,7 @@ class HistogramUi(QMainWindow):
 
         print("========== df.hist ==========")
         df_hist = df.apply(pd.value_counts)
-        counts_max = df_hist.max().max()
+        counts_max = df_hist.max().max() + 1
         print(df_hist)
         print("--- counts_max ---")
         print(counts_max)
@@ -230,17 +340,16 @@ class HistogramUi(QMainWindow):
         self._chartview.set_max_y(max_y + dif)
         self._chartview.set_min_y(min_y - dif)
 
-        self._histview_hi.set_bar_color(Qt.magenta)
         self._histview_hi.set_max_x(counts_max)
         self._histview_hi.set_min_x(0)
         self._histview_hi.set_max_y(index_max)
         self._histview_hi.set_min_y(-index_max)
-        self._histview_cl.set_bar_color(Qt.green)
+
         self._histview_cl.set_max_x(counts_max)
         self._histview_cl.set_min_x(0)
         self._histview_cl.set_max_y(index_max)
         self._histview_cl.set_min_y(-index_max)
-        self._histview_lo.set_bar_color(Qt.cyan)
+
         self._histview_lo.set_max_x(counts_max)
         self._histview_lo.set_min_x(0)
         self._histview_lo.set_max_y(index_max)
@@ -287,6 +396,7 @@ if __name__ == "__main__":
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication([])
     widget = HistogramUi()
+    widget.setWindowTitle("Time Axis Analysis [9:10]")
     widget.set_data(df, InstParam.USDJPY)
     widget.show()
     sys.exit(app.exec_())

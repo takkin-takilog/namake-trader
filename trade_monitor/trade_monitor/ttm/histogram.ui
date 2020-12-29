@@ -16,17 +16,10 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2">
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="0">
       <property name="sizeConstraint">
        <enum>QLayout::SetDefaultConstraint</enum>
       </property>
-      <item>
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Time:</string>
-        </property>
-       </widget>
-      </item>
       <item>
        <widget class="QWidget" name="widget_TreeView" native="true">
         <property name="sizePolicy">
