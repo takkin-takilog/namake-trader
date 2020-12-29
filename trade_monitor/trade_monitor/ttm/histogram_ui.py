@@ -2,15 +2,16 @@ import os
 from enum import Enum
 import pandas as pd
 from PySide2.QtCore import QPointF, QLineF, QFile, Qt
-from PySide2.QtGui import QColor
+from PySide2.QtGui import QColor, QPen
+from PySide2.QtGui import QLinearGradient, QGradient
 from PySide2.QtWidgets import QMainWindow
 from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCharts import QtCharts
 from trade_monitor.widget_base import PandasTreeView
-from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
-from trade_monitor.widget_base import BaseHistogramView
-from trade_monitor.widget_base import CallouPrice
+from trade_monitor.widget_base import BaseView
+from trade_monitor.widget_base import CallouPrice, CalloutDataTime
+from trade_monitor.widget_base import CALLOUT_PRICE_COLOR, CALLOUT_DATE_COLOR
 from trade_monitor.constant import InstParam
 from trade_monitor import utility as utl
 
@@ -26,7 +27,7 @@ class ColumnName(Enum):
         return [m.value for m in cls]
 
 
-class BaseHistogramViewTtm(BaseHistogramView):
+class BaseHistogramView(BaseView):
 
     _CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 
@@ -166,7 +167,7 @@ class BaseHistogramViewTtm(BaseHistogramView):
         self._hl_zero.show()
 
 
-class HistogramViewHigh(BaseHistogramViewTtm):
+class HistogramViewHigh(BaseHistogramView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -176,7 +177,7 @@ class HistogramViewHigh(BaseHistogramViewTtm):
         self.set_bar_color(Qt.magenta)
 
 
-class HistogramViewClose(BaseHistogramViewTtm):
+class HistogramViewClose(BaseHistogramView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -186,7 +187,7 @@ class HistogramViewClose(BaseHistogramViewTtm):
         self.set_bar_color(Qt.green)
 
 
-class HistogramViewLow(BaseHistogramViewTtm):
+class HistogramViewLow(BaseHistogramView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -196,22 +197,58 @@ class HistogramViewLow(BaseHistogramViewTtm):
         self.set_bar_color(Qt.cyan)
 
 
-class ChartView(CandlestickChartViewBarCategoryAxis):
+class ChartView(BaseView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.chart().setTitle("Date Lines chart")
+        # self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
 
-        axis_x = self.chart().axes(Qt.Horizontal)[0]
+        chart = self.chart()
+        chart.setTitle("Date Lines chart")
+
+        # ---------- Add Series on chart ----------
+        series_hi = QtCharts.QAreaSeries()
+        pen = QPen(Qt.darkMagenta)
+        pen.setWidth(1)
+        series_hi.setPen(pen)
+        series_hi.setBrush(Qt.magenta)
+        chart.addSeries(series_hi)
+
+        series_lo = QtCharts.QAreaSeries()
+        pen = QPen(Qt.darkCyan)
+        pen.setWidth(1)
+        series_lo.setPen(pen)
+        series_lo.setBrush(Qt.cyan)
+        chart.addSeries(series_lo)
+
+        series_cl = QtCharts.QAreaSeries()
+        pen = QPen(Qt.darkGreen)
+        pen.setWidth(1)
+        series_cl.setPen(pen)
+        series_cl.setBrush(Qt.green)
+        chart.addSeries(series_cl)
+
+        # ---------- Set X Axis on chart ----------
+        axis_x = QtCharts.QBarCategoryAxis()
         axis_x.setTitleText("Date")
+        axis_x.setLabelsAngle(0)
+        axis_x.setLabelsVisible(False)
+        axis_x.setMinorGridLineVisible(False)
+        axis_x.setLineVisible(False)
+        axis_x.setGridLineVisible(False)
+        chart.addAxis(axis_x, Qt.AlignBottom)
+        series_hi.attachAxis(axis_x)
+        series_lo.attachAxis(axis_x)
+        series_cl.attachAxis(axis_x)
 
-        axis_y = self.chart().axes(Qt.Vertical)[0]
+        # ---------- Set Y Axis on chart ----------
+        axis_y = QtCharts.QValueAxis()
         axis_y.setTitleText("Price")
-
-        # ---------- Set Candlestick color ----------
-        self._series.setDecreasingColor(Qt.blue)
-        self._series.setIncreasingColor(Qt.red)
+        chart.addAxis(axis_y, Qt.AlignLeft)
+        series_hi.attachAxis(axis_y)
+        series_lo.attachAxis(axis_y)
+        series_cl.attachAxis(axis_y)
 
         # ---------- Add Horizon Zero Line on scene ----------
         self._hl_zero = QGraphicsLineItem()
@@ -223,26 +260,64 @@ class ChartView(CandlestickChartViewBarCategoryAxis):
         self._hl_zero.setZValue(1)
         self.scene().addItem(self._hl_zero)
 
+        # ---------- Add CalloutDataTime on scene ----------
+        self._callout_dt = CalloutDataTime(chart)
+        self._callout_dt.setBackgroundColor(CALLOUT_DATE_COLOR)
+        self._callout_dt.setZValue(100)
+        self.scene().addItem(self._callout_dt)
+
+        # ---------- Add CallouPrice on scene ----------
+        self._callout_pr = CallouPrice(chart)
+        self._callout_pr.setBackgroundColor(CALLOUT_PRICE_COLOR)
+        self._callout_pr.setZValue(100)
+        self.scene().addItem(self._callout_pr)
+
+        # ---------- Add CallouVerticalLine on scene ----------
+        self._callout_vl = QGraphicsLineItem()
+        pen = self._callout_vl.pen()
+        pen.setColor(CALLOUT_DATE_COLOR)
+        pen.setWidth(1)
+        self._callout_vl.setPen(pen)
+        self._callout_vl.setZValue(100)
+        self.scene().addItem(self._callout_vl)
+
+        # ---------- Add CallouHorizontalLine on scene ----------
+        self._callout_hl = QGraphicsLineItem()
+        pen = self._callout_hl.pen()
+        pen.setColor(CALLOUT_PRICE_COLOR)
+        pen.setWidth(1)
+        self._callout_hl.setPen(pen)
+        self._callout_hl.setZValue(100)
+        self.scene().addItem(self._callout_hl)
+
+        self._series_hi = series_hi
+        self._series_lo = series_lo
+        self._series_cl = series_cl
         self._is_update = False
+        self._inst_param = InstParam.USDJPY
 
     def update(self, df: pd.DataFrame, inst_param: InstParam):
+        super().update()
 
-        x_axis_label = []
-        self._series.clear()
-        for idx, sr in df.iterrows():
-            op = 0.0
-            hi = sr[ColumnName.PRICE_HIOP.value]
-            lo = sr[ColumnName.PRICE_LOOP.value]
-            cl = sr[ColumnName.PRICE_CLOP.value]
-            x_axis_label.append(idx)
-            cnd = QtCharts.QCandlestickSet(op, hi, lo, cl)
-            self._series.append(cnd)
+        self._lineser_u_hi = QtCharts.QLineSeries()
+        self._lineser_u_lo = QtCharts.QLineSeries()
+        self._lineser_u_cl = QtCharts.QLineSeries()
+        self._lineser_l = QtCharts.QLineSeries()
 
-        chart = self.chart()
-        chart.axisX().setCategories(x_axis_label)
-        chart.axisY().setRange(self._min_y, self._max_y)
+        for i, (_, row) in enumerate(df.iterrows()):
+            self._lineser_u_hi.append(QPointF(i, row[ColumnName.PRICE_HIOP.value]))
+            self._lineser_u_lo.append(QPointF(i, row[ColumnName.PRICE_LOOP.value]))
+            self._lineser_u_cl.append(QPointF(i, row[ColumnName.PRICE_CLOP.value]))
+            self._lineser_l.append(QPointF(i, 0))
 
-        self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
+        self._series_hi.setUpperSeries(self._lineser_u_hi)
+        self._series_hi.setLowerSeries(self._lineser_l)
+        self._series_cl.setUpperSeries(self._lineser_u_cl)
+        self._series_cl.setLowerSeries(self._lineser_l)
+        self._series_lo.setUpperSeries(self._lineser_u_lo)
+        self._series_lo.setLowerSeries(self._lineser_l)
+
+        self.chart().axisX().setCategories(df.index)
 
         self._inst_param = inst_param
         self._is_update = True
@@ -253,11 +328,45 @@ class ChartView(CandlestickChartViewBarCategoryAxis):
         if self._is_update:
             self._update_callout()
 
-    """
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
-        self._hl_zero.show()
-    """
+
+        chart = self.chart()
+        flag = chart.plotArea().contains(event.pos())
+        if flag:
+            m2v = chart.mapToValue(event.pos())
+            xpos = utl.roundi(m2v.x())
+            ypos = utl.roundf(m2v.y(), digit=self._inst_param.digit)
+            new_pos = QPointF(xpos, ypos)
+            m2p = chart.mapToPosition(new_pos)
+
+            x_label_list = chart.axisX().categories()
+            dtstr = x_label_list[xpos]
+            self._callout_dt.updateGeometry(dtstr, m2p)
+            self._callout_dt.show()
+
+            fmt = "{:." + str(self._inst_param.digit) + "f}"
+            prstr = fmt.format(new_pos.y())
+            self._callout_pr.updateGeometry(prstr, m2p)
+            self._callout_pr.show()
+
+            plotAreaRect = chart.plotArea()
+            self._callout_vl.setLine(QLineF(m2p.x(),
+                                            plotAreaRect.top(),
+                                            m2p.x(),
+                                            plotAreaRect.bottom()))
+            self._callout_vl.show()
+
+            self._callout_hl.setLine(QLineF(plotAreaRect.left(),
+                                            m2p.y(),
+                                            plotAreaRect.right(),
+                                            m2p.y()))
+            self._callout_hl.show()
+        else:
+            self._callout_dt.hide()
+            self._callout_pr.hide()
+            self._callout_vl.hide()
+            self._callout_hl.hide()
 
     def _update_callout(self):
 

@@ -900,7 +900,7 @@ class BaseLineChartView(QtCharts.QChartView):
             self._callout_hl.hide()
 
 
-class BaseHistogramView(QtCharts.QChartView):
+class BaseView(QtCharts.QChartView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -946,6 +946,8 @@ class BaseHistogramView(QtCharts.QChartView):
         # self._series = series
         self._max_x = None
         self._min_x = None
+        self._max_y = None
+        self._min_y = None
 
     def set_max_x(self, max_x):
         self._max_x = max_x
