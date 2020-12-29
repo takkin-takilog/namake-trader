@@ -1,9 +1,9 @@
 from enum import Enum
-from trade_monitor.constant import InstInfo
+from trade_monitor.constant import InstParam
 
-VALID_INST_LIST = [InstInfo.USDJPY,
-                   InstInfo.EURJPY,
-                   InstInfo.EURUSD
+VALID_INST_LIST = [InstParam.USDJPY,
+                   InstParam.EURJPY,
+                   InstParam.EURUSD
                    ]
 
 

@@ -16,7 +16,7 @@ from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
 from PySide2.QtCore import QSignalMapper, QPoint
 from PySide2.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QPen
-from trade_monitor.constant import GranInfo
+from trade_monitor.constant import GranParam
 from trade_monitor import utility as utl
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
@@ -690,10 +690,10 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
                                            qdt.toMSecsSinceEpoch())
             self._series.append(cnd)
 
-        gran_info = GranInfo.get_member_by_msgid(gran_id)
+        gran_param = GranParam.get_member_by_msgid(gran_id)
 
         self._digit = digit
-        self._freq = gran_info.freq
+        self._freq = gran_param.freq
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -849,10 +849,10 @@ class BaseLineChartView(QtCharts.QChartView):
         if self._min_y is not None:
             self.chart().axisY().setMin(self._min_y)
 
-        gran_info = GranInfo.get_member_by_msgid(gran_id)
+        gran_param = GranParam.get_member_by_msgid(gran_id)
 
         self._digit = digit
-        self._freq = gran_info.freq
+        self._freq = gran_param.freq
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)

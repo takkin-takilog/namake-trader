@@ -30,9 +30,9 @@ class HeatMap():
     def set_param(self, df_param: pd.DataFrame, inst_idx):
 
         df_valid = df_param[df_param[GfColNm.VALID_FLAG.value]]
-        inst_info = VALID_INST_LIST[inst_idx]
+        inst_param = VALID_INST_LIST[inst_idx]
 
-        gap_upper_limit = inst_info.convert_raw2phy(self._GAP_UPPER_LIMIT_RAW)
+        gap_upper_limit = inst_param.convert_raw2phy(self._GAP_UPPER_LIMIT_RAW)
         flg = df_valid[GfColNm.GPA_PRICE_MID.value] < gap_upper_limit
         df_valid = df_valid[flg]
 
@@ -40,7 +40,7 @@ class HeatMap():
         df_succ = df_valid[flg]
         max_open_price_max = df_succ[GfColNm.MAX_OPEN_RANGE.value].max()
 
-        max_open_max_raw = inst_info.convert_phy2raw(max_open_price_max)
+        max_open_max_raw = inst_param.convert_phy2raw(max_open_price_max)
         max_open_max_raw += self._MAX_OPEN_MARGIN_RAW
 
         hmap_col = [GfColNm.DATE.value] + list(range(1, max_open_max_raw + 1))
@@ -51,12 +51,12 @@ class HeatMap():
                                            df_valid[GfColNm.MAX_OPEN_RANGE.value],
                                            df_valid[GfColNm.GPA_PRICE_REAL.value]):
             if is_succ:
-                max_open_raw = inst_info.convert_phy2raw(mop)
+                max_open_raw = inst_param.convert_phy2raw(mop)
             else:
                 max_open_raw = max_open_max_raw
 
             row_left = list(range(-1, -max_open_raw - 1, -1))
-            gap_raw = inst_info.convert_phy2raw(gpr)
+            gap_raw = inst_param.convert_phy2raw(gpr)
 
             row_right = [gap_raw] * (max_open_max_raw - max_open_raw)
             roslist.append([date] + row_left + row_right)
@@ -203,14 +203,14 @@ class HeatMap():
 
         label = GfColNm.GPA_PRICE_MID.value
         gap_price_real_max = df_param[label].max()
-        inst_info = VALID_INST_LIST[inst_idx]
+        inst_param = VALID_INST_LIST[inst_idx]
 
-        gap_max_raw = inst_info.convert_phy2raw(gap_price_real_max)
+        gap_max_raw = inst_param.convert_phy2raw(gap_price_real_max)
         gap_max_raw += self._GAP_MARGIN_RAW
 
         df_base = pd.DataFrame()
         for date, htbl in df_htbl.iterrows():
-            gap_pips_raw = inst_info.convert_phy2raw(df_param.loc[date][label])
+            gap_pips_raw = inst_param.convert_phy2raw(df_param.loc[date][label])
 
             collist = [htbl.to_list()] * (gap_max_raw - (gap_pips_raw - 1))
             gpt_col = list(range(gap_pips_raw, gap_max_raw + 1))

@@ -171,8 +171,8 @@ class GapFillUi():
         self._qstd_itm_mdl.clear()
         self._qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
         inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-        inst_info = VALID_INST_LIST[inst_idx]
-        fmt = "{:." + str(inst_info.digit) + "f}"
+        inst_param = VALID_INST_LIST[inst_idx]
+        fmt = "{:." + str(inst_param.digit) + "f}"
 
         # fetch Gap-fill data
         req = GapFillMntSrv.Request()
@@ -180,7 +180,7 @@ class GapFillUi():
         srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
             self._logger.error("service server [{}] not to become ready"
-                               .format(inst_info.text))
+                               .format(inst_param.text))
         else:
 
             rsp = ros_com.call_servive_sync(srv_cli, req, timeout_sec=10.0)
@@ -276,11 +276,11 @@ class GapFillUi():
             dt_to = trg_date + dt.timedelta(hours=12)
 
             inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-            inst_info = VALID_INST_LIST[inst_idx]
+            inst_param = VALID_INST_LIST[inst_idx]
 
             req = CandlesMntSrv.Request()
             req.gran_msg.gran_id = self._gran_id
-            req.inst_msg.inst_id = inst_info.msg_id
+            req.inst_msg.inst_id = inst_param.msg_id
             req.dt_from = dt_from.strftime(FMT_DTTM_API)
             req.dt_to = dt_to.strftime(FMT_DTTM_API)
 
@@ -332,7 +332,7 @@ class GapFillUi():
             self._chartview_curr.set_max_y(max_y)
             self._chartview_curr.set_min_y(min_y)
 
-            digit = inst_info.digit
+            digit = inst_param.digit
 
             idx = self._ui.comboBox_gapfill_spread_prev.currentIndex()
             self._update_prev_chart(idx, df_prev, sr_gf, digit)

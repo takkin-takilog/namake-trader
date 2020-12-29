@@ -6,7 +6,7 @@ from trade_apl_msgs.srv import TtmMntSrv
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor import utility as utl
 from trade_monitor.ttm.constant import VALID_INST_LIST
-from trade_monitor.constant import GranInfo
+from trade_monitor.constant import GranParam
 from trade_monitor.constant import (FMT_DTTM_API,
                                     FMT_DATE_YMD,
                                     FMT_TIME_HM,
@@ -142,7 +142,7 @@ class TtmUi():
 
     def _on_fetch_ttm_clicked(self):
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
-        inst_info = VALID_INST_LIST[inst_idx]
+        inst_param = VALID_INST_LIST[inst_idx]
 
         # fetch TTM data
         req = TtmMntSrv.Request()
@@ -150,7 +150,7 @@ class TtmUi():
         srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
             self._logger.error("service server [{}] not to become ready"
-                               .format(inst_info.text))
+                               .format(inst_param.text))
         else:
 
             rsp = ros_com.call_servive_sync(srv_cli, req, timeout_sec=10.0)
@@ -158,10 +158,10 @@ class TtmUi():
 
             start_time_str = rsp.start_time
             end_time_str = rsp.end_time
-            gran_info = GranInfo.get_member_by_msgid(rsp.gran_id)
+            gran_param = GranParam.get_member_by_msgid(rsp.gran_id)
             time_range_list = pd.date_range(start_time_str,
                                             end_time_str,
-                                            freq=gran_info.freq
+                                            freq=gran_param.freq
                                             ).strftime(FMT_TIME_HM).to_list()
 
             # ---------- compose Table "OHLC" ----------

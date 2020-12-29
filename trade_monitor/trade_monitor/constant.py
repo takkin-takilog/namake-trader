@@ -37,9 +37,9 @@ class CandleColumnName(Enum):
         return [m.value for m in cls]
 
 
-class InstInfo(Enum):
+class InstParam(Enum):
     """
-    Instrument info.
+    Instrument parameter.
     """
     USDJPY = (Inst.INST_USD_JPY, "usdjpy", "USD/JPY", 3)
     EURJPY = (Inst.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3)
@@ -92,9 +92,9 @@ class InstInfo(Enum):
         return utl.roundi(physical_value / self.lsb_value)
 
 
-class GranInfo(Enum):
+class GranParam(Enum):
     """
-    Granularity info.
+    Granularity parameter.
     """
     M1 = (Gran.GRAN_M1, "1分足", "1min")
     M2 = (Gran.GRAN_M2, "2分足", "2min")
