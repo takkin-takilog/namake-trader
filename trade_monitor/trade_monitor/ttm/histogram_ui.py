@@ -3,8 +3,7 @@ from enum import Enum
 import pandas as pd
 from PySide2.QtCore import QPointF, QLineF, QFile, Qt
 from PySide2.QtGui import QColor, QPen
-from PySide2.QtGui import QLinearGradient, QGradient
-from PySide2.QtWidgets import QMainWindow
+from PySide2.QtWidgets import QMainWindow, QHeaderView
 from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCharts import QtCharts
@@ -398,6 +397,7 @@ class HistogramUi(QMainWindow):
         header = pdtreeview.header()
         callback = self._on_view_header_sectionClicked
         header.sectionClicked.connect(callback)
+        # header.setSectionResizeMode(QHeaderView.Stretch)
 
         # set HistogramView
         histview_hi = HistogramViewHigh(ui.widget_HistView_hi)

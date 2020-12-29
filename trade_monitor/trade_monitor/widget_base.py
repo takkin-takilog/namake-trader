@@ -71,16 +71,22 @@ class PandasModel(QAbstractTableModel):
                     return None
             elif role == Qt.FontRole:
                 return self._bolds.get(section, None)
-
             elif role == Qt.ForegroundRole:
                 return self._colors.get(section, None)
-
+            """
+            elif role == Qt.TextAlignmentRole:
+                return int(Qt.AlignHCenter|Qt.AlignVCenter)
+            """
         elif orientation == Qt.Vertical:
             if role == Qt.DisplayRole:
                 try:
                     return self._df.index.tolist()[section]
                 except (IndexError,):
                     return None
+            """
+            elif role == Qt.TextAlignmentRole:
+                return int(Qt.AlignHCenter|Qt.AlignVCenter)
+            """
         return None
 
     def setFiltered(self, section, isFiltered):
@@ -94,15 +100,18 @@ class PandasModel(QAbstractTableModel):
         self.headerDataChanged.emit(Qt.Horizontal, 0, self.columnCount())
 
     def data(self, index, role=Qt.DisplayRole):
+
         if role == Qt.DisplayRole:
             if not index.isValid():
                 return None
             return str(self._df.iloc[index.row(), index.column()])
-
+        elif role == Qt.TextAlignmentRole:
+            return int(Qt.AlignLeft | Qt.AlignVCenter)
         elif role == Qt.UserRole:
             if not index.isValid():
                 return None
             return self._df.iloc[index.row(), index.column()]
+
         else:
             return None
 
