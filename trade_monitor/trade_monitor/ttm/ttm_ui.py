@@ -133,7 +133,7 @@ class TtmUi():
 
         self._ui = ui
         self._pdtreeview = pdtreeview
-        self._gran_id = 0
+        self._gran_param = GranParam.D
         self._srv_cli_list = srv_cli_list
         self._logger = ros_com.get_logger()
 
@@ -154,7 +154,7 @@ class TtmUi():
         else:
 
             rsp = ros_com.call_servive_sync(srv_cli, req, timeout_sec=10.0)
-            self._gran_id = rsp.gran_id
+            self._gran_param = GranParam.get_member_by_msgid(rsp.gran_id)
 
             start_time_str = rsp.start_time
             end_time_str = rsp.end_time
@@ -277,7 +277,7 @@ class TtmUi():
             inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
             inst_param = VALID_INST_LIST[inst_idx]
 
-            self._chartview.update(df, self._gran_id, inst_param)
+            self._chartview.update(df, self._gran_param, inst_param)
             self._ui.widget_ChartView_ttm.setEnabled(True)
 
     def _on_ttm_weekday_clicked(self):
@@ -288,7 +288,7 @@ class TtmUi():
         df = self._get_dataframe()
 
         self._weekday_ui.show()
-        self._weekday_ui.set_data(df, self._gran_id, inst_param)
+        self._weekday_ui.set_data(df, self._gran_param, inst_param)
 
     def _on_ttm_gotoday_clicked(self):
 
@@ -298,7 +298,7 @@ class TtmUi():
         df = self._get_dataframe()
 
         self._gotoday_ui.show()
-        self._gotoday_ui.set_data(df, self._gran_id, inst_param)
+        self._gotoday_ui.set_data(df, self._gran_param, inst_param)
 
     def _get_dataframe(self):
 

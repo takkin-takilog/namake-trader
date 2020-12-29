@@ -133,13 +133,11 @@ class ChartView(CandlestickChartViewBarCategoryAxis):
         chart = self.chart()
         chart.axisX().setCategories(x_axis_label)
         chart.axisY().setRange(self._min_y, self._max_y)
-        # gran_param = GranParam.get_member_by_msgid(gran_id)
 
         self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
 
         self._inst_param = inst_param
         self._is_update = True
-        # self._freq = gran_param.freq
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

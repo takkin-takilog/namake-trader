@@ -11,8 +11,9 @@ from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
-from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM, InstParam
 from trade_monitor.ttm.constant import ColumnName, GapType, DataType
+from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
+from trade_monitor.constant import GranParam, InstParam
 from trade_monitor import utility as utl
 
 
@@ -107,8 +108,11 @@ class CandlestickChartView(CandlestickChartViewDateTimeAxis):
 
         self._is_update = False
 
-    def update(self, df: pd.DataFrame, gran_id, inst_param: InstParam):
-        super().update(df, gran_id, inst_param)
+    def update(self,
+               df: pd.DataFrame,
+               gran_param: GranParam,
+               inst_param: InstParam):
+        super().update(df, gran_param, inst_param)
 
         max_x = utl.convert_to_qdatetime(df.index[-1])
 
@@ -236,8 +240,11 @@ class BaseLineChartViewTtm(BaseLineChartView):
         chart = self.chart()
         chart.axisY().setRange(self._min_y, self._max_y)
 
-    def update(self, df: pd.DataFrame, gran_id, inst_param: InstParam):
-        super().update(gran_id, inst_param)
+    def update(self,
+               df: pd.DataFrame,
+               gran_param: GranParam,
+               inst_param: InstParam):
+        super().update(gran_param, inst_param)
 
         for data_type, row in self._chart_tbl.iterrows():
             series = row[self._COL_SERIES]
@@ -285,7 +292,7 @@ class BaseLineChartViewTtm(BaseLineChartView):
         if flag and (event.buttons() == Qt.LeftButton):
             m2v = chart.mapToValue(event.pos())
             pdt = QDateTime.fromMSecsSinceEpoch(round(m2v.x())).toPython()
-            pdt = pd.to_datetime(pdt).round(self._freq)
+            pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
             stm = pdt.strftime(FMT_TIME_HM)
 
             self._logger.debug("============================================================")

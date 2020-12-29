@@ -11,7 +11,7 @@ from trade_manager_msgs.srv import CandlesMntSrv
 
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
-from trade_monitor.constant import InstParam
+from trade_monitor.constant import InstParam, GranParam
 from trade_monitor.constant import SPREAD_MSG_LIST
 from trade_monitor.gapfill.constant import VALID_INST_LIST
 from trade_monitor.constant import (FMT_DTTM_API,
@@ -361,21 +361,23 @@ class GapFillUi():
 
         df_prev = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
         df_prev.columns = self._chartview_prev.CandleLabel.to_list()
+        gran_param = GranParam.get_member_by_msgid(self._gran_id)
 
         self._chartview_prev.update(df_prev,
-                                    self._gran_id,
                                     sr_gf[GfColNm.GPA_CLOSE_PRICE.value],
                                     sr_gf[GfColNm.GPA_OPEN_PRICE.value],
+                                    gran_param,
                                     inst_param)
 
     def _update_curr_chart(self, idx, df, sr_gf, inst_param: InstParam):
 
         df_curr = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
         df_curr.columns = self._chartview_curr.CandleLabel.to_list()
+        gran_param = GranParam.get_member_by_msgid(self._gran_id)
 
         self._chartview_curr.update(df_curr,
-                                    self._gran_id,
                                     sr_gf[GfColNm.GPA_CLOSE_PRICE.value],
                                     sr_gf[GfColNm.GPA_OPEN_PRICE.value],
+                                    gran_param,
                                     inst_param,
                                     self._end_time)

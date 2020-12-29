@@ -669,14 +669,17 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
         chart.addAxis(axis_y, Qt.AlignLeft)
         self._series.attachAxis(axis_y)
 
+        self._gran_param = GranParam.D
         self._inst_param = InstParam.USDJPY
         self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
-        self._freq = "D"
 
     def set_callout_dt_format(self, fmt: str):
         self._callout_dt_fmt = fmt
 
-    def update(self, df: pd.DataFrame, gran_id, inst_param: InstParam):
+    def update(self,
+               df: pd.DataFrame,
+               gran_param: GranParam,
+               inst_param: InstParam):
         super().update()
 
         self._series.clear()
@@ -692,10 +695,8 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
                                            qdt.toMSecsSinceEpoch())
             self._series.append(cnd)
 
-        gran_param = GranParam.get_member_by_msgid(gran_id)
-
+        self._gran_param = gran_param
         self._inst_param = inst_param
-        self._freq = gran_param.freq
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -706,7 +707,7 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
             m2v = chart.mapToValue(event.pos())
             xpos = utl.roundi(m2v.x())
             pdt = QDateTime.fromMSecsSinceEpoch(xpos).toPython()
-            pdt = pd.to_datetime(pdt).round(self._freq)
+            pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
             qdttm = utl.convert_to_qdatetime(pdt)
             xpos = qdttm.toMSecsSinceEpoch()
             ypos = utl.roundf(m2v.y(), digit=self._inst_param.digit)
@@ -828,9 +829,9 @@ class BaseLineChartView(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
+        self._gran_param = GranParam
         self._inst_param = InstParam.USDJPY
         self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
-        self._freq = "D"
         self._max_y = None
         self._min_y = None
 
@@ -843,7 +844,7 @@ class BaseLineChartView(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, gran_id, inst_param: InstParam):
+    def update(self, gran_param: GranParam, inst_param: InstParam):
 
         if self._max_y is not None:
             self.chart().axisY().setMax(self._max_y)
@@ -851,10 +852,8 @@ class BaseLineChartView(QtCharts.QChartView):
         if self._min_y is not None:
             self.chart().axisY().setMin(self._min_y)
 
-        gran_param = GranParam.get_member_by_msgid(gran_id)
-
+        self._gran_param = gran_param
         self._inst_param = inst_param
-        self._freq = gran_param.freq
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -865,7 +864,7 @@ class BaseLineChartView(QtCharts.QChartView):
             m2v = chart.mapToValue(event.pos())
             xpos = utl.roundi(m2v.x())
             pdt = QDateTime.fromMSecsSinceEpoch(xpos).toPython()
-            pdt = pd.to_datetime(pdt).round(self._freq)
+            pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
             qdttm = utl.convert_to_qdatetime(pdt)
             xpos = qdttm.toMSecsSinceEpoch()
             ypos = utl.roundf(m2v.y(), digit=self._inst_param.digit)

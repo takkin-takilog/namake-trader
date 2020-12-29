@@ -6,7 +6,7 @@ from PySide2.QtCore import QDate, Qt
 from PySide2.QtGui import QColor, QBrush
 from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import FMT_QT_DATE_YMD
-from trade_monitor.constant import InstParam
+from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.utility import DateRangeManager
 from trade_monitor.ttm.constant import ColumnName
 from trade_monitor.ttm.constant import DataType
@@ -141,12 +141,15 @@ class GotodayUi(BaseUi):
         self._logger = ros_com.get_logger()
         self._ui = ui
         self._df_base = pd.DataFrame()
-        self._gran_id = None
-        self._inst_param = None
+        self._gran_param = GranParam.D
+        self._inst_param = InstParam.USDJPY
         self._chart_idx_list = []
         self._is_require_reconstruct_table = True
 
-    def set_data(self, df_base: pd.DataFrame, gran_id, inst_param: InstParam):
+    def set_data(self,
+                 df_base: pd.DataFrame,
+                 gran_param: GranParam,
+                 inst_param: InstParam):
 
         date_list = list(df_base.groupby(ColumnName.DATE.value).groups.keys())
 
@@ -156,7 +159,7 @@ class GotodayUi(BaseUi):
         qdate_u = QDate.fromString(self._drm.upper_date, FMT_QT_DATE_YMD)
 
         self._df_base = df_base
-        self._gran_id = gran_id
+        self._gran_param = gran_param
         self._inst_param = inst_param
 
         wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
@@ -430,7 +433,7 @@ class GotodayUi(BaseUi):
             chartview.set_min_y(-max_y)
             idxloc = gotoday_m.id
             if idxloc in df_trg.index:
-                chartview.update(df_trg.loc[idxloc], self._gran_id, self._inst_param)
+                chartview.update(df_trg.loc[idxloc], self._gran_param, self._inst_param)
                 level = [ColumnName.GOTO_ID.value]
                 df_date = df_base_r.xs([idxloc], level=level)
                 chartview.set_dataframe_date(df_date)
