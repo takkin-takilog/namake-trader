@@ -8,13 +8,15 @@ from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QFile
 from PySide2.QtCharts import QtCharts
 from trade_monitor import ros_common as ros_com
+from trade_monitor import utility as utl
+from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
+from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
 from trade_monitor.ttm.constant import ColumnName, GapType, DataType
-from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
-from trade_monitor.constant import GranParam, InstParam
-from trade_monitor import utility as utl
+from trade_monitor.ttm.histogram_ui import ColumnName as HistColumnName
+from trade_monitor.ttm.histogram_ui import HistogramUi
 
 
 class BaseUi(QMainWindow):
@@ -284,25 +286,6 @@ class BaseLineChartViewTtm(BaseLineChartView):
         self._callout_ttm_dt.show()
         self._hl_zero.show()
 
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-
-        chart = self.chart()
-        flag = chart.plotArea().contains(event.pos())
-        if flag and (event.buttons() == Qt.LeftButton):
-            m2v = chart.mapToValue(event.pos())
-            pdt = QDateTime.fromMSecsSinceEpoch(round(m2v.x())).toPython()
-            pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
-            stm = pdt.strftime(FMT_TIME_HM)
-
-            self._logger.debug("============================================================")
-            self._logger.debug("buttons:{}".format(event.buttons()))
-            self._logger.debug("pdt:{}".format(pdt))
-            self._logger.debug("type(pdt):{}".format(type(pdt)))
-            self._logger.debug("stm:{}".format(stm))
-            self._logger.debug("df:{}".format(self._df_date))
-            self._logger.debug("df[{}]:{}".format(stm, self._df_date[stm]))
-
     def _update_callout_ttm(self, qdttm):
 
         chart = self.chart()
@@ -340,31 +323,60 @@ class LineChartViewStats(BaseLineChartViewTtm):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        pen_hl_m = QPen()
-        pen_hl_m.setColor(Qt.green)
-        pen_hl_m.setWidth(2)
-        pen_hl_m.setStyle(Qt.SolidLine)
+        pen_ho_m = QPen()
+        pen_ho_m.setColor(Qt.magenta)
+        pen_ho_m.setWidth(2)
+        pen_ho_m.setStyle(Qt.SolidLine)
 
-        pen_c_m = QPen()
-        pen_c_m.setColor(Qt.magenta)
-        pen_c_m.setWidth(3)
-        pen_c_m.setStyle(Qt.SolidLine)
+        pen_lo_m = QPen()
+        pen_lo_m.setColor(Qt.cyan)
+        pen_lo_m.setWidth(2)
+        pen_lo_m.setStyle(Qt.SolidLine)
 
-        pen_c_s = QPen()
-        pen_c_s.setColor(Qt.red)
-        pen_c_s.setWidth(1)
-        pen_c_s.setStyle(Qt.DashLine)
+        pen_co_m = QPen()
+        pen_co_m.setColor(Qt.green)
+        pen_co_m.setWidth(2)
+        pen_co_m.setStyle(Qt.SolidLine)
+
+        pen_co_s = QPen()
+        pen_co_s.setColor(Qt.green)
+        pen_co_s.setWidth(1)
+        pen_co_s.setStyle(Qt.DashLine)
 
         data_list = [
-            [DataType.HO_MEAN.value, pen_hl_m, QtCharts.QLineSeries()],
+            [DataType.HO_MEAN.value, pen_ho_m, QtCharts.QLineSeries()],
             # [DataType.HO_STD.value, Qt.blue, QtCharts.QLineSeries()],
-            [DataType.LO_MEAN.value, pen_hl_m, QtCharts.QLineSeries()],
+            [DataType.LO_MEAN.value, pen_lo_m, QtCharts.QLineSeries()],
             # [DataType.LO_STD.value, Qt.green, QtCharts.QLineSeries()],
-            [DataType.CO_MEAN.value, pen_c_m, QtCharts.QLineSeries()],
-            [DataType.CO_STD.value, pen_c_s, QtCharts.QLineSeries()]
+            [DataType.CO_MEAN.value, pen_co_m, QtCharts.QLineSeries()],
+            [DataType.CO_STD.value, pen_co_s, QtCharts.QLineSeries()]
         ]
 
         self._init_chart(data_list)
+        self._hist_ui = HistogramUi()
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+
+        chart = self.chart()
+        flag = chart.plotArea().contains(event.pos())
+        if flag and (event.buttons() == Qt.LeftButton):
+            m2v = chart.mapToValue(event.pos())
+            pdt = QDateTime.fromMSecsSinceEpoch(round(m2v.x())).toPython()
+            pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
+            stm = pdt.strftime(FMT_TIME_HM)
+            df = self._df_date[stm]
+            sr_ho = df.xs(GapType.HO.value, level=ColumnName.GAP_TYP.value)
+            sr_ho.rename(HistColumnName.PRICE_HIOP.value, inplace=True)
+            sr_lo = df.xs(GapType.LO.value, level=ColumnName.GAP_TYP.value)
+            sr_lo.rename(HistColumnName.PRICE_LOOP.value, inplace=True)
+            sr_co = df.xs(GapType.CO.value, level=ColumnName.GAP_TYP.value)
+            sr_co.rename(HistColumnName.PRICE_CLOP.value, inplace=True)
+            df_hcl = pd.concat([sr_ho, sr_co, sr_lo], axis=1)
+
+            self._hist_ui.set_data(df_hcl, self._inst_param)
+            self._hist_ui.setWindowTitle("Time Axis Analysis:  [{}]".format(stm))
+            self._hist_ui.show()
 
 
 class LineChartViewCumsum(BaseLineChartViewTtm):
@@ -373,8 +385,8 @@ class LineChartViewCumsum(BaseLineChartViewTtm):
         super().__init__(parent)
 
         pen = QPen()
-        pen.setColor(Qt.cyan)
-        pen.setWidth(3)
+        pen.setColor(Qt.blue)
+        pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
 
         data_list = [

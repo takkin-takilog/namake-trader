@@ -3,7 +3,7 @@ from enum import Enum
 import pandas as pd
 from PySide2.QtCore import QPointF, QLineF, QFile, Qt
 from PySide2.QtGui import QColor, QPen
-from PySide2.QtWidgets import QMainWindow, QHeaderView
+from PySide2.QtWidgets import QMainWindow
 from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCharts import QtCharts
@@ -17,16 +17,16 @@ from trade_monitor import utility as utl
 
 class ColumnName(Enum):
     DATE = "date"
-    PRICE_HIOP = "high-open price"
-    PRICE_LOOP = "low-open price"
-    PRICE_CLOP = "close-open price"
+    PRICE_HIOP = "high gap price"
+    PRICE_LOOP = "low gap price"
+    PRICE_CLOP = "close gap price"
 
     @classmethod
     def to_list(cls):
         return [m.value for m in cls]
 
 
-class BaseHistogramView(BaseView):
+class HistogramView(BaseView):
 
     _CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 
@@ -94,7 +94,6 @@ class BaseHistogramView(BaseView):
         self._axis_x.setTickCount(self._max_x + 1)
 
         ofs = inst_param.lsb_value / 2
-        print(ofs)
         for idx in sr_hist.index:
             series_u = QtCharts.QLineSeries()
             series_u.append(QPointF(0, idx + ofs))
@@ -166,7 +165,7 @@ class BaseHistogramView(BaseView):
         self._hl_zero.show()
 
 
-class HistogramViewHigh(BaseHistogramView):
+class HistogramViewHigh(HistogramView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -176,7 +175,7 @@ class HistogramViewHigh(BaseHistogramView):
         self.set_bar_color(Qt.magenta)
 
 
-class HistogramViewClose(BaseHistogramView):
+class HistogramViewClose(HistogramView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -186,7 +185,7 @@ class HistogramViewClose(BaseHistogramView):
         self.set_bar_color(Qt.green)
 
 
-class HistogramViewLow(BaseHistogramView):
+class HistogramViewLow(HistogramView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -416,32 +415,27 @@ class HistogramUi(QMainWindow):
         self._chartview = chartview
 
     def set_data(self, df: pd.DataFrame, inst_param: InstParam):
-        print("========== df ==========")
-        print(df)
 
-        print("========== df.hist ==========")
-        df_hist = df.apply(pd.value_counts)
+        def func(x):
+            return utl.roundf(x, digit=inst_param.digit)
+        df_adjust = df.applymap(func)
+        df_hist = df_adjust.apply(pd.value_counts)
         counts_max = df_hist.max().max() + 1
-        print(df_hist)
-        print("--- counts_max ---")
-        print(counts_max)
 
         lsb = inst_param.lsb_value
         index_max = max(abs(df_hist.index[0]), abs(df_hist.index[-1])) + lsb * 3
-        print("--- index_max ---")
-        print(index_max)
 
         sr_hi = df_hist[ColumnName.PRICE_HIOP.value].fillna(0)
         sr_cl = df_hist[ColumnName.PRICE_CLOP.value].fillna(0)
         sr_lo = df_hist[ColumnName.PRICE_LOOP.value].fillna(0)
 
         # set TreeView
-        self._pdtreeview.set_dataframe(df)
+        fmt = "{:." + str(inst_param.digit) + "f}"
+        self._pdtreeview.set_dataframe(df_adjust.applymap(fmt.format))
 
         # set ChartView
-        max_val = df[ColumnName.PRICE_HIOP.value].max()
-        min_val = df[ColumnName.PRICE_LOOP.value].min()
-
+        max_val = df_adjust[ColumnName.PRICE_HIOP.value].max()
+        min_val = df_adjust[ColumnName.PRICE_LOOP.value].min()
         max_y = max(abs(max_val), abs(min_val))
         min_y = -max_y
 
@@ -467,7 +461,7 @@ class HistogramUi(QMainWindow):
         self._histview_hi.update(sr_hi, inst_param)
         self._histview_cl.update(sr_cl, inst_param)
         self._histview_lo.update(sr_lo, inst_param)
-        self._chartview.update(df, inst_param)
+        self._chartview.update(df_adjust, inst_param)
 
     def _on_view_header_sectionClicked(self, logical_index):
         self._pdtreeview.show_header_menu(logical_index)
@@ -488,7 +482,7 @@ if __name__ == "__main__":
     from PySide2.QtCore import QCoreApplication
     from PySide2.QtWidgets import QApplication
 
-    data = [["2020-10-12", 0.021, 0.000, 0.015],
+    data = [["2020-10-12", 0.021, 0.000, 0.0155],
             ["2020-10-19", 0.004, -0.021, -0.019],
             ["2020-10-26", 0.009, -0.008, -0.007],
             ["2020-11-02", 0.003, -0.012, 0.003],

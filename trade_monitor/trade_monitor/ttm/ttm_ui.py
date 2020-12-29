@@ -21,7 +21,7 @@ from trade_monitor import ros_common as ros_com
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
 pd.set_option("display.width", 200)
-pd.options.display.float_format = '{:.3f}'.format
+# pd.options.display.float_format = '{:.3f}'.format
 
 
 class _WeekdayId(Enum):
