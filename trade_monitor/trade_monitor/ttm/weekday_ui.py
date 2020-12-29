@@ -6,6 +6,7 @@ from PySide2.QtCore import QDate, Qt
 from PySide2.QtGui import QColor, QBrush
 from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import FMT_QT_DATE_YMD
+from trade_monitor.constant import InstParam
 from trade_monitor.utility import DateRangeManager
 from trade_monitor.ttm.constant import ColumnName
 from trade_monitor.ttm.constant import DataType
@@ -159,11 +160,11 @@ class WeekdayUi(BaseUi):
         self._ui = ui
         self._df_base = pd.DataFrame()
         self._gran_id = None
-        self._digit = None
+        self._inst_param = None
         self._chart_idx_list = []
         self._is_require_reconstruct_table = True
 
-    def set_data(self, df_base, gran_id, digit):
+    def set_data(self, df_base: pd.DataFrame, gran_id, inst_param: InstParam):
 
         date_list = list(df_base.groupby(ColumnName.DATE.value).groups.keys())
 
@@ -174,7 +175,7 @@ class WeekdayUi(BaseUi):
 
         self._df_base = df_base
         self._gran_id = gran_id
-        self._digit = digit
+        self._inst_param = inst_param
 
         wasBlocked1 = self._ui.dateEdit_lower.blockSignals(True)
         wasBlocked2 = self._ui.dateEdit_upper.blockSignals(True)
@@ -472,7 +473,7 @@ class WeekdayUi(BaseUi):
             chartview.set_min_y(-max_y)
             idxloc = (weekday_m.id, is_goto)
             if idxloc in df_trg.index:
-                chartview.update(df_trg.loc[idxloc], self._gran_id, self._digit)
+                chartview.update(df_trg.loc[idxloc], self._gran_id, self._inst_param)
                 level = [ColumnName.WEEKDAY_ID.value, ColumnName.IS_GOTO.value]
                 df_date = df_base_r.xs(idxloc, level=level)
                 chartview.set_dataframe_date(df_date)

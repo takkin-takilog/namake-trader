@@ -16,7 +16,7 @@ from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
 from PySide2.QtCore import QSignalMapper, QPoint
 from PySide2.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QPen
-from trade_monitor.constant import GranParam
+from trade_monitor.constant import GranParam, InstParam
 from trade_monitor import utility as utl
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
@@ -534,7 +534,6 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         # self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
 
         self._series = series
-        self._digit = 0
         self._max_y = None
         self._min_y = None
 
@@ -581,7 +580,9 @@ class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
         chart.addAxis(axis_y, Qt.AlignLeft)
         self._series.attachAxis(axis_y)
 
-    def update(self, df, digit):
+        self._inst_param = InstParam.USDJPY
+
+    def update(self, df: pd.DataFrame, inst_param: InstParam):
         super().update()
 
         x_axis_label = []
@@ -598,7 +599,7 @@ class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
         chart = self.chart()
         chart.axisX().setCategories(x_axis_label)
 
-        self._digit = digit
+        self._inst_param = inst_param
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -608,7 +609,7 @@ class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
         if flag:
             m2v = chart.mapToValue(event.pos())
             xpos = utl.roundi(m2v.x())
-            ypos = utl.roundf(m2v.y(), digit=self._digit)
+            ypos = utl.roundf(m2v.y(), digit=self._inst_param.digit)
             new_pos = QPointF(xpos, ypos)
             m2p = chart.mapToPosition(new_pos)
 
@@ -617,7 +618,7 @@ class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
-            fmt = "{:." + str(self._digit) + "f}"
+            fmt = "{:." + str(self._inst_param.digit) + "f}"
             prstr = fmt.format(new_pos.y())
             self._callout_pr.updateGeometry(prstr, m2p)
             self._callout_pr.show()
@@ -668,13 +669,14 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
         chart.addAxis(axis_y, Qt.AlignLeft)
         self._series.attachAxis(axis_y)
 
+        self._inst_param = InstParam.USDJPY
         self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
         self._freq = "D"
 
     def set_callout_dt_format(self, fmt: str):
         self._callout_dt_fmt = fmt
 
-    def update(self, df, gran_id, digit):
+    def update(self, df: pd.DataFrame, gran_id, inst_param: InstParam):
         super().update()
 
         self._series.clear()
@@ -692,7 +694,7 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
 
         gran_param = GranParam.get_member_by_msgid(gran_id)
 
-        self._digit = digit
+        self._inst_param = inst_param
         self._freq = gran_param.freq
 
     def mouseMoveEvent(self, event):
@@ -707,7 +709,7 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
             pdt = pd.to_datetime(pdt).round(self._freq)
             qdttm = utl.convert_to_qdatetime(pdt)
             xpos = qdttm.toMSecsSinceEpoch()
-            ypos = utl.roundf(m2v.y(), digit=self._digit)
+            ypos = utl.roundf(m2v.y(), digit=self._inst_param.digit)
             new_pos = QPointF(xpos, ypos)
             m2p = chart.mapToPosition(new_pos)
 
@@ -715,7 +717,7 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
-            fmt = "{:." + str(self._digit) + "f}"
+            fmt = "{:." + str(self._inst_param.digit) + "f}"
             prstr = fmt.format(new_pos.y())
             self._callout_pr.updateGeometry(prstr, m2p)
             self._callout_pr.show()
@@ -826,8 +828,8 @@ class BaseLineChartView(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
+        self._inst_param = InstParam.USDJPY
         self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
-        self._digit = 0
         self._freq = "D"
         self._max_y = None
         self._min_y = None
@@ -841,7 +843,7 @@ class BaseLineChartView(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, gran_id, digit):
+    def update(self, gran_id, inst_param: InstParam):
 
         if self._max_y is not None:
             self.chart().axisY().setMax(self._max_y)
@@ -851,7 +853,7 @@ class BaseLineChartView(QtCharts.QChartView):
 
         gran_param = GranParam.get_member_by_msgid(gran_id)
 
-        self._digit = digit
+        self._inst_param = inst_param
         self._freq = gran_param.freq
 
     def mouseMoveEvent(self, event):
@@ -866,7 +868,7 @@ class BaseLineChartView(QtCharts.QChartView):
             pdt = pd.to_datetime(pdt).round(self._freq)
             qdttm = utl.convert_to_qdatetime(pdt)
             xpos = qdttm.toMSecsSinceEpoch()
-            ypos = utl.roundf(m2v.y(), digit=self._digit)
+            ypos = utl.roundf(m2v.y(), digit=self._inst_param.digit)
             new_pos = QPointF(xpos, ypos)
             m2p = chart.mapToPosition(new_pos)
 
@@ -874,7 +876,7 @@ class BaseLineChartView(QtCharts.QChartView):
             self._callout_dt.updateGeometry(dtstr, m2p)
             self._callout_dt.show()
 
-            fmt = "{:." + str(self._digit) + "f}"
+            fmt = "{:." + str(self._inst_param.digit) + "f}"
             prstr = fmt.format(new_pos.y())
             self._callout_pr.updateGeometry(prstr, m2p)
             self._callout_pr.show()
@@ -943,7 +945,6 @@ class BaseHistogramView(QtCharts.QChartView):
         self.setChart(chart)
 
         # self._series = series
-        self._digit = 0
         self._max_x = None
         self._min_x = None
 

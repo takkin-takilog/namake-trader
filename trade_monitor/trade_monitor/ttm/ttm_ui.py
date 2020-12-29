@@ -275,30 +275,30 @@ class TtmUi():
             self._chartview.set_min_y(min_y - dif)
 
             inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
-            digit = VALID_INST_LIST[inst_idx].digit
+            inst_param = VALID_INST_LIST[inst_idx]
 
-            self._chartview.update(df, self._gran_id, digit)
+            self._chartview.update(df, self._gran_id, inst_param)
             self._ui.widget_ChartView_ttm.setEnabled(True)
 
     def _on_ttm_weekday_clicked(self):
 
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
-        digit = VALID_INST_LIST[inst_idx].digit
+        inst_param = VALID_INST_LIST[inst_idx]
 
         df = self._get_dataframe()
 
         self._weekday_ui.show()
-        self._weekday_ui.set_data(df, self._gran_id, digit)
+        self._weekday_ui.set_data(df, self._gran_id, inst_param)
 
     def _on_ttm_gotoday_clicked(self):
 
         inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
-        digit = VALID_INST_LIST[inst_idx].digit
+        inst_param = VALID_INST_LIST[inst_idx]
 
         df = self._get_dataframe()
 
         self._gotoday_ui.show()
-        self._gotoday_ui.set_data(df, self._gran_id, digit)
+        self._gotoday_ui.set_data(df, self._gran_id, inst_param)
 
     def _get_dataframe(self):
 

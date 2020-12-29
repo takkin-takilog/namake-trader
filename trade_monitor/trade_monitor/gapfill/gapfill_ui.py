@@ -11,6 +11,7 @@ from trade_manager_msgs.srv import CandlesMntSrv
 
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
+from trade_monitor.constant import InstParam
 from trade_monitor.constant import SPREAD_MSG_LIST
 from trade_monitor.gapfill.constant import VALID_INST_LIST
 from trade_monitor.constant import (FMT_DTTM_API,
@@ -332,13 +333,11 @@ class GapFillUi():
             self._chartview_curr.set_max_y(max_y)
             self._chartview_curr.set_min_y(min_y)
 
-            digit = inst_param.digit
-
             idx = self._ui.comboBox_gapfill_spread_prev.currentIndex()
-            self._update_prev_chart(idx, df_prev, sr_gf, digit)
+            self._update_prev_chart(idx, df_prev, sr_gf, inst_param)
 
             idx = self._ui.comboBox_gapfill_spread_curr.currentIndex()
-            self._update_curr_chart(idx, df_curr, sr_gf, digit)
+            self._update_curr_chart(idx, df_curr, sr_gf, inst_param)
 
             self._sr_gf = sr_gf
             self._df_prev = df_prev
@@ -348,17 +347,17 @@ class GapFillUi():
 
         if self._is_update:
             inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-            digit = VALID_INST_LIST[inst_idx].digit
-            self._update_prev_chart(idx, self._df_prev, self._sr_gf, digit)
+            inst_param = VALID_INST_LIST[inst_idx]
+            self._update_prev_chart(idx, self._df_prev, self._sr_gf, inst_param)
 
     def _comboBox_gapfill_spread_curr_changed(self, idx):
 
         if self._is_update:
             inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-            digit = VALID_INST_LIST[inst_idx].digit
-            self._update_curr_chart(idx, self._df_curr, self._sr_gf, digit)
+            inst_param = VALID_INST_LIST[inst_idx]
+            self._update_curr_chart(idx, self._df_curr, self._sr_gf, inst_param)
 
-    def _update_prev_chart(self, idx, df, sr_gf, digit):
+    def _update_prev_chart(self, idx, df, sr_gf, inst_param: InstParam):
 
         df_prev = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
         df_prev.columns = self._chartview_prev.CandleLabel.to_list()
@@ -367,9 +366,9 @@ class GapFillUi():
                                     self._gran_id,
                                     sr_gf[GfColNm.GPA_CLOSE_PRICE.value],
                                     sr_gf[GfColNm.GPA_OPEN_PRICE.value],
-                                    digit)
+                                    inst_param)
 
-    def _update_curr_chart(self, idx, df, sr_gf, digit):
+    def _update_curr_chart(self, idx, df, sr_gf, inst_param: InstParam):
 
         df_curr = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
         df_curr.columns = self._chartview_curr.CandleLabel.to_list()
@@ -378,5 +377,5 @@ class GapFillUi():
                                     self._gran_id,
                                     sr_gf[GfColNm.GPA_CLOSE_PRICE.value],
                                     sr_gf[GfColNm.GPA_OPEN_PRICE.value],
-                                    digit,
+                                    inst_param,
                                     self._end_time)

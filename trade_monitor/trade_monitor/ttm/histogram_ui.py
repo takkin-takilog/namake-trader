@@ -12,6 +12,7 @@ from PySide2.QtCharts import QtCharts
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
 from trade_monitor.widget_base import BaseHistogramView
+from trade_monitor.constant import InstParam
 
 
 class ColumnName(Enum):
@@ -63,7 +64,7 @@ class HistogramView(BaseHistogramView):
     def set_bar_color(self, color: QColor):
         self._color = color
 
-    def update(self, sr_hist: pd.Series, digit: int):
+    def update(self, sr_hist: pd.Series, inst_param: InstParam):
         super().update()
 
         chart = self.chart()
@@ -72,7 +73,7 @@ class HistogramView(BaseHistogramView):
         self._LineSeriesList = []
         self._axis_x.setTickCount(self._max_x + 1)
 
-        ofs = math.pow(10, -digit) / 2
+        ofs = inst_param.lsb_value / 2
         print(ofs)
         for idx in sr_hist.index:
             series_u = QtCharts.QLineSeries()
@@ -116,7 +117,7 @@ class ChartView(CandlestickChartViewBarCategoryAxis):
         self._hl_zero.setZValue(1)
         self.scene().addItem(self._hl_zero)
 
-    def update(self, df, digit):
+    def update(self, df: pd.DataFrame, inst_param: InstParam):
 
         x_axis_label = []
         self._series.clear()
@@ -136,7 +137,7 @@ class ChartView(CandlestickChartViewBarCategoryAxis):
 
         self.setRubberBand(QtCharts.QChartView.HorizontalRubberBand)
 
-        self._digit = digit
+        self._inst_param = inst_param
         self._is_update = True
         # self._freq = gran_param.freq
 
@@ -197,7 +198,7 @@ class HistogramUi(QMainWindow):
         self._histview_lo = histview_lo
         self._chartview = chartview
 
-    def set_data(self, df: pd.DataFrame, digit):
+    def set_data(self, df: pd.DataFrame, inst_param: InstParam):
         print("========== df ==========")
         print(df)
 
@@ -208,7 +209,7 @@ class HistogramUi(QMainWindow):
         print("--- counts_max ---")
         print(counts_max)
 
-        lsb = math.pow(10, -digit)
+        lsb = inst_param.lsb_value
         index_max = max(abs(df_hist.index[0]), abs(df_hist.index[-1])) + lsb * 3
         print("--- index_max ---")
         print(index_max)
@@ -247,10 +248,10 @@ class HistogramUi(QMainWindow):
         self._histview_lo.set_max_y(index_max)
         self._histview_lo.set_min_y(-index_max)
 
-        self._histview_hi.update(sr_hi, digit)
-        self._histview_cl.update(sr_cl, digit)
-        self._histview_lo.update(sr_lo, digit)
-        self._chartview.update(df, digit)
+        self._histview_hi.update(sr_hi, inst_param)
+        self._histview_cl.update(sr_cl, inst_param)
+        self._histview_lo.update(sr_lo, inst_param)
+        self._chartview.update(df, inst_param)
 
     def _on_view_header_sectionClicked(self, logical_index):
         self._pdtreeview.show_header_menu(logical_index)
@@ -288,6 +289,6 @@ if __name__ == "__main__":
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication([])
     widget = HistogramUi()
-    widget.set_data(df, digit=3)
+    widget.set_data(df, InstParam.USDJPY)
     widget.show()
     sys.exit(app.exec_())

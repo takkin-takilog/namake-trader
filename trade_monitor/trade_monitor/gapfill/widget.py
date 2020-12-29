@@ -3,6 +3,7 @@ from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtCharts import QtCharts
 from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor import utility as utl
+from trade_monitor.constant import InstParam
 
 
 class BaseCandlestickChartViewGapFill(CandlestickChartViewDateTimeAxis):
@@ -36,8 +37,8 @@ class BaseCandlestickChartViewGapFill(CandlestickChartViewDateTimeAxis):
         self._gap_open_price = 0
         self._is_update = False
 
-    def update(self, df, gran_id, gap_close_price, gap_open_price, digit):
-        super().update(df, gran_id, digit)
+    def update(self, df, gran_id, gap_close_price, gap_open_price, inst_param: InstParam):
+        super().update(df, gran_id, inst_param)
 
         chart = self.chart()
         point = QPointF(0, gap_close_price)
@@ -104,8 +105,8 @@ class CandlestickChartViewPrev(BaseCandlestickChartViewGapFill):
                gran_id,
                gap_close_price,
                gap_open_price,
-               digit):
-        super().update(df, gran_id, gap_close_price, gap_open_price, digit)
+               inst_param: InstParam):
+        super().update(df, gran_id, gap_close_price, gap_open_price, inst_param)
 
         qdttm_x = utl.convert_to_qdatetime(df.index[-1])
         max_x = qdttm_x.addSecs(60 * 10)
@@ -140,9 +141,9 @@ class CandlestickChartViewCurr(BaseCandlestickChartViewGapFill):
                gran_id,
                gap_close_price,
                gap_open_price,
-               digit,
+               inst_param: InstParam,
                end_time):
-        super().update(df, gran_id, gap_close_price, gap_open_price, digit)
+        super().update(df, gran_id, gap_close_price, gap_open_price, inst_param)
 
         max_x = utl.convert_to_qdatetime(df.index[-1])
         dt_ = df.index[0]
