@@ -13,6 +13,7 @@ from trade_monitor.widget_base import CallouPrice, CalloutDataTime
 from trade_monitor.widget_base import CALLOUT_PRICE_COLOR, CALLOUT_DATE_COLOR
 from trade_monitor.constant import InstParam
 from trade_monitor import utility as utl
+from trade_monitor.ttm.constant import AnalysisType, ChartTag
 
 
 class ColumnName(Enum):
@@ -383,7 +384,7 @@ class ChartView(BaseView):
 
 class HistogramUi(QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(self, tag: ChartTag, parent=None):
         super().__init__(parent)
 
         ui = self._load_ui(parent, "histogram.ui")
@@ -408,6 +409,7 @@ class HistogramUi(QMainWindow):
 
         # self._logger = ros_com.get_logger()
         self._ui = ui
+        self._tag = tag
         self._pdtreeview = pdtreeview
         self._histview_hi = histview_hi
         self._histview_cl = histview_cl
@@ -463,6 +465,33 @@ class HistogramUi(QMainWindow):
         self._histview_lo.update(sr_lo, inst_param)
         self._chartview.update(df_adjust, inst_param)
 
+    def set_tag_text(self, time: str):
+        if self._tag.analysis_type == AnalysisType.WEEKDAY:
+            text = (
+                """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+<html><head><meta name="qrichtext" content="1" /><style type="text/css">
+p, li { white-space: pre-wrap; }
+</style></head><body style=" font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;">
+<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Time Axis: <span style=" font-weight:600; color:#0000ff;">%s</span></p>
+<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Analysis Data: <span style=" font-weight:600; color:#0000ff;">Weekday</span></p>
+<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"> - weekday: <span style=" font-weight:600; color:#0000ff;">%s</span></p>
+<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"> - gotoday: <span style=" font-weight:600; color:#0000ff;">%s</span></p></body></html>
+"""
+            ) % (time, self._tag.weekday, self._tag.is_gotoday)
+        else:
+            text = (
+                """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+<html><head><meta name="qrichtext" content="1" /><style type="text/css">
+p, li { white-space: pre-wrap; }
+</style></head><body style=" font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;">
+<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Time Axis: <span style=" font-weight:600; color:#0000ff;">%s</span></p>
+<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Analysis Data: <span style=" font-weight:600; color:#0000ff;">Gotoday</span></p>
+<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"> - gotoday: <span style=" font-weight:600; color:#0000ff;">%s</span></p></body></html>
+"""
+            ) % (time, self._tag.gotoday)
+
+        self._ui.textBrowser.setHtml(text)
+
     def _on_view_header_sectionClicked(self, logical_index):
         self._pdtreeview.show_header_menu(logical_index)
 
@@ -498,8 +527,15 @@ if __name__ == "__main__":
 
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication([])
-    widget = HistogramUi()
+
+    tag = ChartTag(
+        analysis_type=AnalysisType.GOTODAY,
+        weekday="test",
+        is_gotoday="test"
+    )
+    widget = HistogramUi(tag)
     widget.setWindowTitle("Time Axis Analysis [9:10]")
+    widget.set_tag_text("9:10")
     widget.set_data(df, InstParam.USDJPY)
     widget.show()
     sys.exit(app.exec_())

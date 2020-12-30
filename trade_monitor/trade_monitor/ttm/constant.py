@@ -1,4 +1,5 @@
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, auto
+from dataclasses import dataclass
 from trade_monitor.constant import InstParam
 
 VALID_INST_LIST = [InstParam.USDJPY,
@@ -45,3 +46,23 @@ class DataType(IntEnum):
     CO_MEAN = 5   # Mean of Close - Open price
     CO_STD = 6    # Std of Close - Open price
     CO_CSUM = 7   # Cumsum of Close - Open price
+
+
+class AnalysisType(IntEnum):
+    """
+    Analysis type.
+    """
+    WEEKDAY = auto()    # Weekday analysis
+    GOTODAY = auto()    # Gotoday analysis
+
+
+@dataclass
+class ChartTag():
+    """
+    Chart tag.
+    """
+    analysis_type: AnalysisType = None
+    weekday: str = None
+    is_gotoday: str = None
+    gotoday: str = None
+

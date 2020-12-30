@@ -13,6 +13,7 @@ from trade_monitor.ttm.constant import DataType
 from trade_monitor.ttm.widget import LineChartViewStats
 from trade_monitor.ttm.widget import LineChartViewCumsum
 from trade_monitor.ttm.widget import BaseUi
+from trade_monitor.ttm.constant import AnalysisType, ChartTag
 
 
 class _WeekdayId(Enum):
@@ -422,7 +423,12 @@ class WeekdayUi(BaseUi):
 
             # set Table Item "Chart View"
             if charttyp_m == _ChartType.STATS:
-                chartview = LineChartViewStats()
+                tag = ChartTag(
+                    analysis_type=AnalysisType.WEEKDAY,
+                    weekday=weekday_m.text,
+                    is_gotoday=gotoday_m.text
+                )
+                chartview = LineChartViewStats(tag)
             else:
                 chartview = LineChartViewCumsum()
             chartview.chart().setBackgroundBrush(back_color)

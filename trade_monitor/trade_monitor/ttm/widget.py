@@ -15,6 +15,7 @@ from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
 from trade_monitor.ttm.constant import ColumnName, GapType, DataType
+from trade_monitor.ttm.constant import AnalysisType, ChartTag
 from trade_monitor.ttm.histogram_ui import ColumnName as HistColumnName
 from trade_monitor.ttm.histogram_ui import HistogramUi
 
@@ -320,7 +321,7 @@ class BaseLineChartViewTtm(BaseLineChartView):
 
 class LineChartViewStats(BaseLineChartViewTtm):
 
-    def __init__(self, parent=None):
+    def __init__(self, tag: ChartTag, parent=None):
         super().__init__(parent)
 
         pen_ho_m = QPen()
@@ -353,7 +354,7 @@ class LineChartViewStats(BaseLineChartViewTtm):
         ]
 
         self._init_chart(data_list)
-        self._hist_ui = HistogramUi()
+        self._hist_ui = HistogramUi(tag)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
@@ -362,7 +363,8 @@ class LineChartViewStats(BaseLineChartViewTtm):
         flag = chart.plotArea().contains(event.pos())
         if flag and (event.buttons() == Qt.LeftButton):
             m2v = chart.mapToValue(event.pos())
-            pdt = QDateTime.fromMSecsSinceEpoch(round(m2v.x())).toPython()
+            xpos = utl.roundi(m2v.x())
+            pdt = QDateTime.fromMSecsSinceEpoch(xpos).toPython()
             pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
             stm = pdt.strftime(FMT_TIME_HM)
             df = self._df_date[stm]
@@ -375,7 +377,8 @@ class LineChartViewStats(BaseLineChartViewTtm):
             df_hcl = pd.concat([sr_ho, sr_co, sr_lo], axis=1)
 
             self._hist_ui.set_data(df_hcl, self._inst_param)
-            self._hist_ui.setWindowTitle("Time Axis Analysis:  [{}]".format(stm))
+            self._hist_ui.setWindowTitle("Time Axis Analysis".format(stm))
+            self._hist_ui.set_tag_text(stm)
             self._hist_ui.show()
 
 
