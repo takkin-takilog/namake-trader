@@ -1,6 +1,6 @@
 from typing import TypeVar
 import rclpy
-from rclpy.executors import Executor
+from rclpy.executors import Executor, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.client import Client
 
@@ -38,6 +38,8 @@ def call_servive_sync(srv_cli: Client,
                       ) -> SrvTypeResponse:
     future = srv_cli.call_async(request)
     global _g_node
+    if executor is None:
+        executor = SingleThreadedExecutor()
     rclpy.spin_until_future_complete(_g_node, future, executor, timeout_sec)
 
     if future.done() is False:

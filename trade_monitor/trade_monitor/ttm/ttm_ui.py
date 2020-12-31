@@ -152,8 +152,7 @@ class TtmUi():
             self._logger.error("service server [{}] not to become ready"
                                .format(inst_param.text))
         else:
-
-            rsp = ros_com.call_servive_sync(srv_cli, req, timeout_sec=10.0)
+            rsp = ros_com.call_servive_sync(srv_cli, req)
             self._gran_param = GranParam.get_member_by_msgid(rsp.gran_id)
 
             start_time_str = rsp.start_time
