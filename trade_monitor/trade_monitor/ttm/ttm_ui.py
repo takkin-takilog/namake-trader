@@ -206,7 +206,7 @@ class TtmUi():
                 record = [rec.date,
                           # rec.month,
                           rec.weekday_id,
-                          rec.goto_id,
+                          rec.gotoday_id,
                           rec.is_goto,
                           rec.gap_type
                           ] + rec.data_list.tolist()

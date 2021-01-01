@@ -14,17 +14,18 @@ from trade_monitor.ttm.widget import LineChartViewStats
 from trade_monitor.ttm.widget import LineChartViewCumsum
 from trade_monitor.ttm.widget import BaseUi
 from trade_monitor.ttm.constant import AnalysisType, ChartTag
+from trade_apl_msgs.msg import TtmTblBaseRecMsg as BsMsg
 
 
 class _WeekdayId(Enum):
     """
     Weekday ID.
     """
-    MON = (0, "Mon", QColor(Qt.black), "#f5dcdc")
-    TUE = (1, "Tue", QColor(Qt.black), "#d9ead3")
-    WED = (2, "Wed", QColor(Qt.black), "#fce5cd")
-    THU = (3, "Thu", QColor(Qt.black), "#cfe2f3")
-    FRI = (4, "Fri", QColor(Qt.black), "#fff2cc")
+    MON = (BsMsg.WEEKDAY_MON, "Mon", QColor(Qt.black), "#f5dcdc")
+    TUE = (BsMsg.WEEKDAY_TUE, "Tue", QColor(Qt.black), "#d9ead3")
+    WED = (BsMsg.WEEKDAY_WED, "Wed", QColor(Qt.black), "#fce5cd")
+    THU = (BsMsg.WEEKDAY_THU, "Thu", QColor(Qt.black), "#cfe2f3")
+    FRI = (BsMsg.WEEKDAY_FRI, "Fri", QColor(Qt.black), "#fff2cc")
 
     def __init__(self,
                  id_: int,

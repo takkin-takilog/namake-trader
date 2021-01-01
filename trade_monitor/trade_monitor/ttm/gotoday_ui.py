@@ -14,19 +14,20 @@ from trade_monitor.ttm.widget import LineChartViewStats
 from trade_monitor.ttm.widget import LineChartViewCumsum
 from trade_monitor.ttm.widget import BaseUi
 from trade_monitor.ttm.constant import AnalysisType, ChartTag
+from trade_apl_msgs.msg import TtmTblBaseRecMsg as BsMsg
 
 
 class _GotodayId(Enum):
     """
     Gotoday ID.
     """
-    NTD = (0, "Not", QColor(Qt.black), "#f5dcdc")
-    D05 = (1, "5Day", QColor(Qt.black), "#d9ead3")
-    D10 = (2, "10Day", QColor(Qt.black), "#fce5cd")
-    D15 = (3, "15Day", QColor(Qt.black), "#cfe2f3")
-    D20 = (4, "20Day", QColor(Qt.black), "#fff2cc")
-    D25 = (5, "25Day", QColor(Qt.black), "#ead1dc")
-    LSD = (6, "LstDay", QColor(Qt.black), "#d0e0e3")
+    NTD = (BsMsg.GOTODAY_NONE, "Not", QColor(Qt.black), "#f5dcdc")
+    D05 = (BsMsg.GOTODAY_D05, "5Day", QColor(Qt.black), "#d9ead3")
+    D10 = (BsMsg.GOTODAY_D10, "10Day", QColor(Qt.black), "#fce5cd")
+    D15 = (BsMsg.GOTODAY_D15, "15Day", QColor(Qt.black), "#cfe2f3")
+    D20 = (BsMsg.GOTODAY_D20, "20Day", QColor(Qt.black), "#fff2cc")
+    D25 = (BsMsg.GOTODAY_D25, "25Day", QColor(Qt.black), "#ead1dc")
+    LSD = (BsMsg.GOTODAY_DLST, "LstDay", QColor(Qt.black), "#d0e0e3")
 
     def __init__(self,
                  id_: int,
