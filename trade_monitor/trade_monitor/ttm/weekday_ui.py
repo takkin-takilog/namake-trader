@@ -492,8 +492,7 @@ class WeekdayUi(BaseUi):
     def _reconstruct_dataframe_base(self, df_base):
 
         df_base_r = df_base.reset_index()
-        columns = [ColumnName.MONTH.value,
-                   ColumnName.GOTO_ID.value]
+        columns = [ColumnName.GOTODAY_ID.value]
         df_base_r.drop(columns=columns, inplace=True)
         index = [ColumnName.WEEKDAY_ID.value,
                  ColumnName.IS_GOTO.value,

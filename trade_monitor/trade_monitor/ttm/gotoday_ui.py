@@ -336,7 +336,7 @@ class GotodayUi(BaseUi):
                               df_base: pd.DataFrame
                               ) -> pd.DataFrame:
 
-        level = [ColumnName.GOTO_ID.value,
+        level = [ColumnName.GOTODAY_ID.value,
                  ColumnName.GAP_TYP.value
                  ]
         return self._make_statistics_dataframe(df_base, level)
@@ -439,7 +439,7 @@ class GotodayUi(BaseUi):
             idxloc = gotoday_m.id
             if idxloc in df_trg.index:
                 chartview.update(df_trg.loc[idxloc], self._gran_param, self._inst_param)
-                level = [ColumnName.GOTO_ID.value]
+                level = [ColumnName.GOTODAY_ID.value]
                 df_date = df_base_r.xs([idxloc], level=level)
                 chartview.set_dataframe_date(df_date)
             else:
@@ -448,11 +448,10 @@ class GotodayUi(BaseUi):
     def _reconstruct_dataframe_base(self, df_base):
 
         df_base_r = df_base.reset_index()
-        columns = [ColumnName.MONTH.value,
-                   ColumnName.WEEKDAY_ID.value,
+        columns = [ColumnName.WEEKDAY_ID.value,
                    ColumnName.IS_GOTO.value]
         df_base_r.drop(columns=columns, inplace=True)
-        index = [ColumnName.GOTO_ID.value,
+        index = [ColumnName.GOTODAY_ID.value,
                  ColumnName.DATE.value,
                  ColumnName.GAP_TYP.value]
         df_base_r.set_index(index, inplace=True)

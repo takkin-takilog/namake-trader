@@ -71,6 +71,14 @@ class _GotodayId(Enum):
                 return m
         return None
 
+    @property
+    def is_goto(self) -> bool:
+        """
+        Least significant bit (Resolution).
+        return type is "float".
+        """
+        return False if self is _GotodayId.NON else True
+
 
 class _TreeViewColumn(Enum):
     """
@@ -78,8 +86,11 @@ class _TreeViewColumn(Enum):
     """
     DATE = "Date"
     WEEKDAY = "Weekday"
-    GOTODAY = "Goto day"
-    DATATYP = "Data type"
+    GOTODAY = "Gotoday"
+    IS_GOTO = "Is-Gotoday"
+    CLOP0930 = "CL-OP:9:30"
+    CLOP0950 = "CL-OP:9:50"
+    CLOP0955 = "CL-OP:9:55"
 
     @classmethod
     def to_list(cls):
@@ -193,7 +204,7 @@ class TtmUi():
             tbl = []
             for rec in rsp.ttm_tbl_base:
                 record = [rec.date,
-                          rec.month,
+                          # rec.month,
                           rec.weekday_id,
                           rec.goto_id,
                           rec.is_goto,
@@ -202,35 +213,47 @@ class TtmUi():
                 tbl.append(record)
 
             columns = [ColumnName.DATE.value,
-                       ColumnName.MONTH.value,
+                       # ColumnName.MONTH.value,
                        ColumnName.WEEKDAY_ID.value,
-                       ColumnName.GOTO_ID.value,
+                       ColumnName.GOTODAY_ID.value,
                        ColumnName.IS_GOTO.value,
                        ColumnName.GAP_TYP.value
                        ] + time_range_list
             df_base = pd.DataFrame(tbl, columns=columns)
 
             index = [ColumnName.DATE.value,
-                     ColumnName.MONTH.value,
+                     # ColumnName.MONTH.value,
                      ColumnName.WEEKDAY_ID.value,
-                     ColumnName.GOTO_ID.value,
+                     ColumnName.GOTODAY_ID.value,
                      ColumnName.IS_GOTO.value,
                      ColumnName.GAP_TYP.value,
                      ]
             df_base.set_index(index, inplace=True)
 
             # ---------- compose Tree View ----------
+            inst_idx = self._ui.comboBox_ttm_inst.currentIndex()
+            inst_param = VALID_INST_LIST[inst_idx]
+            is_goto_dict = {True: "Yes", False: "No"}
+            mltidx_name = df_base.index.names
+            date_pos = mltidx_name.index(ColumnName.DATE.value)
+            weekdayid_pos = mltidx_name.index(ColumnName.WEEKDAY_ID.value)
+            gotodayid_pos = mltidx_name.index(ColumnName.GOTODAY_ID.value)
             flg = df_base.index.get_level_values(ColumnName.GAP_TYP.value) == GapType.CO.value
-
             tbl = []
-            for index, row in df_base[flg].iterrows():
-                wdmem = _WeekdayId.get_member_by_id(index[2])
-                gdmem = _GotodayId.get_member_by_id(index[3])
+            for mltidx, row in df_base[flg].iterrows():
+                date = mltidx[date_pos]
+                weekdayid = mltidx[weekdayid_pos]
+                gotodayid = mltidx[gotodayid_pos]
+                wdmem = _WeekdayId.get_member_by_id(weekdayid)
+                gdmem = _GotodayId.get_member_by_id(gotodayid)
                 items = [
-                    index[0],  # date
+                    date,
                     wdmem.text,
                     gdmem.text,
-                    0
+                    is_goto_dict[gdmem.is_goto],
+                    utl.roundf(row["09:30"], digit=inst_param.digit),
+                    utl.roundf(row["09:50"], digit=inst_param.digit),
+                    utl.roundf(row["09:55"], digit=inst_param.digit)
                 ]
                 tbl.append(items)
             df = pd.DataFrame(tbl,
