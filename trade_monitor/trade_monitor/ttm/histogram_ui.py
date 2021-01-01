@@ -384,6 +384,8 @@ class ChartView(BaseView):
 
 class HistogramUi(QMainWindow):
 
+    _PRICE_RANGE_MAX = 0.250
+
     def __init__(self, tag: ChartTag, parent=None):
         super().__init__(parent)
 
@@ -426,6 +428,8 @@ class HistogramUi(QMainWindow):
 
         lsb = inst_param.lsb_value
         index_max = max(abs(df_hist.index[0]), abs(df_hist.index[-1])) + lsb * 3
+        if self._PRICE_RANGE_MAX < index_max:
+            index_max = self._PRICE_RANGE_MAX
 
         sr_hi = df_hist[ColumnName.PRICE_HIOP.value].fillna(0)
         sr_cl = df_hist[ColumnName.PRICE_CLOP.value].fillna(0)
@@ -439,11 +443,13 @@ class HistogramUi(QMainWindow):
         max_val = df_adjust[ColumnName.PRICE_HIOP.value].max()
         min_val = df_adjust[ColumnName.PRICE_LOOP.value].min()
         max_y = max(abs(max_val), abs(min_val))
+        max_y += max_y * 0.05
+        if self._PRICE_RANGE_MAX < max_y:
+            max_y = self._PRICE_RANGE_MAX
         min_y = -max_y
 
-        dif = max_y * 0.05
-        self._chartview.set_max_y(max_y + dif)
-        self._chartview.set_min_y(min_y - dif)
+        self._chartview.set_max_y(max_y)
+        self._chartview.set_min_y(min_y)
 
         self._histview_hi.set_max_x(counts_max)
         self._histview_hi.set_min_x(0)
