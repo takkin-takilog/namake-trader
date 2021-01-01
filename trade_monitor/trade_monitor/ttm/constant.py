@@ -23,7 +23,6 @@ class ColumnName(Enum):
     IS_GOTO = "Is_Goto"
     GAP_TYP = "Gap_type"
     DATA_TYP = "Data_type"
-    # MONTH = "Month"
 
 
 class GapType(IntEnum):
