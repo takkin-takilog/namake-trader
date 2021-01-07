@@ -333,14 +333,14 @@ class GotodayUi(BaseUi):
         df_base = self._df_base[(sdt_str <= mst_list) & (mst_list <= sdt_end)]
         return df_base
 
-    def _convert_base2gotoday(self,
-                              df_base: pd.DataFrame
-                              ) -> pd.DataFrame:
+    def _generate_dfgotoday_from_dfbase(self,
+                                        df_base: pd.DataFrame
+                                        ) -> pd.DataFrame:
 
         level = [ColumnName.GOTODAY_ID.value,
                  ColumnName.GAP_TYP.value
                  ]
-        return self._make_statistics_dataframe(df_base, level)
+        return self._generate_statistics_dataframe(df_base, level)
 
     def _reconstruct_table(self):
 
@@ -403,7 +403,7 @@ class GotodayUi(BaseUi):
 
     def _update_chart(self, df_base):
 
-        df = self._convert_base2gotoday(df_base)
+        df = self._generate_dfgotoday_from_dfbase(df_base)
         df_base_r = self._reconstruct_dataframe_base(df_base)
 
         mst_list = df.index.get_level_values(level=ColumnName.DATA_TYP.value)

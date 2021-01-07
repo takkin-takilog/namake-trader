@@ -15,7 +15,7 @@ from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
 from trade_monitor.ttm.constant import ColumnName, GapType, DataType
-from trade_monitor.ttm.constant import AnalysisType, ChartTag
+from trade_monitor.ttm.constant import ChartTag
 from trade_monitor.ttm.histogram_ui import ColumnName as HistColumnName
 from trade_monitor.ttm.histogram_ui import HistogramUi
 
@@ -35,12 +35,12 @@ class BaseUi(QMainWindow):
 
         return ui
 
-    def _make_statistics_dataframe(self,
-                                   df_base: pd.DataFrame,
-                                   level: list
-                                   ) -> pd.DataFrame:
+    def _generate_statistics_dataframe(self,
+                                       df_base: pd.DataFrame,
+                                       level: list
+                                       ) -> pd.DataFrame:
 
-        # ----- make DataFrame "Mean" -----
+        # ----- generate DataFrame "Mean" -----
         df_mean = df_base.mean(level=level).sort_index()
         df_mean.reset_index(ColumnName.GAP_TYP.value, inplace=True)
 
@@ -56,7 +56,7 @@ class BaseUi(QMainWindow):
         index = ColumnName.DATA_TYP.value
         df_mean.set_index(index, append=True, inplace=True)
 
-        # ----- make DataFrame "Std" -----
+        # ----- generate DataFrame "Std" -----
         df_std = df_base.std(level=level).sort_index()
         df_std.reset_index(ColumnName.GAP_TYP.value, inplace=True)
 
@@ -72,7 +72,7 @@ class BaseUi(QMainWindow):
         index = ColumnName.DATA_TYP.value
         df_std.set_index(index, append=True, inplace=True)
 
-        # ----- make DataFrame "Cumulative Sum" -----
+        # ----- generate DataFrame "Cumulative Sum" -----
         cond = df_mean.index.get_level_values(ColumnName.DATA_TYP.value) == DataType.CO_MEAN.value
         df_csum = df_mean[cond].rename(index={DataType.CO_MEAN.value: DataType.CO_CSUM.value},
                                        level=ColumnName.DATA_TYP.value)
