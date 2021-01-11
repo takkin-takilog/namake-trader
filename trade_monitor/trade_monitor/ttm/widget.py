@@ -143,8 +143,9 @@ class CandlestickChartView(CandlestickChartViewDateTimeAxis):
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
 
-        self._vl_ttm.show()
-        self._callout_ttm_dt.show()
+        if self._is_update:
+            self._vl_ttm.show()
+            self._callout_ttm_dt.show()
 
     def _update_callout_ttm(self, qdttm):
 
@@ -283,9 +284,10 @@ class BaseLineChartViewTtm(BaseLineChartView):
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
 
-        self._vl_ttm.show()
-        self._callout_ttm_dt.show()
-        self._hl_zero.show()
+        if self._is_update:
+            self._vl_ttm.show()
+            self._callout_ttm_dt.show()
+            self._hl_zero.show()
 
     def _update_callout_ttm(self, qdttm):
 

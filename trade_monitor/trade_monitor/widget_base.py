@@ -838,7 +838,7 @@ class BaseLineChartView(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
-        self._gran_param = GranParam
+        self._gran_param = GranParam.D
         self._inst_param = InstParam.USDJPY
         self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
         self._max_y = None
