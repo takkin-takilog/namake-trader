@@ -361,27 +361,28 @@ class LineChartViewStats(BaseLineChartViewTtm):
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
 
-        chart = self.chart()
-        flag = chart.plotArea().contains(event.pos())
-        if flag and (event.buttons() == Qt.LeftButton):
-            m2v = chart.mapToValue(event.pos())
-            xpos = utl.roundi(m2v.x())
-            pdt = QDateTime.fromMSecsSinceEpoch(xpos).toPython()
-            pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
-            stm = pdt.strftime(FMT_TIME_HM)
-            df = self._df_date[stm]
-            sr_ho = df.xs(GapType.HO.value, level=ColumnName.GAP_TYP.value)
-            sr_ho.rename(HistColumnName.PRICE_HIOP.value, inplace=True)
-            sr_lo = df.xs(GapType.LO.value, level=ColumnName.GAP_TYP.value)
-            sr_lo.rename(HistColumnName.PRICE_LOOP.value, inplace=True)
-            sr_co = df.xs(GapType.CO.value, level=ColumnName.GAP_TYP.value)
-            sr_co.rename(HistColumnName.PRICE_CLOP.value, inplace=True)
-            df_hcl = pd.concat([sr_ho, sr_co, sr_lo], axis=1)
+        if self._is_update:
+            chart = self.chart()
+            flag = chart.plotArea().contains(event.pos())
+            if flag and (event.buttons() == Qt.LeftButton):
+                m2v = chart.mapToValue(event.pos())
+                xpos = utl.roundi(m2v.x())
+                pdt = QDateTime.fromMSecsSinceEpoch(xpos).toPython()
+                pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
+                stm = pdt.strftime(FMT_TIME_HM)
+                df = self._df_date[stm]
+                sr_ho = df.xs(GapType.HO.value, level=ColumnName.GAP_TYP.value)
+                sr_ho.rename(HistColumnName.PRICE_HIOP.value, inplace=True)
+                sr_lo = df.xs(GapType.LO.value, level=ColumnName.GAP_TYP.value)
+                sr_lo.rename(HistColumnName.PRICE_LOOP.value, inplace=True)
+                sr_co = df.xs(GapType.CO.value, level=ColumnName.GAP_TYP.value)
+                sr_co.rename(HistColumnName.PRICE_CLOP.value, inplace=True)
+                df_hcl = pd.concat([sr_ho, sr_co, sr_lo], axis=1)
 
-            self._hist_ui.set_data(df_hcl, self._inst_param)
-            self._hist_ui.setWindowTitle("Time Axis Analysis".format(stm))
-            self._hist_ui.set_tag_text(stm)
-            self._hist_ui.show()
+                self._hist_ui.set_data(df_hcl, self._inst_param)
+                self._hist_ui.setWindowTitle("Time Axis Analysis".format(stm))
+                self._hist_ui.set_tag_text(stm)
+                self._hist_ui.show()
 
 
 class LineChartViewCumsum(BaseLineChartViewTtm):
