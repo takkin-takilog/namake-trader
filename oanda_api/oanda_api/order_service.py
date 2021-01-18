@@ -41,7 +41,7 @@ _ORDER_STS_DICT = {
 
 _TRADE_STS_DICT = {
     "OPEN": TradeState.STS_OPEN,
-    "STS_CLOSED": TradeState.STS_CLOSED,
+    "CLOSED": TradeState.STS_CLOSED,
     "CLOSE_WHEN_TRADEABLE": TradeState.STS_CLOSE_WHEN_TRADEABLE,
 }
 
