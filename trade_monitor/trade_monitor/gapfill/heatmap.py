@@ -1,75 +1,71 @@
-import math
+from enum import IntEnum, auto
 import pandas as pd
-from trade_monitor.util import INST_MSG_LIST
-from trade_monitor import util as utl
 from trade_apl_msgs.msg import GapFillMsg
-
-COL_NAME_DATE = "date"
-COL_NAME_GPA_DIR = "gap dir"
-COL_NAME_GPA_CLOSE_PRICE = "gap close price"
-COL_NAME_GPA_OPEN_PRICE = "gap open price"
-COL_NAME_GPA_PRICE_MID = "gap price(mid)"
-COL_NAME_GPA_PRICE_REAL = "gap price(real)"
-COL_NAME_VALID_FLAG = "valid flag"
-COL_NAME_SUCCESS_FLAG = "success flag"
-COL_NAME_GAP_FILLED_TIME = "gap filled time"
-COL_NAME_MAX_OPEN_RANGE = "max open range"
-COL_NAME_END_CLOSE_PRICE = "end close price"
-
-COL_GPA_PRICE_TH = "gap price thresh"
+from trade_monitor import utility as utl
+from trade_monitor import ros_common as ros_com
+from trade_monitor.gapfill.constant import VALID_INST_LIST
+from trade_monitor.gapfill.constant import ColumnName as GfColNm
 
 
-class HeatMapManager():
+class _GapDir(IntEnum):
+    """
+    Gap direction.
+    """
+    ALL = auto()
+    UP = auto()
+    DOWN = auto()
 
-    GAP_DIR_ALL = 1
-    GAP_DIR_UP = 2
-    GAP_DIR_DOWN = 3
 
-    GAP_UPPER_LIMIT = 500   # pips
+class HeatMap():
+
+    _COL_GPA_PRICE_TH = "gap price thresh"
+    _GAP_UPPER_LIMIT_RAW = 500
+    _MAX_OPEN_MARGIN_RAW = 5
+    _GAP_MARGIN_RAW = 10
 
     def __init__(self, sts_bar):
         self._sts_bar = sts_bar
+        self._logger = ros_com.get_logger()
 
     def set_param(self, df_param: pd.DataFrame, inst_idx):
 
-        df_valid = df_param[df_param[COL_NAME_VALID_FLAG]]
+        df_valid = df_param[df_param[GfColNm.VALID_FLAG.value]]
+        inst_param = VALID_INST_LIST[inst_idx]
 
-        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-        lsb = math.pow(10, decimal_digit)
-
-        gap_upper_limit = self.GAP_UPPER_LIMIT / lsb
-        flg = df_valid[COL_NAME_GPA_PRICE_MID] < gap_upper_limit
+        gap_upper_limit = inst_param.convert_raw2phy(self._GAP_UPPER_LIMIT_RAW)
+        flg = df_valid[GfColNm.GPA_PRICE_MID.value] < gap_upper_limit
         df_valid = df_valid[flg]
 
-        flg = df_valid[COL_NAME_SUCCESS_FLAG]
+        flg = df_valid[GfColNm.SUCCESS_FLAG.value]
         df_succ = df_valid[flg]
-        max_open_price_max = df_succ[COL_NAME_MAX_OPEN_RANGE].max()
+        max_open_price_max = df_succ[GfColNm.MAX_OPEN_RANGE.value].max()
 
-        margin = 5
-        max_open_pips_max = utl.roundi(max_open_price_max * lsb) + margin
-        hmap_col = [COL_NAME_DATE] + list(range(1, max_open_pips_max + 1))
+        max_open_max_raw = inst_param.convert_phy2raw(max_open_price_max)
+        max_open_max_raw += self._MAX_OPEN_MARGIN_RAW
+
+        hmap_col = [GfColNm.DATE.value] + list(range(1, max_open_max_raw + 1))
 
         roslist = []
         for date, is_succ, mop, gpr in zip(df_valid.index,
-                                           df_valid[COL_NAME_SUCCESS_FLAG],
-                                           df_valid[COL_NAME_MAX_OPEN_RANGE],
-                                           df_valid[COL_NAME_GPA_PRICE_REAL]):
+                                           df_valid[GfColNm.SUCCESS_FLAG.value],
+                                           df_valid[GfColNm.MAX_OPEN_RANGE.value],
+                                           df_valid[GfColNm.GPA_PRICE_REAL.value]):
             if is_succ:
-                max_open_pips = utl.roundi(mop * lsb)
+                max_open_raw = inst_param.convert_phy2raw(mop)
             else:
-                max_open_pips = max_open_pips_max
+                max_open_raw = max_open_max_raw
 
-            row_left = list(range(-1, -max_open_pips - 1, -1))
-            gap_pips = utl.roundi(gpr * lsb)
+            row_left = list(range(-1, -max_open_raw - 1, -1))
+            gap_raw = inst_param.convert_phy2raw(gpr)
 
-            row_right = [gap_pips] * (max_open_pips_max - max_open_pips)
+            row_right = [gap_raw] * (max_open_max_raw - max_open_raw)
             roslist.append([date] + row_left + row_right)
 
         df_htbl = pd.DataFrame(roslist, columns=hmap_col)
-        df_htbl.set_index(COL_NAME_DATE, inplace=True)
+        df_htbl.set_index(GfColNm.DATE.value, inplace=True)
 
         df_hmap_base = self._make_basemap(df_valid, df_htbl, inst_idx)
-        df_hmap = df_hmap_base.sum(level=COL_GPA_PRICE_TH).sort_index()
+        df_hmap = df_hmap_base.sum(level=self._COL_GPA_PRICE_TH).sort_index()
 
         zero_idx = list(range(1, df_hmap.index[0]))
         df_tmp = pd.DataFrame(index=zero_idx,
@@ -93,7 +89,7 @@ class HeatMapManager():
 
         self._date_step = len(df_valid)
         self._date_pos = 0
-        self._gap_dir = self.GAP_DIR_ALL
+        self._gap_dir = _GapDir.ALL
 
     def reset_hmap(self, deci: int):
         self._df_param = self._df_param_mst
@@ -113,7 +109,7 @@ class HeatMapManager():
         date_list = self._df_param.index[start:end].tolist()
         df_hmap_base = self._df_hmap_base.loc[(date_list), :]
 
-        df_hmap = df_hmap_base.sum(level=COL_GPA_PRICE_TH)
+        df_hmap = df_hmap_base.sum(level=self._COL_GPA_PRICE_TH)
         df_hmap = pd.concat([df_hmap, self._df_hmap_zero]).sum(level=0)
         df_hmap.sort_index(inplace=True)
 
@@ -125,25 +121,25 @@ class HeatMapManager():
         return df_new
 
     def switch_dir_all(self):
-        self._gap_dir = self.GAP_DIR_ALL
+        self._gap_dir = _GapDir.ALL
         self._update_param()
 
     def switch_dir_up(self):
-        self._gap_dir = self.GAP_DIR_UP
+        self._gap_dir = _GapDir.UP
         self._update_param()
 
     def switch_dir_down(self):
-        self._gap_dir = self.GAP_DIR_DOWN
+        self._gap_dir = _GapDir.DOWN
         self._update_param()
 
     def _update_param(self):
 
         df = self._df_param_mst
 
-        if self._gap_dir == self.GAP_DIR_UP:
-            df_param = df[df[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_UP]
-        elif self._gap_dir == self.GAP_DIR_DOWN:
-            df_param = df[df[COL_NAME_GPA_DIR] == GapFillMsg.GAP_DIR_DOWN]
+        if self._gap_dir == _GapDir.UP:
+            df_param = df[df[GfColNm.GPA_DIR.value] == GapFillMsg.GAP_DIR_UP]
+        elif self._gap_dir == _GapDir.DOWN:
+            df_param = df[df[GfColNm.GPA_DIR.value] == GapFillMsg.GAP_DIR_DOWN]
         else:
             df_param = df
 
@@ -205,25 +201,25 @@ class HeatMapManager():
                       inst_idx: int
                       ):
 
-        label = COL_NAME_GPA_PRICE_MID
+        label = GfColNm.GPA_PRICE_MID.value
         gap_price_real_max = df_param[label].max()
-        decimal_digit = INST_MSG_LIST[inst_idx].decimal_digit
-        lsb = math.pow(10, decimal_digit)
+        inst_param = VALID_INST_LIST[inst_idx]
 
-        margin = 10
-        gap_pips_max = utl.roundi(gap_price_real_max * lsb) + margin
+        gap_max_raw = inst_param.convert_phy2raw(gap_price_real_max)
+        gap_max_raw += self._GAP_MARGIN_RAW
 
         df_base = pd.DataFrame()
         for date, htbl in df_htbl.iterrows():
-            gap_pips = utl.roundi(df_param.loc[date][label] * lsb)
-            collist = [htbl.to_list()] * (gap_pips_max - (gap_pips - 1))
-            gpt_col = list(range(gap_pips, gap_pips_max + 1))
+            gap_pips_raw = inst_param.convert_phy2raw(df_param.loc[date][label])
+
+            collist = [htbl.to_list()] * (gap_max_raw - (gap_pips_raw - 1))
+            gpt_col = list(range(gap_pips_raw, gap_max_raw + 1))
 
             df = pd.DataFrame(collist,
                               columns=df_htbl.columns)
-            df[COL_GPA_PRICE_TH] = gpt_col
-            df[COL_NAME_DATE] = date
-            df.set_index([COL_NAME_DATE, COL_GPA_PRICE_TH], inplace=True)
+            df[self._COL_GPA_PRICE_TH] = gpt_col
+            df[GfColNm.DATE.value] = date
+            df.set_index([GfColNm.DATE.value, self._COL_GPA_PRICE_TH], inplace=True)
             df_base = pd.concat([df_base, df])
 
         return df_base

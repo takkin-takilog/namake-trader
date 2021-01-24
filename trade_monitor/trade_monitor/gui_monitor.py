@@ -13,10 +13,12 @@ from rclpy.client import Client
 from std_msgs.msg import String, Bool
 from trade_manager_msgs.srv import CandlesMntSrv
 from trade_monitor.gapfill.gapfill_ui import GapFillUi
+from trade_monitor.ttm.ttm_ui import TtmUi
 from trade_monitor.main_ui import MainUi
-from trade_monitor import util as utl
-from trade_monitor.util import INST_MSG_LIST
-from trade_monitor.util import GRAN_MSG_LIST
+from trade_monitor import utility as utl
+# from trade_monitor.constant import INST_MSG_LIST
+# from trade_monitor.constant import GRAN_MSG_LIST
+from trade_monitor import ros_common as ros_com
 
 
 class GuiMonitor(QMainWindow):
@@ -29,6 +31,7 @@ class GuiMonitor(QMainWindow):
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
 
+        """
         # set comboBox of Instrument
         utl.remove_all_items_of_comboBox(ui.comboBox_inst_main)
         for obj in INST_MSG_LIST:
@@ -38,6 +41,7 @@ class GuiMonitor(QMainWindow):
         utl.remove_all_items_of_comboBox(ui.comboBox_gran_main)
         for obj in GRAN_MSG_LIST:
             ui.comboBox_gran_main.addItem(obj.text)
+        """
 
         # QTimer
         self.timer = QTimer(self)
@@ -73,13 +77,17 @@ class GuiMonitor(QMainWindow):
                                  reliability=QoSReliabilityPolicy.RELIABLE)
         pub_alive = node.create_publisher(msg_type, topic, qos_profile)
 
+        ros_com.set_node(node)
+        ros_com.set_service_client_candle(cli_cdl)
+
         self._ui = ui
         self._node = node
         self._cli_cdl = cli_cdl
         self._pub_alive = pub_alive
 
-        self._main_ui = MainUi(ui, node, cli_cdl)
-        self._gapfill_ui = GapFillUi(ui, node, cli_cdl)
+        self._main_ui = MainUi(ui)
+        self._gapfill_ui = GapFillUi(ui)
+        self._ttm_ui = TtmUi(ui)
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")
@@ -148,7 +156,9 @@ class GuiMonitor(QMainWindow):
         if tab_index == 0:
             self._main_ui.resize_chart_widget()
         elif tab_index == 1:
-            self._gapfill_ui.resize_chart_widget()
+            pass
+        elif tab_index == 2:
+            pass
 
     def _on_timeout_1s(self) -> None:
 
