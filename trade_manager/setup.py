@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'order_scheduler_exe = ' + package_name + '.order_scheduler:main',
             'order_manager_exe = ' + package_name + '.order_manager:main',
             'candlestick_manager_exe = ' + package_name + '.candlestick_manager:main',
         ],
