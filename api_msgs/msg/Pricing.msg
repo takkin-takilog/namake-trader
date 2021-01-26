@@ -4,6 +4,7 @@
 #    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/pricing/pricingstream.html
 
 # The date/time when the Price was created.
+# Format is "%Y-%m-%dT%H:%M:%S.%f"
 string time
 
 # The list of prices and liquidity available on the Instrument's bid side.
