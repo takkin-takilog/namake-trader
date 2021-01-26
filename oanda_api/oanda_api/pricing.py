@@ -10,6 +10,7 @@ from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error
 from oanda_api.service_common import INST_DICT, ADD_CIPHERS
+from oanda_api import utility as utl
 
 MsgType = TypeVar("MsgType")
 
@@ -163,7 +164,7 @@ class PricingPublisher(Node):
         for price in price_list:
             if price["type"] == "PRICE":
                 msg = Pricing()
-                msg.time = price["time"]
+                msg.time = utl.convert_datetime_jst(price["time"])
                 for bid in price["bids"]:
                     pb = PriceBucket()
                     pb.price = float(bid["price"])

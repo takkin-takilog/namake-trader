@@ -10,6 +10,7 @@ from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error, StreamTerminated
 from oanda_api.service_common import INST_DICT, ADD_CIPHERS
+from oanda_api import utility as utl
 
 MsgType = TypeVar("MsgType")
 
@@ -173,7 +174,7 @@ class PricingStreamPublisher(Node):
                 typ = rsp["type"]
                 if typ == "PRICE":
                     msg = Pricing()
-                    msg.time = rsp["time"]
+                    msg.time = utl.convert_datetime_jst(rsp["time"])
                     for bid in rsp["bids"]:
                         pb = PriceBucket()
                         pb.price = float(bid["price"])
@@ -192,7 +193,7 @@ class PricingStreamPublisher(Node):
 
                 elif typ == "HEARTBEAT":
                     msg = String()
-                    msg.data = rsp["time"]
+                    msg.data = utl.convert_datetime_jst(rsp["time"])
                     # Publish topics
                     self._pub_hb.publish(msg)
 
