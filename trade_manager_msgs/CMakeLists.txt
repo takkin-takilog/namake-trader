@@ -18,6 +18,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CandleMnt.msg"
   "msg/Granularity.msg"
   "msg/Instrument.msg"
+  "msg/OrderRequest.msg"
   "msg/LimitOrderRequest.msg"
   "msg/MarketOrderRequest.msg"
   "msg/StopOrderRequest.msg"
