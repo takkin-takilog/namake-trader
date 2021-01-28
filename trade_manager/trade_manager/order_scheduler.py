@@ -50,10 +50,10 @@ class OrderTicket():
 
         req = OrderCreateSrv.Request()
 
-        if req.order_type == OrderRequest.ORDER_TYP_MARKET:
+        if msg.order_type == OrderRequest.ORDER_TYP_MARKET:
             req.ordertype_msg.type = OrderTypeMsg.TYP_MARKET
         else:
-            if req.order_type == OrderRequest.ORDER_TYP_LIMIT:
+            if msg.order_type == OrderRequest.ORDER_TYP_LIMIT:
                 req.ordertype_msg.type = OrderTypeMsg.TYP_LIMIT
             else:
                 req.ordertype_msg.type = OrderTypeMsg.TYP_STOP
@@ -71,10 +71,10 @@ class OrderTicket():
             self._exit_exp_time = dt.datetime.strptime(
                 msg.exit_exp_time, FMT_DTTM_YMDHMS)
 
-        if req.order_dir == OrderRequest.DIR_LONG:
-            req.units = req.units
+        if msg.order_dir == OrderRequest.DIR_LONG:
+            req.units = msg.units
         else:
-            req.units = -req.units
+            req.units = -msg.units
 
         req.inst_msg.inst_id = msg.inst_id
         req.take_profit_price = msg.take_profit_price
