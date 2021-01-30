@@ -5,11 +5,13 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from std_msgs.msg import Bool
-from api_msgs.msg import PriceBucket, Pricing, Instrument
+from api_msgs.msg import PriceBucket, Pricing
+from api_msgs.msg import Instrument as Inst
 from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error
-from oanda_api.service_common import INST_DICT, ADD_CIPHERS
+from oanda_api.constant import InstParam
+from oanda_api.constant import ADD_CIPHERS
 from oanda_api import utility as utl
 
 MsgType = TypeVar("MsgType")
@@ -80,21 +82,21 @@ class PricingPublisher(Node):
         inst_name_list = []
         self._pub_dict = {}
         if ENA_INST_USDJPY:
-            inst_name = INST_DICT[Instrument.INST_USD_JPY].name
+            inst_name = InstParam.get_member_by_msgid(Inst.INST_USD_JPY).name
             pub = self.create_publisher(Pricing,
                                         TPCNM_PRICING_USDJPY,
                                         qos_profile)
             self._pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
         if ENA_INST_EURJPY:
-            inst_name = INST_DICT[Instrument.INST_EUR_JPY].name
+            inst_name = InstParam.get_member_by_msgid(Inst.INST_EUR_JPY).name
             pub = self.create_publisher(Pricing,
                                         TPCNM_PRICING_EURJPY,
                                         qos_profile)
             self._pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
         if ENA_INST_EURUSD:
-            inst_name = INST_DICT[Instrument.INST_EUR_USD].name
+            inst_name = InstParam.get_member_by_msgid(Inst.INST_EUR_USD).name
             pub = self.create_publisher(Pricing,
                                         TPCNM_PRICING_EURUSD,
                                         qos_profile)
@@ -129,7 +131,7 @@ class PricingPublisher(Node):
         params = {"instruments": instruments}
         self._pi = pr.PricingInfo(ACCOUNT_NUMBER, params)
 
-        self._logger = logger
+        self.logger = logger
 
     def background(self) -> None:
 
@@ -137,17 +139,17 @@ class PricingPublisher(Node):
             try:
                 self._request()
             except V20Error as err:
-                self._logger.error("{:!^50}".format(" V20Error "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" V20Error "))
+                self.logger.error("{}".format(err))
             except ConnectionError as err:
-                self._logger.error("{:!^50}".format(" ConnectionError "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" ConnectionError "))
+                self.logger.error("{}".format(err))
             except ReadTimeout as err:
-                self._logger.error("{:!^50}".format(" ReadTimeout "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" ReadTimeout "))
+                self.logger.error("{}".format(err))
             except Exception as err:
-                self._logger.error("{:!^50}".format(" OthersError "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" OthersError "))
+                self.logger.error("{}".format(err))
 
             rclpy.spin_once(self, timeout_sec=0)
 
