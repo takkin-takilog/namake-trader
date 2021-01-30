@@ -2,6 +2,7 @@ from typing import TypeVar
 from dataclasses import dataclass
 import requests
 import datetime as dt
+import ast
 import json
 from decimal import Decimal, ROUND_HALF_UP
 from requests.exceptions import ConnectionError, ReadTimeout
@@ -402,9 +403,22 @@ class OrderService(Node):
         try:
             apirsp = self._api.request(ep)
         except V20Error as err:
-            self.logger.error("{:!^50}".format(" V20Error "))
-            self.logger.error("{}".format(err))
             rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
+            try:
+                rspdic = ast.literal_eval(err.msg)
+            except ValueError:
+                pass
+            else:
+                if isinstance(rspdic, dict):
+                    self.logger.debug("{}".format(json.dumps(rspdic, indent=2)))
+                    if "orderRejectTransaction" in rspdic.keys():
+                        rjc = rspdic["orderRejectTransaction"]
+                        if "rejectReason" in rjc.keys():
+                            if rjc["rejectReason"] == "TRADE_DOESNT_EXIST":
+                                rsp.frc_msg.reason_code = frc.REASON_TRADE_DOESNT_EXIST
+            if not rsp.frc_msg.reason_code == frc.REASON_TRADE_DOESNT_EXIST:
+                self.logger.error("{:!^50}".format(" V20Error "))
+                self.logger.error("{}".format(err))
         except ConnectionError as err:
             self.logger.error("{:!^50}".format(" Connection Error "))
             self.logger.error("{}".format(err))
@@ -544,9 +558,22 @@ class OrderService(Node):
         try:
             apirsp = self._api.request(ep)
         except V20Error as err:
-            self.logger.error("{:!^50}".format(" V20Error "))
-            self.logger.error("{}".format(err))
             rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
+            try:
+                rspdic = ast.literal_eval(err.msg)
+            except ValueError:
+                pass
+            else:
+                if isinstance(rspdic, dict):
+                    self.logger.debug("{}".format(json.dumps(rspdic, indent=2)))
+                    if "orderCancelRejectTransaction" in rspdic.keys():
+                        rjc = rspdic["orderCancelRejectTransaction"]
+                        if "rejectReason" in rjc.keys():
+                            if rjc["rejectReason"] == "ORDER_DOESNT_EXIST":
+                                rsp.frc_msg.reason_code = frc.REASON_ORDER_DOESNT_EXIST
+            if not rsp.frc_msg.reason_code == frc.REASON_ORDER_DOESNT_EXIST:
+                self.logger.error("{:!^50}".format(" V20Error "))
+                self.logger.error("{}".format(err))
         except ConnectionError as err:
             self.logger.error("{:!^50}".format(" Connection Error "))
             self.logger.error("{}".format(err))
