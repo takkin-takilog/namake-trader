@@ -1,7 +1,7 @@
 from enum import Enum
 
-FMT_DTTM_YMDHMS = "%Y-%m-%dT%H:%M:%S"
-FMT_DTTM_YMDHMSF = "%Y-%m-%dT%H:%M:%S.%f"
+FMT_YMDHMSF = "%Y-%m-%dT%H:%M:%S.%f"
+FMT_YMDHMS = "%Y-%m-%dT%H:%M:%S"
 
 
 class Transitions(Enum):

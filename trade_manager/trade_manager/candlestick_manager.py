@@ -6,6 +6,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.client import Client
 from rclpy.task import Future
+from trade_manager.constant import FMT_YMDHMS
 from api_msgs.srv import CandlesSrv
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
@@ -21,8 +22,6 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
 class CandlesData():
-
-    DT_FMT = "%Y-%m-%dT%H:%M:00.000000000Z"
 
     _DT_LSB_DICT = {
         GranTm.GRAN_M1: dt.timedelta(minutes=1),    # 1 minute
@@ -221,8 +220,8 @@ class CandlesData():
         req.inst_msg.inst_id = self._inst_id
         req.gran_msg.gran_id = self._gran_id
 
-        req.dt_from = dt_from.strftime(self.DT_FMT)
-        req.dt_to = dt_to.strftime(self.DT_FMT)
+        req.dt_from = dt_from.strftime(FMT_YMDHMS)
+        req.dt_to = dt_to.strftime(FMT_YMDHMS)
 
         future = self._srv_cli.call_async(req)
 
@@ -236,7 +235,7 @@ class CandlesData():
 
             data = []
             for cndl_msg in rsp.cndl_msg_list:
-                dt_ = dt.datetime.strptime(cndl_msg.time, self.DT_FMT)
+                dt_ = dt.datetime.strptime(cndl_msg.time, FMT_YMDHMS)
                 hsc_o = (cndl_msg.ask_o - cndl_msg.bid_o) / 2
                 hsc_h = (cndl_msg.ask_h - cndl_msg.bid_h) / 2
                 hsc_l = (cndl_msg.ask_l - cndl_msg.bid_l) / 2
@@ -655,17 +654,15 @@ class CandlestickManager(Node):
         logger.debug("  - dt_to:[{}]".format(req.dt_to))
         dbg_tm_start = dt.datetime.now()
 
-        DT_FMT = CandlesData.DT_FMT
-
         if req.dt_from == "":
             dt_from = None
         else:
-            dt_from = dt.datetime.strptime(req.dt_from, DT_FMT)
+            dt_from = dt.datetime.strptime(req.dt_from, FMT_YMDHMS)
 
         if req.dt_to == "":
             dt_to = None
         else:
-            dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
+            dt_to = dt.datetime.strptime(req.dt_to, FMT_YMDHMS)
 
         df = self._get_dataframe(req.inst_msg.inst_id,
                                  req.gran_msg.gran_id,
@@ -688,7 +685,7 @@ class CandlestickManager(Node):
                 msg.bid_h = sr[CandlesData._COL_NAME_BID_HI]
                 msg.bid_l = sr[CandlesData._COL_NAME_BID_LO]
                 msg.bid_c = sr[CandlesData._COL_NAME_BID_CL]
-                msg.time = time.strftime(DT_FMT)
+                msg.time = time.strftime(FMT_YMDHMS)
                 msg.is_complete = sr[CandlesData._COL_NAME_COMP]
                 rsp.cndl_msg_list.append(msg)
 
@@ -715,17 +712,15 @@ class CandlestickManager(Node):
         logger.debug("  - dt_to:[{}]".format(req.dt_to))
         dbg_tm_start = dt.datetime.now()
 
-        DT_FMT = CandlesData.DT_FMT
-
         if req.dt_from == "":
             dt_from = None
         else:
-            dt_from = dt.datetime.strptime(req.dt_from, DT_FMT)
+            dt_from = dt.datetime.strptime(req.dt_from, FMT_YMDHMS)
 
         if req.dt_to == "":
             dt_to = None
         else:
-            dt_to = dt.datetime.strptime(req.dt_to, DT_FMT)
+            dt_to = dt.datetime.strptime(req.dt_to, FMT_YMDHMS)
 
         df = self._get_dataframe(req.inst_msg.inst_id,
                                  req.gran_msg.gran_id,
@@ -748,7 +743,7 @@ class CandlestickManager(Node):
                 msg.bid_h = sr[CandlesData._COL_NAME_BID_HI]
                 msg.bid_l = sr[CandlesData._COL_NAME_BID_LO]
                 msg.bid_c = sr[CandlesData._COL_NAME_BID_CL]
-                msg.time = time.strftime(DT_FMT)
+                msg.time = time.strftime(FMT_YMDHMS)
                 msg.is_complete = sr[CandlesData._COL_NAME_COMP]
                 rsp.cndl_msg_list.append(msg)
 

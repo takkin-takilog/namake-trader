@@ -208,7 +208,7 @@ class CandlestickService(Node):
                         msg.bid_c = float(raw["bid"]["c"])
                         dttmp = dt.datetime.strptime(raw["time"], FMT_DTTM_API)
                         jst_dt = utl.convert_from_utc_to_jst(dttmp)
-                        msg.time = jst_dt.strftime(FMT_DTTM_API)
+                        msg.time = jst_dt.strftime(FMT_YMDHMS)
                         msg.is_complete = raw["complete"]
                         rsp.cndl_msg_list.append(msg)
 

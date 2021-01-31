@@ -12,7 +12,7 @@ from rclpy.task import Future
 from rclpy.client import Client
 from std_msgs.msg import Bool
 from trade_manager.constant import Transitions as Tr
-from trade_manager.constant import FMT_DTTM_YMDHMS, FMT_DTTM_YMDHMSF
+from trade_manager.constant import FMT_YMDHMS, FMT_YMDHMSF
 from trade_manager.exception import InitializerErrorException
 from trade_manager_msgs.msg import OrderRequest
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
@@ -63,13 +63,13 @@ class OrderTicket():
                 self._entry_exp_time = None
             else:
                 self._entry_exp_time = dt.datetime.strptime(
-                    msg.entry_exp_time, FMT_DTTM_YMDHMS)
+                    msg.entry_exp_time, FMT_YMDHMS)
 
         if not msg.exit_exp_time:
             self._exit_exp_time = None
         else:
             self._exit_exp_time = dt.datetime.strptime(
-                msg.exit_exp_time, FMT_DTTM_YMDHMS)
+                msg.exit_exp_time, FMT_YMDHMS)
 
         if msg.order_dir == OrderRequest.DIR_LONG:
             req.units = msg.units
@@ -369,7 +369,7 @@ class OrderScheduler(Node):
         return cli
 
     def _on_sub_order_request(self, msg: MsgType) -> None:
-        dt_now = dt.datetime.now().strftime(FMT_DTTM_YMDHMSF)
+        dt_now = dt.datetime.now().strftime(FMT_YMDHMSF)
         self.logger.debug("{:=^50}".format(" Topic[order_request]:Start "))
         self.logger.debug("  - inst_id:[{}]".format(msg.inst_id))
         self.logger.debug("  - inst_id:[{}]".format(msg.order_type))
