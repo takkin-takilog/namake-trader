@@ -46,53 +46,17 @@ class OrderTicket():
         ExitOrdering = auto()
         Complete = auto()
 
+    _POL_INTERVAL = dt.timedelta(minutes=1)
+
     def __init__(self, msg: MsgType) -> None:
 
-        req = OrderCreateSrv.Request()
-
-        if msg.order_type == OrderRequest.ORDER_TYP_MARKET:
-            req.ordertype_msg.type = OrderTypeMsg.TYP_MARKET
-        else:
-            if msg.order_type == OrderRequest.ORDER_TYP_LIMIT:
-                req.ordertype_msg.type = OrderTypeMsg.TYP_LIMIT
-            else:
-                req.ordertype_msg.type = OrderTypeMsg.TYP_STOP
-            req.price = msg.entry_price
-
-            if not msg.entry_exp_time:
-                self._entry_exp_time = None
-            else:
-                self._entry_exp_time = dt.datetime.strptime(
-                    msg.entry_exp_time, FMT_YMDHMS)
-
-        if not msg.exit_exp_time:
-            self._exit_exp_time = None
-        else:
-            self._exit_exp_time = dt.datetime.strptime(
-                msg.exit_exp_time, FMT_YMDHMS)
-
-        if msg.order_dir == OrderRequest.DIR_LONG:
-            req.units = msg.units
-        else:
-            req.units = -msg.units
-
-        req.inst_msg.inst_id = msg.inst_id
-        req.take_profit_price = msg.take_profit_price
-        req.stop_loss_price = msg.stop_loss_price
-
-        try:
-            self._future = OrderTicket.cli_ordcre.call_async(req)
-        except Exception as err:
-            self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
-            self.logger.error("{}".format(err))
-            raise InitializerErrorException("Call Async ROS Service failed.")
 
         # ---------- Create State Machine ----------
         states = [
             {
                 Tr.NAME.value: self.States.EntryOrdering,
-                Tr.ON_ENTER.value: "_on_entry_EntryOrdering",
-                Tr.ON_EXIT.value: None
+                Tr.ON_ENTER.value: None,
+                Tr.ON_EXIT.value: "_on_exit_EntryOrdering"
             },
             {
                 Tr.NAME.value: self.States.EntryWaiting,
@@ -160,8 +124,18 @@ class OrderTicket():
                 Tr.CONDITIONS.value: None
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryChecking_to_EntryCanceling",
+                Tr.TRIGGER.value: "_trans_from_EntryChecking_to_EntryWaiting",
                 Tr.SOURCE.value: self.States.EntryChecking,
+                Tr.DEST.value: self.States.EntryWaiting,
+                Tr.PREPARE.value: None,
+                Tr.BEFORE.value: None,
+                Tr.AFTER.value: None,
+                Tr.CONDITIONS.value: None
+            },
+
+            {
+                Tr.TRIGGER.value: "_trans_from_EntryWaiting_to_EntryCanceling",
+                Tr.SOURCE.value: self.States.EntryWaiting,
                 Tr.DEST.value: self.States.EntryCanceling,
                 Tr.PREPARE.value: None,
                 Tr.BEFORE.value: None,
@@ -177,6 +151,16 @@ class OrderTicket():
                 Tr.AFTER.value: None,
                 Tr.CONDITIONS.value: None
             },
+            {
+                Tr.TRIGGER.value: "_trans_from_EntryCanceling_to_EntryChecking",
+                Tr.SOURCE.value: self.States.EntryCanceling,
+                Tr.DEST.value: self.States.EntryChecking,
+                Tr.PREPARE.value: None,
+                Tr.BEFORE.value: None,
+                Tr.AFTER.value: None,
+                Tr.CONDITIONS.value: None
+            },
+
             {
                 Tr.TRIGGER.value: "_trans_from_EntryChecking_to_ExitWaiting",
                 Tr.SOURCE.value: self.States.EntryChecking,
@@ -196,6 +180,15 @@ class OrderTicket():
                 Tr.CONDITIONS.value: None
             },
             {
+                Tr.TRIGGER.value: "_trans_from_ExitChecking_to_ExitWaiting",
+                Tr.SOURCE.value: self.States.ExitChecking,
+                Tr.DEST.value: self.States.ExitWaiting,
+                Tr.PREPARE.value: None,
+                Tr.BEFORE.value: None,
+                Tr.AFTER.value: None,
+                Tr.CONDITIONS.value: None
+            },
+            {
                 Tr.TRIGGER.value: "_trans_from_ExitChecking_to_Complete",
                 Tr.SOURCE.value: self.States.ExitChecking,
                 Tr.DEST.value: self.States.Complete,
@@ -205,8 +198,8 @@ class OrderTicket():
                 Tr.CONDITIONS.value: None
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitChecking_to_ExitOrdering",
-                Tr.SOURCE.value: self.States.ExitChecking,
+                Tr.TRIGGER.value: "_trans_from_ExitWaiting_to_ExitOrdering",
+                Tr.SOURCE.value: self.States.ExitWaiting,
                 Tr.DEST.value: self.States.ExitOrdering,
                 Tr.PREPARE.value: None,
                 Tr.BEFORE.value: None,
@@ -216,6 +209,15 @@ class OrderTicket():
             {
                 Tr.TRIGGER.value: "_trans_from_ExitOrdering_to_Complete",
                 Tr.SOURCE.value: self.States.ExitOrdering,
+                Tr.DEST.value: self.States.Complete,
+                Tr.PREPARE.value: None,
+                Tr.BEFORE.value: None,
+                Tr.AFTER.value: None,
+                Tr.CONDITIONS.value: None
+            },
+            {
+                Tr.TRIGGER.value: "_trans_to_Complete",
+                Tr.SOURCE.value: "*",
                 Tr.DEST.value: self.States.Complete,
                 Tr.PREPARE.value: None,
                 Tr.BEFORE.value: None,
@@ -232,7 +234,17 @@ class OrderTicket():
         if isinstance(self._sm, GraphMachine):
             self._sm.get_graph().view()
 
+        self._msg = msg
+        self._future = None
+        self._trade_id = None
+        self._order_id = None
+
+        self.do_timeout_event()
+
         self.logger.debug("{:=^50}".format(" Initialize Finish! "))
+
+    def __del__(self):
+        print("----- del -----")
 
     def do_timeout_event(self):
 
@@ -262,10 +274,71 @@ class OrderTicket():
     def _on_do_EntryOrdering(self):
 
         if self._future is None:
-            pass
+            req = OrderCreateSrv.Request()
+            if self._msg.order_type == OrderRequest.ORDER_TYP_MARKET:
+                req.ordertype_msg.type = OrderTypeMsg.TYP_MARKET
+            else:
+                if self._msg.order_type == OrderRequest.ORDER_TYP_LIMIT:
+                    req.ordertype_msg.type = OrderTypeMsg.TYP_LIMIT
+                else:
+                    req.ordertype_msg.type = OrderTypeMsg.TYP_STOP
+                req.price = self._msg.entry_price
+
+                if not self._msg.entry_exp_time:
+                    self._entry_exp_time = None
+                else:
+                    self._entry_exp_time = dt.datetime.strptime(self._msg.entry_exp_time,
+                                                                FMT_YMDHMS)
+
+            if not self._msg.exit_exp_time:
+                self._exit_exp_time = None
+            else:
+                self._exit_exp_time = dt.datetime.strptime(self._msg.exit_exp_time,
+                                                           FMT_YMDHMS)
+
+            if self._msg.order_dir == OrderRequest.DIR_LONG:
+                req.units = self._msg.units
+            else:
+                req.units = -self._msg.units
+
+            req.inst_msg.inst_id = self._msg.inst_id
+            req.take_profit_price = self._msg.take_profit_price
+            req.stop_loss_price = self._msg.stop_loss_price
+
+            self.logger.debug("----- Requesting \"Order Create\" -----")
+            try:
+                self._future = OrderTicket.cli_ordcre.call_async(req)
+            except Exception as err:
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
+                self.logger.error("{}".format(err))
+                self._trans_to_Complete()
         else:
-            self._trans_from_EntryOrdering_to_ExitWaiting()
-            self._trans_from_EntryOrdering_to_EntryWaiting()
+            if self._future.done():
+                self.logger.debug("  Request done.")
+                if self._future.result() is not None:
+                    rsp = self._future.result()
+                    if rsp.result:
+                        if self._msg.order_type == OrderRequest.ORDER_TYP_MARKET:
+                            self._trade_id = rsp.id
+                            self._trans_from_EntryOrdering_to_ExitWaiting()
+                            self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
+                        else:
+                            self._order_id = rsp.id
+                            self._trans_from_EntryOrdering_to_EntryWaiting()
+                            self.logger.debug("  - order_id:[{}]".format(self._order_id))
+                    else:
+                        self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Create) "))
+                        self._trans_to_Complete()
+                else:
+                    self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
+                    self.logger.error("  future.result() is \"None\".")
+                    self._trans_to_Complete()
+            else:
+                self.logger.debug("  Requesting now...")
+
+    def _on_exit_EntryOrdering(self):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self._next_pol_time = dt.datetime.now() + self._POL_INTERVAL
 
     def _on_do_EntryWaiting(self):
         self._trans_from_EntryWaiting_to_EntryChecking()
