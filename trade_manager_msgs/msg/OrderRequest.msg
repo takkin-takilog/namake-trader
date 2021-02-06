@@ -1,10 +1,5 @@
 # Limit order request Definitions.
 
-# Instrument ID definition
-int32 INST_USD_JPY=1	# USD/JPY
-int32 INST_EUR_JPY=2	# EUR/JPY
-int32 INST_EUR_USD=3	# EUR/USD
-
 # Order Type ID definition
 int32 ORDER_TYP_MARKET=1	# Market Order
 int32 ORDER_TYP_LIMIT=2		# Limit Order
@@ -14,8 +9,8 @@ int32 ORDER_TYP_STOP=3		# Stop Order
 int32 DIR_LONG=1	# Long order
 int32 DIR_SHORT=2	# Short Order
 
-# The instrument ID.
-int32 inst_id
+# The Instrument.
+trade_manager_msgs/Instrument inst_msg
 
 # The order type(market or limit or stop).
 int32 order_type

@@ -13,6 +13,7 @@ from rclpy.client import Client
 from std_msgs.msg import Bool
 from trade_manager.constant import Transitions as Tr
 from trade_manager.constant import FMT_YMDHMS, FMT_YMDHMSF
+from trade_manager.constant import INST_DICT, ORDER_TYP_DICT
 from trade_manager.exception import InitializerErrorException
 from trade_manager_msgs.msg import OrderRequest
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
@@ -252,12 +253,14 @@ class OrderTicket():
 
         self.do_timeout_event()
 
-        self.logger.debug("{:=^50}".format(" Initialize Finish! "))
-
     def __del__(self):
-        print("----- del -----")
+        self.logger.debug("----- del -----")
+        self.logger.debug("  - order_id:[{}]".format(self._order_id))
+        self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
 
     def do_timeout_event(self):
+
+        self.logger.debug("state:[{}]".format(self.state))
 
         if self.state == self.States.EntryOrdering:
             self._on_do_EntryOrdering()
@@ -282,21 +285,13 @@ class OrderTicket():
 
         if self._future is None:
             req = OrderCreateSrv.Request()
-            if self._msg.order_type == OrderRequest.ORDER_TYP_MARKET:
-                req.ordertype_msg.type = OrderTypeMsg.TYP_MARKET
-            else:
-                if self._msg.order_type == OrderRequest.ORDER_TYP_LIMIT:
-                    req.ordertype_msg.type = OrderTypeMsg.TYP_LIMIT
-                else:
-                    req.ordertype_msg.type = OrderTypeMsg.TYP_STOP
-                req.price = self._msg.entry_price
-
+            req.ordertype_msg.type = ORDER_TYP_DICT[self._msg.order_type]
+            req.price = self._msg.entry_price
             if self._msg.order_dir == OrderRequest.DIR_LONG:
                 req.units = self._msg.units
             else:
                 req.units = -self._msg.units
-
-            req.inst_msg.inst_id = self._msg.inst_id
+            req.inst_msg.inst_id = INST_DICT[self._msg.inst_msg.inst_id]
             req.take_profit_price = self._msg.take_profit_price
             req.stop_loss_price = self._msg.stop_loss_price
 
@@ -373,7 +368,8 @@ class OrderTicket():
                             self._trans_from_EntryChecking_to_EntryWaiting()
                         elif rsp.order_state_msg.state == OrderState.STS_FILLED:
                             self._trade_id = rsp.open_trade_id
-                            self.logger.debug("  - order id:[{}] is Filled.".format(self._order_id))
+                            self.logger.debug("  - order_id:[{}] is Filled.".format(self._order_id))
+                            self.logger.debug("  - trade_id:[{}] is Opened.".format(self._trade_id))
                             self._trans_from_EntryChecking_to_ExitWaiting()
                         else:
                             self.logger.debug("  - order id:[{}] is Unexpected State! (State No:<{}>)"
@@ -524,7 +520,9 @@ class OrderTicket():
         pass
 
     def _update_next_pollingtime(self, time: dt.datetime):
-        return time.replace(second=10, microsecond=0) + self._POL_INTERVAL
+        next_time = time.replace(second=10, microsecond=0) + self._POL_INTERVAL
+        self.logger.debug(" - update polling time:{}".format(next_time))
+        return next_time
 
 
 class OrderScheduler(Node):
@@ -610,10 +608,10 @@ class OrderScheduler(Node):
     def _on_sub_order_request(self, msg: MsgType) -> None:
         dt_now = dt.datetime.now().strftime(FMT_YMDHMSF)
         self.logger.debug("{:=^50}".format(" Topic[order_request]:Start "))
-        self.logger.debug("  - inst_id:[{}]".format(msg.inst_id))
-        self.logger.debug("  - inst_id:[{}]".format(msg.order_type))
+        self.logger.debug("  - inst_id:[{}]".format(msg.inst_msg.inst_id))
+        self.logger.debug("  - order_type:[{}]".format(msg.order_type))
         self.logger.debug("  - units:[{}]".format(msg.units))
-        self.logger.debug("  - price:[{}]".format(msg.entry_price))
+        self.logger.debug("  - entry_price:[{}]".format(msg.entry_price))
         self.logger.debug("  - entry_exp_time:[{}]".format(msg.entry_exp_time))
         self.logger.debug("  - take_profit_price:[{}]".format(msg.take_profit_price))
         self.logger.debug("  - stop_loss_price:[{}]".format(msg.stop_loss_price))
