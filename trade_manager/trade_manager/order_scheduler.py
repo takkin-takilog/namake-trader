@@ -8,7 +8,6 @@ from transitions.extensions.factory import GraphMachine
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
-from rclpy.task import Future
 from rclpy.client import Client
 from std_msgs.msg import Bool
 from trade_manager.constant import Transitions as Tr
@@ -19,7 +18,6 @@ from trade_manager_msgs.msg import OrderRequest
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
-from api_msgs.msg import OrderType as OrderTypeMsg
 from api_msgs.msg import OrderState, TradeState
 from api_msgs.msg import FailReasonCode as frc
 
@@ -34,6 +32,8 @@ class OrderTicket():
     cli_trddet = None
     cli_trdcrc = None
     cli_trdcls = None
+
+    _is_trans_lock = False
 
     logger = None
 
@@ -66,7 +66,7 @@ class OrderTicket():
             {
                 Tr.NAME.value: self.States.EntryChecking,
                 Tr.ON_ENTER.value: "_on_enter_EntryChecking",
-                Tr.ON_EXIT.value: None
+                Tr.ON_EXIT.value: "_on_exit_EntryChecking"
             },
             {
                 Tr.NAME.value: self.States.EntryCanceling,
@@ -81,7 +81,7 @@ class OrderTicket():
             {
                 Tr.NAME.value: self.States.ExitChecking,
                 Tr.ON_ENTER.value: "_on_enter_ExitChecking",
-                Tr.ON_EXIT.value: None
+                Tr.ON_EXIT.value: "_on_exit_ExitChecking"
             },
             {
                 Tr.NAME.value: self.States.ExitOrdering,
@@ -121,7 +121,7 @@ class OrderTicket():
                 Tr.PREPARE.value: None,
                 Tr.BEFORE.value: None,
                 Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.CONDITIONS.value: "_conditions_trans_lock"
             },
             {
                 Tr.TRIGGER.value: "_trans_from_EntryChecking_to_EntryWaiting",
@@ -158,7 +158,7 @@ class OrderTicket():
                 Tr.PREPARE.value: None,
                 Tr.BEFORE.value: None,
                 Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.CONDITIONS.value: "_conditions_trans_lock"
             },
 
             {
@@ -177,7 +177,7 @@ class OrderTicket():
                 Tr.PREPARE.value: None,
                 Tr.BEFORE.value: None,
                 Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.CONDITIONS.value: "_conditions_trans_lock"
             },
             {
                 Tr.TRIGGER.value: "_trans_from_ExitChecking_to_ExitWaiting",
@@ -257,12 +257,12 @@ class OrderTicket():
 
         self.do_timeout_event()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.logger.debug("----- del -----")
         self.logger.debug("  - order_id:[{}]".format(self._order_id))
         self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
 
-    def do_timeout_event(self):
+    def do_timeout_event(self) -> None:
 
         self.logger.debug("state:[{}]".format(self.state))
 
@@ -285,7 +285,7 @@ class OrderTicket():
         else:
             pass
 
-    def _on_do_EntryOrdering(self):
+    def _on_do_EntryOrdering(self) -> None:
 
         if self._future is None:
             req = OrderCreateSrv.Request()
@@ -330,26 +330,32 @@ class OrderTicket():
             else:
                 self.logger.debug("  Requesting now...")
 
-    def _on_entry_EntryWaiting(self):
+    def _on_entry_EntryWaiting(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
-    def _on_do_EntryWaiting(self):
+    def _on_do_EntryWaiting(self) -> None:
         now = dt.datetime.now()
         if ((self._entry_exp_time is not None) and (self._entry_exp_time < now)):
             self._trans_from_EntryWaiting_to_EntryCanceling()
         elif self._next_pol_time < now:
             self.logger.debug("<<< Timeout >>> in EntryWaiting")
-            self._next_pol_time = self._update_next_pollingtime(now)
             self._trans_from_EntryWaiting_to_EntryChecking()
         else:
             pass
 
-    def _on_enter_EntryChecking(self):
+    def _conditions_trans_lock(self) -> None:
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug("--- trans_lock state:[{}]".format(OrderTicket._is_trans_lock))
+        return not OrderTicket._is_trans_lock
+
+    def _on_enter_EntryChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._future = None
+        OrderTicket._is_trans_lock = True
+        self.logger.debug("--- Trans \"Locked\"")
 
-    def _on_do_EntryChecking(self):
+    def _on_do_EntryChecking(self) -> None:
 
         if self._future is None:
             req = OrderDetailsSrv.Request()
@@ -390,12 +396,17 @@ class OrderTicket():
             else:
                 self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
 
-    def _on_enter_EntryCanceling(self):
+    def _on_exit_EntryChecking(self) -> None:
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        OrderTicket._is_trans_lock = False
+        self.logger.debug("--- Trans \"Unlocked\"")
+
+    def _on_enter_EntryCanceling(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._future = None
         self._on_do_EntryCanceling()
 
-    def _on_do_EntryCanceling(self):
+    def _on_do_EntryCanceling(self) -> None:
 
         if self._future is None:
             req = OrderCancelSrv.Request()
@@ -431,26 +442,27 @@ class OrderTicket():
             else:
                 self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
 
-    def _on_entry_ExitWaiting(self):
+    def _on_entry_ExitWaiting(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
-    def _on_do_ExitWaiting(self):
+    def _on_do_ExitWaiting(self) -> None:
         now = dt.datetime.now()
         if ((self._exit_exp_time is not None) and (self._exit_exp_time < now)):
             self._trans_from_ExitWaiting_to_ExitOrdering()
         elif self._next_pol_time < now:
             self.logger.debug("<<< Timeout >>> in ExitWaiting")
-            self._next_pol_time = self._update_next_pollingtime(now)
             self._trans_from_ExitWaiting_to_ExitChecking()
         else:
             pass
 
-    def _on_enter_ExitChecking(self):
+    def _on_enter_ExitChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._future = None
+        OrderTicket._is_trans_lock = True
+        self.logger.debug("--- Trans \"Locked\"")
 
-    def _on_do_ExitChecking(self):
+    def _on_do_ExitChecking(self) -> None:
 
         if self._future is None:
             req = TradeDetailsSrv.Request()
@@ -489,12 +501,17 @@ class OrderTicket():
             else:
                 self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
 
-    def _on_enter_ExitOrdering(self):
+    def _on_exit_ExitChecking(self) -> None:
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        OrderTicket._is_trans_lock = False
+        self.logger.debug("--- Trans \"Unlocked\"")
+
+    def _on_enter_ExitOrdering(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._future = None
         self._on_do_ExitOrdering()
 
-    def _on_do_ExitOrdering(self):
+    def _on_do_ExitOrdering(self) -> None:
 
         if self._future is None:
             req = TradeCloseSrv.Request()
@@ -527,10 +544,10 @@ class OrderTicket():
             else:
                 self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
 
-    def _on_do_Complete(self):
+    def _on_do_Complete(self) -> None:
         pass
 
-    def _update_next_pollingtime(self, time: dt.datetime):
+    def _update_next_pollingtime(self, time: dt.datetime) -> dt.datetime:
         next_time = time.replace(second=10, microsecond=0) + self._POL_INTERVAL
         self.logger.debug(" - update polling time:{}".format(next_time))
         return next_time
@@ -599,7 +616,7 @@ class OrderScheduler(Node):
             self.destroy_node()
             raise InitializerErrorException("create service client failed.")
 
-    def do_timeout_event(self):
+    def do_timeout_event(self) -> None:
 
         for ticket in self._tickets:
             ticket.do_timeout_event()
@@ -641,7 +658,7 @@ class OrderScheduler(Node):
         else:
             self.logger.error("{:!^50}".format(" Validate msg: NG "))
 
-    def _validate_msg(self, msg: MsgType):
+    def _validate_msg(self, msg: MsgType) -> Bool:
 
         if msg.units < 0:
             return False
