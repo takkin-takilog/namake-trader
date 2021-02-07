@@ -251,6 +251,10 @@ class OrderTicket():
             self._exit_exp_time = dt.datetime.strptime(self._msg.exit_exp_time,
                                                        FMT_YMDHMS)
 
+        self.logger.debug("----- init -----")
+        self.logger.debug("  - entry_exp_time:[{}]".format(self._entry_exp_time))
+        self.logger.debug("  - exit_exp_time:[{}]".format(self._exit_exp_time))
+
         self.do_timeout_event()
 
     def __del__(self):
@@ -335,6 +339,7 @@ class OrderTicket():
         if ((self._entry_exp_time is not None) and (self._entry_exp_time < now)):
             self._trans_from_EntryWaiting_to_EntryCanceling()
         elif self._next_pol_time < now:
+            self.logger.debug("<<< Timeout >>> in EntryWaiting")
             self._next_pol_time = self._update_next_pollingtime(now)
             self._trans_from_EntryWaiting_to_EntryChecking()
         else:
@@ -388,6 +393,7 @@ class OrderTicket():
     def _on_enter_EntryCanceling(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._future = None
+        self._on_do_EntryCanceling()
 
     def _on_do_EntryCanceling(self):
 
@@ -408,9 +414,12 @@ class OrderTicket():
                 if self._future.result() is not None:
                     rsp = self._future.result()
                     if rsp.result:
+                        self.logger.debug("  EntryCanceling complete.(id:[{}])".format(self._order_id))
                         self._trans_from_EntryCanceling_to_Complete()
                     else:
                         if rsp.frc_msg.reason_code == frc.REASON_ORDER_DOESNT_EXIST:
+                            self.logger.debug("  EntryCanceling fail.(id:[{}])".format(self._order_id))
+                            self.logger.debug("    - Order doesnt exist!")
                             self._trans_from_EntryCanceling_to_EntryChecking()
                         else:
                             self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Cancel) "))
@@ -431,6 +440,7 @@ class OrderTicket():
         if ((self._exit_exp_time is not None) and (self._exit_exp_time < now)):
             self._trans_from_ExitWaiting_to_ExitOrdering()
         elif self._next_pol_time < now:
+            self.logger.debug("<<< Timeout >>> in ExitWaiting")
             self._next_pol_time = self._update_next_pollingtime(now)
             self._trans_from_ExitWaiting_to_ExitChecking()
         else:
@@ -460,7 +470,7 @@ class OrderTicket():
                     rsp = self._future.result()
                     if rsp.result:
                         if rsp.trade_state_msg.state == TradeState.STS_OPEN:
-                            self.logger.debug("  - trade id:[{}] is Open.".format(self._trade_id))
+                            self.logger.debug("  - trade id:[{}] is Opening.".format(self._trade_id))
                             self._trans_from_ExitChecking_to_ExitWaiting()
                         elif rsp.trade_state_msg.state == TradeState.STS_CLOSED:
                             self.logger.debug("  - trade id:[{}] is Closed.".format(self._trade_id))
@@ -482,6 +492,7 @@ class OrderTicket():
     def _on_enter_ExitOrdering(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._future = None
+        self._on_do_ExitOrdering()
 
     def _on_do_ExitOrdering(self):
 
@@ -619,9 +630,7 @@ class OrderScheduler(Node):
         self.logger.debug("[Performance]")
         self.logger.debug("  - request time:[{}]".format(dt_now))
 
-        if msg.units < 0:
-            pass
-        else:
+        if self._validate_msg(msg):
             try:
                 ticket = OrderTicket(msg)
             except Exception as err:
@@ -629,6 +638,15 @@ class OrderScheduler(Node):
                 self.logger.error(err)
             else:
                 self._tickets.append(ticket)
+        else:
+            self.logger.error("{:!^50}".format(" Validate msg: NG "))
+
+    def _validate_msg(self, msg: MsgType):
+
+        if msg.units < 0:
+            return False
+
+        return True
 
 
 def main(args=None):
