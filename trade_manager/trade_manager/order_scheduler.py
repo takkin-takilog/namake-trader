@@ -26,17 +26,6 @@ MsgType = TypeVar("MsgType")
 
 class OrderTicket():
 
-    cli_ordcre = None
-    cli_orddet = None
-    cli_ordcnc = None
-    cli_trddet = None
-    cli_trdcrc = None
-    cli_trdcls = None
-
-    _is_trans_lock = False
-
-    logger = None
-
     class States(Enum):
         EntryOrdering = auto()
         EntryWaiting = auto()
@@ -48,6 +37,17 @@ class OrderTicket():
         Complete = auto()
 
     _POL_INTERVAL = dt.timedelta(minutes=1)
+
+    cli_ordcre = None
+    cli_orddet = None
+    cli_ordcnc = None
+    cli_trddet = None
+    cli_trdcrc = None
+    cli_trdcls = None
+
+    logger = None
+
+    _is_trans_lock = False
 
     def __init__(self, msg: MsgType) -> None:
 
