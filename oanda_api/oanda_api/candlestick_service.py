@@ -36,9 +36,6 @@ class _RosParams():
 
 class CandlestickService(Node):
 
-    _MAX_SIZE = 4999
-    # _MAX_SIZE = 10    # For test
-
     def __init__(self) -> None:
         super().__init__("candlestick_service")
 
@@ -47,13 +44,18 @@ class CandlestickService(Node):
         logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
         self.logger = logger
 
-        # Declare parameter
+        # Define Constant value.
+        self._MAX_SIZE = 4999
+        # self._MAX_SIZE = 10    # For test
+
+        # Declare ROS parameter
         self._rosprm = _RosParams()
         self.declare_parameter(self._rosprm.USE_ENV_LIVE.name)
         self.declare_parameter(self._rosprm.PRA_ACCESS_TOKEN.name)
         self.declare_parameter(self._rosprm.LIV_ACCESS_TOKEN.name)
         self.declare_parameter(self._rosprm.CONNECTION_TIMEOUT.name)
 
+        # Set ROS parameter
         para = self.get_parameter(self._rosprm.USE_ENV_LIVE.name)
         self._rosprm.USE_ENV_LIVE.value = para.value
         para = self.get_parameter(self._rosprm.PRA_ACCESS_TOKEN.name)

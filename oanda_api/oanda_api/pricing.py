@@ -44,7 +44,7 @@ class PricingPublisher(Node):
         logger = super().get_logger()
         logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
-        # Declare parameter
+        # Declare ROS parameter
         self.declare_parameter(PRMNM_USE_ENV_LIVE)
         self.declare_parameter(PRMNM_PRAC_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_PRAC_ACCESS_TOKEN)
@@ -55,6 +55,7 @@ class PricingPublisher(Node):
         self.declare_parameter(PRMNM_ENA_INST_EURUSD)
         self.declare_parameter(PRMNM_CONN_TIMEOUT)
 
+        # Set ROS parameter
         USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
         if USE_ENV_LIVE:
             ACCOUNT_NUMBER = self.get_parameter(PRMNM_LIVE_ACCOUNT_NUMBER).value

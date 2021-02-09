@@ -75,7 +75,7 @@ class OrderService(Node):
         logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
         self.logger = logger
 
-        # Declare parameter
+        # Declare ROS parameter
         self._rosprm = _RosParams()
         self.declare_parameter(self._rosprm.USE_ENV_LIVE.name)
         self.declare_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)
@@ -84,6 +84,7 @@ class OrderService(Node):
         self.declare_parameter(self._rosprm.LIV_ACCESS_TOKEN.name)
         self.declare_parameter(self._rosprm.CONNECTION_TIMEOUT.name)
 
+        # Set ROS parameter
         para = self.get_parameter(self._rosprm.USE_ENV_LIVE.name)
         self._rosprm.USE_ENV_LIVE.value = para.value
         para = self.get_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)

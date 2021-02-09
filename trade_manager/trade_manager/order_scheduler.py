@@ -36,8 +36,6 @@ class OrderTicket():
         ExitOrdering = auto()
         Complete = auto()
 
-    _POL_INTERVAL = dt.timedelta(minutes=1)
-
     cli_ordcre = None
     cli_orddet = None
     cli_ordcnc = None
@@ -50,6 +48,9 @@ class OrderTicket():
     _is_trans_lock = False
 
     def __init__(self, msg: MsgType) -> None:
+
+        # Define Constant value.
+        self._POL_INTERVAL = dt.timedelta(minutes=1)
 
         # ---------- Create State Machine ----------
         states = [
