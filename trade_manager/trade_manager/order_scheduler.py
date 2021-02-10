@@ -252,6 +252,8 @@ class OrderTicket():
             self._exit_exp_time = dt.datetime.strptime(self._msg.exit_exp_time,
                                                        FMT_YMDHMS)
 
+        self._is_entry_exp_time_over = False
+
         self.logger.debug("----- init -----")
         self.logger.debug("  - entry_exp_time:[{}]".format(self._entry_exp_time))
         self.logger.debug("  - exit_exp_time:[{}]".format(self._exit_exp_time))
@@ -337,8 +339,11 @@ class OrderTicket():
 
     def _on_do_EntryWaiting(self) -> None:
         now = dt.datetime.now()
-        if ((self._entry_exp_time is not None) and (self._entry_exp_time < now)):
+        if self._is_entry_exp_time_over:
+            self._trans_to_Complete()
+        elif ((self._entry_exp_time is not None) and (self._entry_exp_time < now)):
             self._trans_from_EntryWaiting_to_EntryCanceling()
+            self._is_entry_exp_time_over = True
         elif self._next_pol_time < now:
             self.logger.debug("<<< Timeout >>> in EntryWaiting")
             self._trans_from_EntryWaiting_to_EntryChecking()
