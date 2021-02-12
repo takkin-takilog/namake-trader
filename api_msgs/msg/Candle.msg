@@ -15,6 +15,7 @@ float32 bid_l
 float32 bid_c
 
 # The start time of the candlestick.
+# The format is "%Y-%m-%dT%H:%M:%S"
 string time
 
 # A flag indicating if the latest candlestick is complete.

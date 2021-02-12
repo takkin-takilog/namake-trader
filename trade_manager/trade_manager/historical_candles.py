@@ -1,3 +1,5 @@
+import sys
+from typing import List
 from typing import TypeVar
 from dataclasses import dataclass
 import datetime as dt
@@ -9,6 +11,9 @@ from rclpy.client import Client
 from rclpy.task import Future
 from trade_manager.utility import RosParam
 from trade_manager.constant import FMT_YMDHMS
+from trade_manager.constant import GranParam
+from trade_manager.constant import CandleColumnNames
+from trade_manager.exception import InitializerErrorException
 from api_msgs.srv import CandlesSrv
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
@@ -21,6 +26,15 @@ from trade_manager_msgs.msg import Granularity as GranTm
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
+
+
+@dataclass
+class _GranData():
+    """
+    Granularity data.
+    """
+    gran_id: int
+    length: int
 
 
 @dataclass
@@ -66,12 +80,158 @@ class _RosParams():
     LENG_D = RosParam("data_length.d")
     LENG_W = RosParam("data_length.w")
 
+    def enable_inst_list(self):
+        inst_list = []
+        if self.ENA_INST_USDJPY.value:
+            inst_list.append(InstApi.INST_USD_JPY)
+        if self.ENA_INST_EURJPY.value:
+            inst_list.append(InstApi.INST_EUR_JPY)
+        if self.ENA_INST_EURUSD.value:
+            inst_list.append(InstApi.INST_EUR_USD)
+        return inst_list
+
+    def enable_gran_list(self):
+        gran_list = []
+        if self.ENA_GRAN_M1.value:
+            gran_list.append(_GranData(GranApi.GRAN_M1, self.LENG_M1.value))
+        if self.ENA_GRAN_M2.value:
+            gran_list.append(_GranData(GranApi.GRAN_M2, self.LENG_M2.value))
+        if self.ENA_GRAN_M3.value:
+            gran_list.append(_GranData(GranApi.GRAN_M3, self.LENG_M3.value))
+        if self.ENA_GRAN_M4.value:
+            gran_list.append(_GranData(GranApi.GRAN_M4, self.LENG_M4.value))
+        if self.ENA_GRAN_M5.value:
+            gran_list.append(_GranData(GranApi.GRAN_M5, self.LENG_M5.value))
+        if self.ENA_GRAN_M10.value:
+            gran_list.append(_GranData(GranApi.GRAN_M10, self.LENG_M10.value))
+        if self.ENA_GRAN_M15.value:
+            gran_list.append(_GranData(GranApi.GRAN_M15, self.LENG_M15.value))
+        if self.ENA_GRAN_M30.value:
+            gran_list.append(_GranData(GranApi.GRAN_M30, self.LENG_M30.value))
+        if self.ENA_GRAN_H1.value:
+            gran_list.append(_GranData(GranApi.GRAN_H1, self.LENG_H1.value))
+        if self.ENA_GRAN_H2.value:
+            gran_list.append(_GranData(GranApi.GRAN_H2, self.LENG_H2.value))
+        if self.ENA_GRAN_H3.value:
+            gran_list.append(_GranData(GranApi.GRAN_H3, self.LENG_H3.value))
+        if self.ENA_GRAN_H4.value:
+            gran_list.append(_GranData(GranApi.GRAN_H4, self.LENG_H4.value))
+        if self.ENA_GRAN_H6.value:
+            gran_list.append(_GranData(GranApi.GRAN_H6, self.LENG_H6.value))
+        if self.ENA_GRAN_H8.value:
+            gran_list.append(_GranData(GranApi.GRAN_H8, self.LENG_H8.value))
+        if self.ENA_GRAN_H12.value:
+            gran_list.append(_GranData(GranApi.GRAN_H12, self.LENG_H12.value))
+        if self.ENA_GRAN_D.value:
+            gran_list.append(_GranData(GranApi.GRAN_D, self.LENG_D.value))
+        if self.ENA_GRAN_W.value:
+            gran_list.append(_GranData(GranApi.GRAN_W, self.LENG_W.value))
+        return gran_list
+
 
 class CandlesData():
 
-    cli_ordcre = None
-
+    cli_cdl = None
     logger = None
+
+    def __init__(self,
+                 node: 'Node',
+                 inst_id: int,
+                 gran_data: _GranData
+                 ) -> None:
+
+        self._inst_id = inst_id
+        self._gran_id = gran_data.gran_id
+        self._df_comp = pd.DataFrame()
+        self._df_prov = pd.DataFrame()
+        self._future = None
+        # self._next_update_time = self._get_next_update_time(gran_id, dt_now)
+
+        self.logger.debug("{:-^40}".format(" Create CandlesData:Start "))
+        self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
+        self.logger.debug("  - gran_id:[{}]".format(self._gran_id))
+
+        gran_param = GranParam.get_member_by_msgid(self._gran_id)
+        self._interval = gran_param.timedelta
+
+        dt_now = dt.datetime.now()
+        dt_from = dt_now - self._interval * gran_data.length
+        dt_to = dt_now
+
+        self.logger.debug("  - time_from:[{}]".format(dt_from))
+        self.logger.debug("  - time_to  :[{}]".format(dt_to))
+
+        try:
+            future = self._request_async_candles(dt_from, dt_to)
+        except Exception as err:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
+            self.logger.error("{}".format(err))
+            raise InitializerErrorException("\"CandlesData\" initialize failed.")
+
+        rclpy.spin_until_future_complete(node, future)
+        rsp = future.result()
+        if rsp.result is True:
+            self._update_dataframe(rsp.cndl_msg_list)
+        else:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
+            self.logger.error("  future result is False")
+            raise InitializerErrorException("\"CandlesData\" initialize failed.")
+
+    def _update_dataframe(self,
+                          cndl_msg_list: List[Candle]
+                          ) -> None:
+
+        data = []
+        for cndl_msg in cndl_msg_list:
+            dt_ = cndl_msg.time.split("T")
+            date_ = dt_[0]
+            time_ = dt_[1]
+            hsc_o = (cndl_msg.ask_o - cndl_msg.bid_o) / 2
+            hsc_h = (cndl_msg.ask_h - cndl_msg.bid_h) / 2
+            hsc_l = (cndl_msg.ask_l - cndl_msg.bid_l) / 2
+            hsc_c = (cndl_msg.ask_c - cndl_msg.bid_c) / 2
+            data.append([date_,
+                         time_,
+                         cndl_msg.ask_o,
+                         cndl_msg.ask_h,
+                         cndl_msg.ask_l,
+                         cndl_msg.ask_c,
+                         cndl_msg.bid_o,
+                         cndl_msg.bid_h,
+                         cndl_msg.bid_l,
+                         cndl_msg.bid_c,
+                         cndl_msg.bid_o + hsc_o,
+                         cndl_msg.bid_h + hsc_h,
+                         cndl_msg.bid_l + hsc_l,
+                         cndl_msg.bid_c + hsc_c,
+                         cndl_msg.is_complete
+                         ])
+
+        df = pd.DataFrame(data,
+                          columns=CandleColumnNames.to_list())
+        df.set_index([CandleColumnNames.DATE.value,
+                      CandleColumnNames.TIME.value],
+                     inplace=True)
+
+        self.logger.debug("\n{}".format(df))
+
+
+    def do_timeout_event(self) -> None:
+        pass
+
+    def _request_async_candles(self,
+                               dt_from: dt.datetime,
+                               dt_to: dt.datetime
+                               ) -> Future:
+        req = CandlesSrv.Request()
+        req.inst_msg.inst_id = self._inst_id
+        req.gran_msg.gran_id = self._gran_id
+        req.dt_from = dt_from.strftime(FMT_YMDHMS)
+        req.dt_to = dt_to.strftime(FMT_YMDHMS)
+
+        future = CandlesData.cli_cdl.call_async(req)
+
+        return future
 
 
 class HistoricalCandles(Node):
@@ -243,18 +403,57 @@ class HistoricalCandles(Node):
         self.logger.debug("  - D:  [{}]".format(self._rosprm.LENG_D.value))
         self.logger.debug("  - W:  [{}]".format(self._rosprm.LENG_W.value))
 
+        try:
+            # Create service client "Candles"
+            srv_type = CandlesSrv
+            srv_name = "candles"
+            CandlesData.cli_cdl = self._create_service_client(srv_type, srv_name)
+        except Exception as err:
+            self.logger.error("{:!^50}".format(" Exception "))
+            self.logger.error(err)
+            raise InitializerErrorException("create service client failed.")
+
+        self._candles_data_list = []
+        for inst_id in self._rosprm.enable_inst_list():
+            for gran_data in self._rosprm.enable_gran_list():
+                candles_data = CandlesData(self, inst_id, gran_data)
+                self._candles_data_list.append(candles_data)
+
+    def do_timeout_event(self) -> None:
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+
+        for candles_data in self._candles_data_list:
+            candles_data.do_timeout_event()
+            self.logger.debug("inst_id:{}, gran_id:{}"
+                              .format(candles_data._inst_id, candles_data._gran_id))
+
+    def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
+        # Create service client
+        cli = self.create_client(srv_type, srv_name)
+        # Wait for a service server
+        while not cli.wait_for_service(timeout_sec=1.0):
+            if not rclpy.ok():
+                raise RuntimeError("Interrupted while waiting for service.")
+            self._logger.info("Waiting for [{}] service...".format(srv_name))
+        return cli
+
 
 def main(args=None):
 
     rclpy.init(args=args)
 
-    hc = HistoricalCandles()
     try:
-        while rclpy.ok():
-            rclpy.spin_once(hc, timeout_sec=1.0)
-            hc.do_timeout_event()
-    except KeyboardInterrupt:
+        hc = HistoricalCandles()
+    except InitializerErrorException:
         pass
+    else:
+        try:
+            while rclpy.ok():
+                rclpy.spin_once(hc, timeout_sec=1.0)
+                hc.do_timeout_event()
+        except KeyboardInterrupt:
+            pass
 
-    hc.destroy_node()
+        hc.destroy_node()
+
     rclpy.shutdown()
