@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, IntEnum
 import datetime as dt
 from trade_manager_msgs.msg import Instrument as MngInst
 from trade_manager_msgs.msg import OrderRequest
@@ -26,6 +26,26 @@ class Transitions(Enum):
     AFTER = "after"
     CONDITIONS = "conditions"
     UNLESS = "unless"
+
+
+class WeekDay(IntEnum):
+    """
+    Weekday.
+    """
+    MON = 0  # Monday
+    TUE = 1  # Tuesday
+    WED = 2  # Wednesday
+    THU = 3  # Thursday
+    FRI = 4  # Friday
+    SAT = 5  # Saturday
+    SUN = 6  # Sunday
+
+    @classmethod
+    def get_member_by_id(cls, id_: int):
+        for m in cls:
+            if id_ == m.value:
+                return m
+        return None
 
 
 class CandleColumnNames(Enum):
