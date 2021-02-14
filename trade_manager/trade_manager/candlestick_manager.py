@@ -114,13 +114,13 @@ class CandlesData():
             df_prov = df[~(df[self._COL_NAME_COMP])]
 
             self._interval = interval
-            self._next_update_time = self._get_next_update_time(gran_id, dt_now)
+            self._next_updatetime = self._get_next_update_time(gran_id, dt_now)
             self._df_comp = df_comp
             self._df_prov = df_prov
             self._future = None
             self._timeout_end = 0.0
 
-            self._logger.debug("  - last_update_time:[{}]".format(self._next_update_time))
+            self._logger.debug("  - last_update_time:[{}]".format(self._next_updatetime))
             self._logger.debug("{:-^40}".format(" Create CandlesData:End "))
 
     def _get_next_update_time(self,
@@ -185,10 +185,10 @@ class CandlesData():
             self._logger.debug("[{}]update_not_complete_data[inst:{}][gran:{}]"
                                 .format(dt_now, self._inst_id, self._gran_id))
             """
-            target_time = dt_now - self._next_update_time - self._MARGIN_SEC
+            target_time = dt_now - self._next_updatetime - self._MARGIN_SEC
             if self._interval < target_time:
 
-                # dt_from = self._next_update_time
+                # dt_from = self._next_updatetime
                 dt_from = self._df_comp.index[-1] + self._interval
                 dt_to = dt_now
 
@@ -201,11 +201,11 @@ class CandlesData():
 
                 df = self._get_df_from_future(self._future)
                 self._update_df(df)
-                self._next_update_time += self._interval
+                self._next_updatetime += self._interval
                 self._future = None
 
                 self._logger.debug("<Update> inst_id:[{}], gran_id:[{}] last_update_time:[{}]"
-                                   .format(self._inst_id, self._gran_id, self._next_update_time))
+                                   .format(self._inst_id, self._gran_id, self._next_updatetime))
             else:
                 if time.monotonic() >= self._timeout_end:
                     self._future = None

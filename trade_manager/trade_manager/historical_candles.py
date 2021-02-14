@@ -15,6 +15,7 @@ from rclpy.task import Future
 import trade_manager.utility as utl
 from trade_manager.utility import RosParam
 from trade_manager.constant import Transitions as Tr
+from trade_manager.constant import WeekDay
 from trade_manager.constant import FMT_YMDHMS
 from trade_manager.constant import GranParam
 from trade_manager.constant import CandleColumnNames
@@ -31,16 +32,6 @@ from trade_manager_msgs.msg import Granularity as GranTm
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
-
-
-@dataclass
-class DailyParam():
-    """
-    Daily Parameter.
-    """
-    today: dt.date = None
-    open_time: dt.time = None
-    close_time: dt.time = None
 
 
 @dataclass
@@ -161,6 +152,15 @@ class CandlesData():
                  gran_data: _GranData
                  ) -> None:
 
+        # Define Constant value.
+        gran_param = GranParam.get_member_by_msgid(gran_data.gran_id)
+        self._GRAN_INTERVAL = gran_param.timedelta
+        self._NEXT_UPDATETIME_OFS_SEC = dt.timedelta(seconds=3)
+        self._RETRY_INTERVAL = dt.timedelta(minutes=1)
+        self._FAIL_INTERVAL = dt.timedelta(minutes=10)
+        self._RETRY_COUNT_MAX = 2
+        self._SELF_RETRY_COUNT_MAX = 2
+
         # ---------- Create State Machine ----------
         states = [
             {
@@ -175,7 +175,7 @@ class CandlesData():
             },
             {
                 Tr.NAME.value: self.States.retrying,
-                Tr.ON_ENTER.value: None,
+                Tr.ON_ENTER.value: "_on_enrty_retrying",
                 Tr.ON_EXIT.value: "_on_exit_retrying"
             },
         ]
@@ -217,6 +217,15 @@ class CandlesData():
                 Tr.AFTER.value: None,
                 Tr.CONDITIONS.value: None
             },
+            {
+                Tr.TRIGGER.value: "_trans_self_updating",
+                Tr.SOURCE.value: self.States.updating,
+                Tr.DEST.value: "=",
+                Tr.PREPARE.value: None,
+                Tr.BEFORE.value: None,
+                Tr.AFTER.value: None,
+                Tr.CONDITIONS.value: None
+            },
         ]
 
         self._sm = Machine(model=self,
@@ -232,17 +241,14 @@ class CandlesData():
         self._df_comp = pd.DataFrame()
         self._df_prov = pd.DataFrame()
         self._future = None
-        # self._next_update_time = self._get_next_update_time(gran_id, dt_now)
+        self._is_update_complete = True
 
         self.logger.debug("{:-^40}".format(" Create CandlesData:Start "))
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
         self.logger.debug("  - gran_id:[{}]".format(self._gran_id))
 
-        gran_param = GranParam.get_member_by_msgid(self._gran_id)
-        self._interval = gran_param.timedelta
-
         dt_now = dt.datetime.now()
-        dt_from = dt_now - self._interval * gran_data.length
+        dt_from = dt_now - self._GRAN_INTERVAL * gran_data.length
         dt_to = dt_now
 
         self.logger.debug("  - time_from:[{}]".format(dt_from))
@@ -271,8 +277,17 @@ class CandlesData():
             self.logger.error("  future result is False")
             raise InitializerErrorException("\"CandlesData\" initialize failed.")
 
-        CandlesData.daily_param.open_time
-        CandlesData.daily_param.close_time
+        self._on_entry_waiting()
+
+    def _get_latest_datetime_in_dataframe(self) -> dt.datetime:
+        date_ = self._df_comp.iloc[-1].name[0]
+        time_ = self._df_comp.iloc[-1].name[1]
+        return dt.datetime.strptime(date_ + "T" + time_, FMT_YMDHMS)
+
+    def _calc_next_updatetime(self) -> dt.datetime:
+        dt_ = self._get_latest_datetime_in_dataframe()
+        next_updatetime = dt_ + (self._GRAN_INTERVAL * 2) + self._NEXT_UPDATETIME_OFS_SEC
+        return next_updatetime
 
     def do_timeout_event(self) -> None:
         self.logger.debug("state:[{}]".format(self.state))
@@ -288,15 +303,55 @@ class CandlesData():
 
     def _on_entry_waiting(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        # TODO:
-        self._next_update_time = None
+
+        dt_now = dt.datetime.now()
+        if self._is_update_complete:
+            self.logger.debug("========== DF Update OK! ==========")
+            if utl.is_market_close(dt_now):
+                self.logger.debug(" - Market is \"Close\"")
+                close_time = utl.get_market_close_time(dt_now.date())
+                delta_day = dt_now.weekday() - WeekDay.SAT.value
+                if delta_day < 0:
+                    delta_day = 7 + delta_day
+                sat_date = dt_now.date() - dt.timedelta(days=delta_day)
+                close_dt = dt.datetime.combine(sat_date, close_time)
+                latest_dt = self._get_latest_datetime_in_dataframe()
+                if close_dt <= (latest_dt + self._GRAN_INTERVAL):
+                    self.logger.debug(" - Weekly Data Complete!")
+                    delta_day = 7 - dt_now.weekday()
+                    if 7 <= delta_day:
+                        delta_day = 0
+                    next_update_date = dt_now.date() + dt.timedelta(days=delta_day)
+                    open_time = utl.get_market_open_time(next_update_date)
+                    next_update_datetime = dt.datetime.combine(next_update_date,
+                                                               open_time)
+                    self._next_updatetime = next_update_datetime + self._GRAN_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
+                else:
+                    self.logger.debug(" - Weekly Data Not Complete!")
+                    self._next_updatetime = self._calc_next_updatetime()
+            else:
+                self.logger.debug(" - Market is \"Open\"")
+                self._next_updatetime = self._calc_next_updatetime()
+        else:
+            self.logger.debug("========== DF Update NG! ==========")
+            dt_now = dt_now.replace(second=0, microsecond=0)
+            self._next_updatetime = dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
+
+        self.logger.debug(" ---------- Next update time ----------")
+        self.logger.debug(" - Now time:        [{}]".format(dt_now))
+        self.logger.debug(" - Next update time:[{}]".format(self._next_updatetime))
 
     def _on_do_waiting(self):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        dt_now = dt.datetime.now()
+        if self._next_updatetime < dt_now:
+            self._trans_from_wating_to_updating()
 
     def _on_exit_waiting(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._retry_counter = 0
+        self._is_update_complete = False
+        self._self_retry_counter = 0
 
     def _on_entry_updating(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -304,21 +359,26 @@ class CandlesData():
 
     def _on_do_updating(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug(" - self_retry_counter:[{}]".format(self._self_retry_counter))
+        self.logger.debug(" - retry_counter:[{}]".format(self._retry_counter))
 
         if self._future is None:
+            latest_dt = self._get_latest_datetime_in_dataframe()
+            dt_from = latest_dt + self._GRAN_INTERVAL
             dt_to = dt.datetime.now()
-            # TODO:
-            # dt_from = dt_now - self._interval * gran_data.length
-
             self.logger.debug("  - time_from:[{}]".format(dt_from))
             self.logger.debug("  - time_to  :[{}]".format(dt_to))
+            self._target_dt = dt_from
 
             try:
                 self._future = self._request_async_candles(dt_from, dt_to)
             except Exception as err:
                 self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
                 self.logger.error("{}".format(err))
-                self._trans_from_updating_to_retrying()
+                if self._retry_counter < self._RETRY_COUNT_MAX:
+                    self._trans_from_updating_to_retrying()
+                else:
+                    self._trans_from_updating_to_waiting()
         else:
             if self._future.done():
                 self.logger.debug("  Request done.")
@@ -326,23 +386,60 @@ class CandlesData():
                     rsp = self._future.result()
                     if rsp.result:
                         self._update_dataframe(rsp.cndl_msg_list)
-                        self._trans_from_updating_to_waiting()
+                        if not rsp.cndl_msg_list:
+                            self.logger.error(" - rsp.cndl_msg_list is empty")
+                            self._trans_updating_common()
+                        else:
+                            latest_dt = self._get_latest_datetime_in_dataframe()
+                            self.logger.debug("  - target_dt <= latest_dt:[{}] <= [{}]"
+                                              .format(self._target_dt, latest_dt))
+                            if self._target_dt <= latest_dt:
+                                self.logger.error(" - Update complete!")
+                                self._is_update_complete = True
+                                self._trans_from_updating_to_waiting()
+                            else:
+                                self.logger.error(" !!!!!!!!!! Unexpected statement !!!!!!!!!!")
+                                if self._self_retry_counter < self._SELF_RETRY_COUNT_MAX:
+                                    self._self_retry_counter += 1
+                                    self._trans_self_updating()
+                                else:
+                                    self._trans_updating_common()
                     else:
                         self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Create) "))
-                        self._trans_from_updating_to_retrying()
+                        self._trans_updating_common()
                 else:
                     self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
                     self.logger.error("  future.result() is \"None\".")
-                    self._trans_from_updating_to_retrying()
+                    self._trans_updating_common()
             else:
                 self.logger.debug("  Requesting now...")
 
+    def _trans_updating_common(self):
+        if self._retry_counter < self._RETRY_COUNT_MAX:
+            self._trans_from_updating_to_retrying()
+        else:
+            self._trans_from_updating_to_waiting()
+
+    def _on_enrty_retrying(self):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        dt_now = dt.datetime.now()
+        dt_now = dt_now.replace(second=0, microsecond=0)
+        self._next_updatetime = dt_now + self._RETRY_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
+
+        self.logger.debug("---------- Next rtey update time ----------")
+        self.logger.debug("  - Now time:        [{}]".format(dt_now))
+        self.logger.debug("  - Next update time:[{}]".format(self._next_updatetime))
+
     def _on_do_retrying(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        dt_now = dt.datetime.now()
+        if self._next_updatetime < dt_now:
+            self._trans_from_retrying_to_updating()
 
     def _on_exit_retrying(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._retry_counter += 1
+        self._self_retry_counter = 0
 
     def _update_dataframe(self,
                           cndl_msg_list: List[Candle]
@@ -384,6 +481,7 @@ class CandlesData():
         df_prov = df[~(df[CandleColumnNames.COMP.value])]
 
         if not df_comp.empty:
+            df_comp.drop(CandleColumnNames.COMP.value, axis=1, inplace=True)
             if self._df_comp.empty:
                 self._df_comp = df_comp
             else:
@@ -395,6 +493,7 @@ class CandlesData():
                 droplist = self._df_comp.index[range(0, len(df_comp))]
                 self._df_comp.drop(index=droplist, inplace=True)
 
+        df_prov.drop(CandleColumnNames.COMP.value, axis=1, inplace=True)
         self._df_prov = df_prov
 
     def _request_async_candles(self,
@@ -591,43 +690,27 @@ class HistoricalCandles(Node):
             self.logger.error(err)
             raise InitializerErrorException("create service client failed.")
 
-        CandlesData.daily_param = self._create_daily_param()
-        self.logger.debug("----- update \"daily param\" -----")
-        self.logger.debug("{}".format(CandlesData.daily_param))
-
         self._candles_data_list = []
         for inst_id in self._rosprm.enable_inst_list():
             for gran_data in self._rosprm.enable_gran_list():
                 candles_data = CandlesData(self, inst_id, gran_data)
                 self._candles_data_list.append(candles_data)
 
-    def do_timeout_event(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        # Create service server "HistoricalCandles"
+        srv_type = HistoricalCandlesSrv
+        srv_name = "historical_candles"
+        callback = self._on_recv_historical_candles
+        self._hc_srv = self.create_service(srv_type,
+                                           srv_name,
+                                           callback)
 
-        currday = dt.datetime.now().date()
-        if CandlesData.daily_param.today != currday:
-            CandlesData.daily_param = self._create_daily_param(currday)
-            self.logger.debug("----- update \"daily param\" -----")
-            self.logger.debug("{}".format(CandlesData.daily_param))
+    def do_timeout_event(self) -> None:
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
         for candles_data in self._candles_data_list:
             candles_data.do_timeout_event()
             self.logger.debug("inst_id:{}, gran_id:{}"
                               .format(candles_data._inst_id, candles_data._gran_id))
-
-    def _create_daily_param(self, date: dt.date=None) -> DailyParam:
-
-        if date is None:
-            date = dt.date.today()
-
-        if utl.is_summer_time(date):
-            open_time = dt.time(6, 0)
-            close_time = dt.time(6, 0)
-        else:
-            open_time = dt.time(7, 0)
-            close_time = dt.time(7, 0)
-
-        return DailyParam(date, open_time, close_time)
 
     def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
         # Create service client
@@ -638,6 +721,66 @@ class HistoricalCandles(Node):
                 raise RuntimeError("Interrupted while waiting for service.")
             self._logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
+
+    def _on_recv_historical_candles(self,
+                                    req: SrvTypeRequest,
+                                    rsp: SrvTypeResponse
+                                    ) -> SrvTypeResponse:
+        self.logger.debug("{:=^50}".format(" Service[historical_candles]:Start "))
+        self.logger.debug("<Request>")
+        self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
+        self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
+        self.logger.debug("  - dt_from:[{}]".format(req.dt_from))
+        self.logger.debug("  - dt_to:[{}]".format(req.dt_to))
+        """
+        dbg_tm_start = dt.datetime.now()
+
+        if req.dt_from == "":
+            dt_from = None
+        else:
+            # TODO:
+            dt_from = dt.datetime.strptime(req.dt_from, FMT_YMDHMS)
+
+        if req.dt_to == "":
+            dt_to = None
+        else:
+            # TODO:
+            dt_to = dt.datetime.strptime(req.dt_to, FMT_YMDHMS)
+
+        df = self._get_dataframe(req.inst_msg.inst_id,
+                                 req.gran_msg.gran_id,
+                                 dt_from,
+                                 dt_to)
+
+        rsp.cndl_msg_list = []
+        if not df.empty:
+            for time, sr in df.iterrows():
+                msg = Candle()
+                msg.ask_o = sr[CandlesData._COL_NAME_ASK_OP]
+                msg.ask_h = sr[CandlesData._COL_NAME_ASK_HI]
+                msg.ask_l = sr[CandlesData._COL_NAME_ASK_LO]
+                msg.ask_c = sr[CandlesData._COL_NAME_ASK_CL]
+                msg.mid_o = sr[CandlesData._COL_NAME_MID_OP]
+                msg.mid_h = sr[CandlesData._COL_NAME_MID_HI]
+                msg.mid_l = sr[CandlesData._COL_NAME_MID_LO]
+                msg.mid_c = sr[CandlesData._COL_NAME_MID_CL]
+                msg.bid_o = sr[CandlesData._COL_NAME_BID_OP]
+                msg.bid_h = sr[CandlesData._COL_NAME_BID_HI]
+                msg.bid_l = sr[CandlesData._COL_NAME_BID_LO]
+                msg.bid_c = sr[CandlesData._COL_NAME_BID_CL]
+                msg.time = time.strftime(FMT_YMDHMS)
+                msg.is_complete = sr[CandlesData._COL_NAME_COMP]
+                rsp.cndl_msg_list.append(msg)
+
+        dbg_tm_end = dt.datetime.now()
+        self.logger.debug("<Response>")
+        self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
+        self.logger.debug("[Performance]")
+        self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        self.logger.debug("{:=^50}".format(" Service[historical_candles]:End "))
+        """
+
+        return rsp
 
 
 def main(args=None):
