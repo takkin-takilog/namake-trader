@@ -375,10 +375,7 @@ class CandlesData():
             except Exception as err:
                 self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
                 self.logger.error("{}".format(err))
-                if self._retry_counter < self._RETRY_COUNT_MAX:
-                    self._trans_from_updating_to_retrying()
-                else:
-                    self._trans_from_updating_to_waiting()
+                self._trans_updating_common()
         else:
             if self._future.done():
                 self.logger.debug("  Request done.")
@@ -386,6 +383,13 @@ class CandlesData():
                     rsp = self._future.result()
                     if rsp.result:
                         self._update_dataframe(rsp.cndl_msg_list)
+                        self.logger.debug("---------- df_comp(length:[{}]) ----------"
+                                          .format(len(self._df_comp)))
+                        self.logger.debug("  - Head:\n{}".format(self._df_comp[:5]))
+                        self.logger.debug("  - Tail:\n{}".format(self._df_comp[-5:]))
+                        self.logger.debug("---------- df_prov(length:[{}]) ----------"
+                                          .format(len(self._df_prov)))
+                        self.logger.debug("\n{}".format(self._df_prov))
                         if not rsp.cndl_msg_list:
                             self.logger.error(" - rsp.cndl_msg_list is empty")
                             self._trans_updating_common()
@@ -399,11 +403,11 @@ class CandlesData():
                                 self._trans_from_updating_to_waiting()
                             else:
                                 self.logger.error(" !!!!!!!!!! Unexpected statement !!!!!!!!!!")
-                                if self._self_retry_counter < self._SELF_RETRY_COUNT_MAX:
+                                if self._SELF_RETRY_COUNT_MAX <= self._self_retry_counter:
+                                    self._trans_updating_common()
+                                else:
                                     self._self_retry_counter += 1
                                     self._trans_self_updating()
-                                else:
-                                    self._trans_updating_common()
                     else:
                         self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Create) "))
                         self._trans_updating_common()
@@ -415,10 +419,10 @@ class CandlesData():
                 self.logger.debug("  Requesting now...")
 
     def _trans_updating_common(self):
-        if self._retry_counter < self._RETRY_COUNT_MAX:
-            self._trans_from_updating_to_retrying()
-        else:
+        if self._RETRY_COUNT_MAX <= self._retry_counter:
             self._trans_from_updating_to_waiting()
+        else:
+            self._trans_from_updating_to_retrying()
 
     def _on_enrty_retrying(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -477,8 +481,8 @@ class CandlesData():
                       CandleColumnNames.TIME.value],
                      inplace=True)
 
-        df_comp = df[(df[CandleColumnNames.COMP.value])]
-        df_prov = df[~(df[CandleColumnNames.COMP.value])]
+        df_comp = df[(df[CandleColumnNames.COMP.value])].copy()
+        df_prov = df[~(df[CandleColumnNames.COMP.value])].copy()
 
         if not df_comp.empty:
             df_comp.drop(CandleColumnNames.COMP.value, axis=1, inplace=True)
@@ -493,8 +497,11 @@ class CandlesData():
                 droplist = self._df_comp.index[range(0, len(df_comp))]
                 self._df_comp.drop(index=droplist, inplace=True)
 
-        df_prov.drop(CandleColumnNames.COMP.value, axis=1, inplace=True)
-        self._df_prov = df_prov
+        if df_prov.empty:
+            self._df_prov = pd.DataFrame()
+        else:
+            df_prov.drop(CandleColumnNames.COMP.value, axis=1, inplace=True)
+            self._df_prov = df_prov
 
     def _request_async_candles(self,
                                dt_from: dt.datetime,
