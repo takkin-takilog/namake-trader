@@ -430,7 +430,7 @@ class CandlesData():
         dt_now = dt_now.replace(second=0, microsecond=0)
         self._next_updatetime = dt_now + self._RETRY_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
 
-        self.logger.debug("---------- Next rtey update time ----------")
+        self.logger.debug("---------- Next retry update time ----------")
         self.logger.debug("  - Now time:        [{}]".format(dt_now))
         self.logger.debug("  - Next update time:[{}]".format(self._next_updatetime))
 
