@@ -582,7 +582,7 @@ class CandlestickManager(Node):
         # Create service server "HistoricalCandles"
         srv_type = HistoricalCandlesSrv
         srv_name = "historical_candles"
-        callback = self._on_recv_historical_candles
+        callback = self._on_recv_candles_data
         self._hc_srv = self.create_service(srv_type,
                                            srv_name,
                                            callback)
@@ -640,7 +640,7 @@ class CandlestickManager(Node):
             self._logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
-    def _on_recv_historical_candles(self,
+    def _on_recv_candles_data(self,
                                     req: SrvTypeRequest,
                                     rsp: SrvTypeResponse
                                     ) -> SrvTypeResponse:

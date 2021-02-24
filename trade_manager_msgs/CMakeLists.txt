@@ -23,7 +23,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MarketOrderRequest.msg"
   "msg/StopOrderRequest.msg"
   "srv/CandlesMntSrv.srv"
-  "srv/HistoricalCandlesSrv.srv"
+  "srv/CandlesDataSrv.srv"
   DEPENDENCIES std_msgs action_msgs
 )
 
