@@ -1,4 +1,4 @@
-# Cabdlestick service.
+# Cabdlestick data service.
 
 # ========================= Request =========================
 # The granularity.
@@ -7,15 +7,25 @@ trade_manager_msgs/Granularity gran_msg
 # The Instrument.
 trade_manager_msgs/Instrument inst_msg
 
-# The start of the time range to fetch candlesticks for.
-# The format is "%Y-%m-%dT%H:%M:00.000000000Z".
+# The start of datetime to fetch candlesticks.
+# The format is "%Y-%m-%dT%H:%M:%S".
 # If want to set indefinite period, set blank as "".
-string dt_from
+string datetime_start
 
-# The end of the time range to fetch candlesticks for.
-# The format is "%Y-%m-%dT%H:%M:00.000000000Z".
+# The end of datetime to fetch candlesticks for.
+# The format is "%Y-%m-%dT%H:%M:%S".
 # If want to set indefinite period, set blank as "".
-string dt_to
+string datetime_end
+
+# The start of time range.
+# The format is "%H:%M:%S".
+# If want to set indefinite period, set blank as "".
+string time_from
+
+# The end of time range.
+# The format is "%H:%M:%S".
+# If want to set indefinite period, set blank as "".
+string time_to
 
 ---
 # ========================= Response =========================

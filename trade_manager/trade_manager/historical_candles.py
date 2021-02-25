@@ -154,7 +154,7 @@ class CandlesData():
         # Define Constant value.
         gran_param = GranParam.get_member_by_msgid(gran_data.gran_id)
         self._GRAN_INTERVAL = gran_param.timedelta
-        self._NEXT_UPDATETIME_OFS_SEC = dt.timedelta(seconds=3)
+        self._NEXT_UPDATETIME_OFS_SEC = dt.timedelta(seconds=5)
         self._RETRY_INTERVAL = dt.timedelta(minutes=1)
         self._FAIL_INTERVAL = dt.timedelta(minutes=10)
         self._RETRY_COUNT_MAX = 2
@@ -709,8 +709,8 @@ class HistoricalCandles(Node):
             raise InitializerErrorException("create service client failed.")
 
         self._candles_data_list = []
-        for inst_id in self._rosprm.enable_inst_list():
-            for gran_data in self._rosprm.enable_gran_list():
+        for gran_data in self._rosprm.enable_gran_list():
+            for inst_id in self._rosprm.enable_inst_list():
                 candles_data = CandlesData(self, inst_id, gran_data)
                 self._candles_data_list.append(candles_data)
 
@@ -748,25 +748,25 @@ class HistoricalCandles(Node):
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
         self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
-        self.logger.debug("  - dt_from:[{}]".format(req.dt_from))
-        self.logger.debug("  - dt_to:[{}]".format(req.dt_to))
+        self.logger.debug("  - datetime_start:[{}]".format(req.datetime_start))
+        self.logger.debug("  - datetime_end:[{}]".format(req.datetime_end))
         self.logger.debug("  - time_from:[{}]".format(req.time_from))
         self.logger.debug("  - time_to:[{}]".format(req.time_to))
 
         inst_id = INST_DICT[req.inst_msg.inst_id]
-        gran_id = GRAN_DICT[req.inst_msg.gran_id]
+        gran_id = GRAN_DICT[req.gran_msg.gran_id]
 
         dbg_tm_start = dt.datetime.now()
 
-        if req.dt_from == "":
+        if req.datetime_start == "":
             start_dt = None
         else:
-            start_dt = tuple(req.dt_from.split("T"))
+            start_dt = tuple(req.datetime_start.split("T"))
 
-        if req.dt_to == "":
+        if req.datetime_end == "":
             end_dt = None
         else:
-            end_dt = tuple(req.dt_to.split("T"))
+            end_dt = tuple(req.datetime_end.split("T"))
 
         if req.time_from == "":
             start_time = None
