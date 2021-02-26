@@ -20,6 +20,7 @@ from trade_manager.constant import FMT_YMDHMS, FMT_TIME_HMS
 from trade_manager.constant import GranParam
 from trade_manager.constant import CandleColumnNames as ColName
 from trade_manager.constant import INST_DICT, GRAN_DICT
+from trade_manager.constant import MIN_TIME, MAX_TIME
 from trade_manager.exception import InitializerErrorException
 from api_msgs.srv import CandlesSrv
 from api_msgs.msg import Instrument as InstApi
@@ -291,9 +292,7 @@ class CandlesData():
         return self._df_comp
 
     def _get_latest_datetime_in_dataframe(self) -> dt.datetime:
-        date_ = self._df_comp.iloc[-1].name[0]
-        time_ = self._df_comp.iloc[-1].name[1]
-        return dt.datetime.strptime(date_ + "T" + time_, FMT_YMDHMS)
+        return self._df_comp.index[-1].to_pydatetime()
 
     def _calc_next_updatetime(self) -> dt.datetime:
         dt_ = self._get_latest_datetime_in_dataframe()
@@ -462,15 +461,12 @@ class CandlesData():
 
         data = []
         for cndl_msg in cndl_msg_list:
-            dt_ = cndl_msg.time.split("T")
-            date_ = dt_[0]
-            time_ = dt_[1]
+            dt_ = dt.datetime.strptime(cndl_msg.time, FMT_YMDHMS)
             hsc_o = (cndl_msg.ask_o - cndl_msg.bid_o) / 2
             hsc_h = (cndl_msg.ask_h - cndl_msg.bid_h) / 2
             hsc_l = (cndl_msg.ask_l - cndl_msg.bid_l) / 2
             hsc_c = (cndl_msg.ask_c - cndl_msg.bid_c) / 2
-            data.append([date_,
-                         time_,
+            data.append([dt_,
                          cndl_msg.ask_o,
                          cndl_msg.ask_h,
                          cndl_msg.ask_l,
@@ -488,8 +484,7 @@ class CandlesData():
 
         df = pd.DataFrame(data,
                           columns=ColName.to_list())
-        df.set_index([ColName.DATE.value,
-                      ColName.TIME.value],
+        df.set_index([ColName.DATETIME.value],
                      inplace=True)
 
         df_comp = df[(df[ColName.COMP.value])].copy()
@@ -737,7 +732,7 @@ class HistoricalCandles(Node):
         while not cli.wait_for_service(timeout_sec=1.0):
             if not rclpy.ok():
                 raise RuntimeError("Interrupted while waiting for service.")
-            self._logger.info("Waiting for [{}] service...".format(srv_name))
+            self.logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
     def _on_recv_candles_data(self,
@@ -758,16 +753,6 @@ class HistoricalCandles(Node):
 
         dbg_tm_start = dt.datetime.now()
 
-        if req.datetime_start == "":
-            start_dt = None
-        else:
-            start_dt = tuple(req.datetime_start.split("T"))
-
-        if req.datetime_end == "":
-            end_dt = None
-        else:
-            end_dt = tuple(req.datetime_end.split("T"))
-
         if req.time_from == "":
             start_time = None
         else:
@@ -787,28 +772,22 @@ class HistoricalCandles(Node):
         rsp.cndl_msg_list = []
         if df_comp is not None:
 
-            if start_dt is not None:
-                start_row = df_comp.index.get_loc(start_dt)
-                df_comp = df_comp[start_row:]
+            if not req.datetime_start == "":
+                start_dt = dt.datetime.strptime(req.datetime_start, FMT_YMDHMS)
+                df_comp = df_comp.loc[start_dt:]
 
-            if end_dt is not None:
-                end_row = df_comp.index.get_loc(end_dt)
-                df_comp = df_comp[:end_row + 1]
-
-            time_list = df_comp.index.get_level_values(ColName.TIME.value)
-            time_list = pd.Index(dt.datetime.strptime(time, FMT_TIME_HMS).time() for time in time_list)
+            if not req.datetime_end == "":
+                end_dt = dt.datetime.strptime(req.datetime_end, FMT_YMDHMS)
+                df_comp = df_comp.loc[:end_dt]
 
             if ((start_time is not None) and (end_time is not None)):
-                cond = (start_time <= time_list) & (time_list <= end_time)
+                df_comp = df_comp.between_time(start_time, end_time)
             elif ((start_time is not None) and (end_time is None)):
-                cond = start_time <= time_list
+                df_comp = df_comp.between_time(start_time, MAX_TIME)
             elif ((start_time is None) and (end_time is not None)):
-                cond = time_list <= end_time
+                df_comp = df_comp.between_time(MIN_TIME, end_time)
             else:
-                cond = None
-
-            if cond is not None:
-                df_comp = df_comp[cond]
+                pass
 
             if not df_comp.empty:
                 for idx, sr in df_comp.iterrows():
@@ -825,8 +804,7 @@ class HistoricalCandles(Node):
                     msg.bid_h = sr[ColName.BID_HI.value]
                     msg.bid_l = sr[ColName.BID_LO.value]
                     msg.bid_c = sr[ColName.BID_CL.value]
-                    msg.time = idx[0] + "T" + idx[1]
-                    # msg.is_complete = sr[CandlesData._COL_NAME_COMP]
+                    msg.time = idx.strftime(FMT_YMDHMS)
                     rsp.cndl_msg_list.append(msg)
 
         dbg_tm_end = dt.datetime.now()

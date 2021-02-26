@@ -11,6 +11,8 @@ FMT_YMDHMSF = "%Y-%m-%dT%H:%M:%S.%f"
 FMT_YMDHMS = "%Y-%m-%dT%H:%M:%S"
 FMT_TIME_HMS = "%H:%M:%S"
 
+MIN_TIME = dt.time(0, 0, 0)
+MAX_TIME = dt.time(23, 59, 59)
 
 class Transitions(Enum):
     """
@@ -54,8 +56,7 @@ class CandleColumnNames(Enum):
     """
     Candle column names.
     """
-    DATE = "date"
-    TIME = "time"
+    DATETIME = "datetime"
     ASK_OP = "open(Ask)"
     ASK_HI = "high(Ask)"
     ASK_LO = "low(Ask)"
