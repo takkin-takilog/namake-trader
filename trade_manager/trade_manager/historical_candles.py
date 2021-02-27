@@ -753,12 +753,12 @@ class HistoricalCandles(Node):
 
         dbg_tm_start = dt.datetime.now()
 
-        if req.time_from == "":
+        if ((gran_id == GranApi.GRAN_D) or (req.time_from == "")):
             start_time = None
         else:
             start_time = dt.datetime.strptime(req.time_from, FMT_TIME_HMS).time()
 
-        if req.time_to == "":
+        if ((gran_id == GranApi.GRAN_D) or (req.time_to == "")):
             end_time = None
         else:
             end_time = dt.datetime.strptime(req.time_to, FMT_TIME_HMS).time()
@@ -774,10 +774,14 @@ class HistoricalCandles(Node):
 
             if not req.datetime_start == "":
                 start_dt = dt.datetime.strptime(req.datetime_start, FMT_YMDHMS)
+                if gran_id == GranApi.GRAN_D:
+                    start_dt = dt.datetime.combine(start_dt.date(), dt.time(6, 0))
                 df_comp = df_comp.loc[start_dt:]
 
             if not req.datetime_end == "":
                 end_dt = dt.datetime.strptime(req.datetime_end, FMT_YMDHMS)
+                if gran_id == GranApi.GRAN_D:
+                    end_dt = dt.datetime.combine(end_dt.date(), dt.time(7, 0))
                 df_comp = df_comp.loc[:end_dt]
 
             if ((start_time is not None) and (end_time is not None)):

@@ -1,10 +1,10 @@
 from enum import Enum, IntEnum
 import datetime as dt
-from trade_manager_msgs.msg import Instrument as MngInst
-from trade_manager_msgs.msg import Granularity as MngGran
+from trade_manager_msgs.msg import Instrument as InstMng
+from trade_manager_msgs.msg import Granularity as GranMng
 from trade_manager_msgs.msg import OrderRequest
-from api_msgs.msg import Instrument as ApiInst
-from api_msgs.msg import Granularity as ApiGran
+from api_msgs.msg import Instrument as InstApi
+from api_msgs.msg import Granularity as GranApi
 from api_msgs.msg import OrderType
 
 FMT_YMDHMSF = "%Y-%m-%dT%H:%M:%S.%f"
@@ -13,6 +13,7 @@ FMT_TIME_HMS = "%H:%M:%S"
 
 MIN_TIME = dt.time(0, 0, 0)
 MAX_TIME = dt.time(23, 59, 59)
+
 
 class Transitions(Enum):
     """
@@ -80,23 +81,23 @@ class GranParam(Enum):
     """
     Granularity parameter.
     """
-    M1 = (ApiGran.GRAN_M1, dt.timedelta(minutes=1))
-    M2 = (ApiGran.GRAN_M2, dt.timedelta(minutes=2))
-    M3 = (ApiGran.GRAN_M3, dt.timedelta(minutes=3))
-    M4 = (ApiGran.GRAN_M4, dt.timedelta(minutes=4))
-    M5 = (ApiGran.GRAN_M5, dt.timedelta(minutes=5))
-    M10 = (ApiGran.GRAN_M10, dt.timedelta(minutes=10))
-    M15 = (ApiGran.GRAN_M15, dt.timedelta(minutes=15))
-    M30 = (ApiGran.GRAN_M30, dt.timedelta(minutes=30))
-    H1 = (ApiGran.GRAN_H1, dt.timedelta(hours=1))
-    H2 = (ApiGran.GRAN_H2, dt.timedelta(hours=2))
-    H3 = (ApiGran.GRAN_H3, dt.timedelta(hours=3))
-    H4 = (ApiGran.GRAN_H4, dt.timedelta(hours=4))
-    H6 = (ApiGran.GRAN_H6, dt.timedelta(hours=6))
-    H8 = (ApiGran.GRAN_H8, dt.timedelta(hours=8))
-    H12 = (ApiGran.GRAN_H12, dt.timedelta(hours=12))
-    D = (ApiGran.GRAN_D, dt.timedelta(days=1))
-    W = (ApiGran.GRAN_W, dt.timedelta(weeks=1))
+    M1 = (GranApi.GRAN_M1, dt.timedelta(minutes=1))
+    M2 = (GranApi.GRAN_M2, dt.timedelta(minutes=2))
+    M3 = (GranApi.GRAN_M3, dt.timedelta(minutes=3))
+    M4 = (GranApi.GRAN_M4, dt.timedelta(minutes=4))
+    M5 = (GranApi.GRAN_M5, dt.timedelta(minutes=5))
+    M10 = (GranApi.GRAN_M10, dt.timedelta(minutes=10))
+    M15 = (GranApi.GRAN_M15, dt.timedelta(minutes=15))
+    M30 = (GranApi.GRAN_M30, dt.timedelta(minutes=30))
+    H1 = (GranApi.GRAN_H1, dt.timedelta(hours=1))
+    H2 = (GranApi.GRAN_H2, dt.timedelta(hours=2))
+    H3 = (GranApi.GRAN_H3, dt.timedelta(hours=3))
+    H4 = (GranApi.GRAN_H4, dt.timedelta(hours=4))
+    H6 = (GranApi.GRAN_H6, dt.timedelta(hours=6))
+    H8 = (GranApi.GRAN_H8, dt.timedelta(hours=8))
+    H12 = (GranApi.GRAN_H12, dt.timedelta(hours=12))
+    D = (GranApi.GRAN_D, dt.timedelta(days=1))
+    W = (GranApi.GRAN_W, dt.timedelta(weeks=1))
 
     def __init__(self,
                  msg_id: int,
@@ -120,31 +121,31 @@ ORDER_TYP_DICT = {
 }
 
 INST_DICT = {
-    MngInst.INST_USD_JPY: ApiInst.INST_USD_JPY,
-    MngInst.INST_EUR_JPY: ApiInst.INST_EUR_JPY,
-    MngInst.INST_EUR_USD: ApiInst.INST_EUR_USD
+    InstMng.INST_USD_JPY: InstApi.INST_USD_JPY,
+    InstMng.INST_EUR_JPY: InstApi.INST_EUR_JPY,
+    InstMng.INST_EUR_USD: InstApi.INST_EUR_USD
 }
 
 GRAN_DICT = {
-    MngGran.GRAN_S5: ApiGran.GRAN_S5,
-    MngGran.GRAN_S10: ApiGran.GRAN_S10,
-    MngGran.GRAN_S15: ApiGran.GRAN_S15,
-    MngGran.GRAN_S30: ApiGran.GRAN_S30,
-    MngGran.GRAN_M1: ApiGran.GRAN_M1,
-    MngGran.GRAN_M2: ApiGran.GRAN_M2,
-    MngGran.GRAN_M3: ApiGran.GRAN_M3,
-    MngGran.GRAN_M4: ApiGran.GRAN_M4,
-    MngGran.GRAN_M5: ApiGran.GRAN_M5,
-    MngGran.GRAN_M10: ApiGran.GRAN_M10,
-    MngGran.GRAN_M15: ApiGran.GRAN_M15,
-    MngGran.GRAN_M30: ApiGran.GRAN_M30,
-    MngGran.GRAN_H1: ApiGran.GRAN_H1,
-    MngGran.GRAN_H2: ApiGran.GRAN_H2,
-    MngGran.GRAN_H3: ApiGran.GRAN_H3,
-    MngGran.GRAN_H4: ApiGran.GRAN_H4,
-    MngGran.GRAN_H6: ApiGran.GRAN_H6,
-    MngGran.GRAN_H8: ApiGran.GRAN_H8,
-    MngGran.GRAN_H12: ApiGran.GRAN_H12,
-    MngGran.GRAN_D: ApiGran.GRAN_D,
-    MngGran.GRAN_W: ApiGran.GRAN_W
+    GranMng.GRAN_S5: GranApi.GRAN_S5,
+    GranMng.GRAN_S10: GranApi.GRAN_S10,
+    GranMng.GRAN_S15: GranApi.GRAN_S15,
+    GranMng.GRAN_S30: GranApi.GRAN_S30,
+    GranMng.GRAN_M1: GranApi.GRAN_M1,
+    GranMng.GRAN_M2: GranApi.GRAN_M2,
+    GranMng.GRAN_M3: GranApi.GRAN_M3,
+    GranMng.GRAN_M4: GranApi.GRAN_M4,
+    GranMng.GRAN_M5: GranApi.GRAN_M5,
+    GranMng.GRAN_M10: GranApi.GRAN_M10,
+    GranMng.GRAN_M15: GranApi.GRAN_M15,
+    GranMng.GRAN_M30: GranApi.GRAN_M30,
+    GranMng.GRAN_H1: GranApi.GRAN_H1,
+    GranMng.GRAN_H2: GranApi.GRAN_H2,
+    GranMng.GRAN_H3: GranApi.GRAN_H3,
+    GranMng.GRAN_H4: GranApi.GRAN_H4,
+    GranMng.GRAN_H6: GranApi.GRAN_H6,
+    GranMng.GRAN_H8: GranApi.GRAN_H8,
+    GranMng.GRAN_H12: GranApi.GRAN_H12,
+    GranMng.GRAN_D: GranApi.GRAN_D,
+    GranMng.GRAN_W: GranApi.GRAN_W
 }
