@@ -240,7 +240,8 @@ class OrderTicket():
         self._trade_id = None
         self._order_id = None
 
-        if not self._msg.entry_exp_time:
+        if ((self._msg.order_type == OrderRequest.ORDER_TYP_MARKET)
+                or (not self._msg.entry_exp_time)):
             self._entry_exp_time = None
         else:
             self._entry_exp_time = dt.datetime.strptime(self._msg.entry_exp_time,
@@ -255,7 +256,8 @@ class OrderTicket():
         self._is_entry_exp_time_over = False
 
         self.logger.debug("----- init -----")
-        self.logger.debug("  - entry_exp_time:[{}]".format(self._entry_exp_time))
+        if not self._msg.order_type == OrderRequest.ORDER_TYP_MARKET:
+            self.logger.debug("  - entry_exp_time:[{}]".format(self._entry_exp_time))
         self.logger.debug("  - exit_exp_time:[{}]".format(self._exit_exp_time))
 
         self.do_timeout_event()
@@ -293,11 +295,17 @@ class OrderTicket():
         if self._future is None:
             req = OrderCreateSrv.Request()
             req.ordertype_msg.type = ORDER_TYP_DICT[self._msg.order_type]
-            req.price = self._msg.entry_price
+
+            if self._msg.order_type == OrderRequest.ORDER_TYP_MARKET:
+                req.price = 0.0
+            else:
+                req.price = self._msg.entry_price
+
             if self._msg.order_dir == OrderRequest.DIR_LONG:
                 req.units = self._msg.units
             else:
                 req.units = -self._msg.units
+
             req.inst_msg.inst_id = INST_DICT[self._msg.inst_msg.inst_id]
             req.take_profit_price = self._msg.take_profit_price
             req.stop_loss_price = self._msg.stop_loss_price

@@ -1,4 +1,4 @@
-# The price data (open, high, low, close) for the Candlestick for monitor.
+# The price data (open, high, low, close) for the Candlestick.
 
 # The ask candle data.
 float32 ask_o
