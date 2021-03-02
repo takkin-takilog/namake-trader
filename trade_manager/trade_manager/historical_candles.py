@@ -25,10 +25,8 @@ from trade_manager.exception import InitializerErrorException
 from api_msgs.srv import CandlesSrv
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
-from trade_manager_msgs.srv import CandlesMntSrv
 from trade_manager_msgs.srv import CandlesDataSrv
 from trade_manager_msgs.msg import Candle
-from trade_manager_msgs.msg import CandleMnt
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")

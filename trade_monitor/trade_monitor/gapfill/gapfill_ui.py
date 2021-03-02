@@ -7,14 +7,14 @@ from PySide2.QtCore import QItemSelectionModel
 
 from trade_apl_msgs.srv import GapFillMntSrv
 from trade_apl_msgs.msg import GapFillMsg
-from trade_manager_msgs.srv import CandlesMntSrv
+from trade_manager_msgs.srv import CandlesDataSrv
 
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import InstParam, GranParam
 from trade_monitor.constant import SPREAD_MSG_LIST
 from trade_monitor.gapfill.constant import VALID_INST_LIST
-from trade_monitor.constant import (FMT_DTTM_API,
+from trade_monitor.constant import (FMT_YMDHMS,
                                     FMT_DATE_YMD,
                                     FMT_TIME_HMS
                                     )
@@ -279,16 +279,16 @@ class GapFillUi():
             inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
             inst_param = VALID_INST_LIST[inst_idx]
 
-            req = CandlesMntSrv.Request()
+            req = CandlesDataSrv.Request()
             req.gran_msg.gran_id = self._gran_id
             req.inst_msg.inst_id = inst_param.msg_id
-            req.dt_from = dt_from.strftime(FMT_DTTM_API)
-            req.dt_to = dt_to.strftime(FMT_DTTM_API)
+            req.datetime_start = dt_from.strftime(FMT_YMDHMS)
+            req.datetime_end = dt_to.strftime(FMT_YMDHMS)
 
             rsp = ros_com.call_servive_sync_candle(req, timeout_sec=10.0)
             data = []
             for cndl_msg in rsp.cndl_msg_list:
-                dt_ = dt.datetime.strptime(cndl_msg.time, FMT_DTTM_API)
+                dt_ = dt.datetime.strptime(cndl_msg.time, FMT_YMDHMS)
                 data.append([dt_,
                              cndl_msg.ask_o,
                              cndl_msg.ask_h,

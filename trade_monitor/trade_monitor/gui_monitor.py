@@ -11,7 +11,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from std_msgs.msg import String, Bool
-from trade_manager_msgs.srv import CandlesMntSrv
+from trade_manager_msgs.srv import CandlesDataSrv
 from trade_monitor.gapfill.gapfill_ui import GapFillUi
 from trade_monitor.ttm.ttm_ui import TtmUi
 from trade_monitor.main_ui import MainUi
@@ -65,9 +65,9 @@ class GuiMonitor(QMainWindow):
                                             self.listener_callback,
                                             qos_profile)
 
-        # Create service client "CandlesMonitor"
-        srv_type = CandlesMntSrv
-        srv_name = "candles_monitor"
+        # Create service client "CandlesData"
+        srv_type = CandlesDataSrv
+        srv_name = "candles_data"
         cli_cdl = self._create_client(node, srv_type, srv_name)
 
         # Create publisher "Alive"
@@ -82,7 +82,7 @@ class GuiMonitor(QMainWindow):
 
         self._ui = ui
         self._node = node
-        self._cli_cdl = cli_cdl
+        # self._cli_cdl = cli_cdl
         self._pub_alive = pub_alive
 
         self._main_ui = MainUi(ui)
