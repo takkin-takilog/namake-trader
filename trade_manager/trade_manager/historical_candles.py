@@ -743,6 +743,7 @@ class HistoricalCandles(Node):
         self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
         self.logger.debug("  - datetime_start:[{}]".format(req.datetime_start))
         self.logger.debug("  - datetime_end:[{}]".format(req.datetime_end))
+        self.logger.debug("  - dayofweeks:[{}]".format(req.dayofweeks))
         self.logger.debug("  - time_from:[{}]".format(req.time_from))
         self.logger.debug("  - time_to:[{}]".format(req.time_to))
 
@@ -781,6 +782,10 @@ class HistoricalCandles(Node):
                 if gran_id == GranApi.GRAN_D:
                     end_dt = dt.datetime.combine(end_dt.date(), dt.time(7, 0))
                 df_comp = df_comp.loc[:end_dt]
+
+            if req.dayofweeks:
+                cond = [i in req.dayofweeks for i in df_comp.index.dayofweek]
+                df_comp = df_comp[cond]
 
             if ((start_time is not None) and (end_time is not None)):
                 df_comp = df_comp.between_time(start_time, end_time)

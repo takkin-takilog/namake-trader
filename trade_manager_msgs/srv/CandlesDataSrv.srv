@@ -17,6 +17,16 @@ string datetime_start
 # If want to set indefinite period, set blank as "".
 string datetime_end
 
+# The target dayofweeks.
+# - Monday = 0
+# - Tuesday = 1
+# - Wednesday = 2
+# - Thursday = 3
+# - Friday = 4
+# - Saturday = 5
+# - Sunday = 6
+int32[] dayofweeks
+
 # The start of time range.
 # The format is "%H:%M:%S".
 # If want to set indefinite period, set blank as "".
