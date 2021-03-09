@@ -528,9 +528,9 @@ class HeatMapUi(QMainWindow):
 
     def set_param(self,
                   inst_idx: int,
-                  df_param: pd.DataFrame):
+                  df_gap: pd.DataFrame):
 
-        self._hmap.set_param(df_param, inst_idx)
+        self._hmap.set_param(df_gap, inst_idx)
 
         shape = self._hmap.shape
         lenmax = max(shape)
