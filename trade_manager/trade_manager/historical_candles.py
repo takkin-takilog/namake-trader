@@ -298,7 +298,7 @@ class CandlesData():
         return next_updatetime
 
     def do_timeout_event(self) -> None:
-        self.logger.debug("state:[{}]".format(self.state))
+        # self.logger.debug("state:[{}]".format(self.state))
 
         if self.state == self.States.waiting:
             self._on_do_waiting()
@@ -310,7 +310,9 @@ class CandlesData():
             pass
 
     def _on_entry_waiting(self):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug("--- <inst_id:[{}], gran_id:[{}]> Call \"{}\""
+                          .format(self.inst_id, self.gran_id,
+                                  sys._getframe().f_code.co_name))
 
         dt_now = dt.datetime.now()
         if self._is_update_complete:
@@ -356,13 +358,17 @@ class CandlesData():
             self._trans_from_wating_to_updating()
 
     def _on_exit_waiting(self):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug("--- <inst_id:[{}], gran_id:[{}]> Call \"{}\""
+                          .format(self.inst_id, self.gran_id,
+                                  sys._getframe().f_code.co_name))
         self._retry_counter = 0
         self._is_update_complete = False
         self._self_retry_counter = 0
 
     def _on_entry_updating(self):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug("--- <inst_id:[{}], gran_id:[{}]> Call \"{}\""
+                          .format(self.inst_id, self.gran_id,
+                                  sys._getframe().f_code.co_name))
         self._future = None
 
     def _on_do_updating(self):
@@ -406,7 +412,7 @@ class CandlesData():
                             self.logger.debug("  - target_dt <= latest_dt:[{}] <= [{}]"
                                               .format(self._target_dt, latest_dt))
                             if self._target_dt <= latest_dt:
-                                self.logger.error(" - Update complete!")
+                                self.logger.debug(" - Update complete!")
                                 self._is_update_complete = True
                                 self._trans_from_updating_to_waiting()
                             else:
@@ -433,7 +439,9 @@ class CandlesData():
             self._trans_from_updating_to_retrying()
 
     def _on_enrty_retrying(self):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug("--- <inst_id:[{}], gran_id:[{}]> Call \"{}\""
+                          .format(self.inst_id, self.gran_id,
+                                  sys._getframe().f_code.co_name))
         dt_now = dt.datetime.now()
         dt_now = dt_now.replace(second=0, microsecond=0)
         self._next_updatetime = dt_now + self._RETRY_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
@@ -443,13 +451,14 @@ class CandlesData():
         self.logger.debug("  - Next update time:[{}]".format(self._next_updatetime))
 
     def _on_do_retrying(self):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         dt_now = dt.datetime.now()
         if self._next_updatetime < dt_now:
             self._trans_from_retrying_to_updating()
 
     def _on_exit_retrying(self):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug("--- <inst_id:[{}], gran_id:[{}]> Call \"{}\""
+                          .format(self.inst_id, self.gran_id,
+                                  sys._getframe().f_code.co_name))
         self._retry_counter += 1
         self._self_retry_counter = 0
 
@@ -720,8 +729,10 @@ class HistoricalCandles(Node):
 
         for candles_data in self._candles_data_list:
             candles_data.do_timeout_event()
+            """
             self.logger.debug("inst_id:{}, gran_id:{}"
                               .format(candles_data._inst_id, candles_data._gran_id))
+            """
 
     def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
         # Create service client
