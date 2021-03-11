@@ -652,6 +652,7 @@ class OrderScheduler(Node):
         self.logger.debug("{:=^50}".format(" Topic[order_request]:Start "))
         self.logger.debug("  - inst_id:[{}]".format(msg.inst_msg.inst_id))
         self.logger.debug("  - order_type:[{}]".format(msg.order_type))
+        self.logger.debug("  - order_dir:[{}]".format(msg.order_dir))
         self.logger.debug("  - units:[{}]".format(msg.units))
         self.logger.debug("  - entry_price:[{}]".format(msg.entry_price))
         self.logger.debug("  - entry_exp_time:[{}]".format(msg.entry_exp_time))
