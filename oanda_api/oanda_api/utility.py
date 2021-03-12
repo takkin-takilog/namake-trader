@@ -21,7 +21,7 @@ def convert_datetime_jst(oanda_dt: str,
 
     time_list = oanda_dt.split(".")
     dt_str = time_list[0] + "." + time_list[1][:6]
-    dt_ = dt.datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S.%f")
+    dt_ = dt.datetime.strptime(dt_str, FMT_YMDHMSF)
     return (dt_ + _JST_OFS).strftime(fmt)
 
 
