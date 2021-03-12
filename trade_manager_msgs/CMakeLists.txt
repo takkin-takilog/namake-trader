@@ -15,14 +15,10 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Candle.msg"
-  "msg/CandleMnt.msg"
   "msg/Granularity.msg"
   "msg/Instrument.msg"
-  "msg/LimitOrderRequest.msg"
-  "msg/MarketOrderRequest.msg"
-  "msg/StopOrderRequest.msg"
-  "srv/CandlesMntSrv.srv"
-  "srv/HistoricalCandlesSrv.srv"
+  "msg/OrderRequest.msg"
+  "srv/CandlesDataSrv.srv"
   DEPENDENCIES std_msgs action_msgs
 )
 

@@ -5,6 +5,7 @@ from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
 
 FMT_DTTM_API = "%Y-%m-%dT%H:%M:00.000000000Z"
+FMT_YMDHMS = "%Y-%m-%dT%H:%M:%S"
 FMT_DATE_YMD = "%Y-%m-%d"
 FMT_TIME_HM = "%H:%M"
 FMT_TIME_HMS = "%H:%M:%S"

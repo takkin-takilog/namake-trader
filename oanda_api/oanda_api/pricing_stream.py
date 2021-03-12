@@ -5,11 +5,13 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from std_msgs.msg import Bool, String
-from api_msgs.msg import PriceBucket, Pricing, Instrument
+from api_msgs.msg import PriceBucket, Pricing
+from api_msgs.msg import Instrument as Inst
 from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error, StreamTerminated
-from oanda_api.service_common import INST_DICT, ADD_CIPHERS
+from oanda_api.constant import InstParam
+from oanda_api.constant import ADD_CIPHERS
 from oanda_api import utility as utl
 
 MsgType = TypeVar("MsgType")
@@ -43,7 +45,7 @@ class PricingStreamPublisher(Node):
         logger = super().get_logger()
         logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
-        # Declare parameter
+        # Declare ROS parameter
         self.declare_parameter(PRMNM_USE_ENV_LIVE)
         self.declare_parameter(PRMNM_PRAC_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_PRAC_ACCESS_TOKEN)
@@ -54,6 +56,7 @@ class PricingStreamPublisher(Node):
         self.declare_parameter(PRMNM_ENA_INST_EURUSD)
         self.declare_parameter(PRMNM_CONN_TIMEOUT)
 
+        # Set ROS parameter
         USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
         if USE_ENV_LIVE:
             ACCOUNT_NUMBER = self.get_parameter(PRMNM_LIVE_ACCOUNT_NUMBER).value
@@ -70,9 +73,9 @@ class PricingStreamPublisher(Node):
         logger.debug("[Param]Account Number:[{}]".format(ACCOUNT_NUMBER))
         logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
         logger.debug("[Param]Enable instrument:")
-        logger.debug("        USD/JPY:[{}]".format(ENA_INST_USDJPY))
-        logger.debug("        EUR/JPY:[{}]".format(ENA_INST_EURJPY))
-        logger.debug("        EUR/USD:[{}]".format(ENA_INST_EURUSD))
+        logger.debug("  - USD/JPY:[{}]".format(ENA_INST_USDJPY))
+        logger.debug("  - EUR/JPY:[{}]".format(ENA_INST_EURJPY))
+        logger.debug("  - EUR/USD:[{}]".format(ENA_INST_EURUSD))
         logger.debug("[Param]Connection Timeout:[{}]".format(CONN_TIMEOUT))
 
         # Declare publisher and subscriber
@@ -81,21 +84,21 @@ class PricingStreamPublisher(Node):
         inst_name_list = []
         self._pub_dict = {}
         if ENA_INST_USDJPY:
-            inst_name = INST_DICT[Instrument.INST_USD_JPY].name
+            inst_name = InstParam.get_member_by_msgid(Inst.INST_USD_JPY).name
             pub = self.create_publisher(Pricing,
                                         TPCNM_PRICING_USDJPY,
                                         qos_profile)
             self._pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
         if ENA_INST_EURJPY:
-            inst_name = INST_DICT[Instrument.INST_EUR_JPY].name
+            inst_name = InstParam.get_member_by_msgid(Inst.INST_EUR_JPY).name
             pub = self.create_publisher(Pricing,
                                         TPCNM_PRICING_EURJPY,
                                         qos_profile)
             self._pub_dict[inst_name] = pub.publish
             inst_name_list.append(inst_name)
         if ENA_INST_EURUSD:
-            inst_name = INST_DICT[Instrument.INST_EUR_USD].name
+            inst_name = InstParam.get_member_by_msgid(Inst.INST_EUR_USD).name
             pub = self.create_publisher(Pricing,
                                         TPCNM_PRICING_EURUSD,
                                         qos_profile)
@@ -134,7 +137,7 @@ class PricingStreamPublisher(Node):
         params = {"instruments": instruments}
         self._pi = pr.PricingStream(ACCOUNT_NUMBER, params)
 
-        self._logger = logger
+        self.logger = logger
 
     def background(self) -> None:
 
@@ -142,19 +145,19 @@ class PricingStreamPublisher(Node):
             try:
                 self._request()
             except StreamTerminated as err:
-                self._logger.debug("Stream Terminated: {}".format(err))
+                self.logger.debug("Stream Terminated: {}".format(err))
             except V20Error as err:
-                self._logger.error("{:!^50}".format(" V20Error "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" V20Error "))
+                self.logger.error("{}".format(err))
             except ConnectionError as err:
-                self._logger.error("{:!^50}".format(" ConnectionError "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" ConnectionError "))
+                self.logger.error("{}".format(err))
             except ReadTimeout as err:
-                self._logger.error("{:!^50}".format(" ReadTimeout "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" ReadTimeout "))
+                self.logger.error("{}".format(err))
             except Exception as err:
-                self._logger.error("{:!^50}".format(" OthersError "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" OthersError "))
+                self.logger.error("{}".format(err))
 
     def _on_subs_act_flg(self, msg: MsgType) -> None:
         if msg.data:

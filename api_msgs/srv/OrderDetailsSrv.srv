@@ -39,7 +39,7 @@ int32 open_trade_id
 # TakeProfitDetails specifies the details of a TakeProfit Order to be created on behalf of a client.
 # This may happen when an Order is filled that opens a Trade requiring a TakeProfit,
 # or when a Trade's dependent Take ProfitOrder is modified directly through the Trade.
-float32 take_profit_pn_fill_price
+float32 take_profit_on_fill_price
 
 # TakeProfitDetails specifies the details of a StopLoss Order to be created on behalf of a client.
 # This may happen when an Order is filled that opens a Trade requiring a StopLoss,

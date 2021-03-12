@@ -1,108 +1,84 @@
 import pandas as pd
 import datetime as dt
-
 from PySide2.QtWidgets import QHeaderView
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtCore import QItemSelectionModel
-
 from trade_apl_msgs.srv import GapFillMntSrv
-from trade_apl_msgs.msg import GapFillMsg
-from trade_manager_msgs.srv import CandlesMntSrv
-
+from trade_apl_msgs.msg import GapFillTblGapRecMsg as GapMsg
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import InstParam, GranParam
 from trade_monitor.constant import SPREAD_MSG_LIST
 from trade_monitor.gapfill.constant import VALID_INST_LIST
-from trade_monitor.constant import (FMT_DTTM_API,
+from trade_monitor.constant import (FMT_YMDHMS,
                                     FMT_DATE_YMD,
                                     FMT_TIME_HMS
                                     )
-from trade_monitor.constant import CandleColumnName as CdlColNm
 from trade_monitor.gapfill.heatmap_ui import HeatMapUi
-from trade_monitor.gapfill.constant import ColumnName as GfColNm
+from trade_monitor.gapfill.constant import ColNameGap as ColNmGap
+from trade_monitor.gapfill.constant import ColNameOhlc as ColNmOhlc
 from trade_monitor.gapfill.widget import CandlestickChartViewPrev as ChartViewPrev
 from trade_monitor.gapfill.widget import CandlestickChartViewCurr as ChartViewCurr
 
 
+_GAP_DIR_DICT = {
+    GapMsg.GAP_DIR_UP: "Up",
+    GapMsg.GAP_DIR_DOWN: "Down"
+}
+
+_GAP_FILL_VALID_DICT = {
+    True: "Valid",
+    False: "Invalid"
+}
+
+_GAP_FILL_SUCC_DICT = {
+    True: "Success",
+    False: "Failure"
+}
+
+_TREEVIEW_HEADERS = [
+    "Date",
+    "Gap dir",
+    "Previous close price",
+    "Current open price",
+    "Gap price(mid)",
+    "Gap price(real)",
+    "Valid",
+    "Result",
+    "Gap filled time",
+    "Max open range",
+    "End close price"
+]
+
+
+_ASK_COLUMNS = [ColNmOhlc.ASK_O.value,
+                ColNmOhlc.ASK_H.value,
+                ColNmOhlc.ASK_L.value,
+                ColNmOhlc.ASK_C.value
+                ]
+
+_MID_COLUMNS = [ColNmOhlc.MID_O.value,
+                ColNmOhlc.MID_H.value,
+                ColNmOhlc.MID_L.value,
+                ColNmOhlc.MID_C.value
+                ]
+
+_BID_COLUMNS = [ColNmOhlc.BID_O.value,
+                ColNmOhlc.BID_H.value,
+                ColNmOhlc.BID_L.value,
+                ColNmOhlc.BID_C.value
+                ]
+
+_SPREAD_COLUMNS_LIST = [_MID_COLUMNS,
+                        _ASK_COLUMNS,
+                        _BID_COLUMNS]
+
+
 class GapFillUi():
 
-    _GAP_DIR_DICT = {
-        GapFillMsg.GAP_DIR_UP: "Up",
-        GapFillMsg.GAP_DIR_DOWN: "Down"
-    }
-
-    _GAP_FILL_VALID_DICT = {
-        True: "Valid",
-        False: "Invalid"
-    }
-
-    _GAP_FILL_SUCC_DICT = {
-        True: "Success",
-        False: "Failure"
-    }
-
-    _TREEVIEW_HEADERS = [
-        "Date",
-        "Gap dir",
-        "Previous close price",
-        "Current open price",
-        "Gap price(mid)",
-        "Gap price(real)",
-        "Valid",
-        "Result",
-        "Gap filled time",
-        "Max open range",
-        "End close price"
-    ]
-
-    _ALL_COLUMNS = [CdlColNm.ASK_OP.value,
-                    CdlColNm.ASK_HI.value,
-                    CdlColNm.ASK_LO.value,
-                    CdlColNm.ASK_CL.value,
-                    CdlColNm.MID_OP.value,
-                    CdlColNm.MID_HI.value,
-                    CdlColNm.MID_LO.value,
-                    CdlColNm.MID_CL.value,
-                    CdlColNm.BID_OP.value,
-                    CdlColNm.BID_HI.value,
-                    CdlColNm.BID_LO.value,
-                    CdlColNm.BID_CL.value
-                    ]
-
-    _ASK_COLUMNS = [CdlColNm.ASK_OP.value,
-                    CdlColNm.ASK_HI.value,
-                    CdlColNm.ASK_LO.value,
-                    CdlColNm.ASK_CL.value
-                    ]
-
-    _MID_COLUMNS = [CdlColNm.MID_OP.value,
-                    CdlColNm.MID_HI.value,
-                    CdlColNm.MID_LO.value,
-                    CdlColNm.MID_CL.value
-                    ]
-
-    _BID_COLUMNS = [CdlColNm.BID_OP.value,
-                    CdlColNm.BID_HI.value,
-                    CdlColNm.BID_LO.value,
-                    CdlColNm.BID_CL.value
-                    ]
-
-    """
-    CDL_COLUMNS = [CandlestickChartViewPrev.CdlColNm.OP,
-                   CandlestickChartViewPrev.CdlColNm.HI,
-                   CandlestickChartViewPrev.CdlColNm.LO,
-                   CandlestickChartViewPrev.CdlColNm.CL
-                   ]
-    """
-
-    _SPREAD_COLUMNS_LIST = [_MID_COLUMNS,
-                            _ASK_COLUMNS,
-                            _BID_COLUMNS]
-
-    _DRAW_CANDLE_COUNT = 50
-
     def __init__(self, ui) -> None:
+
+        self._DRAW_CANDLE_COUNT = 50
 
         utl.remove_all_items_of_comboBox(ui.comboBox_gapfill_inst)
         for obj in VALID_INST_LIST:
@@ -132,7 +108,7 @@ class GapFillUi():
         sel_mdl.selectionChanged.connect(callback)
 
         # set header
-        qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
+        qstd_itm_mdl.setHorizontalHeaderLabels(_TREEVIEW_HEADERS)
         ui.treeView_gapfill.setModel(qstd_itm_mdl)
         ui.treeView_gapfill.setSelectionModel(sel_mdl)
         header = ui.treeView_gapfill.header()
@@ -159,9 +135,10 @@ class GapFillUi():
         self._ui = ui
         self._gran_id = 0
         self._srv_cli_list = srv_cli_list
-        self._end_time = dt.time(10, 0, 0)
+        self._exit_time = dt.time(10, 0, 0)
         self._is_update = False
-        self._df_param = pd.DataFrame()
+        self._df_ohlc = pd.DataFrame()
+        self._df_gap = pd.DataFrame()
         self._sr_gf = pd.Series()
         self._df_prev = pd.DataFrame()
         self._df_curr = pd.DataFrame()
@@ -170,7 +147,7 @@ class GapFillUi():
     def _on_fetch_gapfill_clicked(self):
 
         self._qstd_itm_mdl.clear()
-        self._qstd_itm_mdl.setHorizontalHeaderLabels(self._TREEVIEW_HEADERS)
+        self._qstd_itm_mdl.setHorizontalHeaderLabels(_TREEVIEW_HEADERS)
         inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
         inst_param = VALID_INST_LIST[inst_idx]
         fmt = "{:." + str(inst_param.digit) + "f}"
@@ -186,80 +163,74 @@ class GapFillUi():
 
             rsp = ros_com.call_servive_sync(srv_cli, req, timeout_sec=10.0)
             self._gran_id = rsp.gran_id
-            """
-            future = srv_cli.call_async(req)
-            rclpy.spin_until_future_complete(self._node, future, timeout_sec=10.0)
 
-            flg = future.done() and future.result() is not None
-            assert flg, "fetch [Gap-Fill] failed!"
+            # OHLC table data
+            tbl = []
+            for rec in rsp.tbl_ohlc:
+                tbl.append([dt.datetime.strptime(rec.datetime, FMT_YMDHMS),
+                            rec.data_id,
+                            rec.ask_o,
+                            rec.ask_h,
+                            rec.ask_l,
+                            rec.ask_c,
+                            rec.mid_o,
+                            rec.mid_h,
+                            rec.mid_l,
+                            rec.mid_c,
+                            rec.bid_o,
+                            rec.bid_h,
+                            rec.bid_l,
+                            rec.bid_c,
+                            ])
+            df_ohlc = pd.DataFrame(tbl, columns=ColNmOhlc.to_list())
+            self._df_ohlc = df_ohlc.set_index(ColNmOhlc.DATETIME.value)
 
-            rsp = future.result()
-            """
-            # Parameter data
-            data = []
-            for gapfillmsg in rsp.gapfillmsg_list:
+            # Gap table data
+            tbl = []
+            for rec in rsp.tbl_gap:
                 items = [
-                    QStandardItem(gapfillmsg.date),
-                    QStandardItem(self._GAP_DIR_DICT[gapfillmsg.gap_dir]),
-                    QStandardItem(fmt.format(gapfillmsg.gap_close_price)),
-                    QStandardItem(fmt.format(gapfillmsg.gap_open_price)),
-                    QStandardItem(fmt.format(gapfillmsg.gap_price_mid)),
-                    QStandardItem(fmt.format(gapfillmsg.gap_price_real)),
-                    QStandardItem(self._GAP_FILL_VALID_DICT[
-                        gapfillmsg.is_valid]),
-                    QStandardItem(self._GAP_FILL_SUCC_DICT[
-                        gapfillmsg.is_gapfill_success]),
-                    QStandardItem(gapfillmsg.gap_filled_time),
-                    QStandardItem(fmt.format(gapfillmsg.max_open_range)),
-                    QStandardItem(fmt.format(gapfillmsg.end_close_price))
+                    QStandardItem(rec.date),
+                    QStandardItem(_GAP_DIR_DICT[rec.gap_dir]),
+                    QStandardItem(fmt.format(rec.close_price_mid)),
+                    QStandardItem(fmt.format(rec.open_price_mid)),
+                    QStandardItem(fmt.format(rec.gap_price_mid)),
+                    QStandardItem(fmt.format(rec.gap_price_real)),
+                    QStandardItem(_GAP_FILL_VALID_DICT[rec.is_valid]),
+                    QStandardItem(_GAP_FILL_SUCC_DICT[rec.is_gapfill_success]),
+                    QStandardItem(rec.gap_filled_time),
+                    QStandardItem(fmt.format(rec.max_open_range)),
+                    QStandardItem(fmt.format(rec.end_close_price))
                 ]
                 self._qstd_itm_mdl.appendRow(items)
-                data.append([gapfillmsg.date,
-                             gapfillmsg.gap_dir,
-                             gapfillmsg.gap_close_price,
-                             gapfillmsg.gap_open_price,
-                             gapfillmsg.gap_price_mid,
-                             gapfillmsg.gap_price_real,
-                             gapfillmsg.is_valid,
-                             gapfillmsg.is_gapfill_success,
-                             gapfillmsg.gap_filled_time,
-                             gapfillmsg.max_open_range,
-                             gapfillmsg.end_close_price
-                             ])
+                tbl.append([rec.date,
+                            rec.data_id,
+                            rec.gap_dir,
+                            rec.close_price_mid,
+                            rec.open_price_mid,
+                            rec.gap_price_mid,
+                            rec.gap_price_real,
+                            rec.is_valid,
+                            rec.is_gapfill_success,
+                            rec.gap_filled_time,
+                            rec.max_open_range,
+                            rec.end_close_price,
+                            rec.end_diff_price
+                            ])
 
-            df_param = pd.DataFrame(data, columns=GfColNm.to_list())
-            self._df_param = df_param.set_index(GfColNm.DATE.value)
-
-            """
-            # Heat map data
-            self._hmap_range_start = rsp.heatmap_range_start
-            self._hmap_range_end = rsp.heatmap_range_end
-            self._hmap_range_step = rsp.heatmap_range_step
-
-            hm_idx = [COL_NAME_DATE]
-            hm_x_range = list(np.arange(self._hmap_range_start,
-                                        self._hmap_range_end,
-                                        self._hmap_range_step))
-            columns = hm_idx + hm_x_range
-            data = []
-            for heatmapmsg in rsp.heatmapmsg_list:
-                idx = [heatmapmsg.date]
-                data.append(idx + heatmapmsg.data_list.tolist())
-            df_hmap = pd.DataFrame(data, columns=columns)
-            self._df_hmap = df_hmap.set_index(hm_idx)
-            """
+            df_gap = pd.DataFrame(tbl, columns=ColNmGap.to_list())
+            self._df_gap = df_gap.set_index(ColNmGap.DATE.value)
 
             header = self._ui.treeView_gapfill.header()
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
-            self._end_time = dt.datetime.strptime(rsp.end_time,
-                                                  FMT_TIME_HMS).time()
+            self._exit_time = dt.datetime.strptime(rsp.exit_time,
+                                                   FMT_TIME_HMS).time()
             self._is_update = True
 
     def _on_gapfill_heatmap_clicked(self):
 
         inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
-        self._htmap_ui.set_param(inst_idx, self._df_param)
+        self._htmap_ui.set_param(inst_idx, self._df_gap)
         self._htmap_ui.show()
         self._htmap_ui.init_resize()
 
@@ -273,57 +244,26 @@ class GapFillUi():
             trg_date_str = self._qstd_itm_mdl.item(model_index.row()).text()
             trg_date = dt.datetime.strptime(trg_date_str, FMT_DATE_YMD)
 
-            dt_from = trg_date - dt.timedelta(days=2)
-            dt_to = trg_date + dt.timedelta(hours=12)
+            sr_gf = self._df_gap.loc[trg_date_str]
+            data_id = sr_gf[ColNmGap.DATA_ID.value]
+            df_ohlc = self._df_ohlc[self._df_ohlc[ColNmOhlc.DATA_ID.value] == data_id]
+
+            date_th = df_ohlc.index[0] + dt.timedelta(days=1)
+            date_th = date_th.replace(hour=0, minute=0, second=0)
+
+            df_prev = df_ohlc[df_ohlc.index < date_th]
+            df_curr = df_ohlc[df_ohlc.index > date_th]
 
             inst_idx = self._ui.comboBox_gapfill_inst.currentIndex()
             inst_param = VALID_INST_LIST[inst_idx]
 
-            req = CandlesMntSrv.Request()
-            req.gran_msg.gran_id = self._gran_id
-            req.inst_msg.inst_id = inst_param.msg_id
-            req.dt_from = dt_from.strftime(FMT_DTTM_API)
-            req.dt_to = dt_to.strftime(FMT_DTTM_API)
+            df_prev = df_prev.tail(self._DRAW_CANDLE_COUNT)
+            df_curr = df_curr.head(self._DRAW_CANDLE_COUNT)
 
-            rsp = ros_com.call_servive_sync_candle(req, timeout_sec=10.0)
-            data = []
-            for cndl_msg in rsp.cndl_msg_list:
-                dt_ = dt.datetime.strptime(cndl_msg.time, FMT_DTTM_API)
-                data.append([dt_,
-                             cndl_msg.ask_o,
-                             cndl_msg.ask_h,
-                             cndl_msg.ask_l,
-                             cndl_msg.ask_c,
-                             cndl_msg.mid_o,
-                             cndl_msg.mid_h,
-                             cndl_msg.mid_l,
-                             cndl_msg.mid_c,
-                             cndl_msg.bid_o,
-                             cndl_msg.bid_h,
-                             cndl_msg.bid_l,
-                             cndl_msg.bid_c,
-                             cndl_msg.is_complete
-                             ])
-
-            df = pd.DataFrame(data)
-            df.columns = CdlColNm.to_list()
-            df = df.set_index(CdlColNm.TIME.value)
-
-            sr_gf = self._df_param.loc[trg_date_str]
-
-            df_prev = df.loc[:, self._ALL_COLUMNS]
-            df_curr = df.loc[:, self._ALL_COLUMNS]
-
-            th = df_prev.index[-1] - dt.timedelta(days=1)
-            df_prev = df_prev[df_prev.index < th].tail(self._DRAW_CANDLE_COUNT)
-
-            th = df_curr.index[-1] - dt.timedelta(days=1)
-            df_curr = df_curr[th < df_curr.index].head(self._DRAW_CANDLE_COUNT)
-
-            max_prev = df_prev[CdlColNm.ASK_HI.value].max()
-            min_prev = df_prev[CdlColNm.BID_LO.value].min()
-            max_curr = df_curr[CdlColNm.ASK_HI.value].max()
-            min_curr = df_curr[CdlColNm.BID_LO.value].min()
+            max_prev = df_prev[ColNmOhlc.ASK_H.value].max()
+            min_prev = df_prev[ColNmOhlc.BID_L.value].min()
+            max_curr = df_curr[ColNmOhlc.ASK_H.value].max()
+            min_curr = df_curr[ColNmOhlc.BID_L.value].min()
 
             max_y = max(max_prev, max_curr)
             min_y = min(min_prev, min_curr)
@@ -359,25 +299,25 @@ class GapFillUi():
 
     def _update_prev_chart(self, idx, df, sr_gf, inst_param: InstParam):
 
-        df_prev = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
+        df_prev = df.loc[:, _SPREAD_COLUMNS_LIST[idx]]
         df_prev.columns = self._chartview_prev.CandleLabel.to_list()
         gran_param = GranParam.get_member_by_msgid(self._gran_id)
 
         self._chartview_prev.update(df_prev,
-                                    sr_gf[GfColNm.GPA_CLOSE_PRICE.value],
-                                    sr_gf[GfColNm.GPA_OPEN_PRICE.value],
+                                    sr_gf[ColNmGap.CLOSE_PRICE_MID.value],
+                                    sr_gf[ColNmGap.OPEN_PRICE_MID.value],
                                     gran_param,
                                     inst_param)
 
     def _update_curr_chart(self, idx, df, sr_gf, inst_param: InstParam):
 
-        df_curr = df.loc[:, self._SPREAD_COLUMNS_LIST[idx]]
+        df_curr = df.loc[:, _SPREAD_COLUMNS_LIST[idx]]
         df_curr.columns = self._chartview_curr.CandleLabel.to_list()
         gran_param = GranParam.get_member_by_msgid(self._gran_id)
 
         self._chartview_curr.update(df_curr,
-                                    sr_gf[GfColNm.GPA_CLOSE_PRICE.value],
-                                    sr_gf[GfColNm.GPA_OPEN_PRICE.value],
+                                    sr_gf[ColNmGap.CLOSE_PRICE_MID.value],
+                                    sr_gf[ColNmGap.OPEN_PRICE_MID.value],
                                     gran_param,
                                     inst_param,
-                                    self._end_time)
+                                    self._exit_time)
