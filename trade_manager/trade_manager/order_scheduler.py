@@ -1,4 +1,5 @@
 import sys
+import gc
 from typing import TypeVar
 from enum import Enum, auto
 import datetime as dt
@@ -638,6 +639,7 @@ class OrderScheduler(Node):
         # remove "Complete" States element
         self._tickets = [ticket for ticket in self._tickets
                          if ticket.state != OrderTicket.States.Complete]
+        gc.collect()
 
     def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
         cli = self.create_client(srv_type, srv_name)
