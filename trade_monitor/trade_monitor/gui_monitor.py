@@ -14,6 +14,7 @@ from std_msgs.msg import String, Bool
 from trade_manager_msgs.srv import CandlesDataSrv
 from trade_monitor.gapfill.gapfill_ui import GapFillUi
 from trade_monitor.ttm.ttm_ui import TtmUi
+from trade_monitor.tech.tech_ui import TechUi
 from trade_monitor.main_ui import MainUi
 from trade_monitor import utility as utl
 # from trade_monitor.constant import INST_MSG_LIST
@@ -88,6 +89,7 @@ class GuiMonitor(QMainWindow):
         self._main_ui = MainUi(ui)
         self._gapfill_ui = GapFillUi(ui)
         self._ttm_ui = TtmUi(ui)
+        self._tech_ui = TechUi(ui)
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")
