@@ -292,10 +292,22 @@ class CandlesData():
     def _get_latest_datetime_in_dataframe(self) -> dt.datetime:
         return self._df_comp.index[-1].to_pydatetime()
 
-    def _calc_next_updatetime(self) -> dt.datetime:
-        dt_ = self._get_latest_datetime_in_dataframe()
-        next_updatetime = dt_ + (self._GRAN_INTERVAL * 2) + self._NEXT_UPDATETIME_OFS_SEC
-        return next_updatetime
+    def _get_next_update_datetime(self, latest_datetime: dt.datetime):
+
+        next_update_dt = latest_datetime + self._GRAN_INTERVAL
+
+        if next_update_dt.weekday() == WeekDay.SAT.value:
+            close_time = utl.get_market_close_time(next_update_dt.date())
+            if close_time <= next_update_dt.time():
+                self.logger.debug(" - Weekly Data Complete!")
+                next_monday = next_update_dt.date() + dt.timedelta(days=2)
+                open_time = utl.get_market_open_time(next_monday)
+                next_update_dt = dt.datetime.combine(next_monday,
+                                                     open_time)
+
+        next_update_dt += self._GRAN_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
+
+        return next_update_dt
 
     def do_timeout_event(self) -> None:
         # self.logger.debug("state:[{}]".format(self.state))
@@ -317,31 +329,8 @@ class CandlesData():
         dt_now = dt.datetime.now()
         if self._is_update_complete:
             self.logger.debug("========== DF Update OK! ==========")
-            if utl.is_market_close(dt_now):
-                self.logger.debug(" - Market is \"Close\"")
-                close_time = utl.get_market_close_time(dt_now.date())
-                delta_day = dt_now.weekday() - WeekDay.SAT.value
-                if delta_day < 0:
-                    delta_day = 7 + delta_day
-                sat_date = dt_now.date() - dt.timedelta(days=delta_day)
-                close_dt = dt.datetime.combine(sat_date, close_time)
-                latest_dt = self._get_latest_datetime_in_dataframe()
-                if close_dt <= (latest_dt + self._GRAN_INTERVAL):
-                    self.logger.debug(" - Weekly Data Complete!")
-                    delta_day = 7 - dt_now.weekday()
-                    if 7 <= delta_day:
-                        delta_day = 0
-                    next_update_date = dt_now.date() + dt.timedelta(days=delta_day)
-                    open_time = utl.get_market_open_time(next_update_date)
-                    next_update_datetime = dt.datetime.combine(next_update_date,
-                                                               open_time)
-                    self._next_updatetime = next_update_datetime + self._GRAN_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
-                else:
-                    self.logger.debug(" - Weekly Data Not Complete!")
-                    self._next_updatetime = self._calc_next_updatetime()
-            else:
-                self.logger.debug(" - Market is \"Open\"")
-                self._next_updatetime = self._calc_next_updatetime()
+            latest_dt = self._get_latest_datetime_in_dataframe()
+            self._next_updatetime = self._get_next_update_datetime(latest_dt)
         else:
             self.logger.debug("========== DF Update NG! ==========")
             dt_now = dt_now.replace(second=0, microsecond=0)
