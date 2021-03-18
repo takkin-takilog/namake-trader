@@ -393,10 +393,8 @@ class CandlesData():
                         self.logger.debug("---------- df_prov(length:[{}]) ----------"
                                           .format(len(self._df_prov)))
                         self.logger.debug("\n{}".format(self._df_prov))
-                        if not rsp.cndl_msg_list:
-                            self.logger.error(" - rsp.cndl_msg_list is empty")
-                            self._trans_updating_common()
-                        else:
+
+                        if rsp.cndl_msg_list:
                             latest_dt = self._get_latest_datetime_in_dataframe()
                             self.logger.debug("  - target_dt <= latest_dt:[{}] <= [{}]"
                                               .format(self._target_dt, latest_dt))
@@ -411,11 +409,14 @@ class CandlesData():
                                 else:
                                     self._self_retry_counter += 1
                                     self._trans_self_updating()
+                        else:
+                            self.logger.error(" - rsp.cndl_msg_list is empty")
+                            self._trans_updating_common()
                     else:
-                        self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Create) "))
+                        self.logger.error("{:!^50}".format(" Call ROS Service Fail (Updating) "))
                         self._trans_updating_common()
                 else:
-                    self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
+                    self.logger.error("{:!^50}".format(" Call ROS Service Error (Updating) "))
                     self.logger.error("  future.result() is \"None\".")
                     self._trans_updating_common()
             else:
