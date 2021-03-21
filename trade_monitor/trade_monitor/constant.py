@@ -9,6 +9,7 @@ FMT_YMDHMS = "%Y-%m-%dT%H:%M:%S"
 FMT_DATE_YMD = "%Y-%m-%d"
 FMT_TIME_HM = "%H:%M"
 FMT_TIME_HMS = "%H:%M:%S"
+FMT_YMDHMS_DISP = "%Y-%m-%d %H:%M:%S"
 
 FMT_QT_DATE_YMD = "yyyy-MM-dd"
 FMT_QT_TIME = "HH:mm"
