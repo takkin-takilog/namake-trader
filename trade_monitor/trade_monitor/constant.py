@@ -9,7 +9,6 @@ FMT_YMDHMS = "%Y-%m-%dT%H:%M:%S"
 FMT_DATE_YMD = "%Y-%m-%d"
 FMT_TIME_HM = "%H:%M"
 FMT_TIME_HMS = "%H:%M:%S"
-FMT_YMDHMS_DISP = "%Y-%m-%d %H:%M:%S"
 
 FMT_QT_DATE_YMD = "yyyy-MM-dd"
 FMT_QT_TIME = "HH:mm"
@@ -98,29 +97,31 @@ class GranParam(Enum):
     """
     Granularity parameter.
     """
-    M1 = (Gran.GRAN_M1, "1分足", "1min")
-    M2 = (Gran.GRAN_M2, "2分足", "2min")
-    M3 = (Gran.GRAN_M3, "3分足", "3min")
-    M4 = (Gran.GRAN_M4, "4分足", "4min")
-    M5 = (Gran.GRAN_M5, "5分足", "5min")
-    M10 = (Gran.GRAN_M10, "10分足", "10min")
-    M15 = (Gran.GRAN_M15, "15分足", "15min")
-    M30 = (Gran.GRAN_M30, "30分足", "30min")
-    H1 = (Gran.GRAN_H1, "1時間足", "1H")
-    H2 = (Gran.GRAN_H2, "2時間足", "2H")
-    H3 = (Gran.GRAN_H3, "3時間足", "3H")
-    H4 = (Gran.GRAN_H4, "4時間足", "4H")
-    H6 = (Gran.GRAN_H6, "6時間足", "6H")
-    H8 = (Gran.GRAN_H8, "8時間足", "8H")
-    H12 = (Gran.GRAN_H12, "12時間足", "12H")
-    D = (Gran.GRAN_D, "日足", "D")
+    M1 = (Gran.GRAN_M1, "m1", "1分足", "1min")
+    M2 = (Gran.GRAN_M2, "m2", "2分足", "2min")
+    M3 = (Gran.GRAN_M3, "m3", "3分足", "3min")
+    M4 = (Gran.GRAN_M4, "m4", "4分足", "4min")
+    M5 = (Gran.GRAN_M5, "m5", "5分足", "5min")
+    M10 = (Gran.GRAN_M10, "m10", "10分足", "10min")
+    M15 = (Gran.GRAN_M15, "m15", "15分足", "15min")
+    M30 = (Gran.GRAN_M30, "m30", "30分足", "30min")
+    H1 = (Gran.GRAN_H1, "h1", "1時間足", "1H")
+    H2 = (Gran.GRAN_H2, "h2", "2時間足", "2H")
+    H3 = (Gran.GRAN_H3, "h3", "3時間足", "3H")
+    H4 = (Gran.GRAN_H4, "h4", "4時間足", "4H")
+    H6 = (Gran.GRAN_H6, "h6", "6時間足", "6H")
+    H8 = (Gran.GRAN_H8, "h8", "8時間足", "8H")
+    H12 = (Gran.GRAN_H12, "h12", "12時間足", "12H")
+    D = (Gran.GRAN_D, "d", "日足", "D")
 
     def __init__(self,
                  msg_id: int,       # ROS message ID
+                 namespace: str,    # ROS message namespace
                  text: str,         # For text shown on the widget
                  freq: str,         # Frequency
                  ) -> None:
         self.msg_id = msg_id
+        self.namespace = namespace
         self.text = text
         self.freq = freq
 

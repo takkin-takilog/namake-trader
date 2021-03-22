@@ -2,11 +2,11 @@ from enum import Enum
 import pandas as pd
 import datetime as dt
 from PySide2.QtCore import Qt
-from trade_apl_msgs.srv import TechMntSrv
+from trade_apl_msgs.srv import TechMntSrv, TechChartMntSrv
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor import utility as utl
 from trade_monitor.constant import GranParam, InstParam
-from trade_monitor.constant import FMT_YMDHMS, FMT_YMDHMS_DISP
+from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD
 from trade_monitor.tech.constant import VALID_INST_LIST
 from trade_monitor.tech.constant import VALID_GRAN_LIST
 from trade_monitor.tech.constant import ColNameOhlc
@@ -52,6 +52,13 @@ class TechUi():
         callback = self._on_fetch_tech_clicked
         ui.pushButton_tech_fetch.clicked.connect(callback)
 
+
+        callback = self._on_inst_currentIndexChanged
+        ui.comboBox_tech_inst.currentIndexChanged.connect(callback)
+
+        callback = self._on_gran_currentIndexChanged
+        ui.comboBox_tech_gran.currentIndexChanged.connect(callback)
+
         # set Tree View
         pdtreeview_sma = PandasTreeView(ui.widget_TreeView_tech_sma)
 
@@ -65,44 +72,59 @@ class TechUi():
 
         chartview = CandlestickChartView(ui.widget_ChartView_tech)
 
+        self._chartview = chartview
+        self._ui = ui
+        self._pdtreeview_sma = pdtreeview_sma
+        self.logger = ros_com.get_logger()
+
+        self._inst_param = VALID_INST_LIST[0]
+        self._gran_param = VALID_GRAN_LIST[0]
+
+        self._init_ros_service()
+
+    def _on_inst_currentIndexChanged(self, index):
+        self._inst_param = VALID_INST_LIST[index]
+        self._init_ros_service()
+
+    def _on_gran_currentIndexChanged(self, index):
+        self._gran_param = VALID_GRAN_LIST[index]
+        self._init_ros_service()
+
+    def _init_ros_service(self):
+        ns = self._inst_param.namespace + "_" \
+            + self._gran_param.namespace + "/"
+
         # Create service client "tech_monitor"
         srv_type = TechMntSrv
         srv_name = "tech_monitor"
-        fullname = "usdjpy_d" + "/" + srv_name
-        srv_cli = ros_com.get_node().create_client(srv_type, fullname)
+        fullname = ns + srv_name
+        self._srv_cli = ros_com.get_node().create_client(srv_type, fullname)
 
-        self._chartview = chartview
-
-        self._ui = ui
-        self._pdtreeview_sma = pdtreeview_sma
-        self._srv_cli = srv_cli
-        self.logger = ros_com.get_logger()
-
-        self._gran_param = GranParam.get_member_by_msgid(Gran.GRAN_D)
-        self._inst_param = InstParam.get_member_by_msgid(Inst.INST_USD_JPY)
+        # Create service client "tech_chart_monitor"
+        srv_type = TechChartMntSrv
+        srv_name = "tech_chart_monitor"
+        fullname = ns + srv_name
+        self._srv_chart_cli = ros_com.get_node().create_client(srv_type, fullname)
 
     def _on_sma_header_sectionClicked(self, logical_index):
         self._pdtreeview_sma.show_header_menu(logical_index)
 
     def _on_fetch_tech_clicked(self):
-        inst_idx = self._ui.comboBox_tech_inst.currentIndex()
-        inst_param = VALID_INST_LIST[inst_idx]
-
-        gran_idx = self._ui.comboBox_tech_gran.currentIndex()
-        gran_param = VALID_GRAN_LIST[gran_idx]
-
-        # fetch Tech data
-        req = TechMntSrv.Request()
+        inst_param = self._inst_param
+        gran_param = self._gran_param
 
         if not self._srv_cli.service_is_ready():
             self.logger.error("service server [{}] not to become ready"
                               .format(inst_param.text))
         else:
+            # fetch Tech data
+            req = TechMntSrv.Request()
             rsp = ros_com.call_servive_sync(self._srv_cli, req)
 
             # ---------- compose Table "SMA" ----------
             tbl = []
             for rec in rsp.tbl_sma:
+                # date_ = rec.datetime.split("T")[0]
                 record = [dt.datetime.strptime(rec.datetime, FMT_YMDHMS),
                           rec.cross_type,
                           rec.cross_level,
@@ -125,9 +147,13 @@ class TechUi():
             df_sma.set_index(index, inplace=True)
 
             # ---------- compose Table "SMA" for TreeView ----------
+            if gran_param == GranParam.D:
+                fmt = FMT_DATE_YMD
+            else:
+                fmt = FMT_YMDHMS
             tbl = []
             for idx, row in df_sma.iterrows():
-                record = [idx.strftime(FMT_YMDHMS_DISP),
+                record = [idx.strftime(fmt),
                           _CROSS_TYP_DICT[int(row[ColNameSma.CRS_TYP.value])],
                           _CROSS_LVL_DICT[int(row[ColNameSma.CRS_LVL.value])],
                           utl.roundf(row[ColNameSma.ANG_S.value], digit=inst_param.digit),
@@ -139,27 +165,21 @@ class TechUi():
             index = ColNameSma.DATETIME.value
             df.set_index(index, inplace=True)
 
-            """
-            self._chartview.set_max_y(120)
-            self._chartview.set_min_y(100)
-            self._chartview.update(df_ohlc2, self._inst_param)
-            """
             self._pdtreeview_sma.set_dataframe(df)
             selmdl = self._pdtreeview_sma.selectionModel()
             callback = self._on_selection_sma_changed
             selmdl.selectionChanged.connect(callback)
 
             self._df_sma = df_sma
-            self._inst_param = inst_param
-            self._gran_param = gran_param
 
             self.logger.debug("----- check Head & Tail DataFrame -----")
             self.logger.debug("  << ---------- df_sma ---------- >>")
             """
             self.logger.debug("\n  << --- Head --- >>\n{}".format(self._df_ohlc[:6]))
             self.logger.debug("\n  << --- Tail --- >>\n{}".format(self._df_ohlc[-5:]))
-            """
             self.logger.debug("\n  << --- Head --- >>\n{}".format(df_sma))
+            """
+
 
     def _on_selection_sma_changed(self, selected, _):
 
@@ -169,14 +189,74 @@ class TechUi():
             model_index = selected.at(0).indexes()[0]
             r = model_index.row()
             proxy = self._pdtreeview_sma.proxy
-            date_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
-
+            dt_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
             df_sma = self._df_sma
-            flg = df_sma.index.get_level_values(ColNameSma.DATETIME.value) == date_str
-            df = df_sma[flg].reset_index(level=ColNameSma.DATETIME.value, drop=True)
-            self.logger.debug("\n{}".format(df))
+
+            if self._gran_param == GranParam.D:
+                fmt = FMT_DATE_YMD
+                dt_ = dt.datetime.strptime(dt_str, fmt)
+                lvl = df_sma.index.get_level_values(ColNameSma.DATETIME.value)
+                trg_dt = lvl[dt_<lvl][0]
+            else:
+                fmt = FMT_YMDHMS
+                dt_ = dt.datetime.strptime(dt_str, fmt)
+                lvl = df_sma.index.get_level_values(ColNameSma.DATETIME.value)
+                trg_dt = lvl[dt_==lvl]
+
+            if not self._srv_chart_cli.service_is_ready():
+                self.logger.error("service server [{}] not to become ready"
+                                  .format(self._inst_param.text))
+            else:
+                # fetch Tech chart data
+                req = TechChartMntSrv.Request()
+                req.datetime = trg_dt.strftime(FMT_YMDHMS)
+                rsp = ros_com.call_servive_sync(self._srv_chart_cli, req)
+
+                # ---------- compose Table "OHLC" ----------
+                tbl = []
+                for rec in rsp.tbl_ohlc:
+                    # date_ = rec.datetime.split("T")[0]
+                    # record = [dt.datetime.strptime(rec.datetime, FMT_YMDHMS),
+                    record = [rec.datetime,
+                              rec.mid_o,
+                              rec.mid_h,
+                              rec.mid_l,
+                              rec.mid_c,
+                              rec.sma_s,
+                              rec.sma_m,
+                              rec.sma_l
+                              ]
+                    tbl.append(record)
+
+                columns = [ColNameOhlc.DATETIME.value,
+                           CandlestickChartView.CandleLabel.OP.value,
+                           CandlestickChartView.CandleLabel.HI.value,
+                           CandlestickChartView.CandleLabel.LO.value,
+                           CandlestickChartView.CandleLabel.CL.value,
+                           ColNameOhlc.SMA_S.value,
+                           ColNameOhlc.SMA_M.value,
+                           ColNameOhlc.SMA_L.value
+                           ]
+                df_ohlc = pd.DataFrame(tbl, columns=columns)
+
+                index = ColNameOhlc.DATETIME.value
+                df_ohlc.set_index(index, inplace=True)
+
+                max_y = df_ohlc.max().max()
+                min_y = df_ohlc.min().min()
+
+                self._chartview.set_max_y(max_y)
+                self._chartview.set_min_y(min_y)
+                self._chartview.update(df_ohlc, self._inst_param)
+
+                self._ui.widget_ChartView_tech.setEnabled(True)
+
+
+
+            # df = df_sma[flg].reset_index(level=ColNameSma.DATETIME.value, drop=True)
+            # self.logger.debug("\n{}".format(df_sma[flg]))
             # fmt = FMT_DATE_YMD + FMT_TIME_HM
-            # df = df.rename(index=lambda t: dt.datetime.strptime(date_str + t, fmt))
+            # df = df.rename(index=lambda t: dt.datetime.strptime(dt_str + t, fmt))
             # df.columns = self._CDL_COLUMNS
             # df.columns = self._chartview.get_candle_labels_list()
 
