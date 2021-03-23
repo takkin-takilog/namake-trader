@@ -217,7 +217,11 @@ class TechUi():
                 for rec in rsp.tbl_ohlc:
                     # date_ = rec.datetime.split("T")[0]
                     # record = [dt.datetime.strptime(rec.datetime, FMT_YMDHMS),
-                    record = [rec.datetime,
+                    if self._gran_param == GranParam.D:
+                        dt_ = rec.datetime.split("T")[0]
+                    else:
+                        dt_ = rec.datetime
+                    record = [dt_,
                               rec.mid_o,
                               rec.mid_h,
                               rec.mid_l,

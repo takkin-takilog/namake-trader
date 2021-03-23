@@ -22,7 +22,7 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
+        # self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
         self.logger = ros_com.get_logger()
 
@@ -30,14 +30,6 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
                df: pd.DataFrame,
                inst_param: InstParam):
         super().update(df, inst_param)
-
-        min_x = utl.convert_to_qdatetime(df.index[0])
-        max_x = utl.convert_to_qdatetime(df.index[-1])
-
-        chart = self.chart()
-        # chart.axisX().setTitleText(dtstr)
-        # chart.axisX().setRange(min_x, max_x)
-
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

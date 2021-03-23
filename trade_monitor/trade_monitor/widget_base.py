@@ -601,7 +601,7 @@ class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
             hi = sr[self.CandleLabel.HI.value]
             lo = sr[self.CandleLabel.LO.value]
             cl = sr[self.CandleLabel.CL.value]
-            x_axis_label.append(idx)
+            x_axis_label.append(str(idx))
             cnd = QtCharts.QCandlestickSet(op, hi, lo, cl)
             self._series.append(cnd)
 
