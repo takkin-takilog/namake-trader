@@ -48,3 +48,18 @@ class ColNameSma(Enum):
     @classmethod
     def to_list(cls):
         return [m.value for m in cls]
+
+
+class ColNameLine(Enum):
+    """
+    Line Chart dataframe column name.
+    """
+    DATA_TYP = "data_type"
+    PEN = "pen"
+    SERIES = "series"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
