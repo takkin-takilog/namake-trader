@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import datetime as dt
 from enum import Enum, IntEnum, auto
 from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
 from PySide2.QtGui import QColor, QPen
@@ -24,6 +25,24 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        color = QColor(Qt.blue)
+        # ---------- Add CalloutDataTime on scene ----------
+        self._callout_trg_dt = CalloutDataTime(self.chart())
+        self._callout_trg_dt.setBackgroundColor(color)
+        self._callout_trg_dt.setZValue(0)
+        self.scene().addItem(self._callout_trg_dt)
+
+        # ---------- Add vertical line of CalloutDataTime on scene ----------
+        self._trg_vl = QGraphicsLineItem()
+        pen = self._trg_vl.pen()
+        pen.setColor(color)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._trg_vl.setPen(pen)
+        self._trg_vl.setZValue(1)
+        self.scene().addItem(self._trg_vl)
+
 
         data_list = []
 
@@ -57,6 +76,7 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
 
     def update(self,
                df: pd.DataFrame,
+               trg_loc: int,
                inst_param: InstParam):
         super().update(df, inst_param)
 
@@ -68,8 +88,13 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
             for idx, value in enumerate(pdsr):
                 series.append(idx, value)
 
+        self._trg_loc = trg_loc
+        self._update_target_callout(self._trg_loc)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
+
+        self._update_target_callout(self._trg_loc)
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -101,3 +126,24 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
             series.attachAxis(axis_y)
 
         self._df_chart = df_chart
+
+    def _update_target_callout(self, trg_loc: int):
+
+        chart = self.chart()
+
+        new_pos = QPointF(trg_loc, 0)
+        m2p = chart.mapToPosition(new_pos)
+
+        # drow Target Vertical Line
+        plotAreaRect = chart.plotArea()
+        self._trg_vl.setLine(QLineF(m2p.x(),
+                                    plotAreaRect.top(),
+                                    m2p.x(),
+                                    plotAreaRect.bottom()))
+        self._trg_vl.show()
+
+        # drow Target Callout Datetime
+        x_label_list = chart.axisX().categories()
+        dtstr = x_label_list[trg_loc]
+        self._callout_trg_dt.updateGeometry(dtstr, m2p)
+        self._callout_trg_dt.show()

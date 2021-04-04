@@ -249,9 +249,11 @@ class TechUi():
                 max_y = df_ohlc.max().max()
                 min_y = df_ohlc.min().min()
 
+                trg_loc = df_ohlc.index.get_loc(dt_str)
+
                 self._chartview.set_max_y(max_y)
                 self._chartview.set_min_y(min_y)
-                self._chartview.update(df_ohlc, self._inst_param)
+                self._chartview.update(df_ohlc, trg_loc, self._inst_param)
 
                 self._ui.widget_ChartView_tech.setEnabled(True)
 
