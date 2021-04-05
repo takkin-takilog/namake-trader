@@ -71,7 +71,7 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         # self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
         self._init_chart(data_list)
-
+        self._trg_loc = None
         self.logger = ros_com.get_logger()
 
     def update(self,
@@ -94,7 +94,8 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
     def resizeEvent(self, event):
         super().resizeEvent(event)
 
-        self._update_target_callout(self._trg_loc)
+        if self._trg_loc is not None:
+            self._update_target_callout(self._trg_loc)
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
