@@ -28,6 +28,11 @@ class ColNameOhlc(Enum):
     SMA_S = "sma_s"
     SMA_M = "sma_m"
     SMA_L = "sma_l"
+    ICHMK_BASE = "ichmk_base"
+    ICHMK_CONV = "ichmk_conv"
+    ICHMK_SPNA = "ichmk_sapn_a"
+    ICHMK_SPNB = "ichmk_sapn_b"
+    ICHMK_LAG = "ichmk_lag"
 
     @classmethod
     def to_list(cls):

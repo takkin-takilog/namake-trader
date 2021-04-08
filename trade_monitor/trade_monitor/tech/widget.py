@@ -68,6 +68,43 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         pen.setStyle(Qt.SolidLine)
         data_list.append([ColNameOhlc.SMA_S.value, pen, QtCharts.QLineSeries()])
 
+
+        # ==================== Ichimoku Kinko ====================
+        # --------------- Base ---------------
+        pen = QPen()
+        pen.setColor(Qt.black)
+        pen.setWidth(2)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameOhlc.ICHMK_BASE.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- Conv ---------------
+        pen = QPen()
+        pen.setColor(Qt.black)
+        pen.setWidth(2)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameOhlc.ICHMK_CONV.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- Span A ---------------
+        pen = QPen()
+        pen.setColor(Qt.black)
+        pen.setWidth(2)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameOhlc.ICHMK_SPNA.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- Span B ---------------
+        pen = QPen()
+        pen.setColor(Qt.black)
+        pen.setWidth(2)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameOhlc.ICHMK_SPNB.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- Lag ---------------
+        pen = QPen()
+        pen.setColor(Qt.black)
+        pen.setWidth(2)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameOhlc.ICHMK_LAG.value, pen, QtCharts.QLineSeries()])
+
         # self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
         self._init_chart(data_list)

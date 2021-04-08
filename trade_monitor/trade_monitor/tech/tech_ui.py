@@ -228,7 +228,12 @@ class TechUi():
                               rec.mid_c,
                               rec.sma_s,
                               rec.sma_m,
-                              rec.sma_l
+                              rec.sma_l,
+                              rec.ichmk_base,
+                              rec.ichmk_conv,
+                              rec.ichmk_sapn_a,
+                              rec.ichmk_sapn_b,
+                              rec.ichmk_lag
                               ]
                     tbl.append(record)
 
@@ -239,12 +244,18 @@ class TechUi():
                            CandlestickChartView.CandleLabel.CL.value,
                            ColNameOhlc.SMA_S.value,
                            ColNameOhlc.SMA_M.value,
-                           ColNameOhlc.SMA_L.value
+                           ColNameOhlc.SMA_L.value,
+                           ColNameOhlc.ICHMK_BASE.value,
+                           ColNameOhlc.ICHMK_CONV.value,
+                           ColNameOhlc.ICHMK_SPNA.value,
+                           ColNameOhlc.ICHMK_SPNB.value,
+                           ColNameOhlc.ICHMK_LAG.value
                            ]
                 df_ohlc = pd.DataFrame(tbl, columns=columns)
 
                 index = ColNameOhlc.DATETIME.value
                 df_ohlc.set_index(index, inplace=True)
+                df_ohlc.where(df_ohlc>0, inplace=True)
 
                 max_y = df_ohlc.max().max()
                 min_y = df_ohlc.min().min()
