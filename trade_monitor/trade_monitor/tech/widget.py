@@ -18,6 +18,7 @@ from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartView
 from trade_monitor.tech.constant import ColNameOhlc
+from trade_monitor.tech.constant import ColNameTrnd
 from trade_monitor.tech.constant import ColNameLine
 
 
@@ -52,21 +53,21 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         pen.setColor(Qt.magenta)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        data_list.append([ColNameOhlc.SMA_L.value, pen, QtCharts.QLineSeries()])
+        data_list.append([ColNameTrnd.SMA_L.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Middle ---------------
         pen = QPen()
         pen.setColor(Qt.red)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        data_list.append([ColNameOhlc.SMA_M.value, pen, QtCharts.QLineSeries()])
+        data_list.append([ColNameTrnd.SMA_M.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Short ---------------
         pen = QPen()
         pen.setColor(Qt.blue)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        data_list.append([ColNameOhlc.SMA_S.value, pen, QtCharts.QLineSeries()])
+        data_list.append([ColNameTrnd.SMA_S.value, pen, QtCharts.QLineSeries()])
 
 
         # ==================== Ichimoku Kinko ====================
@@ -75,35 +76,35 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         pen.setColor(Qt.black)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
-        data_list.append([ColNameOhlc.ICHMK_BASE.value, pen, QtCharts.QLineSeries()])
+        data_list.append([ColNameTrnd.ICHMK_BASE.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Conv ---------------
         pen = QPen()
         pen.setColor(Qt.black)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
-        data_list.append([ColNameOhlc.ICHMK_CONV.value, pen, QtCharts.QLineSeries()])
+        data_list.append([ColNameTrnd.ICHMK_CONV.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Span A ---------------
         pen = QPen()
         pen.setColor(Qt.black)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
-        data_list.append([ColNameOhlc.ICHMK_SPNA.value, pen, QtCharts.QLineSeries()])
+        data_list.append([ColNameTrnd.ICHMK_SPNA.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Span B ---------------
         pen = QPen()
         pen.setColor(Qt.black)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
-        data_list.append([ColNameOhlc.ICHMK_SPNB.value, pen, QtCharts.QLineSeries()])
+        data_list.append([ColNameTrnd.ICHMK_SPNB.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Lag ---------------
         pen = QPen()
         pen.setColor(Qt.black)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
-        data_list.append([ColNameOhlc.ICHMK_LAG.value, pen, QtCharts.QLineSeries()])
+        data_list.append([ColNameTrnd.ICHMK_LAG.value, pen, QtCharts.QLineSeries()])
 
         # self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 

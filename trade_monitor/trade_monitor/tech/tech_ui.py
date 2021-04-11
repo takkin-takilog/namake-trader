@@ -10,6 +10,8 @@ from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD
 from trade_monitor.tech.constant import VALID_INST_LIST
 from trade_monitor.tech.constant import VALID_GRAN_LIST
 from trade_monitor.tech.constant import ColNameOhlc
+from trade_monitor.tech.constant import ColNameTrnd
+from trade_monitor.tech.constant import ColNameOsci
 from trade_monitor.tech.constant import ColNameSma
 from trade_monitor.tech.widget import CandlestickChartView
 # from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis as CandlestickChartView
@@ -51,7 +53,6 @@ class TechUi():
 
         callback = self._on_fetch_tech_clicked
         ui.pushButton_tech_fetch.clicked.connect(callback)
-
 
         callback = self._on_inst_currentIndexChanged
         ui.comboBox_tech_inst.currentIndexChanged.connect(callback)
@@ -180,7 +181,6 @@ class TechUi():
             self.logger.debug("\n  << --- Head --- >>\n{}".format(df_sma))
             """
 
-
     def _on_selection_sma_changed(self, selected, _):
 
         self.logger.debug("----- _on_selection_sma_changed -----")
@@ -196,12 +196,12 @@ class TechUi():
                 fmt = FMT_DATE_YMD
                 dt_ = dt.datetime.strptime(dt_str, fmt)
                 lvl = df_sma.index.get_level_values(ColNameSma.DATETIME.value)
-                trg_dt = lvl[dt_<lvl][0]
+                trg_dt = lvl[dt_ < lvl][0]
             else:
                 fmt = FMT_YMDHMS
                 dt_ = dt.datetime.strptime(dt_str, fmt)
                 lvl = df_sma.index.get_level_values(ColNameSma.DATETIME.value)
-                trg_dt = lvl[dt_==lvl]
+                trg_dt = lvl[dt_ == lvl]
 
             if not self._srv_chart_cli.service_is_ready():
                 self.logger.error("service server [{}] not to become ready"
@@ -222,18 +222,18 @@ class TechUi():
                     else:
                         dt_ = rec.datetime
                     record = [dt_,
-                              rec.mid_o,
-                              rec.mid_h,
-                              rec.mid_l,
-                              rec.mid_c,
-                              rec.sma_s,
-                              rec.sma_m,
-                              rec.sma_l,
-                              rec.ichmk_base,
-                              rec.ichmk_conv,
-                              rec.ichmk_sapn_a,
-                              rec.ichmk_sapn_b,
-                              rec.ichmk_lag
+                              rec.mid_o, rec.mid_h, rec.mid_l, rec.mid_c,
+                              rec.sma_s, rec.sma_m, rec.sma_l,
+                              rec.ema_s, rec.ema_m, rec.ema_l,
+                              rec.wma_s, rec.wma_m, rec.wma_l,
+                              rec.ichmk_base, rec.ichmk_conv,
+                              rec.ichmk_sapn_a, rec.ichmk_sapn_b, rec.ichmk_lag,
+                              rec.blngr_base,
+                              rec.blngr_ps1, rec.blngr_ps2, rec.blngr_ps3,
+                              rec.blngr_ns1, rec.blngr_ns2, rec.blngr_ns3,
+                              rec.rsi_sma, rec.rsi_ema,
+                              rec.macd_macd, rec.macd_sig,
+                              rec.stcha_k, rec.stcha_d, rec.stcha_slow_d,
                               ]
                     tbl.append(record)
 
@@ -241,34 +241,31 @@ class TechUi():
                            CandlestickChartView.CandleLabel.OP.value,
                            CandlestickChartView.CandleLabel.HI.value,
                            CandlestickChartView.CandleLabel.LO.value,
-                           CandlestickChartView.CandleLabel.CL.value,
-                           ColNameOhlc.SMA_S.value,
-                           ColNameOhlc.SMA_M.value,
-                           ColNameOhlc.SMA_L.value,
-                           ColNameOhlc.ICHMK_BASE.value,
-                           ColNameOhlc.ICHMK_CONV.value,
-                           ColNameOhlc.ICHMK_SPNA.value,
-                           ColNameOhlc.ICHMK_SPNB.value,
-                           ColNameOhlc.ICHMK_LAG.value
-                           ]
-                df_ohlc = pd.DataFrame(tbl, columns=columns)
+                           CandlestickChartView.CandleLabel.CL.value
+                           ] + ColNameTrnd.to_list() + ColNameOsci.to_list()
+
+                df_all = pd.DataFrame(tbl, columns=columns)
 
                 index = ColNameOhlc.DATETIME.value
-                df_ohlc.set_index(index, inplace=True)
-                df_ohlc.where(df_ohlc>0, inplace=True)
+                df_all.set_index(index, inplace=True)
+                df_all.where(df_all > 0, inplace=True)
 
-                max_y = df_ohlc.max().max()
-                min_y = df_ohlc.min().min()
+                columns = [CandlestickChartView.CandleLabel.OP.value,
+                           CandlestickChartView.CandleLabel.HI.value,
+                           CandlestickChartView.CandleLabel.LO.value,
+                           CandlestickChartView.CandleLabel.CL.value
+                           ] + ColNameTrnd.to_list()
+                df_trnd = df_all[columns]
 
-                trg_loc = df_ohlc.index.get_loc(dt_str)
+                max_y = df_trnd.max().max()
+                min_y = df_trnd.min().min()
+                trg_loc = df_trnd.index.get_loc(dt_str)
 
                 self._chartview.set_max_y(max_y)
                 self._chartview.set_min_y(min_y)
-                self._chartview.update(df_ohlc, trg_loc, self._inst_param)
+                self._chartview.update(df_all, trg_loc, self._inst_param)
 
                 self._ui.widget_ChartView_tech.setEnabled(True)
-
-
 
             # df = df_sma[flg].reset_index(level=ColNameSma.DATETIME.value, drop=True)
             # self.logger.debug("\n{}".format(df_sma[flg]))
