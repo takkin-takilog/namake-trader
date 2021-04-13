@@ -71,7 +71,22 @@ class TechUi():
         callback = self._on_sma_header_sectionClicked
         header.sectionClicked.connect(callback)
 
-        chartview = CandlestickChartView(ui.widget_ChartView_tech)
+        # chartview = CandlestickChartView(ui.widget_ChartView_tech)
+        chartview = CandlestickChartView()
+
+        col_cnt = ui.tableWidget_tech.columnCount()
+        for i in reversed(range(col_cnt)):
+            ui.tableWidget_tech.removeColumn(i)
+
+        row_cnt = ui.tableWidget_tech.rowCount()
+        for i in reversed(range(row_cnt)):
+            ui.tableWidget_tech.removeRow(i)
+
+        ui.tableWidget_tech.insertColumn(0)
+        # set Item "Chart View"
+        ui.tableWidget_tech.insertRow(0)
+        ui.tableWidget_tech.setCellWidget(0, 0, chartview)
+        ui.tableWidget_tech.setRowHeight(0, 500)
 
         self._chartview = chartview
         self._ui = ui
@@ -265,7 +280,7 @@ class TechUi():
                 self._chartview.set_min_y(min_y)
                 self._chartview.update(df_all, trg_loc, self._inst_param)
 
-                self._ui.widget_ChartView_tech.setEnabled(True)
+                self._ui.tableWidget_tech.setEnabled(True)
 
             # df = df_sma[flg].reset_index(level=ColNameSma.DATETIME.value, drop=True)
             # self.logger.debug("\n{}".format(df_sma[flg]))
