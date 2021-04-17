@@ -490,7 +490,7 @@
        <attribute name="title">
         <string>テクニカル</string>
        </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="2,3">
+       <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="1,2">
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_7">
           <item>
