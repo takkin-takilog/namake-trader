@@ -20,6 +20,7 @@ from trade_monitor.widget_base import BaseLineChartView
 from trade_monitor.tech.constant import ColNameOhlc
 from trade_monitor.tech.constant import ColNameTrnd
 from trade_monitor.tech.constant import ColNameLine
+from trade_monitor.constant import QtColor
 
 
 class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
@@ -44,67 +45,159 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         self._trg_vl.setZValue(1)
         self.scene().addItem(self._trg_vl)
 
-
         data_list = []
 
         # ==================== SMA ====================
         # --------------- Long ---------------
         pen = QPen()
-        pen.setColor(Qt.magenta)
-        pen.setWidth(1)
+        pen.setColor(Qt.red)
+        pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
         data_list.append([ColNameTrnd.SMA_L.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Middle ---------------
         pen = QPen()
-        pen.setColor(Qt.red)
-        pen.setWidth(1)
+        pen.setColor(Qt.magenta)
+        pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
         data_list.append([ColNameTrnd.SMA_M.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Short ---------------
         pen = QPen()
         pen.setColor(Qt.blue)
-        pen.setWidth(1)
+        pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
         data_list.append([ColNameTrnd.SMA_S.value, pen, QtCharts.QLineSeries()])
 
+        # ==================== EMA ====================
+        # --------------- Long ---------------
+        pen = QPen()
+        pen.setColor(Qt.red)
+        pen.setWidth(2)
+        pen.setStyle(Qt.DashLine)
+        data_list.append([ColNameTrnd.EMA_L.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- Middle ---------------
+        pen = QPen()
+        pen.setColor(Qt.magenta)
+        pen.setWidth(2)
+        pen.setStyle(Qt.DashLine)
+        data_list.append([ColNameTrnd.EMA_M.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- Short ---------------
+        pen = QPen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(2)
+        pen.setStyle(Qt.DashLine)
+        data_list.append([ColNameTrnd.EMA_S.value, pen, QtCharts.QLineSeries()])
+
+        # ==================== WMA ====================
+        # --------------- Long ---------------
+        pen = QPen()
+        pen.setColor(Qt.red)
+        pen.setWidth(2)
+        pen.setStyle(Qt.DashDotLine)
+        data_list.append([ColNameTrnd.WMA_L.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- Middle ---------------
+        pen = QPen()
+        pen.setColor(Qt.magenta)
+        pen.setWidth(2)
+        pen.setStyle(Qt.DashDotLine)
+        data_list.append([ColNameTrnd.WMA_M.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- Short ---------------
+        pen = QPen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(2)
+        pen.setStyle(Qt.DashDotLine)
+        data_list.append([ColNameTrnd.WMA_S.value, pen, QtCharts.QLineSeries()])
 
         # ==================== Ichimoku Kinko ====================
         # --------------- Base ---------------
         pen = QPen()
-        pen.setColor(Qt.black)
+        pen.setColor(QtColor.DARKVIOLET.value)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
         data_list.append([ColNameTrnd.ICHMK_BASE.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Conv ---------------
         pen = QPen()
-        pen.setColor(Qt.black)
+        pen.setColor(Qt.green)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
         data_list.append([ColNameTrnd.ICHMK_CONV.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Span A ---------------
         pen = QPen()
-        pen.setColor(Qt.black)
+        pen.setColor(QtColor.ORANGERED.value)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
         data_list.append([ColNameTrnd.ICHMK_SPNA.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Span B ---------------
         pen = QPen()
-        pen.setColor(Qt.black)
+        pen.setColor(QtColor.CRIMSON.value)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
         data_list.append([ColNameTrnd.ICHMK_SPNB.value, pen, QtCharts.QLineSeries()])
 
         # --------------- Lag ---------------
         pen = QPen()
-        pen.setColor(Qt.black)
+        pen.setColor(Qt.magenta)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
         data_list.append([ColNameTrnd.ICHMK_LAG.value, pen, QtCharts.QLineSeries()])
+
+        # ==================== Bollinger bands ====================
+        # --------------- Base ---------------
+        pen = QPen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(2)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameTrnd.BLNGR_BASE.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- sigma * +1 ---------------
+        pen = QPen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameTrnd.BLNGR_PS1.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- sigma * +2 ---------------
+        pen = QPen()
+        pen.setColor(QtColor.ROYALBLUE.value)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameTrnd.BLNGR_PS2.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- sigma * +3 ---------------
+        pen = QPen()
+        pen.setColor(QtColor.DARKVIOLET.value)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameTrnd.BLNGR_PS3.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- sigma * -1 ---------------
+        pen = QPen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameTrnd.BLNGR_NS1.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- sigma * -2 ---------------
+        pen = QPen()
+        pen.setColor(QtColor.ROYALBLUE.value)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameTrnd.BLNGR_NS2.value, pen, QtCharts.QLineSeries()])
+
+        # --------------- sigma * -3 ---------------
+        pen = QPen()
+        pen.setColor(QtColor.DARKVIOLET.value)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        data_list.append([ColNameTrnd.BLNGR_NS3.value, pen, QtCharts.QLineSeries()])
 
         # self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
 
@@ -151,7 +244,7 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
     def _init_chart(self, data_list):
 
         df_chart = pd.DataFrame(data_list,
-                                 columns=ColNameLine.to_list())
+                                columns=ColNameLine.to_list())
         df_chart.set_index(ColNameLine.DATA_TYP.value, inplace=True)
 
         # ---------- Attach X/Y Axis to series ----------

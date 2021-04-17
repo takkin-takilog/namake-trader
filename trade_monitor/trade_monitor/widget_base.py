@@ -16,7 +16,7 @@ from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
 from PySide2.QtCore import QSignalMapper, QPoint
 from PySide2.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QLinearGradient, QPen
-from trade_monitor.constant import GranParam, InstParam
+from trade_monitor.constant import GranParam, InstParam, QtColor
 from trade_monitor import utility as utl
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
@@ -481,8 +481,8 @@ class BaseCandlestickChartView(QtCharts.QChartView):
 
         # ---------- Add Series on chart ----------
         series = QtCharts.QCandlestickSeries()
-        series.setDecreasingColor(Qt.red)
-        series.setIncreasingColor(Qt.green)
+        series.setDecreasingColor(QtColor.DEEPSKYBLUE.value)
+        series.setIncreasingColor(QtColor.TOMATO.value)
         series.setBodyOutlineVisible(False)
         chart.addSeries(series)
 
@@ -494,10 +494,12 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         """
 
         # ---------- Set PlotAreaBackground on chart ----------
+        """
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
         plotAreaGradient.setColorAt(1.0, QColor("#ffffff"))
-        chart.setPlotAreaBackgroundBrush(plotAreaGradient)
+        """
+        chart.setPlotAreaBackgroundBrush(QColor("#fAfAfA"))
         chart.setPlotAreaBackgroundVisible(True)
 
         # ---------- Set X Axis on chart ----------

@@ -14,6 +14,21 @@ FMT_QT_DATE_YMD = "yyyy-MM-dd"
 FMT_QT_TIME = "HH:mm"
 
 
+class QtColor(Enum):
+    """
+    Qt color name.
+    """
+    WHITESMOKE = "#f5f5f5"
+    DARKVIOLET = "#9400d3"
+    CRIMSON = "#dc143c"
+    ORANGERED = "#ff4500"
+    SEAGREEN = "#2e8b57"
+    ROYALBLUE = "#4169e1"
+    DEEPSKYBLUE = "#00bfff"
+    SKYBLUE = "#87ceeb"
+    TOMATO = "#ff6347"
+
+
 class CandleColumnName(Enum):
     """
     Candlestick dataframe column name.
