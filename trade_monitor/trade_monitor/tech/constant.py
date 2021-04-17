@@ -54,17 +54,57 @@ class ColNameTrnd(Enum):
     ICHMK_LAG = "ichmk_lag"
     # ---------- Bollinger Bands ----------
     BLNGR_BASE = "blngr_base"
-    BLNGR_ps1 = "blngr_ps1"
-    BLNGR_ps2 = "blngr_ps2"
-    BLNGR_ps3 = "blngr_ps3"
-    BLNGR_ns1 = "blngr_ns1"
-    BLNGR_ns2 = "blngr_ns2"
-    BLNGR_ns3 = "blngr_ns3"
+    BLNGR_PS1 = "blngr_ps1"
+    BLNGR_PS2 = "blngr_ps2"
+    BLNGR_PS3 = "blngr_ps3"
+    BLNGR_NS1 = "blngr_ns1"
+    BLNGR_NS2 = "blngr_ns2"
+    BLNGR_NS3 = "blngr_ns3"
 
     @classmethod
-    def to_list(cls):
+    def to_list_all(cls):
         return [m.value for m in cls]
 
+    @classmethod
+    def to_list_sma(cls):
+        return [ColNameTrnd.SMA_S.value,
+                ColNameTrnd.SMA_M.value,
+                ColNameTrnd.SMA_L.value
+                ]
+
+    @classmethod
+    def to_list_ema(cls):
+        return [ColNameTrnd.EMA_S.value,
+                ColNameTrnd.EMA_M.value,
+                ColNameTrnd.EMA_L.value
+                ]
+
+    @classmethod
+    def to_list_wma(cls):
+        return [ColNameTrnd.WMA_S.value,
+                ColNameTrnd.WMA_M.value,
+                ColNameTrnd.WMA_L.value
+                ]
+
+    @classmethod
+    def to_list_ichmk(cls):
+        return [ColNameTrnd.ICHMK_BASE.value,
+                ColNameTrnd.ICHMK_CONV.value,
+                ColNameTrnd.ICHMK_SPNA.value,
+                ColNameTrnd.ICHMK_SPNB.value,
+                ColNameTrnd.ICHMK_LAG.value
+                ]
+
+    @classmethod
+    def to_list_bb(cls):
+        return [ColNameTrnd.BLNGR_BASE.value,
+                ColNameTrnd.BLNGR_PS1.value,
+                ColNameTrnd.BLNGR_PS2.value,
+                ColNameTrnd.BLNGR_PS3.value,
+                ColNameTrnd.BLNGR_NS1.value,
+                ColNameTrnd.BLNGR_NS2.value,
+                ColNameTrnd.BLNGR_NS3.value,
+                ]
 
 class ColNameOsci(Enum):
     """

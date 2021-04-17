@@ -121,8 +121,8 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         for data_type, row in self._df_chart.iterrows():
             series = row[ColNameLine.SERIES.value]
             series.clear()
-            pdsr = df[data_type]
 
+            pdsr = df[data_type]
             for idx, value in enumerate(pdsr):
                 series.append(idx, value)
 

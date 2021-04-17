@@ -48,10 +48,13 @@ class GuiMonitor(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._on_timeout_1s)
 
+
+        """
         ui.labe_srvcon_status.setAlignment(Qt.AlignCenter)
 
         callback = self._on_srvcon_toggled
         ui.pushButton_srvcon.toggled.connect(callback)
+        """
 
         ui.tabWidget.currentChanged.connect(self._on_tab_changed)
 
@@ -122,6 +125,7 @@ class GuiMonitor(QMainWindow):
 
         return ui
 
+    """
     def _on_srvcon_toggled(self, flag):
 
         if flag is True:
@@ -143,6 +147,7 @@ class GuiMonitor(QMainWindow):
             self._ui.labe_srvcon_status.setStyleSheet(str_)
 
             self.timer.stop()
+    """
 
     def init_resize_qchart(self) -> None:
         self._main_ui.resize_chart_widget()
@@ -163,7 +168,8 @@ class GuiMonitor(QMainWindow):
             pass
 
     def _on_timeout_1s(self) -> None:
-
+        pass
+        """
         if self._ui.pushButton_srvcon.isChecked():
             self.logger.debug("publish start")
         else:
@@ -172,6 +178,7 @@ class GuiMonitor(QMainWindow):
         msg = Bool()
         msg.data = True
         self._pub_alive.publish(msg)
+        """
 
 
 def main():
