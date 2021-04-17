@@ -122,9 +122,27 @@ class ColNameOsci(Enum):
     STCHA_SD = "stcha_sd"
 
     @classmethod
-    def to_list(cls):
+    def to_list_all(cls):
         return [m.value for m in cls]
 
+    @classmethod
+    def to_list_rsi(cls):
+        return [ColNameOsci.RSI_SMA.value,
+                ColNameOsci.RSI_EMA.value
+                ]
+
+    @classmethod
+    def to_list_macd(cls):
+        return [ColNameOsci.MACD_MACD.value,
+                ColNameOsci.MACD_SIG.value
+                ]
+
+    @classmethod
+    def to_list_stochastic(cls):
+        return [ColNameOsci.STCHA_K.value,
+                ColNameOsci.STCHA_D.value,
+                ColNameOsci.STCHA_SD.value
+                ]
 
 class ColNameSma(Enum):
     """

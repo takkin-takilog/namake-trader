@@ -122,9 +122,10 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
             series = row[ColNameLine.SERIES.value]
             series.clear()
 
-            pdsr = df[data_type]
-            for idx, value in enumerate(pdsr):
-                series.append(idx, value)
+            if data_type in df:
+                pdsr = df[data_type]
+                for idx, value in enumerate(pdsr):
+                    series.append(idx, value)
 
         self._trg_loc = trg_loc
         self._update_target_callout(self._trg_loc)

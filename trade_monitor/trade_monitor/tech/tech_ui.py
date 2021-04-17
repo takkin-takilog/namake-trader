@@ -48,6 +48,12 @@ class TechUi():
 
         self.logger = ros_com.get_logger()
 
+        self._ohlc_columns = [CandlestickChartView.CandleLabel.OP.value,
+                              CandlestickChartView.CandleLabel.HI.value,
+                              CandlestickChartView.CandleLabel.LO.value,
+                              CandlestickChartView.CandleLabel.CL.value
+                              ]
+
         utl.remove_all_items_of_comboBox(ui.comboBox_tech_inst)
         for obj in VALID_INST_LIST:
             ui.comboBox_tech_inst.addItem(obj.text)
@@ -100,16 +106,16 @@ class TechUi():
         checkbox_wma = QCheckBox("加重移動平均")
         checkbox_ich = QCheckBox("一目均衡表")
         checkbox_bb = QCheckBox("ボリンジャーバンド")
-        checkbox_sma.stateChanged.connect(self._on_checkbox_stateChanged_sma)
-        checkbox_ema.stateChanged.connect(self._on_checkbox_stateChanged_ema)
-        checkbox_wma.stateChanged.connect(self._on_checkbox_stateChanged_wma)
-        checkbox_ich.stateChanged.connect(self._on_checkbox_stateChanged_ich)
-        checkbox_bb.stateChanged.connect(self._on_checkbox_stateChanged_bb)
-        checkbox_sma.setChecked(True)
-        checkbox_ema.setChecked(True)
-        checkbox_wma.setChecked(True)
-        checkbox_ich.setChecked(True)
-        checkbox_bb.setChecked(True)
+        checkbox_sma.setChecked(False)
+        checkbox_ema.setChecked(False)
+        checkbox_wma.setChecked(False)
+        checkbox_ich.setChecked(False)
+        checkbox_bb.setChecked(False)
+        checkbox_sma.stateChanged.connect(self._on_checkbox_stateChanged)
+        checkbox_ema.stateChanged.connect(self._on_checkbox_stateChanged)
+        checkbox_wma.stateChanged.connect(self._on_checkbox_stateChanged)
+        checkbox_ich.stateChanged.connect(self._on_checkbox_stateChanged)
+        checkbox_bb.stateChanged.connect(self._on_checkbox_stateChanged)
         vbox = QVBoxLayout()
         vbox.addWidget(checkbox_sma)
         vbox.addWidget(checkbox_ema)
@@ -119,25 +125,31 @@ class TechUi():
         vbox.addStretch(1)
         groupBox.setLayout(vbox)
 
-        menu=QMenu()
+        menu = QMenu()
         checkableAction = QWidgetAction(menu)
-        checkableAction.setDefaultWidget(groupBox);
-        menu.addAction(checkableAction);
+        checkableAction.setDefaultWidget(groupBox)
+        menu.addAction(checkableAction)
         ui.toolButton_tech_trn.setPopupMode(QToolButton.InstantPopup)
         ui.toolButton_tech_trn.setMenu(menu)
         self._menu_t = menu
+
+        self._checkbox_sma = checkbox_sma
+        self._checkbox_ema = checkbox_ema
+        self._checkbox_wma = checkbox_wma
+        self._checkbox_ich = checkbox_ich
+        self._checkbox_bb = checkbox_bb
 
         # ---------- toolButton Oscillator ----------
         groupBox = QGroupBox()
         checkbox_rsi = QCheckBox("RSI")
         checkbox_macd = QCheckBox("MACD")
         checkbox_stch = QCheckBox("ストキャスティクス")
-        checkbox_rsi.stateChanged.connect(self._on_checkbox_stateChanged_rsi)
-        checkbox_macd.stateChanged.connect(self._on_checkbox_stateChanged_macd)
-        checkbox_stch.stateChanged.connect(self._on_checkbox_stateChanged_stch)
-        checkbox_rsi.setChecked(True)
-        checkbox_macd.setChecked(True)
-        checkbox_stch.setChecked(True)
+        checkbox_rsi.setChecked(False)
+        checkbox_macd.setChecked(False)
+        checkbox_stch.setChecked(False)
+        checkbox_rsi.stateChanged.connect(self._on_checkbox_stateChanged)
+        checkbox_macd.stateChanged.connect(self._on_checkbox_stateChanged)
+        checkbox_stch.stateChanged.connect(self._on_checkbox_stateChanged)
         vbox = QVBoxLayout()
         vbox.addWidget(checkbox_rsi)
         vbox.addWidget(checkbox_macd)
@@ -145,45 +157,57 @@ class TechUi():
         vbox.addStretch(1)
         groupBox.setLayout(vbox)
 
-        menu=QMenu()
+        menu = QMenu()
         checkableAction = QWidgetAction(menu)
-        checkableAction.setDefaultWidget(groupBox);
-        menu.addAction(checkableAction);
+        checkableAction.setDefaultWidget(groupBox)
+        menu.addAction(checkableAction)
         ui.toolButton_tech_osc.setPopupMode(QToolButton.InstantPopup)
         ui.toolButton_tech_osc.setMenu(menu)
         self._menu_o = menu
 
+        self._checkbox_rsi = checkbox_rsi
+        self._checkbox_macd = checkbox_macd
+        self._checkbox_stch = checkbox_stch
+
+        # ---------- set field ----------
+        self._show_columns = self._ohlc_columns
         self._chartview = chartview
         self._ui = ui
         self._pdtreeview_sma = pdtreeview_sma
         self._inst_param = VALID_INST_LIST[0]
         self._gran_param = VALID_GRAN_LIST[0]
+        self._target_datetime = None
 
         self._init_ros_service()
 
-    def _on_checkbox_stateChanged_sma(self, state):
-        self.logger.debug("_on_checkbox_stateChanged_sma:{}".format(state))
+    def _on_checkbox_stateChanged(self, _):
 
-    def _on_checkbox_stateChanged_ema(self, state):
-        self.logger.debug("_on_checkbox_stateChanged_ema:{}".format(state))
+        trend_columns = []
+        if self._checkbox_sma.checkState() == Qt.Checked:
+            trend_columns.extend(ColNameTrnd.to_list_sma())
+        if self._checkbox_ema.checkState() == Qt.Checked:
+            trend_columns.extend(ColNameTrnd.to_list_ema())
+        if self._checkbox_wma.checkState() == Qt.Checked:
+            trend_columns.extend(ColNameTrnd.to_list_wma())
+        if self._checkbox_ich.checkState() == Qt.Checked:
+            trend_columns.extend(ColNameTrnd.to_list_ichmk())
+        if self._checkbox_bb.checkState() == Qt.Checked:
+            trend_columns.extend(ColNameTrnd.to_list_bb())
 
-    def _on_checkbox_stateChanged_wma(self, state):
-        self.logger.debug("_on_checkbox_stateChanged_wma:{}".format(state))
+        osci_columns = []
+        if self._checkbox_rsi.checkState() == Qt.Checked:
+            osci_columns.extend(ColNameOsci.to_list_rsi())
+        if self._checkbox_macd.checkState() == Qt.Checked:
+            osci_columns.extend(ColNameOsci.to_list_macd())
+        if self._checkbox_stch.checkState() == Qt.Checked:
+            osci_columns.extend(ColNameOsci.to_list_stochastic())
 
-    def _on_checkbox_stateChanged_ich(self, state):
-        self.logger.debug("_on_checkbox_stateChanged_ich:{}".format(state))
+        self._show_columns = self._ohlc_columns + trend_columns + osci_columns
 
-    def _on_checkbox_stateChanged_bb(self, state):
-        self.logger.debug("_on_checkbox_stateChanged_bb:{}".format(state))
-
-    def _on_checkbox_stateChanged_rsi(self, state):
-        self.logger.debug("_on_checkbox_stateChanged_rsi:{}".format(state))
-
-    def _on_checkbox_stateChanged_macd(self, state):
-        self.logger.debug("_on_checkbox_stateChanged_macd:{}".format(state))
-
-    def _on_checkbox_stateChanged_stch(self, state):
-        self.logger.debug("_on_checkbox_stateChanged_stch:{}".format(state))
+        if not self._target_datetime is None:
+            self._chartview.update(self._df_all[self._show_columns],
+                                   self._target_datetime,
+                                   self._inst_param)
 
     def _on_inst_currentIndexChanged(self, index):
         self._inst_param = VALID_INST_LIST[index]
@@ -345,12 +369,8 @@ class TechUi():
                       ]
             tbl.append(record)
 
-        columns = [ColNameOhlc.DATETIME.value,
-                   CandlestickChartView.CandleLabel.OP.value,
-                   CandlestickChartView.CandleLabel.HI.value,
-                   CandlestickChartView.CandleLabel.LO.value,
-                   CandlestickChartView.CandleLabel.CL.value
-                   ] + ColNameTrnd.to_list_all() + ColNameOsci.to_list()
+        columns = [ColNameOhlc.DATETIME.value] + self._ohlc_columns \
+            + ColNameTrnd.to_list_all() + ColNameOsci.to_list_all()
 
         df_all = pd.DataFrame(tbl, columns=columns)
 
@@ -358,20 +378,20 @@ class TechUi():
         df_all.set_index(index, inplace=True)
         df_all.where(df_all > -1000, inplace=True)
 
-        columns = [CandlestickChartView.CandleLabel.OP.value,
-                   CandlestickChartView.CandleLabel.HI.value,
-                   CandlestickChartView.CandleLabel.LO.value,
-                   CandlestickChartView.CandleLabel.CL.value
-                   ] + ColNameTrnd.to_list_all()
+        columns = self._ohlc_columns + ColNameTrnd.to_list_all()
         df_trnd = df_all[columns]
 
         max_y = df_trnd.max().max()
         min_y = df_trnd.min().min()
-        trg_loc = df_trnd.index.get_loc(dt_str)
+        self._target_datetime = df_trnd.index.get_loc(dt_str)
+        self._df_all = df_all
 
         self._chartview.set_max_y(max_y)
         self._chartview.set_min_y(min_y)
-        self._chartview.update(df_all, trg_loc, self._inst_param)
+
+        self._chartview.update(self._df_all[self._show_columns],
+                               self._target_datetime,
+                               self._inst_param)
 
     def _get_dataframe(self):
 
