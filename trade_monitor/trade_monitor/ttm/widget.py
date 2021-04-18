@@ -13,7 +13,7 @@ from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
-from trade_monitor.widget_base import BaseLineChartView
+from trade_monitor.widget_base import BaseLineChartViewDateTimeAxis
 from trade_monitor.ttm.constant import ColumnName, GapType, DataType
 from trade_monitor.ttm.constant import ChartTag
 from trade_monitor.ttm.histogram_ui import ColumnName as HistColumnName
@@ -168,7 +168,7 @@ class CandlestickChartView(CandlestickChartViewDateTimeAxis):
         self._callout_ttm_dt.show()
 
 
-class BaseLineChartViewTtm(BaseLineChartView):
+class BaseLineChartViewTtm(BaseLineChartViewDateTimeAxis):
 
     _COL_DATA_TYP = "DataType"
     _COL_PEN = "Pen"

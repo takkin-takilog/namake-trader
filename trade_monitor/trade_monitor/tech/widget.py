@@ -16,7 +16,7 @@ from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
 from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
-from trade_monitor.widget_base import BaseLineChartView
+from trade_monitor.widget_base import BaseLineChartViewDateTimeAxis
 from trade_monitor.tech.constant import ColNameOhlc
 from trade_monitor.tech.constant import ColNameTrnd
 from trade_monitor.tech.constant import ColNameLine

@@ -15,7 +15,7 @@ from PySide2.QtCore import Qt, QPointF, QRectF, QRect, QLineF
 from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
 from PySide2.QtCore import QSignalMapper, QPoint
 from PySide2.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath
-from PySide2.QtGui import QLinearGradient, QPen
+from PySide2.QtGui import QPen
 from trade_monitor.constant import GranParam, InstParam, QtColor
 from trade_monitor import utility as utl
 
@@ -755,7 +755,7 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
             self._callout_hl.hide()
 
 
-class BaseLineChartView(QtCharts.QChartView):
+class BaseLineChartViewDateTimeAxis(QtCharts.QChartView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -782,10 +782,13 @@ class BaseLineChartView(QtCharts.QChartView):
         """
 
         # ---------- Set PlotAreaBackground on chart ----------
+        """
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
         plotAreaGradient.setColorAt(1.0, QColor("#ffffff"))
         chart.setPlotAreaBackgroundBrush(plotAreaGradient)
+        """
+        chart.setPlotAreaBackgroundBrush(QColor("#fAfAfA"))
         chart.setPlotAreaBackgroundVisible(True)
 
         # ---------- Set X Axis on chart ----------
@@ -938,10 +941,13 @@ class BaseView(QtCharts.QChartView):
         """
 
         # ---------- Set PlotAreaBackground on chart ----------
+        """
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
         plotAreaGradient.setColorAt(1.0, QColor("#ffffff"))
         chart.setPlotAreaBackgroundBrush(plotAreaGradient)
+        """
+        chart.setPlotAreaBackgroundBrush(QColor("#fAfAfA"))
         chart.setPlotAreaBackgroundVisible(True)
 
         # ---------- Set X Axis on chart ----------
