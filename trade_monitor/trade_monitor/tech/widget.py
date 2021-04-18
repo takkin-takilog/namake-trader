@@ -14,9 +14,8 @@ from trade_monitor import utility as utl
 from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
-from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
-from trade_monitor.widget_base import BaseLineChartViewDateTimeAxis
+from trade_monitor.widget_base import BaseLineChartViewBarCategoryAxis
 from trade_monitor.tech.constant import ColNameOhlc
 from trade_monitor.tech.constant import ColNameTrnd
 from trade_monitor.tech.constant import ColNameLine
@@ -280,3 +279,7 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         dtstr = x_label_list[trg_loc]
         self._callout_trg_dt.updateGeometry(dtstr, m2p)
         self._callout_trg_dt.show()
+
+
+class LineChartView(BaseLineChartViewBarCategoryAxis):
+    pass

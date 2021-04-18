@@ -106,6 +106,7 @@ class ColNameTrnd(Enum):
                 ColNameTrnd.BLNGR_NS3.value,
                 ]
 
+
 class ColNameOsci(Enum):
     """
     Pandas Oscillator dataframe column name.
@@ -143,6 +144,7 @@ class ColNameOsci(Enum):
                 ColNameOsci.STCHA_D.value,
                 ColNameOsci.STCHA_SD.value
                 ]
+
 
 class ColNameSma(Enum):
     """

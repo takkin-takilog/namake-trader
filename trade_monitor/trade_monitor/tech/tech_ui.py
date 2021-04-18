@@ -1,6 +1,8 @@
 from enum import Enum
+from dataclasses import dataclass
 import pandas as pd
 import datetime as dt
+from typing import List
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QCheckBox, QGroupBox, QVBoxLayout
 from PySide2.QtWidgets import QMenu, QWidgetAction
@@ -17,12 +19,10 @@ from trade_monitor.tech.constant import ColNameTrnd
 from trade_monitor.tech.constant import ColNameOsci
 from trade_monitor.tech.constant import ColNameSma
 from trade_monitor.tech.widget import CandlestickChartView
-# from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis as CandlestickChartView
-# from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis as CandlestickChartView
+from trade_monitor.tech.widget import LineChartView
 from trade_monitor import ros_common as ros_com
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
-from trade_monitor.widget_base import BaseCandlestickChartView
 from trade_apl_msgs.msg import TechTblSmaRecMsg as SmaMsg
 
 
@@ -40,6 +40,14 @@ _CROSS_LVL_DICT = {
     SmaMsg.CROSS_LVL_LNGMID: "Long-Mid",
     SmaMsg.CROSS_LVL_MIDSHR: "Mid-Short"
 }
+
+@dataclass
+class OscChartParam():
+    """
+    Oscillator Chart Parameter.
+    """
+    chartview: LineChartView = None
+    df_columns: int = None
 
 
 class TechUi():
@@ -111,11 +119,11 @@ class TechUi():
         checkbox_wma.setChecked(False)
         checkbox_ich.setChecked(False)
         checkbox_bb.setChecked(False)
-        checkbox_sma.stateChanged.connect(self._on_checkbox_stateChanged)
-        checkbox_ema.stateChanged.connect(self._on_checkbox_stateChanged)
-        checkbox_wma.stateChanged.connect(self._on_checkbox_stateChanged)
-        checkbox_ich.stateChanged.connect(self._on_checkbox_stateChanged)
-        checkbox_bb.stateChanged.connect(self._on_checkbox_stateChanged)
+        checkbox_sma.stateChanged.connect(self._on_checkbox_trn_stateChanged)
+        checkbox_ema.stateChanged.connect(self._on_checkbox_trn_stateChanged)
+        checkbox_wma.stateChanged.connect(self._on_checkbox_trn_stateChanged)
+        checkbox_ich.stateChanged.connect(self._on_checkbox_trn_stateChanged)
+        checkbox_bb.stateChanged.connect(self._on_checkbox_trn_stateChanged)
         vbox = QVBoxLayout()
         vbox.addWidget(checkbox_sma)
         vbox.addWidget(checkbox_ema)
@@ -138,6 +146,7 @@ class TechUi():
         self._checkbox_wma = checkbox_wma
         self._checkbox_ich = checkbox_ich
         self._checkbox_bb = checkbox_bb
+        self._trend_columns = []
 
         # ---------- toolButton Oscillator ----------
         groupBox = QGroupBox()
@@ -147,9 +156,9 @@ class TechUi():
         checkbox_rsi.setChecked(False)
         checkbox_macd.setChecked(False)
         checkbox_stch.setChecked(False)
-        checkbox_rsi.stateChanged.connect(self._on_checkbox_stateChanged)
-        checkbox_macd.stateChanged.connect(self._on_checkbox_stateChanged)
-        checkbox_stch.stateChanged.connect(self._on_checkbox_stateChanged)
+        checkbox_rsi.stateChanged.connect(self._on_checkbox_osc_stateChanged)
+        checkbox_macd.stateChanged.connect(self._on_checkbox_osc_stateChanged)
+        checkbox_stch.stateChanged.connect(self._on_checkbox_osc_stateChanged)
         vbox = QVBoxLayout()
         vbox.addWidget(checkbox_rsi)
         vbox.addWidget(checkbox_macd)
@@ -168,6 +177,8 @@ class TechUi():
         self._checkbox_rsi = checkbox_rsi
         self._checkbox_macd = checkbox_macd
         self._checkbox_stch = checkbox_stch
+        self._osci_columns = []
+        self._osc_chart_list = []
 
         # ---------- set field ----------
         self._show_columns = self._ohlc_columns
@@ -180,7 +191,7 @@ class TechUi():
 
         self._init_ros_service()
 
-    def _on_checkbox_stateChanged(self, _):
+    def _on_checkbox_trn_stateChanged(self, _):
 
         trend_columns = []
         if self._checkbox_sma.checkState() == Qt.Checked:
@@ -194,6 +205,16 @@ class TechUi():
         if self._checkbox_bb.checkState() == Qt.Checked:
             trend_columns.extend(ColNameTrnd.to_list_bb())
 
+        self._trend_columns = trend_columns
+        self._show_columns = self._ohlc_columns + self._trend_columns + self._osci_columns
+
+        if not self._target_datetime is None:
+            self._chartview.update(self._df_all[self._show_columns],
+                                   self._target_datetime,
+                                   self._inst_param)
+
+    def _on_checkbox_osc_stateChanged(self, _):
+
         osci_columns = []
         if self._checkbox_rsi.checkState() == Qt.Checked:
             osci_columns.extend(ColNameOsci.to_list_rsi())
@@ -202,12 +223,33 @@ class TechUi():
         if self._checkbox_stch.checkState() == Qt.Checked:
             osci_columns.extend(ColNameOsci.to_list_stochastic())
 
-        self._show_columns = self._ohlc_columns + trend_columns + osci_columns
+        self._osci_columns = osci_columns
+        self._show_columns = self._ohlc_columns + self._trend_columns + self._osci_columns
 
-        if not self._target_datetime is None:
-            self._chartview.update(self._df_all[self._show_columns],
-                                   self._target_datetime,
-                                   self._inst_param)
+
+        row_cnt = self._ui.tableWidget_tech.rowCount()
+        for i in reversed(range(1, row_cnt)):
+            self._ui.tableWidget_tech.removeRow(i)
+
+        self._osc_chart_list = []
+        insert_row_pos = 0
+        if self._checkbox_rsi.checkState() == Qt.Checked:
+            insert_row_pos += 1
+            self._insert_chart(insert_row_pos, ColNameOsci.to_list_rsi())
+        if self._checkbox_macd.checkState() == Qt.Checked:
+            insert_row_pos += 1
+            self._insert_chart(insert_row_pos, ColNameOsci.to_list_macd())
+        if self._checkbox_stch.checkState() == Qt.Checked:
+            insert_row_pos += 1
+            self._insert_chart(insert_row_pos, ColNameOsci.to_list_stochastic())
+
+    def _insert_chart(self, insert_row_pos:int, columns:List[str]):
+        chartview = LineChartView()
+        self._ui.tableWidget_tech.insertRow(insert_row_pos)
+        self._ui.tableWidget_tech.setCellWidget(insert_row_pos, 0, chartview)
+        self._ui.tableWidget_tech.setRowHeight(insert_row_pos, 300)
+        param = OscChartParam(chartview, columns)
+        self._osc_chart_list.append(param)
 
     def _on_inst_currentIndexChanged(self, index):
         self._inst_param = VALID_INST_LIST[index]
@@ -392,6 +434,13 @@ class TechUi():
         self._chartview.update(self._df_all[self._show_columns],
                                self._target_datetime,
                                self._inst_param)
+
+        for osc_chart in self._osc_chart_list:
+            """
+            osc_chart.chartview
+            osc_chart.df_columns
+            """
+            self.logger.debug("{}".format(osc_chart.df_columns))
 
     def _get_dataframe(self):
 
