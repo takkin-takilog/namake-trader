@@ -214,9 +214,9 @@ class BaseLineChartViewTtm(BaseLineChartViewDateTimeAxis):
         self._is_update = False
         self._logger = ros_com.get_logger()
 
-    def _init_chart(self, data_list):
+    def _init_config(self, config_tbl):
 
-        chart_tbl = pd.DataFrame(data_list,
+        chart_tbl = pd.DataFrame(config_tbl,
                                  columns=[self._COL_DATA_TYP,
                                           self._COL_PEN,
                                           self._COL_SERIES])
@@ -346,7 +346,7 @@ class LineChartViewStats(BaseLineChartViewTtm):
         pen_co_s.setWidth(1)
         pen_co_s.setStyle(Qt.DashLine)
 
-        data_list = [
+        config_tbl = [
             [DataType.HO_MEAN.value, pen_ho_m, QtCharts.QLineSeries()],
             # [DataType.HO_STD.value, Qt.blue, QtCharts.QLineSeries()],
             [DataType.LO_MEAN.value, pen_lo_m, QtCharts.QLineSeries()],
@@ -355,7 +355,7 @@ class LineChartViewStats(BaseLineChartViewTtm):
             [DataType.CO_STD.value, pen_co_s, QtCharts.QLineSeries()]
         ]
 
-        self._init_chart(data_list)
+        self._init_config(config_tbl)
         self._hist_ui = HistogramUi(tag)
 
     def mousePressEvent(self, event):
@@ -399,4 +399,4 @@ class LineChartViewCumsum(BaseLineChartViewTtm):
             [DataType.CO_CSUM.value, pen, QtCharts.QLineSeries()]
         ]
 
-        self._init_chart(data_list)
+        self._init_config(data_list)

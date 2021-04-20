@@ -1,5 +1,6 @@
 from enum import Enum
 import pandas as pd
+from typing import List
 from PySide2.QtWidgets import QGraphicsItem
 from PySide2.QtWidgets import QWidget
 from PySide2.QtWidgets import QStyleOptionGraphicsItem
@@ -18,6 +19,7 @@ from PySide2.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QPen
 from trade_monitor.constant import GranParam, InstParam, QtColor
 from trade_monitor import utility as utl
+from trade_monitor import ros_common as ros_com
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 CALLOUT_DATE_COLOR = QColor(0, 204, 51)
@@ -755,9 +757,9 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
             self._callout_hl.hide()
 
 
-class BaseLineChartViewBarCategoryAxis(QtCharts.QChartView):
+class BaseLineChartView(QtCharts.QChartView):
 
-    def __init__(self, parent=None):
+    def __init__(self, config_tbl: List, parent=None):
         super().__init__(parent)
 
         if parent is not None:
@@ -765,14 +767,33 @@ class BaseLineChartViewBarCategoryAxis(QtCharts.QChartView):
             lay.setMargin(0)
             lay.addWidget(self, 0, 0, 1, 1)
 
+        self.logger = ros_com.get_logger()
+
+        # ---------- Define const value ----------
+        self._COL_IDX = "Index"
+        self._COL_PEN = "Pen"
+        self._COL_SERIES = "Series"
+
         # ---------- Create Chart ----------
         chart = QtCharts.QChart()
-        chart.setBackgroundBrush(Qt.red)
         chart.layout().setContentsMargins(0, 0, 0, 0)
         chart.setBackgroundRoundness(0)
 
         # ---------- Add Series on chart ----------
-        """ override """
+        tbl = []
+        for rec in config_tbl:
+            series = QtCharts.QLineSeries()
+            tbl.append(rec + [series])
+        config_df = pd.DataFrame(tbl,
+                                 columns=[self._COL_IDX,
+                                          self._COL_PEN,
+                                          self._COL_SERIES])
+        config_df.set_index(self._COL_IDX, inplace=True)
+
+        for _, row in config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.setPen(row[self._COL_PEN])
+            chart.addSeries(series)
 
         """
         # ---------- Set font on chart ----------
@@ -792,16 +813,7 @@ class BaseLineChartViewBarCategoryAxis(QtCharts.QChartView):
         chart.setPlotAreaBackgroundVisible(True)
 
         # ---------- Set X Axis on chart ----------
-        axis_x = QtCharts.QBarCategoryAxis()
-        # axis_x.setTickCount(2)
-        axis_x.setTitleText("Date")
-        # axis_x.setFormat("h:mm")
-        axis_x.setLabelsAngle(0)
-        axis_x.setLabelsVisible(False)
-        axis_x.setMinorGridLineVisible(False)
-        axis_x.setLineVisible(False)
-        axis_x.setGridLineVisible(False)
-        chart.addAxis(axis_x, Qt.AlignBottom)
+        """ override """
 
         # ---------- Set Y Axis on chart ----------
         axis_y = QtCharts.QValueAxis()
@@ -842,13 +854,9 @@ class BaseLineChartViewBarCategoryAxis(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
-        self._inst_param = InstParam.USDJPY
-        self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
+        self._config_df = config_df
         self._max_y = None
         self._min_y = None
-
-    def set_callout_dt_format(self, fmt: str):
-        self._callout_dt_fmt = fmt
 
     def set_max_y(self, max_y):
         self._max_y = max_y
@@ -856,13 +864,57 @@ class BaseLineChartViewBarCategoryAxis(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, inst_param: InstParam):
+    def update(self):
 
         if self._max_y is not None:
             self.chart().axisY().setMax(self._max_y)
 
         if self._min_y is not None:
             self.chart().axisY().setMin(self._min_y)
+
+
+class LineChartViewBarCategoryAxis(BaseLineChartView):
+
+    def __init__(self, config_tbl: List, parent=None):
+        super().__init__(config_tbl, parent)
+
+        # ---------- Set X Axis on chart ----------
+        axis_x = QtCharts.QBarCategoryAxis()
+        # axis_x.setTickCount(2)
+        axis_x.setTitleText("Date")
+        # axis_x.setFormat("h:mm")
+        axis_x.setLabelsAngle(0)
+        axis_x.setLabelsVisible(False)
+        axis_x.setMinorGridLineVisible(False)
+        axis_x.setLineVisible(False)
+        axis_x.setGridLineVisible(False)
+        self.chart().addAxis(axis_x, Qt.AlignBottom)
+
+        # ---------- Attach X/Y Axis to series ----------
+        axis_y = self.chart().axes(Qt.Vertical)[0]
+
+        for _, row in self._config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.attachAxis(axis_x)
+            series.attachAxis(axis_y)
+
+        self._inst_param = InstParam.USDJPY
+
+
+    def update(self,
+               df: pd.DataFrame,
+               inst_param: InstParam):
+        super().update()
+
+        for idx, row in self._config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.clear()
+            pdsr = df[idx]
+
+            for idx, val in enumerate(pdsr):
+                series.append(idx, val)
+
+        self.chart().axisX().setCategories(df.index.to_list())
 
         self._inst_param = inst_param
 

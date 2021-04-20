@@ -4,11 +4,13 @@ import pandas as pd
 import datetime as dt
 from typing import List
 from PySide2.QtCore import Qt
+from PySide2.QtGui import QColor, QPen, QPainter, QPainterPath, QPixmap
 from PySide2.QtWidgets import QCheckBox, QGroupBox, QVBoxLayout
 from PySide2.QtWidgets import QMenu, QWidgetAction
 from PySide2.QtWidgets import QToolButton
 from trade_apl_msgs.srv import TechMntSrv, TechChartMntSrv
 from trade_monitor.widget_base import PandasTreeView
+from trade_monitor.widget_base import LineChartViewBarCategoryAxis as LineChartView
 from trade_monitor import utility as utl
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD
@@ -19,7 +21,6 @@ from trade_monitor.tech.constant import ColNameTrnd
 from trade_monitor.tech.constant import ColNameOsci
 from trade_monitor.tech.constant import ColNameSma
 from trade_monitor.tech.widget import CandlestickChartView
-from trade_monitor.tech.widget import LineChartView
 from trade_monitor import ros_common as ros_com
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
@@ -180,6 +181,22 @@ class TechUi():
         self._osci_columns = []
         self._osc_chart_list = []
 
+        # ==================== RSI config ====================
+        self._config_tbl_rsi = []
+        # --------------- SMA ---------------
+        pen = QPen()
+        pen.setColor(Qt.red)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        self._config_tbl_rsi.append([ColNameOsci.RSI_SMA.value, pen])
+
+        # --------------- EMA ---------------
+        pen = QPen()
+        pen.setColor(Qt.magenta)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        self._config_tbl_rsi.append([ColNameOsci.RSI_EMA.value, pen])
+
         # ---------- set field ----------
         self._show_columns = self._ohlc_columns
         self._chartview = chartview
@@ -235,7 +252,7 @@ class TechUi():
         insert_row_pos = 0
         if self._checkbox_rsi.checkState() == Qt.Checked:
             insert_row_pos += 1
-            self._insert_chart(insert_row_pos, ColNameOsci.to_list_rsi())
+            self._insert_chart(insert_row_pos, ColNameOsci.to_list_rsi(), 100, 0)
         if self._checkbox_macd.checkState() == Qt.Checked:
             insert_row_pos += 1
             self._insert_chart(insert_row_pos, ColNameOsci.to_list_macd())
@@ -243,8 +260,14 @@ class TechUi():
             insert_row_pos += 1
             self._insert_chart(insert_row_pos, ColNameOsci.to_list_stochastic())
 
-    def _insert_chart(self, insert_row_pos:int, columns:List[str]):
-        chartview = LineChartView()
+    def _insert_chart(self,
+                      insert_row_pos:int,
+                      columns:List[str],
+                      max_y: float = None,
+                      min_y: float = None):
+        chartview = LineChartView(self._config_tbl_rsi)
+        chartview.set_max_y(max_y)
+        chartview.set_min_y(min_y)
         self._ui.tableWidget_tech.insertRow(insert_row_pos)
         self._ui.tableWidget_tech.setCellWidget(insert_row_pos, 0, chartview)
         self._ui.tableWidget_tech.setRowHeight(insert_row_pos, 300)
@@ -436,10 +459,17 @@ class TechUi():
                                self._inst_param)
 
         for osc_chart in self._osc_chart_list:
+            df = self._df_all[osc_chart.df_columns]
+            max_y = df_trnd.max().max()
+            min_y = df_trnd.min().min()
+            max_y = max(abs(max_y), abs(min_y))
+            chartview = osc_chart.chartview
             """
-            osc_chart.chartview
-            osc_chart.df_columns
+            chartview.set_max_y(max_y)
+            chartview.set_min_y(-max_y)
             """
+            chartview.update(df, self._inst_param)
+
             self.logger.debug("{}".format(osc_chart.df_columns))
 
     def _get_dataframe(self):
