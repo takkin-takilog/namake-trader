@@ -14,6 +14,7 @@ from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import BaseLineChartViewDateTimeAxis
+from trade_monitor.widget_base import LineChartViewDateTimeAxis
 from trade_monitor.ttm.constant import ColumnName, GapType, DataType
 from trade_monitor.ttm.constant import ChartTag
 from trade_monitor.ttm.histogram_ui import ColumnName as HistColumnName
@@ -168,6 +169,124 @@ class CandlestickChartView(CandlestickChartViewDateTimeAxis):
         self._callout_ttm_dt.show()
 
 
+class LineChartViewTtm(LineChartViewDateTimeAxis):
+
+    def __init__(self, config_tbl, parent=None):
+        super().__init__(config_tbl, parent)
+
+        color = QColor(Qt.blue)
+
+        # ---------- Add CurrentOpenPriceLine on scene ----------
+        self._vl_ttm = QGraphicsLineItem()
+        pen = self._vl_ttm.pen()
+        pen.setColor(color)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._vl_ttm.setPen(pen)
+        self._vl_ttm.setZValue(1)
+        self.scene().addItem(self._vl_ttm)
+
+        # ---------- Add CalloutDataTime on scene ----------
+        self._callout_ttm_dt = CalloutDataTime(self.chart())
+        self._callout_ttm_dt.setBackgroundColor(color)
+        self._callout_ttm_dt.setZValue(0)
+        self.scene().addItem(self._callout_ttm_dt)
+
+        # ---------- Add Horizon Zero Line on scene ----------
+        self._hl_zero = QGraphicsLineItem()
+        pen = self._hl_zero.pen()
+        pen.setColor(QColor(Qt.black))
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._hl_zero.setPen(pen)
+        self._hl_zero.setZValue(1)
+        self.scene().addItem(self._hl_zero)
+
+        self.set_callout_dt_format("hh:mm")
+
+        self._QDT_BASE = QDate(2010, 1, 1)
+        self._QDTTM_TTM = QDateTime(self._QDT_BASE, QTime(9, 55))
+
+        self._is_update = False
+
+    def clear(self):
+
+        for _, row in self._config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.clear()
+
+        self.chart().axisY().setRange(self._min_y, self._max_y)
+
+    def update(self,
+               df: pd.DataFrame,
+               inst_param: InstParam,
+               gran_param: GranParam):
+        super().update(df, inst_param, gran_param)
+
+        qtm = QTime.fromString(df.index[-1], FMT_QT_TIME)
+        max_x = QDateTime(self._QDT_BASE, qtm)
+
+        qtm = QTime.fromString(df.index[0], FMT_QT_TIME)
+        min_x = QDateTime(self._QDT_BASE, qtm)
+
+        self.chart().axisX().setRange(min_x, max_x)
+
+        self._update_callout_ttm(self._QDTTM_TTM)
+        self._df_date = pd.DataFrame()
+        self._is_update = True
+
+    def set_dataframe_date(self, df_date):
+        self._df_date = df_date
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        if self._is_update:
+            self._update_callout_ttm(self._QDTTM_TTM)
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+        if self._is_update:
+            self._vl_ttm.show()
+            self._callout_ttm_dt.show()
+            self._hl_zero.show()
+
+    def _update_callout_ttm(self, qdttm):
+
+        chart = self.chart()
+
+        # drow Vertical TTM Line
+        x = qdttm.toMSecsSinceEpoch()
+        ttm_point = QPointF(x, 0)
+        m2p = chart.mapToPosition(ttm_point)
+        plotAreaRect = chart.plotArea()
+        self._vl_ttm.setLine(QLineF(m2p.x(),
+                                    plotAreaRect.top(),
+                                    m2p.x(),
+                                    plotAreaRect.bottom()))
+        self._vl_ttm.show()
+
+        # drow Callout TTM
+        dtstr = qdttm.toString("hh:mm")
+        self._callout_ttm_dt.updateGeometry(dtstr, m2p)
+        self._callout_ttm_dt.show()
+
+        # drow Horizontal Zreo Line
+        x = qdttm.toMSecsSinceEpoch()
+        ttm_point = QPointF(0, 0)
+        m2p = chart.mapToPosition(ttm_point)
+        plotAreaRect = chart.plotArea()
+        self._hl_zero.setLine(QLineF(plotAreaRect.left(),
+                                     m2p.y(),
+                                     plotAreaRect.right(),
+                                     m2p.y()))
+        self._hl_zero.show()
+
+
+
+
+
 class BaseLineChartViewTtm(BaseLineChartViewDateTimeAxis):
 
     _COL_DATA_TYP = "DataType"
@@ -319,6 +438,110 @@ class BaseLineChartViewTtm(BaseLineChartViewDateTimeAxis):
                                      plotAreaRect.right(),
                                      m2p.y()))
         self._hl_zero.show()
+
+
+
+class LineChartViewStats2(LineChartViewTtm):
+
+    def __init__(self, tag: ChartTag, parent=None):
+
+        pen_ho_m = QPen()
+        pen_ho_m.setColor(Qt.magenta)
+        pen_ho_m.setWidth(2)
+        pen_ho_m.setStyle(Qt.SolidLine)
+
+        pen_lo_m = QPen()
+        pen_lo_m.setColor(Qt.cyan)
+        pen_lo_m.setWidth(2)
+        pen_lo_m.setStyle(Qt.SolidLine)
+
+        pen_co_m = QPen()
+        pen_co_m.setColor(Qt.green)
+        pen_co_m.setWidth(2)
+        pen_co_m.setStyle(Qt.SolidLine)
+
+        pen_co_s = QPen()
+        pen_co_s.setColor(Qt.green)
+        pen_co_s.setWidth(1)
+        pen_co_s.setStyle(Qt.DashLine)
+
+        """
+        config_tbl = [
+            [DataType.HO_MEAN.value, pen_ho_m, QtCharts.QLineSeries()],
+            # [DataType.HO_STD.value, Qt.blue, QtCharts.QLineSeries()],
+            [DataType.LO_MEAN.value, pen_lo_m, QtCharts.QLineSeries()],
+            # [DataType.LO_STD.value, Qt.green, QtCharts.QLineSeries()],
+            [DataType.CO_MEAN.value, pen_co_m, QtCharts.QLineSeries()],
+            [DataType.CO_STD.value, pen_co_s, QtCharts.QLineSeries()]
+        ]
+        """
+        config_tbl = [
+            [DataType.HO_MEAN.value, pen_ho_m],
+            # [DataType.HO_STD.value, Qt.blue],
+            [DataType.LO_MEAN.value, pen_lo_m],
+            # [DataType.LO_STD.value, Qt.green],
+            [DataType.CO_MEAN.value, pen_co_m],
+            [DataType.CO_STD.value, pen_co_s]
+        ]
+
+        super().__init__(config_tbl, parent)
+
+        self._hist_ui = HistogramUi(tag)
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+
+        if self._is_update:
+            chart = self.chart()
+            flag = chart.plotArea().contains(event.pos())
+            if flag and (event.buttons() == Qt.LeftButton):
+                m2v = chart.mapToValue(event.pos())
+                xpos = utl.roundi(m2v.x())
+                pdt = QDateTime.fromMSecsSinceEpoch(xpos).toPython()
+                pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
+                stm = pdt.strftime(FMT_TIME_HM)
+                df = self._df_date[stm]
+                sr_ho = df.xs(GapType.HO.value, level=ColumnName.GAP_TYP.value)
+                sr_ho.rename(HistColumnName.PRICE_HIOP.value, inplace=True)
+                sr_lo = df.xs(GapType.LO.value, level=ColumnName.GAP_TYP.value)
+                sr_lo.rename(HistColumnName.PRICE_LOOP.value, inplace=True)
+                sr_co = df.xs(GapType.CO.value, level=ColumnName.GAP_TYP.value)
+                sr_co.rename(HistColumnName.PRICE_CLOP.value, inplace=True)
+                df_hcl = pd.concat([sr_ho, sr_co, sr_lo], axis=1)
+
+                self._hist_ui.set_data(df_hcl, self._inst_param)
+                self._hist_ui.setWindowTitle("Time Axis Analysis".format(stm))
+                self._hist_ui.set_tag_text(stm)
+                self._hist_ui.show()
+
+
+class LineChartViewCumsum2(LineChartViewTtm):
+
+    def __init__(self, parent=None):
+
+        pen = QPen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(2)
+        pen.setStyle(Qt.SolidLine)
+
+        """
+        data_list = [
+            [DataType.CO_CSUM.value, pen, QtCharts.QLineSeries()]
+        ]
+        """
+
+        config_tbl = [
+            [DataType.CO_CSUM.value, pen]
+        ]
+
+        super().__init__(config_tbl, parent)
+
+
+
+
+
+
+
 
 
 class LineChartViewStats(BaseLineChartViewTtm):

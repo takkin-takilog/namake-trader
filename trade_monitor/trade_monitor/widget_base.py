@@ -17,6 +17,7 @@ from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
 from PySide2.QtCore import QSignalMapper, QPoint
 from PySide2.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath
 from PySide2.QtGui import QPen
+from trade_monitor.constant import FMT_QT_TIME
 from trade_monitor.constant import GranParam, InstParam, QtColor
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
@@ -900,7 +901,6 @@ class LineChartViewBarCategoryAxis(BaseLineChartView):
 
         self._inst_param = InstParam.USDJPY
 
-
     def update(self,
                df: pd.DataFrame,
                inst_param: InstParam):
@@ -958,6 +958,104 @@ class LineChartViewBarCategoryAxis(BaseLineChartView):
             self._callout_pr.hide()
             self._callout_vl.hide()
             self._callout_hl.hide()
+
+
+class LineChartViewDateTimeAxis(BaseLineChartView):
+
+    def __init__(self, config_tbl: List, parent=None):
+        super().__init__(config_tbl, parent)
+
+        # ---------- Set X Axis on chart ----------
+        axis_x = QtCharts.QDateTimeAxis()
+        axis_x.setTickCount(2)
+        # axis_x.setTitleText("Date")
+        axis_x.setFormat("h:mm")
+        axis_x.setLabelsAngle(0)
+
+        now = QDateTime.currentDateTime()
+        today = QDateTime(now.date())
+        yesterday = today.addDays(-1)
+        axis_x.setRange(yesterday, today)
+        self.chart().addAxis(axis_x, Qt.AlignBottom)
+
+        # ---------- Attach X/Y Axis to series ----------
+        axis_y = self.chart().axes(Qt.Vertical)[0]
+
+        for _, row in self._config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.attachAxis(axis_x)
+            series.attachAxis(axis_y)
+
+        self._inst_param = InstParam.USDJPY
+        self._gran_param = GranParam.D
+        self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
+
+    def update(self,
+               df: pd.DataFrame,
+               inst_param: InstParam,
+               gran_param: GranParam):
+        super().update()
+
+        for idx, row in self._config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.clear()
+            pdsr = df[idx]
+
+            if not pdsr.isnull().any():
+                for idx in pdsr.index:
+                    qtm = QTime.fromString(idx, FMT_QT_TIME)
+                    qdttm = QDateTime(self._QDT_BASE, qtm)
+                    series.append(qdttm.toMSecsSinceEpoch(), pdsr[idx])
+
+        self._inst_param = inst_param
+        self._gran_param = gran_param
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+        chart = self.chart()
+        flag = chart.plotArea().contains(event.pos())
+        if flag:
+            m2v = chart.mapToValue(event.pos())
+            xpos = utl.roundi(m2v.x())
+            pdt = QDateTime.fromMSecsSinceEpoch(xpos).toPython()
+            pdt = pd.to_datetime(pdt).round(self._gran_param.freq)
+            qdttm = utl.convert_to_qdatetime(pdt)
+            xpos = qdttm.toMSecsSinceEpoch()
+            ypos = utl.roundf(m2v.y(), digit=self._inst_param.digit)
+            new_pos = QPointF(xpos, ypos)
+            m2p = chart.mapToPosition(new_pos)
+
+            dtstr = qdttm.toString(self._callout_dt_fmt)
+            self._callout_dt.updateGeometry(dtstr, m2p)
+            self._callout_dt.show()
+
+            fmt = "{:." + str(self._inst_param.digit) + "f}"
+            prstr = fmt.format(new_pos.y())
+            self._callout_pr.updateGeometry(prstr, m2p)
+            self._callout_pr.show()
+
+            plotAreaRect = chart.plotArea()
+            self._callout_vl.setLine(QLineF(m2p.x(),
+                                            plotAreaRect.top(),
+                                            m2p.x(),
+                                            plotAreaRect.bottom()))
+            self._callout_vl.show()
+
+            self._callout_hl.setLine(QLineF(plotAreaRect.left(),
+                                            m2p.y(),
+                                            plotAreaRect.right(),
+                                            m2p.y()))
+            self._callout_hl.show()
+
+        else:
+            self._callout_dt.hide()
+            self._callout_pr.hide()
+            self._callout_vl.hide()
+            self._callout_hl.hide()
+
+    def set_callout_dt_format(self, fmt: str):
+        self._callout_dt_fmt = fmt
 
 
 class BaseLineChartViewDateTimeAxis(QtCharts.QChartView):

@@ -10,8 +10,8 @@ from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.utility import DateRangeManager
 from trade_monitor.ttm.constant import ColumnName
 from trade_monitor.ttm.constant import DataType
-from trade_monitor.ttm.widget import LineChartViewStats
-from trade_monitor.ttm.widget import LineChartViewCumsum
+from trade_monitor.ttm.widget import LineChartViewStats2
+from trade_monitor.ttm.widget import LineChartViewCumsum2
 from trade_monitor.ttm.widget import BaseUi
 from trade_monitor.ttm.constant import AnalysisType, ChartTag
 from trade_apl_msgs.msg import TtmTblBaseRecMsg as BsMsg
@@ -429,9 +429,9 @@ class WeekdayUi(BaseUi):
                     weekday=weekday_m.text,
                     is_gotoday=gotoday_m.text
                 )
-                chartview = LineChartViewStats(tag)
+                chartview = LineChartViewStats2(tag)
             else:
-                chartview = LineChartViewCumsum()
+                chartview = LineChartViewCumsum2()
             chartview.chart().setBackgroundBrush(back_color)
             pos = _TblColPos.CHARTVIEW.value
             self._ui.tableWidget.setCellWidget(i, pos, chartview)
@@ -483,7 +483,7 @@ class WeekdayUi(BaseUi):
             chartview.set_min_y(-max_y)
             idxloc = (weekday_m.id, is_goto)
             if idxloc in df_trg.index:
-                chartview.update(df_trg.loc[idxloc], self._gran_param, self._inst_param)
+                chartview.update(df_trg.loc[idxloc].T, self._inst_param, self._gran_param)
                 level = [ColumnName.WEEKDAY_ID.value, ColumnName.IS_GOTO.value]
                 df_date = df_base_r.xs(idxloc, level=level)
                 chartview.set_dataframe_date(df_date)
