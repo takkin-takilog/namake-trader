@@ -10,8 +10,8 @@ from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.utility import DateRangeManager
 from trade_monitor.ttm.constant import ColumnName
 from trade_monitor.ttm.constant import DataType
-from trade_monitor.ttm.widget import LineChartViewStats2
-from trade_monitor.ttm.widget import LineChartViewCumsum2
+from trade_monitor.ttm.widget import LineChartViewStats
+from trade_monitor.ttm.widget import LineChartViewCumsum
 from trade_monitor.ttm.widget import BaseUi
 from trade_monitor.ttm.constant import AnalysisType, ChartTag
 from trade_apl_msgs.msg import TtmTblBaseRecMsg as BsMsg
@@ -429,9 +429,9 @@ class WeekdayUi(BaseUi):
                     weekday=weekday_m.text,
                     is_gotoday=gotoday_m.text
                 )
-                chartview = LineChartViewStats2(tag)
+                chartview = LineChartViewStats(tag)
             else:
-                chartview = LineChartViewCumsum2()
+                chartview = LineChartViewCumsum()
             chartview.chart().setBackgroundBrush(back_color)
             pos = _TblColPos.CHARTVIEW.value
             self._ui.tableWidget.setCellWidget(i, pos, chartview)

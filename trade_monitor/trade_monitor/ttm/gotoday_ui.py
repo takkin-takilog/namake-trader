@@ -439,7 +439,7 @@ class GotodayUi(BaseUi):
             chartview.set_min_y(-max_y)
             idxloc = gotoday_m.id
             if idxloc in df_trg.index:
-                chartview.update(df_trg.loc[idxloc], self._gran_param, self._inst_param)
+                chartview.update(df_trg.loc[idxloc].T, self._inst_param, self._gran_param)
                 level = [ColumnName.GOTODAY_ID.value]
                 df_date = df_base_r.xs([idxloc], level=level)
                 chartview.set_dataframe_date(df_date)
