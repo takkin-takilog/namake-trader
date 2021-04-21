@@ -569,6 +569,9 @@ class BaseCandlestickChartView(QtCharts.QChartView):
     def get_candle_labels_list(self):
         return self.CandleLabel.to_list()
 
+    def set_title(self, text: str):
+        self.chart().setTitle(text)
+
 
 class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
 
@@ -873,6 +876,9 @@ class BaseLineChartView(QtCharts.QChartView):
         if self._min_y is not None:
             self.chart().axisY().setMin(self._min_y)
 
+    def set_title(self, text: str):
+        self.chart().setTitle(text)
+
 
 class LineChartViewBarCategoryAxis(BaseLineChartView):
 
@@ -882,7 +888,7 @@ class LineChartViewBarCategoryAxis(BaseLineChartView):
         # ---------- Set X Axis on chart ----------
         axis_x = QtCharts.QBarCategoryAxis()
         # axis_x.setTickCount(2)
-        axis_x.setTitleText("Date")
+        # axis_x.setTitleText("Date")
         # axis_x.setFormat("h:mm")
         axis_x.setLabelsAngle(0)
         axis_x.setLabelsVisible(False)
@@ -906,16 +912,34 @@ class LineChartViewBarCategoryAxis(BaseLineChartView):
                inst_param: InstParam):
         super().update()
 
+        max_y = None
+        min_y = None
         for idx, row in self._config_df.iterrows():
             series = row[self._COL_SERIES]
             series.clear()
             pdsr = df[idx]
+
+            if self._max_y is None:
+                if max_y is None:
+                    max_y = pdsr.max()
+                else:
+                    max_y = max(pdsr.max(), max_y)
+            if self._min_y is None:
+                if min_y is None:
+                    min_y = pdsr.min()
+                else:
+                    min_y = min(pdsr.min(), min_y)
 
             # if not pdsr.isnull().any():
             for idx, val in enumerate(pdsr):
                 series.append(idx, val)
 
         self.chart().axisX().setCategories(df.index.to_list())
+
+        if max_y is not None:
+            self.chart().axisY().setMax(max_y)
+        if min_y is not None:
+            self.chart().axisY().setMin(min_y)
 
         self._inst_param = inst_param
 
@@ -997,16 +1021,34 @@ class LineChartViewDateTimeAxis(BaseLineChartView):
                gran_param: GranParam):
         super().update()
 
+        max_y = None
+        min_y = None
         for idx, row in self._config_df.iterrows():
             series = row[self._COL_SERIES]
             series.clear()
             pdsr = df[idx]
+
+            if self._max_y is None:
+                if max_y is None:
+                    max_y = pdsr.max()
+                else:
+                    max_y = max(pdsr.max(), max_y)
+            if self._min_y is None:
+                if min_y is None:
+                    min_y = pdsr.min()
+                else:
+                    min_y = min(pdsr.min(), min_y)
 
             # if not pdsr.isnull().any():
             for idx in pdsr.index:
                 qtm = QTime.fromString(idx, FMT_QT_TIME)
                 qdttm = QDateTime(self._QDT_BASE, qtm)
                 series.append(qdttm.toMSecsSinceEpoch(), pdsr[idx])
+
+        if max_y is not None:
+            self.chart().axisY().setMax(max_y)
+        if min_y is not None:
+            self.chart().axisY().setMin(min_y)
 
         self._inst_param = inst_param
         self._gran_param = gran_param

@@ -216,6 +216,27 @@ class TechUi():
         pen.setStyle(Qt.SolidLine)
         self._config_tbl_macd.append([ColNameOsci.MACD_SIG.value, pen])
 
+        # ==================== Stochastics config ====================
+        self._config_tbl_stcha = []
+        # --------------- %K ---------------
+        pen = QPen()
+        pen.setColor(Qt.red)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        self._config_tbl_stcha.append([ColNameOsci.STCHA_K.value, pen])
+        # --------------- %D ---------------
+        pen = QPen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        self._config_tbl_stcha.append([ColNameOsci.STCHA_D.value, pen])
+        # --------------- Slow%D ---------------
+        pen = QPen()
+        pen.setColor(Qt.magenta)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        self._config_tbl_stcha.append([ColNameOsci.STCHA_SD.value, pen])
+
         # ---------- set field ----------
         self._show_columns = self._ohlc_columns
         self._chartview_cndl = chartview_cndl
@@ -283,7 +304,11 @@ class TechUi():
                                ColNameOsci.to_list_macd())
         if self._checkbox_stch.checkState() == Qt.Checked:
             insert_row_pos += 1
-            self._append_chart(insert_row_pos, ColNameOsci.to_list_stochastic())
+            self._append_chart(insert_row_pos,
+                               OsciTyp.STOCHASTICS,
+                               self._config_tbl_stcha,
+                               ColNameOsci.to_list_stochastic(),
+                               100, 0)
 
         if not self._target_datetime is None:
             for osc_chart in self._osc_chart_list:
@@ -300,6 +325,7 @@ class TechUi():
         chartview = LineChartView(config_tbl)
         chartview.set_max_y(max_y)
         chartview.set_min_y(min_y)
+        chartview.set_title(osci_type.value)
         self._ui.tableWidget_tech.insertRow(insert_row_pos)
         self._ui.tableWidget_tech.setCellWidget(insert_row_pos, 0, chartview)
         self._ui.tableWidget_tech.setRowHeight(insert_row_pos, 300)
@@ -492,17 +518,7 @@ class TechUi():
 
         for osc_chart in self._osc_chart_list:
             df = self._df_all[osc_chart.df_columns]
-            """
-            max_y = df_trnd.max().max()
-            min_y = df_trnd.min().min()
-            max_y = max(abs(max_y), abs(min_y))
-            """
-            chartview = osc_chart.chartview
-            """
-            chartview.set_max_y(max_y)
-            chartview.set_min_y(-max_y)
-            """
-            chartview.update(df, self._inst_param)
+            osc_chart.chartview.update(df, self._inst_param)
 
             # self.logger.debug("{}".format(osc_chart.df_columns))
 

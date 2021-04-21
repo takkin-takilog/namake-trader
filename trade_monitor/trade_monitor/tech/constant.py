@@ -179,6 +179,6 @@ class OsciTyp(Enum):
     """
     Oscillator type.
     """
-    RSI = auto()
-    MACD = auto()
-    STOCHASTICS = auto()
+    RSI = "RSI"
+    MACD = "MACD"
+    STOCHASTICS = "Stochastics"
