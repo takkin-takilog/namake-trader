@@ -328,7 +328,7 @@ class TechUi():
         chartview.set_title(osci_type.value)
         self._ui.tableWidget_tech.insertRow(insert_row_pos)
         self._ui.tableWidget_tech.setCellWidget(insert_row_pos, 0, chartview)
-        self._ui.tableWidget_tech.setRowHeight(insert_row_pos, 300)
+        self._ui.tableWidget_tech.setRowHeight(insert_row_pos, 200)
         param = OscChartParam(osci_type, chartview, columns)
         self._osc_chart_list.append(param)
 
