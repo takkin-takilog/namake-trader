@@ -20,6 +20,7 @@ from trade_monitor.tech.constant import ColNameOhlc
 from trade_monitor.tech.constant import ColNameTrnd
 from trade_monitor.tech.constant import ColNameOsci
 from trade_monitor.tech.constant import ColNameSma
+from trade_monitor.tech.constant import OsciTyp
 from trade_monitor.tech.widget import CandlestickChartView
 from trade_monitor import ros_common as ros_com
 from trade_manager_msgs.msg import Instrument as Inst
@@ -42,11 +43,13 @@ _CROSS_LVL_DICT = {
     SmaMsg.CROSS_LVL_MIDSHR: "Mid-Short"
 }
 
+
 @dataclass
 class OscChartParam():
     """
     Oscillator Chart Parameter.
     """
+    osci_type: OsciTyp = None
     chartview: LineChartView = None
     df_columns: int = None
 
@@ -91,8 +94,8 @@ class TechUi():
         callback = self._on_sma_header_sectionClicked
         header.sectionClicked.connect(callback)
 
-        # chartview = CandlestickChartView(ui.widget_ChartView_tech)
-        chartview = CandlestickChartView()
+        # chartview_cndl = CandlestickChartView(ui.widget_ChartView_tech)
+        chartview_cndl = CandlestickChartView()
 
         col_cnt = ui.tableWidget_tech.columnCount()
         for i in reversed(range(col_cnt)):
@@ -105,7 +108,7 @@ class TechUi():
         ui.tableWidget_tech.insertColumn(0)
         # set Item "Chart View"
         ui.tableWidget_tech.insertRow(0)
-        ui.tableWidget_tech.setCellWidget(0, 0, chartview)
+        ui.tableWidget_tech.setCellWidget(0, 0, chartview_cndl)
         ui.tableWidget_tech.setRowHeight(0, 500)
 
         # ---------- toolButton Trend ----------
@@ -189,17 +192,33 @@ class TechUi():
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
         self._config_tbl_rsi.append([ColNameOsci.RSI_SMA.value, pen])
-
         # --------------- EMA ---------------
+        """
         pen = QPen()
         pen.setColor(Qt.magenta)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
         self._config_tbl_rsi.append([ColNameOsci.RSI_EMA.value, pen])
+        """
+
+        # ==================== MACD config ====================
+        self._config_tbl_macd = []
+        # --------------- MACD ---------------
+        pen = QPen()
+        pen.setColor(Qt.red)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        self._config_tbl_macd.append([ColNameOsci.MACD_MACD.value, pen])
+        # --------------- Signal ---------------
+        pen = QPen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(1)
+        pen.setStyle(Qt.SolidLine)
+        self._config_tbl_macd.append([ColNameOsci.MACD_SIG.value, pen])
 
         # ---------- set field ----------
         self._show_columns = self._ohlc_columns
-        self._chartview = chartview
+        self._chartview_cndl = chartview_cndl
         self._ui = ui
         self._pdtreeview_sma = pdtreeview_sma
         self._inst_param = VALID_INST_LIST[0]
@@ -226,9 +245,9 @@ class TechUi():
         self._show_columns = self._ohlc_columns + self._trend_columns + self._osci_columns
 
         if not self._target_datetime is None:
-            self._chartview.update(self._df_all[self._show_columns],
-                                   self._target_datetime,
-                                   self._inst_param)
+            self._chartview_cndl.update(self._df_all[self._show_columns],
+                                        self._target_datetime,
+                                        self._inst_param)
 
     def _on_checkbox_osc_stateChanged(self, _):
 
@@ -243,7 +262,6 @@ class TechUi():
         self._osci_columns = osci_columns
         self._show_columns = self._ohlc_columns + self._trend_columns + self._osci_columns
 
-
         row_cnt = self._ui.tableWidget_tech.rowCount()
         for i in reversed(range(1, row_cnt)):
             self._ui.tableWidget_tech.removeRow(i)
@@ -252,26 +270,40 @@ class TechUi():
         insert_row_pos = 0
         if self._checkbox_rsi.checkState() == Qt.Checked:
             insert_row_pos += 1
-            self._insert_chart(insert_row_pos, ColNameOsci.to_list_rsi(), 100, 0)
+            self._append_chart(insert_row_pos,
+                               OsciTyp.RSI,
+                               self._config_tbl_rsi,
+                               ColNameOsci.to_list_rsi(),
+                               100, 0)
         if self._checkbox_macd.checkState() == Qt.Checked:
             insert_row_pos += 1
-            self._insert_chart(insert_row_pos, ColNameOsci.to_list_macd())
+            self._append_chart(insert_row_pos,
+                               OsciTyp.MACD,
+                               self._config_tbl_macd,
+                               ColNameOsci.to_list_macd())
         if self._checkbox_stch.checkState() == Qt.Checked:
             insert_row_pos += 1
-            self._insert_chart(insert_row_pos, ColNameOsci.to_list_stochastic())
+            self._append_chart(insert_row_pos, ColNameOsci.to_list_stochastic())
 
-    def _insert_chart(self,
-                      insert_row_pos:int,
-                      columns:List[str],
+        if not self._target_datetime is None:
+            for osc_chart in self._osc_chart_list:
+                df = self._df_all[osc_chart.df_columns]
+                osc_chart.chartview.update(df, self._inst_param)
+
+    def _append_chart(self,
+                      insert_row_pos: int,
+                      osci_type: OsciTyp,
+                      config_tbl: List,
+                      columns: List[str],
                       max_y: float = None,
                       min_y: float = None):
-        chartview = LineChartView(self._config_tbl_rsi)
+        chartview = LineChartView(config_tbl)
         chartview.set_max_y(max_y)
         chartview.set_min_y(min_y)
         self._ui.tableWidget_tech.insertRow(insert_row_pos)
         self._ui.tableWidget_tech.setCellWidget(insert_row_pos, 0, chartview)
         self._ui.tableWidget_tech.setRowHeight(insert_row_pos, 300)
-        param = OscChartParam(chartview, columns)
+        param = OscChartParam(osci_type, chartview, columns)
         self._osc_chart_list.append(param)
 
     def _on_inst_currentIndexChanged(self, index):
@@ -386,10 +418,10 @@ class TechUi():
                 proxy = self._pdtreeview_sma.proxy
                 dt_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
 
-                self._show_chart(dt_str)
+                self._draw_all_chart(dt_str)
                 self._ui.tableWidget_tech.setEnabled(True)
 
-    def _show_chart(self, dt_str: str):
+    def _draw_all_chart(self, dt_str: str):
 
         df_sma = self._df_sma
 
@@ -451,18 +483,20 @@ class TechUi():
         self._target_datetime = df_trnd.index.get_loc(dt_str)
         self._df_all = df_all
 
-        self._chartview.set_max_y(max_y)
-        self._chartview.set_min_y(min_y)
+        self._chartview_cndl.set_max_y(max_y)
+        self._chartview_cndl.set_min_y(min_y)
 
-        self._chartview.update(self._df_all[self._show_columns],
-                               self._target_datetime,
-                               self._inst_param)
+        self._chartview_cndl.update(self._df_all[self._show_columns],
+                                    self._target_datetime,
+                                    self._inst_param)
 
         for osc_chart in self._osc_chart_list:
             df = self._df_all[osc_chart.df_columns]
+            """
             max_y = df_trnd.max().max()
             min_y = df_trnd.min().min()
             max_y = max(abs(max_y), abs(min_y))
+            """
             chartview = osc_chart.chartview
             """
             chartview.set_max_y(max_y)
@@ -470,7 +504,7 @@ class TechUi():
             """
             chartview.update(df, self._inst_param)
 
-            self.logger.debug("{}".format(osc_chart.df_columns))
+            # self.logger.debug("{}".format(osc_chart.df_columns))
 
     def _get_dataframe(self):
 

@@ -173,3 +173,12 @@ class ColNameLine(Enum):
     @classmethod
     def to_list(cls):
         return [m.value for m in cls]
+
+
+class OsciTyp(Enum):
+    """
+    Oscillator type.
+    """
+    RSI = auto()
+    MACD = auto()
+    STOCHASTICS = auto()
