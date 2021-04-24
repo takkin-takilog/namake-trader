@@ -776,6 +776,7 @@ class BaseLineChartView(QtCharts.QChartView):
         # ---------- Define const value ----------
         self._COL_IDX = "Index"
         self._COL_PEN = "Pen"
+        self._COL_NAME = "Name"
         self._COL_SERIES = "Series"
 
         # ---------- Create Chart ----------
@@ -787,10 +788,12 @@ class BaseLineChartView(QtCharts.QChartView):
         tbl = []
         for rec in config_tbl:
             series = QtCharts.QLineSeries()
+            series.setName(rec[2])
             tbl.append(rec + [series])
         config_df = pd.DataFrame(tbl,
                                  columns=[self._COL_IDX,
                                           self._COL_PEN,
+                                          self._COL_NAME,
                                           self._COL_SERIES])
         config_df.set_index(self._COL_IDX, inplace=True)
 

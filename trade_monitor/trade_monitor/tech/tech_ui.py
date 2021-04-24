@@ -10,7 +10,6 @@ from PySide2.QtWidgets import QMenu, QWidgetAction
 from PySide2.QtWidgets import QToolButton
 from trade_apl_msgs.srv import TechMntSrv, TechChartMntSrv
 from trade_monitor.widget_base import PandasTreeView
-from trade_monitor.widget_base import LineChartViewBarCategoryAxis as LineChartView
 from trade_monitor import utility as utl
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD
@@ -22,6 +21,7 @@ from trade_monitor.tech.constant import ColNameOsci
 from trade_monitor.tech.constant import ColNameSma
 from trade_monitor.tech.constant import OsciTyp
 from trade_monitor.tech.widget import CandlestickChartView
+from trade_monitor.tech.widget import LineChartViewTech as LineChartView
 from trade_monitor import ros_common as ros_com
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
@@ -191,7 +191,8 @@ class TechUi():
         pen.setColor(Qt.red)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        self._config_tbl_rsi.append([ColNameOsci.RSI_SMA.value, pen])
+        name = "RSI(SMA)"
+        self._config_tbl_rsi.append([ColNameOsci.RSI_SMA.value, pen, name])
         # --------------- EMA ---------------
         """
         pen = QPen()
@@ -208,13 +209,15 @@ class TechUi():
         pen.setColor(Qt.red)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        self._config_tbl_macd.append([ColNameOsci.MACD_MACD.value, pen])
+        name = "MACD"
+        self._config_tbl_macd.append([ColNameOsci.MACD_MACD.value, pen, name])
         # --------------- Signal ---------------
         pen = QPen()
         pen.setColor(Qt.blue)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        self._config_tbl_macd.append([ColNameOsci.MACD_SIG.value, pen])
+        name = "Signal"
+        self._config_tbl_macd.append([ColNameOsci.MACD_SIG.value, pen, name])
 
         # ==================== Stochastics config ====================
         self._config_tbl_stcha = []
@@ -223,19 +226,22 @@ class TechUi():
         pen.setColor(Qt.red)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        self._config_tbl_stcha.append([ColNameOsci.STCHA_K.value, pen])
+        name = "%K"
+        self._config_tbl_stcha.append([ColNameOsci.STCHA_K.value, pen, name])
         # --------------- %D ---------------
         pen = QPen()
         pen.setColor(Qt.blue)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        self._config_tbl_stcha.append([ColNameOsci.STCHA_D.value, pen])
+        name = "%D"
+        self._config_tbl_stcha.append([ColNameOsci.STCHA_D.value, pen, name])
         # --------------- Slow%D ---------------
         pen = QPen()
         pen.setColor(Qt.magenta)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        self._config_tbl_stcha.append([ColNameOsci.STCHA_SD.value, pen])
+        name = "Slow%D"
+        self._config_tbl_stcha.append([ColNameOsci.STCHA_SD.value, pen, name])
 
         # ---------- set field ----------
         self._show_columns = self._ohlc_columns

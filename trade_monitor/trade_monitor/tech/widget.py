@@ -1,23 +1,14 @@
-import os
-import copy
 import pandas as pd
-import datetime as dt
-from enum import Enum, IntEnum, auto
-from PySide2.QtCore import Qt, QDateTime, QDate, QTime, QPointF, QLineF
-from PySide2.QtGui import QColor, QPen
-from PySide2.QtWidgets import QMainWindow
+from typing import List
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF
+from PySide2.QtGui import QColor, QPen, QBrush
 from PySide2.QtWidgets import QGraphicsLineItem
-from PySide2.QtUiTools import QUiLoader
-from PySide2.QtCore import QFile
 from PySide2.QtCharts import QtCharts
 from trade_monitor import ros_common as ros_com
-from trade_monitor import utility as utl
-from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
-from trade_monitor.constant import GranParam, InstParam
+from trade_monitor.constant import InstParam
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
 from trade_monitor.widget_base import CalloutDataTime
 from trade_monitor.widget_base import LineChartViewBarCategoryAxis
-from trade_monitor.tech.constant import ColNameOhlc
 from trade_monitor.tech.constant import ColNameTrnd
 from trade_monitor.tech.constant import ColNameLine
 from trade_monitor.constant import QtColor
@@ -280,3 +271,41 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         dtstr = x_label_list[trg_loc]
         self._callout_trg_dt.updateGeometry(dtstr, m2p)
         self._callout_trg_dt.show()
+
+
+class LineChartViewTech(LineChartViewBarCategoryAxis):
+
+    def __init__(self, config_tbl: List, parent=None):
+        super().__init__(config_tbl, parent)
+
+        # ---------- Set Legend on chart ----------
+        self.chart().legend().setVisible(True)
+
+        self.chart().legend().detachFromChart()
+        self.chart().legend().setBackgroundVisible(True)
+        self.chart().legend().setBrush(QBrush(QColor(0, 0, 0, 0)))
+        self.chart().legend().layout().setContentsMargins(10, 0, 0, 0)
+
+    def update(self,
+               df: pd.DataFrame,
+               inst_param: InstParam):
+        super().update(df, inst_param)
+
+        area = self.chart().plotArea()
+        m2v = area.topLeft()
+        self.chart().legend().setGeometry(QRectF(m2v.x(),
+                                                 m2v.y(),
+                                                 area.width(),
+                                                 area.height()))
+        self.chart().legend().update()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        area = self.chart().plotArea()
+        m2v = area.topLeft()
+        self.chart().legend().setGeometry(QRectF(m2v.x(),
+                                                 m2v.y(),
+                                                 area.width(),
+                                                 area.height()))
+        self.chart().legend().update()
