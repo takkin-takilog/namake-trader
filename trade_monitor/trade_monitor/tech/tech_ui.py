@@ -12,7 +12,7 @@ from trade_apl_msgs.srv import TechMntSrv, TechChartMntSrv
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor import utility as utl
 from trade_monitor.constant import GranParam, InstParam
-from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD
+from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD, FMT_DISP_YMDHMS
 from trade_monitor.tech.constant import VALID_INST_LIST
 from trade_monitor.tech.constant import VALID_GRAN_LIST
 from trade_monitor.tech.constant import ColNameOhlc
@@ -406,7 +406,7 @@ class TechUi():
             if gran_param == GranParam.D:
                 fmt = FMT_DATE_YMD
             else:
-                fmt = FMT_YMDHMS
+                fmt = FMT_DISP_YMDHMS
             tbl = []
             for idx, row in df_sma.iterrows():
                 record = [idx.strftime(fmt),
@@ -463,10 +463,10 @@ class TechUi():
             lvl = df_sma.index.get_level_values(ColNameSma.DATETIME.value)
             trg_dt = lvl[dt_ < lvl][0]
         else:
-            fmt = FMT_YMDHMS
+            fmt = FMT_DISP_YMDHMS
             dt_ = dt.datetime.strptime(dt_str, fmt)
             lvl = df_sma.index.get_level_values(ColNameSma.DATETIME.value)
-            trg_dt = lvl[dt_ == lvl]
+            trg_dt = lvl[dt_ == lvl][0]
 
         # fetch Tech chart data
         req = TechChartMntSrv.Request()
@@ -476,12 +476,10 @@ class TechUi():
         # ---------- compose Table "OHLC" ----------
         tbl = []
         for rec in rsp.tbl_ohlc:
-            # date_ = rec.datetime.split("T")[0]
-            # record = [dt.datetime.strptime(rec.datetime, FMT_YMDHMS),
             if self._gran_param == GranParam.D:
                 dt_ = rec.datetime.split("T")[0]
             else:
-                dt_ = rec.datetime
+                dt_ = utl.convert_ymdhms_fmt_to_disp(rec.datetime)
             record = [dt_,
                       rec.mid_o, rec.mid_h, rec.mid_l, rec.mid_c,
                       rec.sma_s, rec.sma_m, rec.sma_l,

@@ -13,6 +13,7 @@ FMT_TIME_HMS = "%H:%M:%S"
 FMT_QT_DATE_YMD = "yyyy-MM-dd"
 FMT_QT_TIME = "HH:mm"
 
+FMT_DISP_YMDHMS = "%Y-%m-%d %H:%M:%S"
 
 class QtColor(Enum):
     """
