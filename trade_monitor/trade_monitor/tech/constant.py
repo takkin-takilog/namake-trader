@@ -16,7 +16,7 @@ VALID_GRAN_LIST = [
 ]
 
 
-class ColNameOhlc(Enum):
+class ColOhlc(Enum):
     """
     Pandas OHLC dataframe column name.
     """
@@ -32,7 +32,7 @@ class ColNameOhlc(Enum):
         return [m.value for m in cls]
 
 
-class ColNameTrnd(Enum):
+class ColTrnd(Enum):
     """
     Pandas Trend dataframe column name.
     """
@@ -67,47 +67,47 @@ class ColNameTrnd(Enum):
 
     @classmethod
     def to_list_sma(cls):
-        return [ColNameTrnd.SMA_S.value,
-                ColNameTrnd.SMA_M.value,
-                ColNameTrnd.SMA_L.value
+        return [ColTrnd.SMA_S.value,
+                ColTrnd.SMA_M.value,
+                ColTrnd.SMA_L.value
                 ]
 
     @classmethod
     def to_list_ema(cls):
-        return [ColNameTrnd.EMA_S.value,
-                ColNameTrnd.EMA_M.value,
-                ColNameTrnd.EMA_L.value
+        return [ColTrnd.EMA_S.value,
+                ColTrnd.EMA_M.value,
+                ColTrnd.EMA_L.value
                 ]
 
     @classmethod
     def to_list_wma(cls):
-        return [ColNameTrnd.WMA_S.value,
-                ColNameTrnd.WMA_M.value,
-                ColNameTrnd.WMA_L.value
+        return [ColTrnd.WMA_S.value,
+                ColTrnd.WMA_M.value,
+                ColTrnd.WMA_L.value
                 ]
 
     @classmethod
     def to_list_ichmk(cls):
-        return [ColNameTrnd.ICHMK_BASE.value,
-                ColNameTrnd.ICHMK_CONV.value,
-                ColNameTrnd.ICHMK_SPNA.value,
-                ColNameTrnd.ICHMK_SPNB.value,
-                ColNameTrnd.ICHMK_LAG.value
+        return [ColTrnd.ICHMK_BASE.value,
+                ColTrnd.ICHMK_CONV.value,
+                ColTrnd.ICHMK_SPNA.value,
+                ColTrnd.ICHMK_SPNB.value,
+                ColTrnd.ICHMK_LAG.value
                 ]
 
     @classmethod
     def to_list_bb(cls):
-        return [ColNameTrnd.BLNGR_BASE.value,
-                ColNameTrnd.BLNGR_PS1.value,
-                ColNameTrnd.BLNGR_PS2.value,
-                ColNameTrnd.BLNGR_PS3.value,
-                ColNameTrnd.BLNGR_NS1.value,
-                ColNameTrnd.BLNGR_NS2.value,
-                ColNameTrnd.BLNGR_NS3.value,
+        return [ColTrnd.BLNGR_BASE.value,
+                ColTrnd.BLNGR_PS1.value,
+                ColTrnd.BLNGR_PS2.value,
+                ColTrnd.BLNGR_PS3.value,
+                ColTrnd.BLNGR_NS1.value,
+                ColTrnd.BLNGR_NS2.value,
+                ColTrnd.BLNGR_NS3.value,
                 ]
 
 
-class ColNameOsci(Enum):
+class ColOsci(Enum):
     """
     Pandas Oscillator dataframe column name.
     """
@@ -128,25 +128,25 @@ class ColNameOsci(Enum):
 
     @classmethod
     def to_list_rsi(cls):
-        return [ColNameOsci.RSI_SMA.value,
-                ColNameOsci.RSI_EMA.value
+        return [ColOsci.RSI_SMA.value,
+                ColOsci.RSI_EMA.value
                 ]
 
     @classmethod
     def to_list_macd(cls):
-        return [ColNameOsci.MACD_MACD.value,
-                ColNameOsci.MACD_SIG.value
+        return [ColOsci.MACD_MACD.value,
+                ColOsci.MACD_SIG.value
                 ]
 
     @classmethod
     def to_list_stochastic(cls):
-        return [ColNameOsci.STCHA_K.value,
-                ColNameOsci.STCHA_D.value,
-                ColNameOsci.STCHA_SD.value
+        return [ColOsci.STCHA_K.value,
+                ColOsci.STCHA_D.value,
+                ColOsci.STCHA_SD.value
                 ]
 
 
-class ColNameSma(Enum):
+class ColSma(Enum):
     """
     Pandas SMA(Simple Moving Average) dataframe column name.
     """
@@ -162,7 +162,43 @@ class ColNameSma(Enum):
         return [m.value for m in cls]
 
 
-class ColNameLine(Enum):
+class ColMacdGdc(Enum):
+    """
+    Pandas MACD(Golden/Death cross) dataframe column name.
+    """
+    DATETIME = "datetime"
+    SIG_TYP = "signal_type"
+    SIG_VAL = "signal_value"
+    MACD_SLP = "macd_slope"
+    EXIT_COND = "exit_cond"
+    EXIT_DATETIME = "exit_datetime"
+    PL_PRICE = "profit_loss_price"
+    MAX_LOSS_PRICE = "max_loss_price"
+    ADD_ENTRY_ID = "add_entry_id"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
+class ColMacdZlc(Enum):
+    """
+    Pandas MACD(Zero line cross) dataframe column name.
+    """
+    DATETIME = "datetime"
+    ADD_ENTRY_ID = "add_entry_id"
+    SIG_TYP = "signal_type"
+    EXIT_COND = "exit_cond"
+    EXIT_DATETIME = "exit_datetime"
+    PL_PRICE = "profit_loss_price"
+    MAX_LOSS_PRICE = "max_loss_price"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
+class ColLine(Enum):
     """
     Line Chart dataframe column name.
     """

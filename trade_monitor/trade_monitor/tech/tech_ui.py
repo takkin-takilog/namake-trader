@@ -8,17 +8,20 @@ from PySide2.QtGui import QColor, QPen, QPainter, QPainterPath, QPixmap
 from PySide2.QtWidgets import QCheckBox, QGroupBox, QVBoxLayout
 from PySide2.QtWidgets import QMenu, QWidgetAction
 from PySide2.QtWidgets import QToolButton
-from trade_apl_msgs.srv import TechMntSrv, TechChartMntSrv
+from trade_apl_msgs.srv import TechSmaMntSrv
+from trade_apl_msgs.srv import TechMacdMntSrv
+from trade_apl_msgs.srv import TechChartMntSrv
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor import utility as utl
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD, FMT_DISP_YMDHMS
 from trade_monitor.tech.constant import VALID_INST_LIST
 from trade_monitor.tech.constant import VALID_GRAN_LIST
-from trade_monitor.tech.constant import ColNameOhlc
-from trade_monitor.tech.constant import ColNameTrnd
-from trade_monitor.tech.constant import ColNameOsci
-from trade_monitor.tech.constant import ColNameSma
+from trade_monitor.tech.constant import ColOhlc
+from trade_monitor.tech.constant import ColTrnd
+from trade_monitor.tech.constant import ColOsci
+from trade_monitor.tech.constant import ColSma
+from trade_monitor.tech.constant import ColMacdGdc, ColMacdZlc
 from trade_monitor.tech.constant import OsciTyp
 from trade_monitor.tech.widget import CandlestickChartView
 from trade_monitor.tech.widget import LineChartViewTech as LineChartView
@@ -26,6 +29,7 @@ from trade_monitor import ros_common as ros_com
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
 from trade_apl_msgs.msg import TechTblSmaRecMsg as SmaMsg
+from _ast import Pass
 
 
 pd.set_option("display.max_columns", 1000)
@@ -83,18 +87,41 @@ class TechUi():
         callback = self._on_gran_currentIndexChanged
         ui.comboBox_tech_gran.currentIndexChanged.connect(callback)
 
-        # set Tree View
+        # --------------- Tree View ---------------
+        # ----- SMA -----
         pdtreeview_sma = PandasTreeView(ui.widget_TreeView_tech_sma)
 
         selmdl = pdtreeview_sma.selectionModel()
-        callback = self._on_selection_sma_changed
+        callback = self._on_sma_selection_changed
         selmdl.selectionChanged.connect(callback)
 
         header = pdtreeview_sma.header()
         callback = self._on_sma_header_sectionClicked
         header.sectionClicked.connect(callback)
 
-        # chartview_cndl = CandlestickChartView(ui.widget_ChartView_tech)
+        # ----- MACD(Golden/Death cross) -----
+        pdtreeview_macd_gdc = PandasTreeView(ui.widget_TreeView_tech_macd_gdc)
+
+        selmdl = pdtreeview_macd_gdc.selectionModel()
+        callback = self._on_macd_gdc_selection_changed
+        selmdl.selectionChanged.connect(callback)
+
+        header = pdtreeview_macd_gdc.header()
+        callback = self._on_macd_gdc_header_sectionClicked
+        header.sectionClicked.connect(callback)
+
+        # ----- MACD(Zero line cross) -----
+        pdtreeview_macd_zlc = PandasTreeView(ui.widget_TreeView_tech_macd_zlc)
+
+        selmdl = pdtreeview_macd_zlc.selectionModel()
+        callback = self._on_macd_zlc_selection_changed
+        selmdl.selectionChanged.connect(callback)
+
+        header = pdtreeview_macd_zlc.header()
+        callback = self._on_macd_zlc_header_sectionClicked
+        header.sectionClicked.connect(callback)
+
+        # --------------- Candlestick Chart View ---------------
         chartview_cndl = CandlestickChartView()
 
         col_cnt = ui.tableWidget_tech.columnCount()
@@ -192,14 +219,14 @@ class TechUi():
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
         name = "RSI(SMA)"
-        self._config_tbl_rsi.append([ColNameOsci.RSI_SMA.value, pen, name])
+        self._config_tbl_rsi.append([ColOsci.RSI_SMA.value, pen, name])
         # --------------- EMA ---------------
         """
         pen = QPen()
         pen.setColor(Qt.magenta)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
-        self._config_tbl_rsi.append([ColNameOsci.RSI_EMA.value, pen])
+        self._config_tbl_rsi.append([ColOsci.RSI_EMA.value, pen])
         """
 
         # ==================== MACD config ====================
@@ -210,14 +237,14 @@ class TechUi():
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
         name = "MACD"
-        self._config_tbl_macd.append([ColNameOsci.MACD_MACD.value, pen, name])
+        self._config_tbl_macd.append([ColOsci.MACD_MACD.value, pen, name])
         # --------------- Signal ---------------
         pen = QPen()
         pen.setColor(Qt.blue)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
         name = "Signal"
-        self._config_tbl_macd.append([ColNameOsci.MACD_SIG.value, pen, name])
+        self._config_tbl_macd.append([ColOsci.MACD_SIG.value, pen, name])
 
         # ==================== Stochastics config ====================
         self._config_tbl_stcha = []
@@ -227,27 +254,29 @@ class TechUi():
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
         name = "%K"
-        self._config_tbl_stcha.append([ColNameOsci.STCHA_K.value, pen, name])
+        self._config_tbl_stcha.append([ColOsci.STCHA_K.value, pen, name])
         # --------------- %D ---------------
         pen = QPen()
         pen.setColor(Qt.blue)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
         name = "%D"
-        self._config_tbl_stcha.append([ColNameOsci.STCHA_D.value, pen, name])
+        self._config_tbl_stcha.append([ColOsci.STCHA_D.value, pen, name])
         # --------------- Slow%D ---------------
         pen = QPen()
         pen.setColor(Qt.magenta)
         pen.setWidth(1)
         pen.setStyle(Qt.SolidLine)
         name = "Slow%D"
-        self._config_tbl_stcha.append([ColNameOsci.STCHA_SD.value, pen, name])
+        self._config_tbl_stcha.append([ColOsci.STCHA_SD.value, pen, name])
 
         # ---------- set field ----------
         self._show_columns = self._ohlc_columns
         self._chartview_cndl = chartview_cndl
         self._ui = ui
         self._pdtreeview_sma = pdtreeview_sma
+        self._pdtreeview_macd_gdc = pdtreeview_macd_gdc
+        self._pdtreeview_macd_zlc = pdtreeview_macd_zlc
         self._inst_param = VALID_INST_LIST[0]
         self._gran_param = VALID_GRAN_LIST[0]
         self._target_datetime = None
@@ -258,15 +287,15 @@ class TechUi():
 
         trend_columns = []
         if self._checkbox_sma.checkState() == Qt.Checked:
-            trend_columns.extend(ColNameTrnd.to_list_sma())
+            trend_columns.extend(ColTrnd.to_list_sma())
         if self._checkbox_ema.checkState() == Qt.Checked:
-            trend_columns.extend(ColNameTrnd.to_list_ema())
+            trend_columns.extend(ColTrnd.to_list_ema())
         if self._checkbox_wma.checkState() == Qt.Checked:
-            trend_columns.extend(ColNameTrnd.to_list_wma())
+            trend_columns.extend(ColTrnd.to_list_wma())
         if self._checkbox_ich.checkState() == Qt.Checked:
-            trend_columns.extend(ColNameTrnd.to_list_ichmk())
+            trend_columns.extend(ColTrnd.to_list_ichmk())
         if self._checkbox_bb.checkState() == Qt.Checked:
-            trend_columns.extend(ColNameTrnd.to_list_bb())
+            trend_columns.extend(ColTrnd.to_list_bb())
 
         self._trend_columns = trend_columns
         self._show_columns = self._ohlc_columns + self._trend_columns + self._osci_columns
@@ -280,11 +309,11 @@ class TechUi():
 
         osci_columns = []
         if self._checkbox_rsi.checkState() == Qt.Checked:
-            osci_columns.extend(ColNameOsci.to_list_rsi())
+            osci_columns.extend(ColOsci.to_list_rsi())
         if self._checkbox_macd.checkState() == Qt.Checked:
-            osci_columns.extend(ColNameOsci.to_list_macd())
+            osci_columns.extend(ColOsci.to_list_macd())
         if self._checkbox_stch.checkState() == Qt.Checked:
-            osci_columns.extend(ColNameOsci.to_list_stochastic())
+            osci_columns.extend(ColOsci.to_list_stochastic())
 
         self._osci_columns = osci_columns
         self._show_columns = self._ohlc_columns + self._trend_columns + self._osci_columns
@@ -300,20 +329,20 @@ class TechUi():
             self._append_chart(insert_row_pos,
                                OsciTyp.RSI,
                                self._config_tbl_rsi,
-                               ColNameOsci.to_list_rsi(),
+                               ColOsci.to_list_rsi(),
                                100, 0)
         if self._checkbox_macd.checkState() == Qt.Checked:
             insert_row_pos += 1
             self._append_chart(insert_row_pos,
                                OsciTyp.MACD,
                                self._config_tbl_macd,
-                               ColNameOsci.to_list_macd())
+                               ColOsci.to_list_macd())
         if self._checkbox_stch.checkState() == Qt.Checked:
             insert_row_pos += 1
             self._append_chart(insert_row_pos,
                                OsciTyp.STOCHASTICS,
                                self._config_tbl_stcha,
-                               ColNameOsci.to_list_stochastic(),
+                               ColOsci.to_list_stochastic(),
                                100, 0)
 
         if not self._target_datetime is None:
@@ -350,11 +379,17 @@ class TechUi():
         ns = self._inst_param.namespace + "_" \
             + self._gran_param.namespace + "/"
 
-        # Create service client "tech_monitor"
-        srv_type = TechMntSrv
-        srv_name = "tech_monitor"
+        # Create service client "tech_sma_monitor"
+        srv_type = TechSmaMntSrv
+        srv_name = "tech_sma_monitor"
         fullname = ns + srv_name
-        self._srv_cli = ros_com.get_node().create_client(srv_type, fullname)
+        self._srv_sma_cli = ros_com.get_node().create_client(srv_type, fullname)
+
+        # Create service client "tech_macd_gdc_monitor"
+        srv_type = TechMacdMntSrv
+        srv_name = "tech_macd_monitor"
+        fullname = ns + srv_name
+        self._srv_macd_cli = ros_com.get_node().create_client(srv_type, fullname)
 
         # Create service client "tech_chart_monitor"
         srv_type = TechChartMntSrv
@@ -362,20 +397,30 @@ class TechUi():
         fullname = ns + srv_name
         self._srv_chart_cli = ros_com.get_node().create_client(srv_type, fullname)
 
-    def _on_sma_header_sectionClicked(self, logical_index):
-        self._pdtreeview_sma.show_header_menu(logical_index)
-
     def _on_fetch_tech_clicked(self):
+
+        tab_name = self._ui.tabWidget_tech.currentWidget().objectName()
+        if tab_name == "sma":
+            self._on_fetch_tech_sma_clicked()
+        elif tab_name == "macd":
+            self._on_fetch_tech_macd_clicked()
+            self.logger.debug("---------- MACD ----------")
+        else:
+            self.logger.debug("---------- tab_name ----------")
+            self.logger.debug("{}".format(tab_name))
+
+    def _on_fetch_tech_sma_clicked(self):
+
         inst_param = self._inst_param
         gran_param = self._gran_param
 
-        if not self._srv_cli.service_is_ready():
+        if not self._srv_sma_cli.service_is_ready():
             self.logger.error("service server [{}] not to become ready"
                               .format(inst_param.text))
         else:
             # fetch Tech data
-            req = TechMntSrv.Request()
-            rsp = ros_com.call_servive_sync(self._srv_cli, req)
+            req = TechSmaMntSrv.Request()
+            rsp = ros_com.call_servive_sync(self._srv_sma_cli, req)
 
             # ---------- compose Table "SMA" ----------
             tbl = []
@@ -390,16 +435,9 @@ class TechUi():
                           ]
                 tbl.append(record)
 
-            columns = [ColNameSma.DATETIME.value,
-                       ColNameSma.CRS_TYP.value,
-                       ColNameSma.CRS_LVL.value,
-                       ColNameSma.ANG_S.value,
-                       ColNameSma.ANG_M.value,
-                       ColNameSma.ANG_L.value
-                       ]
-            df_sma = pd.DataFrame(tbl, columns=columns)
+            df_sma = pd.DataFrame(tbl, columns=ColSma.to_list())
 
-            index = ColNameSma.DATETIME.value
+            index = ColSma.DATETIME.value
             df_sma.set_index(index, inplace=True)
 
             # ---------- compose Table "SMA" for TreeView ----------
@@ -410,20 +448,20 @@ class TechUi():
             tbl = []
             for idx, row in df_sma.iterrows():
                 record = [idx.strftime(fmt),
-                          _CROSS_TYP_DICT[int(row[ColNameSma.CRS_TYP.value])],
-                          _CROSS_LVL_DICT[int(row[ColNameSma.CRS_LVL.value])],
-                          utl.roundf(row[ColNameSma.ANG_S.value], digit=inst_param.digit),
-                          utl.roundf(row[ColNameSma.ANG_M.value], digit=inst_param.digit),
-                          utl.roundf(row[ColNameSma.ANG_L.value], digit=inst_param.digit)
+                          _CROSS_TYP_DICT[int(row[ColSma.CRS_TYP.value])],
+                          _CROSS_LVL_DICT[int(row[ColSma.CRS_LVL.value])],
+                          utl.roundf(row[ColSma.ANG_S.value], digit=inst_param.digit),
+                          utl.roundf(row[ColSma.ANG_M.value], digit=inst_param.digit),
+                          utl.roundf(row[ColSma.ANG_L.value], digit=inst_param.digit)
                           ]
                 tbl.append(record)
-            df = pd.DataFrame(tbl, columns=columns)
-            index = ColNameSma.DATETIME.value
+            df = pd.DataFrame(tbl, columns=ColSma.to_list())
+            index = ColSma.DATETIME.value
             df.set_index(index, inplace=True)
 
             self._pdtreeview_sma.set_dataframe(df)
             selmdl = self._pdtreeview_sma.selectionModel()
-            callback = self._on_selection_sma_changed
+            callback = self._on_sma_selection_changed
             selmdl.selectionChanged.connect(callback)
 
             self._df_sma = df_sma
@@ -436,11 +474,80 @@ class TechUi():
             self.logger.debug("\n  << --- Head --- >>\n{}".format(df_sma))
             """
 
-    def _on_selection_sma_changed(self, selected, _):
+    def _on_fetch_tech_macd_clicked(self):
 
-        self.logger.debug("----- _on_selection_sma_changed -----")
+        inst_param = self._inst_param
+        gran_param = self._gran_param
+
+        if not self._srv_macd_cli.service_is_ready():
+            self.logger.error("service server [{}] not to become ready"
+                              .format(inst_param.text))
+        else:
+            # fetch Tech data
+            req = TechMacdMntSrv.Request()
+            rsp = ros_com.call_servive_sync(self._srv_macd_cli, req)
+
+            # ---------- compose Table "MACD(Dolden/Death cross)" ----------
+            tbl = []
+            """
+            for rec in rsp.tbl_macd_gdc:
+                record = [dt.datetime.strptime(rec.datetime, FMT_YMDHMS),
+                          rec.signal_type,
+                          rec.signal_value,
+                          rec.macd_slope,
+                          rec.exit_cond,
+                          rec.exit_datetime,
+                          rec.profit_loss_price,
+                          rec.max_loss_price,
+                          rec.add_entry_id,
+                          ]
+                tbl.append(record)
+
+            df_macd_gdc = pd.DataFrame(tbl, columns=ColMacdGdc.to_list())
+
+            index = ColMacdGdc.DATETIME.value
+            df_macd_gdc.set_index(index, inplace=True)
+
+            # ---------- compose Table "SMA" for TreeView ----------
+            if gran_param == GranParam.D:
+                fmt = FMT_DATE_YMD
+            else:
+                fmt = FMT_DISP_YMDHMS
+            tbl = []
+            for idx, row in df_macd_gdc.iterrows():
+                record = [idx.strftime(fmt),
+                          _CROSS_TYP_DICT[int(row[ColSma.CRS_TYP.value])],
+                          _CROSS_LVL_DICT[int(row[ColSma.CRS_LVL.value])],
+                          utl.roundf(row[ColSma.ANG_S.value], digit=inst_param.digit),
+                          utl.roundf(row[ColSma.ANG_M.value], digit=inst_param.digit),
+                          utl.roundf(row[ColSma.ANG_L.value], digit=inst_param.digit)
+                          ]
+                tbl.append(record)
+            df = pd.DataFrame(tbl, columns=ColMacdGdc.to_list())
+            index = ColSma.DATETIME.value
+            df.set_index(index, inplace=True)
+
+            self._pdtreeview_sma.set_dataframe(df)
+            selmdl = self._pdtreeview_sma.selectionModel()
+            callback = self._on_sma_selection_changed
+            selmdl.selectionChanged.connect(callback)
+
+            self._df_macd_gdc = df_macd_gdc
+
+            self.logger.debug("----- check Head & Tail DataFrame -----")
+            self.logger.debug("  << ---------- df_sma ---------- >>")
+            """
+            """
+            self.logger.debug("\n  << --- Head --- >>\n{}".format(self._df_ohlc[:6]))
+            self.logger.debug("\n  << --- Tail --- >>\n{}".format(self._df_ohlc[-5:]))
+            self.logger.debug("\n  << --- Head --- >>\n{}".format(df_sma))
+            """
+
+
+
+    def _on_sma_selection_changed(self, selected, _):
+        self.logger.debug("----- _on_sma_selection_changed -----")
         if not selected.isEmpty():
-
             if not self._srv_chart_cli.service_is_ready():
                 self.logger.error("service server [{}] not to become ready"
                                   .format(self._inst_param.text))
@@ -449,28 +556,78 @@ class TechUi():
                 r = model_index.row()
                 proxy = self._pdtreeview_sma.proxy
                 dt_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
+                if self._gran_param == GranParam.D:
+                    fmt = FMT_DATE_YMD
+                    dt_ = dt.datetime.strptime(dt_str, fmt)
+                    lvl = self._df_sma.index.get_level_values(ColSma.DATETIME.value)
+                    idx_dt = lvl[dt_ < lvl][0]
+                else:
+                    fmt = FMT_DISP_YMDHMS
+                    idx_dt = dt.datetime.strptime(dt_str, fmt)
 
-                self._draw_all_chart(dt_str)
+                self._draw_chart(dt_str, idx_dt)
                 self._ui.tableWidget_tech.setEnabled(True)
 
-    def _draw_all_chart(self, dt_str: str):
+    def _on_macd_gdc_selection_changed(self, selected, _):
+        self.logger.debug("----- _on_macd_gdc_selection_changed -----")
+        if not selected.isEmpty():
+            if not self._srv_chart_cli.service_is_ready():
+                self.logger.error("service server [{}] not to become ready"
+                                  .format(self._inst_param.text))
+            else:
+                model_index = selected.at(0).indexes()[0]
+                r = model_index.row()
+                proxy = self._pdtreeview_macd_gdc.proxy
+                dt_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
+                if self._gran_param == GranParam.D:
+                    fmt = FMT_DATE_YMD
+                    dt_ = dt.datetime.strptime(dt_str, fmt)
+                    lvl = self._df_macd_gdc.index.get_level_values(ColSma.DATETIME.value)
+                    idx_dt = lvl[dt_ < lvl][0]
+                else:
+                    fmt = FMT_DISP_YMDHMS
+                    idx_dt = dt.datetime.strptime(dt_str, fmt)
 
-        df_sma = self._df_sma
+                self._draw_chart(dt_str, idx_dt)
+                self._ui.tableWidget_tech.setEnabled(True)
 
-        if self._gran_param == GranParam.D:
-            fmt = FMT_DATE_YMD
-            dt_ = dt.datetime.strptime(dt_str, fmt)
-            lvl = df_sma.index.get_level_values(ColNameSma.DATETIME.value)
-            trg_dt = lvl[dt_ < lvl][0]
-        else:
-            fmt = FMT_DISP_YMDHMS
-            dt_ = dt.datetime.strptime(dt_str, fmt)
-            lvl = df_sma.index.get_level_values(ColNameSma.DATETIME.value)
-            trg_dt = lvl[dt_ == lvl][0]
+    def _on_macd_zlc_selection_changed(self, selected, _):
+        self.logger.debug("----- _on_macd_zlc_selection_changed -----")
+        if not selected.isEmpty():
+            if not self._srv_chart_cli.service_is_ready():
+                self.logger.error("service server [{}] not to become ready"
+                                  .format(self._inst_param.text))
+            else:
+                model_index = selected.at(0).indexes()[0]
+                r = model_index.row()
+                proxy = self._pdtreeview_macd_zlc.proxy
+                dt_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
+                if self._gran_param == GranParam.D:
+                    fmt = FMT_DATE_YMD
+                    dt_ = dt.datetime.strptime(dt_str, fmt)
+                    lvl = self._df_macd_zlc.index.get_level_values(ColSma.DATETIME.value)
+                    idx_dt = lvl[dt_ < lvl][0]
+                else:
+                    fmt = FMT_DISP_YMDHMS
+                    idx_dt = dt.datetime.strptime(dt_str, fmt)
+
+                self._draw_chart(dt_str, idx_dt)
+                self._ui.tableWidget_tech.setEnabled(True)
+
+    def _on_sma_header_sectionClicked(self, logical_index):
+        self._pdtreeview_sma.show_header_menu(logical_index)
+
+    def _on_macd_gdc_header_sectionClicked(self, logical_index):
+        self._pdtreeview_macd_gdc.show_header_menu(logical_index)
+
+    def _on_macd_zlc_header_sectionClicked(self, logical_index):
+        self._pdtreeview_macd_zlc.show_header_menu(logical_index)
+
+    def _draw_chart(self, dt_str: str, idx_dt: dt.datetime):
 
         # fetch Tech chart data
         req = TechChartMntSrv.Request()
-        req.datetime = trg_dt.strftime(FMT_YMDHMS)
+        req.datetime = idx_dt.strftime(FMT_YMDHMS)
         rsp = ros_com.call_servive_sync(self._srv_chart_cli, req)
 
         # ---------- compose Table "OHLC" ----------
@@ -496,16 +653,16 @@ class TechUi():
                       ]
             tbl.append(record)
 
-        columns = [ColNameOhlc.DATETIME.value] + self._ohlc_columns \
-            + ColNameTrnd.to_list_all() + ColNameOsci.to_list_all()
+        columns = [ColOhlc.DATETIME.value] + self._ohlc_columns \
+            + ColTrnd.to_list_all() + ColOsci.to_list_all()
 
         df_all = pd.DataFrame(tbl, columns=columns)
 
-        index = ColNameOhlc.DATETIME.value
+        index = ColOhlc.DATETIME.value
         df_all.set_index(index, inplace=True)
         df_all.where(df_all > -1000, inplace=True)
 
-        columns = self._ohlc_columns + ColNameTrnd.to_list_all()
+        columns = self._ohlc_columns + ColTrnd.to_list_all()
         df_trnd = df_all[columns]
 
         max_y = df_trnd.max().max()
