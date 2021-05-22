@@ -278,6 +278,23 @@ class LineChartViewTech(LineChartViewBarCategoryAxis):
     def __init__(self, config_tbl: List, parent=None):
         super().__init__(config_tbl, parent)
 
+        color = QColor(Qt.blue)
+        # ---------- Add CalloutDataTime on scene ----------
+        self._callout_trg_dt = CalloutDataTime(self.chart())
+        self._callout_trg_dt.setBackgroundColor(color)
+        self._callout_trg_dt.setZValue(0)
+        self.scene().addItem(self._callout_trg_dt)
+
+        # ---------- Add vertical line of CalloutDataTime on scene ----------
+        self._trg_vl = QGraphicsLineItem()
+        pen = self._trg_vl.pen()
+        pen.setColor(color)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._trg_vl.setPen(pen)
+        self._trg_vl.setZValue(1)
+        self.scene().addItem(self._trg_vl)
+
         # ---------- Set Legend on chart ----------
         self.chart().legend().setVisible(True)
 
@@ -286,8 +303,11 @@ class LineChartViewTech(LineChartViewBarCategoryAxis):
         self.chart().legend().setBrush(QBrush(QColor(0, 0, 0, 0)))
         self.chart().legend().layout().setContentsMargins(10, 0, 0, 0)
 
+        self._trg_loc = None
+
     def update(self,
                df: pd.DataFrame,
+               trg_loc: int,
                inst_param: InstParam):
         super().update(df, inst_param)
 
@@ -299,6 +319,30 @@ class LineChartViewTech(LineChartViewBarCategoryAxis):
                                                  area.height()))
         self.chart().legend().update()
 
+        self._trg_loc = trg_loc
+        self._update_target_callout(self._trg_loc)
+
+    def _update_target_callout(self, trg_loc: int):
+
+        chart = self.chart()
+
+        new_pos = QPointF(trg_loc, 0)
+        m2p = chart.mapToPosition(new_pos)
+
+        # drow Target Vertical Line
+        plotAreaRect = chart.plotArea()
+        self._trg_vl.setLine(QLineF(m2p.x(),
+                                    plotAreaRect.top(),
+                                    m2p.x(),
+                                    plotAreaRect.bottom()))
+        self._trg_vl.show()
+
+        # drow Target Callout Datetime
+        x_label_list = chart.axisX().categories()
+        dtstr = x_label_list[trg_loc]
+        self._callout_trg_dt.updateGeometry(dtstr, m2p)
+        self._callout_trg_dt.show()
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
 
@@ -309,3 +353,6 @@ class LineChartViewTech(LineChartViewBarCategoryAxis):
                                                  area.width(),
                                                  area.height()))
         self.chart().legend().update()
+
+        if self._trg_loc is not None:
+            self._update_target_callout(self._trg_loc)

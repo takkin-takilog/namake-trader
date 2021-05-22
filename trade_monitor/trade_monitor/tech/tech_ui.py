@@ -317,37 +317,42 @@ class TechUi():
         insert_row_pos = 0
         if self._checkbox_rsi.checkState() == Qt.Checked:
             insert_row_pos += 1
-            self._append_chart(insert_row_pos,
-                               OsciTyp.RSI,
-                               self._config_tbl_rsi,
-                               ColOsci.to_list_rsi(),
-                               100, 0)
+            param = self._generate_osc_chart_param(insert_row_pos,
+                                                   OsciTyp.RSI,
+                                                   self._config_tbl_rsi,
+                                                   ColOsci.to_list_rsi(),
+                                                   100, 0)
+            self._osc_chart_list.append(param)
         if self._checkbox_macd.checkState() == Qt.Checked:
             insert_row_pos += 1
-            self._append_chart(insert_row_pos,
-                               OsciTyp.MACD,
-                               self._config_tbl_macd,
-                               ColOsci.to_list_macd())
+            param = self._generate_osc_chart_param(insert_row_pos,
+                                                   OsciTyp.MACD,
+                                                   self._config_tbl_macd,
+                                                   ColOsci.to_list_macd())
+            self._osc_chart_list.append(param)
         if self._checkbox_stch.checkState() == Qt.Checked:
             insert_row_pos += 1
-            self._append_chart(insert_row_pos,
-                               OsciTyp.STOCHASTICS,
-                               self._config_tbl_stcha,
-                               ColOsci.to_list_stochastic(),
-                               100, 0)
+            param = self._generate_osc_chart_param(insert_row_pos,
+                                                   OsciTyp.STOCHASTICS,
+                                                   self._config_tbl_stcha,
+                                                   ColOsci.to_list_stochastic(),
+                                                   100, 0)
+            self._osc_chart_list.append(param)
 
         if not self._target_datetime is None:
             for osc_chart in self._osc_chart_list:
                 df = self._df_all[osc_chart.df_columns]
-                osc_chart.chartview.update(df, self._inst_param)
+                osc_chart.chartview.update(df,
+                                           self._target_datetime,
+                                           self._inst_param)
 
-    def _append_chart(self,
-                      insert_row_pos: int,
-                      osci_type: OsciTyp,
-                      config_tbl: List,
-                      columns: List[str],
-                      max_y: float = None,
-                      min_y: float = None):
+    def _generate_osc_chart_param(self,
+                                  insert_row_pos: int,
+                                  osci_type: OsciTyp,
+                                  config_tbl: List,
+                                  columns: List[str],
+                                  max_y: float = None,
+                                  min_y: float = None):
         chartview = LineChartView(config_tbl)
         chartview.set_max_y(max_y)
         chartview.set_min_y(min_y)
@@ -355,8 +360,7 @@ class TechUi():
         self._ui.tableWidget_tech.insertRow(insert_row_pos)
         self._ui.tableWidget_tech.setCellWidget(insert_row_pos, 0, chartview)
         self._ui.tableWidget_tech.setRowHeight(insert_row_pos, 200)
-        param = OscChartParam(osci_type, chartview, columns)
-        self._osc_chart_list.append(param)
+        return OscChartParam(osci_type, chartview, columns)
 
     def _on_inst_currentIndexChanged(self, index):
         self._inst_param = VALID_INST_LIST[index]
@@ -524,7 +528,7 @@ class TechUi():
                 record = [idx.strftime(fmt),
                           MACD_GDC_SIG_TYP_DICT[int(row[ColMacdGdc.SIG_TYP.value])],
                           utl.roundf(row[ColMacdGdc.SIG_VAL.value], digit=inst_param.digit),
-                          utl.roundf(row[ColMacdGdc.MACD_SLP.value], digit=inst_param.digit),
+                          utl.roundf(row[ColMacdGdc.MACD_SLP.value], digit=inst_param.digit+1),
                           MACD_GDC_EXIT_DICT[int(row[ColMacdGdc.EXIT_COND.value])],
                           row[ColMacdGdc.EXIT_DATETIME.value].strftime(fmt),
                           utl.roundf(row[ColMacdGdc.PL_PRICE.value], digit=inst_param.digit),
@@ -701,7 +705,9 @@ class TechUi():
 
         for osc_chart in self._osc_chart_list:
             df = self._df_all[osc_chart.df_columns]
-            osc_chart.chartview.update(df, self._inst_param)
+            osc_chart.chartview.update(df,
+                                       self._target_datetime,
+                                       self._inst_param)
 
             # self.logger.debug("{}".format(osc_chart.df_columns))
 
