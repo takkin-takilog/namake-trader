@@ -1,6 +1,10 @@
 from enum import Enum, IntEnum, auto
 from dataclasses import dataclass
 from trade_monitor.constant import InstParam, GranParam
+from trade_apl_msgs.msg import TechTblSmaRecMsg as SmaMsg
+from trade_apl_msgs.msg import TechTblMacdGdcRecMsg as MacdGdcMsg
+from trade_apl_msgs.msg import TechTblMacdZlcRecMsg as MacdZlcMsg
+
 
 VALID_INST_LIST = [
     InstParam.USDJPY,
@@ -218,3 +222,33 @@ class OsciTyp(Enum):
     RSI = "RSI"
     MACD = "MACD"
     STOCHASTICS = "Stochastics"
+
+
+SMA_CRS_TYP_DICT = {
+    SmaMsg.CROSS_TYP_GOLDEN: "Golden",
+    SmaMsg.CROSS_TYP_DEAD: "Dead"
+}
+
+SMA_CRS_LVL_DICT = {
+    SmaMsg.CROSS_LVL_LNGMID: "Long-Mid",
+    SmaMsg.CROSS_LVL_MIDSHR: "Mid-Short"
+}
+
+MACD_GDC_SIG_TYP_DICT = {
+    MacdGdcMsg.CROSS_TYP_UP: "Cross-Up",
+    MacdGdcMsg.CROSS_TYP_DOWN: "Cross-Down"
+}
+
+MACD_GDC_EXIT_DICT = {
+    MacdGdcMsg.EXIT_COND_MACD_ZERO: "MACD-Zero",
+    MacdGdcMsg.EXIT_COND_CROSS: "Signal-Cross"
+}
+
+MACD_ZLC_SIG_TYP_DICT = {
+    MacdZlcMsg.CROSS_TYP_UP: "Cross-Up",
+    MacdZlcMsg.CROSS_TYP_DOWN: "Cross-Down"
+}
+
+MACD_ZLC_EXIT_DICT = {
+    MacdZlcMsg.EXIT_COND_MACD_SLOPE: "Slope-Zero",
+}

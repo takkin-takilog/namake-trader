@@ -23,29 +23,20 @@ from trade_monitor.tech.constant import ColOsci
 from trade_monitor.tech.constant import ColSma
 from trade_monitor.tech.constant import ColMacdGdc, ColMacdZlc
 from trade_monitor.tech.constant import OsciTyp
+from trade_monitor.tech.constant import SMA_CRS_TYP_DICT, SMA_CRS_LVL_DICT
+from trade_monitor.tech.constant import MACD_GDC_SIG_TYP_DICT, MACD_GDC_EXIT_DICT
+from trade_monitor.tech.constant import MACD_ZLC_SIG_TYP_DICT, MACD_ZLC_EXIT_DICT
 from trade_monitor.tech.widget import CandlestickChartView
 from trade_monitor.tech.widget import LineChartViewTech as LineChartView
 from trade_monitor import ros_common as ros_com
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
-from trade_apl_msgs.msg import TechTblSmaRecMsg as SmaMsg
-from _ast import Pass
 
 
 pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows", 300)
 pd.set_option("display.width", 200)
 # pd.options.display.float_format = '{:.3f}'.format
-
-_CROSS_TYP_DICT = {
-    SmaMsg.CROSS_TYP_GOLDEN: "Golden",
-    SmaMsg.CROSS_TYP_DEAD: "Dead"
-}
-
-_CROSS_LVL_DICT = {
-    SmaMsg.CROSS_LVL_LNGMID: "Long-Mid",
-    SmaMsg.CROSS_LVL_MIDSHR: "Mid-Short"
-}
 
 
 @dataclass
@@ -448,8 +439,8 @@ class TechUi():
             tbl = []
             for idx, row in df_sma.iterrows():
                 record = [idx.strftime(fmt),
-                          _CROSS_TYP_DICT[int(row[ColSma.CRS_TYP.value])],
-                          _CROSS_LVL_DICT[int(row[ColSma.CRS_LVL.value])],
+                          SMA_CRS_TYP_DICT[int(row[ColSma.CRS_TYP.value])],
+                          SMA_CRS_LVL_DICT[int(row[ColSma.CRS_LVL.value])],
                           utl.roundf(row[ColSma.ANG_S.value], digit=inst_param.digit),
                           utl.roundf(row[ColSma.ANG_M.value], digit=inst_param.digit),
                           utl.roundf(row[ColSma.ANG_L.value], digit=inst_param.digit)
@@ -469,8 +460,6 @@ class TechUi():
             self.logger.debug("----- check Head & Tail DataFrame -----")
             self.logger.debug("  << ---------- df_sma ---------- >>")
             """
-            self.logger.debug("\n  << --- Head --- >>\n{}".format(self._df_ohlc[:6]))
-            self.logger.debug("\n  << --- Tail --- >>\n{}".format(self._df_ohlc[-5:]))
             self.logger.debug("\n  << --- Head --- >>\n{}".format(df_sma))
             """
 
@@ -489,14 +478,13 @@ class TechUi():
 
             # ---------- compose Table "MACD(Dolden/Death cross)" ----------
             tbl = []
-            """
             for rec in rsp.tbl_macd_gdc:
                 record = [dt.datetime.strptime(rec.datetime, FMT_YMDHMS),
                           rec.signal_type,
                           rec.signal_value,
                           rec.macd_slope,
                           rec.exit_cond,
-                          rec.exit_datetime,
+                          dt.datetime.strptime(rec.exit_datetime, FMT_YMDHMS),
                           rec.profit_loss_price,
                           rec.max_loss_price,
                           rec.add_entry_id,
@@ -508,7 +496,25 @@ class TechUi():
             index = ColMacdGdc.DATETIME.value
             df_macd_gdc.set_index(index, inplace=True)
 
-            # ---------- compose Table "SMA" for TreeView ----------
+            # ---------- compose Table "MACD(Zero line cross)" ----------
+            tbl = []
+            for rec in rsp.tbl_macd_zlc:
+                record = [dt.datetime.strptime(rec.datetime, FMT_YMDHMS),
+                          rec.add_entry_id,
+                          rec.signal_type,
+                          rec.exit_cond,
+                          dt.datetime.strptime(rec.exit_datetime, FMT_YMDHMS),
+                          rec.profit_loss_price,
+                          rec.max_loss_price,
+                          ]
+                tbl.append(record)
+
+            df_macd_zlc = pd.DataFrame(tbl, columns=ColMacdZlc.to_list())
+
+            index = ColMacdZlc.DATETIME.value
+            df_macd_zlc.set_index(index, inplace=True)
+
+            # ---------- compose Table "MACD(Dolden/Death cross)" for TreeView ----------
             if gran_param == GranParam.D:
                 fmt = FMT_DATE_YMD
             else:
@@ -516,34 +522,50 @@ class TechUi():
             tbl = []
             for idx, row in df_macd_gdc.iterrows():
                 record = [idx.strftime(fmt),
-                          _CROSS_TYP_DICT[int(row[ColSma.CRS_TYP.value])],
-                          _CROSS_LVL_DICT[int(row[ColSma.CRS_LVL.value])],
-                          utl.roundf(row[ColSma.ANG_S.value], digit=inst_param.digit),
-                          utl.roundf(row[ColSma.ANG_M.value], digit=inst_param.digit),
-                          utl.roundf(row[ColSma.ANG_L.value], digit=inst_param.digit)
+                          MACD_GDC_SIG_TYP_DICT[int(row[ColMacdGdc.SIG_TYP.value])],
+                          utl.roundf(row[ColMacdGdc.SIG_VAL.value], digit=inst_param.digit),
+                          utl.roundf(row[ColMacdGdc.MACD_SLP.value], digit=inst_param.digit),
+                          MACD_GDC_EXIT_DICT[int(row[ColMacdGdc.EXIT_COND.value])],
+                          row[ColMacdGdc.EXIT_DATETIME.value].strftime(fmt),
+                          utl.roundf(row[ColMacdGdc.PL_PRICE.value], digit=inst_param.digit),
+                          utl.roundf(row[ColMacdGdc.MAX_LOSS_PRICE.value], digit=inst_param.digit),
+                          int(row[ColMacdGdc.ADD_ENTRY_ID.value])
                           ]
                 tbl.append(record)
             df = pd.DataFrame(tbl, columns=ColMacdGdc.to_list())
-            index = ColSma.DATETIME.value
+            index = ColMacdGdc.DATETIME.value
             df.set_index(index, inplace=True)
+            self._pdtreeview_macd_gdc.set_dataframe(df)
+            selmdl = self._pdtreeview_macd_gdc.selectionModel()
+            callback = self._on_macd_gdc_selection_changed
+            selmdl.selectionChanged.connect(callback)
 
-            self._pdtreeview_sma.set_dataframe(df)
-            selmdl = self._pdtreeview_sma.selectionModel()
-            callback = self._on_sma_selection_changed
+            # ---------- compose Table "MACD(Zero line cross)" for TreeView ----------
+            if gran_param == GranParam.D:
+                fmt = FMT_DATE_YMD
+            else:
+                fmt = FMT_DISP_YMDHMS
+            tbl = []
+            for idx, row in df_macd_zlc.iterrows():
+                record = [idx.strftime(fmt),
+                          int(row[ColMacdZlc.ADD_ENTRY_ID.value]),
+                          MACD_ZLC_SIG_TYP_DICT[int(row[ColMacdZlc.SIG_TYP.value])],
+                          MACD_ZLC_EXIT_DICT[int(row[ColMacdZlc.EXIT_COND.value])],
+                          row[ColMacdZlc.EXIT_DATETIME.value].strftime(fmt),
+                          utl.roundf(row[ColMacdZlc.PL_PRICE.value], digit=inst_param.digit),
+                          utl.roundf(row[ColMacdZlc.MAX_LOSS_PRICE.value], digit=inst_param.digit),
+                          ]
+                tbl.append(record)
+            df = pd.DataFrame(tbl, columns=ColMacdZlc.to_list())
+            index = ColMacdZlc.DATETIME.value
+            df.set_index(index, inplace=True)
+            self._pdtreeview_macd_zlc.set_dataframe(df)
+            selmdl = self._pdtreeview_macd_zlc.selectionModel()
+            callback = self._on_macd_zlc_selection_changed
             selmdl.selectionChanged.connect(callback)
 
             self._df_macd_gdc = df_macd_gdc
-
-            self.logger.debug("----- check Head & Tail DataFrame -----")
-            self.logger.debug("  << ---------- df_sma ---------- >>")
-            """
-            """
-            self.logger.debug("\n  << --- Head --- >>\n{}".format(self._df_ohlc[:6]))
-            self.logger.debug("\n  << --- Tail --- >>\n{}".format(self._df_ohlc[-5:]))
-            self.logger.debug("\n  << --- Head --- >>\n{}".format(df_sma))
-            """
-
-
+            self._df_macd_zlc = df_macd_zlc
 
     def _on_sma_selection_changed(self, selected, _):
         self.logger.debug("----- _on_sma_selection_changed -----")
