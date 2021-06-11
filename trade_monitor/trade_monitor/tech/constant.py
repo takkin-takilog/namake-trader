@@ -2,6 +2,7 @@ from enum import Enum, IntEnum, auto
 from dataclasses import dataclass
 from trade_monitor.constant import InstParam, GranParam
 from trade_apl_msgs.msg import TechTblSmaRecMsg as SmaMsg
+from trade_apl_msgs.msg import TechTblSmaMethod01RecMsg as SmaMth01Msg
 from trade_apl_msgs.msg import TechTblMacdGdcRecMsg as MacdGdcMsg
 from trade_apl_msgs.msg import TechTblMacdZlcRecMsg as MacdZlcMsg
 
@@ -150,6 +151,29 @@ class ColOsci(Enum):
                 ]
 
 
+class ColSmaMth01(Enum):
+    """
+    Pandas SMA method 1 dataframe column name.
+    """
+    BASE_DATETIME = "base_datetime"
+    BASE_PRICE = "base_price"
+    CROSS_TYP = "cross_type"
+    LT_DATETIME = "lt_datetime"
+    CO_DATETIME = "co_datetime"
+    EN_DATETIME = "en_datetime"
+    CO_BS_SMAM_H = "co_bs_smam_h"
+    CO_BS_SMAM_W = "co_bs_smam_w"
+    CO_TP_SMAM_H = "co_tp_smam_h"
+    CO_TP_SMAM_W = "co_tp_smam_w"
+    CO_SMAM_SMAL_H = "co_smam_smal_h"
+    CO_SMAM_SMAL_W = "co_smam_smal_w"
+    AREA = "area"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
 class ColSma(Enum):
     """
     Pandas SMA(Simple Moving Average) dataframe column name.
@@ -232,6 +256,11 @@ SMA_CRS_TYP_DICT = {
 SMA_CRS_LVL_DICT = {
     SmaMsg.CROSS_LVL_LNGMID: "Long-Mid",
     SmaMsg.CROSS_LVL_MIDSHR: "Mid-Short"
+}
+
+SMA_MTH01_CRS_TYP_DICT = {
+    SmaMth01Msg.CROSS_TYP_UP: "Up",
+    SmaMth01Msg.CROSS_TYP_DOWN: "Down"
 }
 
 MACD_GDC_SIG_TYP_DICT = {
