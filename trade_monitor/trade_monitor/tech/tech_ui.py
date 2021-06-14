@@ -517,17 +517,20 @@ class TechUi():
                     dt.datetime.strptime(rec.lt_datetime, FMT_YMDHMS),
                     dt.datetime.strptime(rec.co_datetime, FMT_YMDHMS),
                     dt.datetime.strptime(rec.en_datetime, FMT_YMDHMS),
+                    dt.datetime.strptime(rec.ex_datetime, FMT_YMDHMS),
                     rec.co_bs_smam_h,
                     rec.co_bs_smam_w,
                     rec.co_tp_smam_h,
                     rec.co_tp_smam_w,
                     rec.co_smam_smal_h,
                     rec.co_smam_smal_w,
+                    rec.profit,
+                    rec.en_ex_w,
                     rec.area
                 ]
                 tbl.append(record)
             df_sma_mth01 = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())
-            df_sma_mth01.set_index(ColSmaMth01.BASE_DATETIME.value,
+            df_sma_mth01.set_index(ColSmaMth01.EN_DATETIME.value,
                                    inplace=True)
 
             self.logger.debug("\n  << --- df_sma_mth01 --- >>\n{}".format(df_sma_mth01))
@@ -540,23 +543,26 @@ class TechUi():
             tbl = []
             for idx, row in df_sma_mth01.iterrows():
                 record = [
-                    idx.strftime(fmt),
+                    row[ColSmaMth01.BASE_DATETIME.value].strftime(fmt),
                     utl.roundf(row[ColSmaMth01.BASE_PRICE.value], digit=inst_param.digit),
                     SMA_MTH01_CRS_TYP_DICT[int(row[ColSmaMth01.CROSS_TYP.value])],
                     row[ColSmaMth01.LT_DATETIME.value].strftime(fmt),
                     row[ColSmaMth01.CO_DATETIME.value].strftime(fmt),
-                    row[ColSmaMth01.EN_DATETIME.value].strftime(fmt),
+                    idx.strftime(fmt),
+                    row[ColSmaMth01.EX_DATETIME.value].strftime(fmt),
                     utl.roundf(row[ColSmaMth01.CO_BS_SMAM_H.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.CO_BS_SMAM_W.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.CO_TP_SMAM_H.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.CO_TP_SMAM_W.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.CO_SMAM_SMAL_H.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.CO_SMAM_SMAL_W.value], digit=inst_param.digit),
+                    utl.roundf(row[ColSmaMth01.PROFIT.value], digit=inst_param.digit),
+                    utl.roundf(row[ColSmaMth01.EN_EX_W.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.AREA.value], digit=inst_param.digit)
                 ]
                 tbl.append(record)
             df = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())
-            index = ColSmaMth01.BASE_DATETIME.value
+            index = ColSmaMth01.EN_DATETIME.value
             df.set_index(index, inplace=True)
 
             self._pdtreeview_sma_mth01.set_dataframe(df)
@@ -711,8 +717,6 @@ class TechUi():
                     idx_dt = lvl[dt_ < lvl][0]
                 else:
                     fmt = FMT_DISP_YMDHMS
-                    self.logger.debug("#######################################")
-                    self.logger.debug("dt_str:{}".format(dt_str))
                     idx_dt = dt.datetime.strptime(dt_str, fmt)
 
                 self._draw_chart(dt_str, idx_dt)

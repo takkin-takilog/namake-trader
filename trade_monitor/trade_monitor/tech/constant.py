@@ -161,12 +161,15 @@ class ColSmaMth01(Enum):
     LT_DATETIME = "lt_datetime"
     CO_DATETIME = "co_datetime"
     EN_DATETIME = "en_datetime"
+    EX_DATETIME = "ex_datetime"
     CO_BS_SMAM_H = "co_bs_smam_h"
     CO_BS_SMAM_W = "co_bs_smam_w"
     CO_TP_SMAM_H = "co_tp_smam_h"
     CO_TP_SMAM_W = "co_tp_smam_w"
     CO_SMAM_SMAL_H = "co_smam_smal_h"
     CO_SMAM_SMAL_W = "co_smam_smal_w"
+    PROFIT = "profit"
+    EN_EX_W = "en_ex_w"
     AREA = "area"
 
     @classmethod
