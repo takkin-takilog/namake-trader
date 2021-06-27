@@ -490,9 +490,9 @@
        <attribute name="title">
         <string>テクニカル</string>
        </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="1,1">
+       <layout class="QHBoxLayout" name="horizontalLayout_29">
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
+         <layout class="QVBoxLayout" name="verticalLayout_10">
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_8">
             <item>
@@ -574,6 +574,31 @@
                </size>
               </property>
              </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_tech_csv_out">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>CSV保存</string>
+              </property>
+              <property name="checkable">
+               <bool>false</bool>
+              </property>
+              <property name="autoExclusive">
+               <bool>false</bool>
+              </property>
+             </widget>
             </item>
            </layout>
           </item>

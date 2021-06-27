@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from dataclasses import dataclass
 import pandas as pd
@@ -7,7 +8,7 @@ from PySide2.QtCore import Qt
 from PySide2.QtGui import QColor, QPen, QPainter, QPainterPath, QPixmap
 from PySide2.QtWidgets import QCheckBox, QGroupBox, QVBoxLayout
 from PySide2.QtWidgets import QMenu, QWidgetAction
-from PySide2.QtWidgets import QToolButton
+from PySide2.QtWidgets import QToolButton, QFileDialog, QMessageBox
 from trade_apl_msgs.srv import TechSmaMntSrv
 from trade_apl_msgs.srv import TechSmaMethod01MntSrv
 from trade_apl_msgs.srv import TechMacdMntSrv
@@ -80,6 +81,9 @@ class TechUi():
 
         callback = self._on_gran_currentIndexChanged
         ui.comboBox_tech_gran.currentIndexChanged.connect(callback)
+
+        callback = self._on_csv_out_clicked
+        ui.pushButton_tech_csv_out.clicked.connect(callback)
 
         # --------------- Tree View ---------------
         # ----- SMA -----
@@ -287,6 +291,8 @@ class TechUi():
         self._gran_param = VALID_GRAN_LIST[0]
         self._target_datetime = None
 
+        self._df_sma_mth01 = pd.DataFrame()
+
         self._init_ros_service()
 
     def _on_checkbox_trn_stateChanged(self, _):
@@ -306,7 +312,7 @@ class TechUi():
         self._trend_columns = trend_columns
         self._show_columns = self._ohlc_columns + self._trend_columns + self._osci_columns
 
-        if not self._target_datetime is None:
+        if self._target_datetime is not None:
             self._chartview_cndl.update(self._df_all[self._show_columns],
                                         self._target_datetime,
                                         self._inst_param)
@@ -354,7 +360,7 @@ class TechUi():
                                                    100, 0)
             self._osc_chart_list.append(param)
 
-        if not self._target_datetime is None:
+        if self._target_datetime is not None:
             for osc_chart in self._osc_chart_list:
                 df = self._df_all[osc_chart.df_columns]
                 osc_chart.chartview.update(df,
@@ -426,6 +432,31 @@ class TechUi():
                 pass
         elif tab_name == "macd":
             self._on_fetch_tech_macd_clicked()
+            self.logger.debug("---------- MACD ----------")
+        else:
+            self.logger.debug("---------- tab_name ----------")
+            self.logger.debug("{}".format(tab_name))
+
+    def _on_csv_out_clicked(self):
+
+        file_name, filter = QFileDialog.getSaveFileName(caption="Save file",
+                                                        dir=os.path.expanduser("~"),
+                                                        filter="*.csv")
+        self.logger.debug("---------- SgetSaveFileName ----------")
+        self.logger.debug("fileName:{}".format(file_name))
+        self.logger.debug("filter:{}".format(filter))
+
+        tab_name = self._ui.tabWidget_tech.currentWidget().objectName()
+        if tab_name == "sma":
+            sub_tab_name = self._ui.tabWidget_sma.currentWidget().objectName()
+            if sub_tab_name == "cross":
+                self.logger.debug("---------- SMA Cross 01 ----------")
+            elif sub_tab_name == "method1":
+                self.logger.debug("---------- SMA Method 01 ----------")
+                self._df_sma_mth01.to_csv(file_name + ".csv")
+            else:
+                pass
+        elif tab_name == "macd":
             self.logger.debug("---------- MACD ----------")
         else:
             self.logger.debug("---------- tab_name ----------")
