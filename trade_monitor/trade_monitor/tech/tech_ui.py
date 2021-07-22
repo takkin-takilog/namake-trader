@@ -542,22 +542,22 @@ class TechUi():
             tbl = []
             for rec in rsp.tbl:
                 record = [
-                    dt.datetime.strptime(rec.base_datetime, FMT_YMDHMS),
-                    rec.base_price,
-                    rec.cross_type,
-                    dt.datetime.strptime(rec.lt_datetime, FMT_YMDHMS),
-                    dt.datetime.strptime(rec.co_datetime, FMT_YMDHMS),
                     dt.datetime.strptime(rec.en_datetime, FMT_YMDHMS),
+                    # dt.datetime.strptime(rec.base_datetime, FMT_YMDHMS),
+                    # rec.base_price,
+                    rec.cross_type,
+                    # dt.datetime.strptime(rec.lt_datetime, FMT_YMDHMS),
+                    dt.datetime.strptime(rec.co_datetime, FMT_YMDHMS),
                     dt.datetime.strptime(rec.ex_datetime, FMT_YMDHMS),
-                    rec.co_bs_smam_h,
-                    rec.co_bs_smam_w,
-                    rec.co_tp_smam_h,
-                    rec.co_tp_smam_w,
+                    # rec.co_bs_smam_h,
+                    # rec.co_bs_smam_w,
+                    # rec.co_tp_smam_h,
+                    # rec.co_tp_smam_w,
                     rec.co_smam_smal_h,
                     rec.co_smam_smal_w,
                     rec.profit,
                     rec.en_ex_w,
-                    rec.area
+                    # rec.area
                 ]
                 tbl.append(record)
             df_sma_mth01 = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())
@@ -566,7 +566,7 @@ class TechUi():
 
             self.logger.debug("\n  << --- df_sma_mth01 --- >>\n{}".format(df_sma_mth01))
 
-            # ---------- compose Table "SMA Method 1" for TreeView ----------
+            # ---------- compose Table "SMA Method01" for TreeView ----------
             if gran_param == GranParam.D:
                 fmt = FMT_DATE_YMD
             else:
@@ -574,22 +574,22 @@ class TechUi():
             tbl = []
             for idx, row in df_sma_mth01.iterrows():
                 record = [
-                    row[ColSmaMth01.BASE_DATETIME.value].strftime(fmt),
-                    utl.roundf(row[ColSmaMth01.BASE_PRICE.value], digit=inst_param.digit),
-                    SMA_MTH01_CRS_TYP_DICT[int(row[ColSmaMth01.CROSS_TYP.value])],
-                    row[ColSmaMth01.LT_DATETIME.value].strftime(fmt),
-                    row[ColSmaMth01.CO_DATETIME.value].strftime(fmt),
                     idx.strftime(fmt),
+                    # row[ColSmaMth01.BASE_DATETIME.value].strftime(fmt),
+                    # utl.roundf(row[ColSmaMth01.BASE_PRICE.value], digit=inst_param.digit),
+                    SMA_MTH01_CRS_TYP_DICT[int(row[ColSmaMth01.CROSS_TYP.value])],
+                    # row[ColSmaMth01.LT_DATETIME.value].strftime(fmt),
+                    row[ColSmaMth01.CO_DATETIME.value].strftime(fmt),
                     row[ColSmaMth01.EX_DATETIME.value].strftime(fmt),
-                    utl.roundf(row[ColSmaMth01.CO_BS_SMAM_H.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.CO_BS_SMAM_W.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.CO_TP_SMAM_H.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.CO_TP_SMAM_W.value], digit=inst_param.digit),
+                    # utl.roundf(row[ColSmaMth01.CO_BS_SMAM_H.value], digit=inst_param.digit),
+                    # utl.roundf(row[ColSmaMth01.CO_BS_SMAM_W.value], digit=inst_param.digit),
+                    # utl.roundf(row[ColSmaMth01.CO_TP_SMAM_H.value], digit=inst_param.digit),
+                    # utl.roundf(row[ColSmaMth01.CO_TP_SMAM_W.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.CO_SMAM_SMAL_H.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.CO_SMAM_SMAL_W.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.PROFIT.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.EN_EX_W.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.AREA.value], digit=inst_param.digit)
+                    # utl.roundf(row[ColSmaMth01.AREA.value], digit=inst_param.digit)
                 ]
                 tbl.append(record)
             df = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())
