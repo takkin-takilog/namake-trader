@@ -9,6 +9,8 @@ from transitions import Machine
 # from transitions.extensions.factory import GraphMachine as Machine
 from transitions.extensions.factory import GraphMachine
 import rclpy
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from rclpy.client import Client
 from rclpy.task import Future
@@ -712,7 +714,9 @@ class HistoricalCandles(Node):
         callback = self._on_recv_candles_data
         self._hc_srv = self.create_service(srv_type,
                                            srv_name,
-                                           callback)
+                                           callback=callback,
+                                           callback_group=ReentrantCallbackGroup()
+                                           )
 
     def do_timeout_event(self) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -734,10 +738,10 @@ class HistoricalCandles(Node):
             self.logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
-    def _on_recv_candles_data(self,
-                              req: SrvTypeRequest,
-                              rsp: SrvTypeResponse
-                              ) -> SrvTypeResponse:
+    async def _on_recv_candles_data(self,
+                                    req: SrvTypeRequest,
+                                    rsp: SrvTypeResponse
+                                    ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_data]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
@@ -828,6 +832,7 @@ class HistoricalCandles(Node):
 def main(args=None):
 
     rclpy.init(args=args)
+    executor = MultiThreadedExecutor()
 
     try:
         hc = HistoricalCandles()
@@ -836,7 +841,7 @@ def main(args=None):
     else:
         try:
             while rclpy.ok():
-                rclpy.spin_once(hc, timeout_sec=1.0)
+                rclpy.spin_once(hc, executor=executor, timeout_sec=1.0)
                 hc.do_timeout_event()
         except KeyboardInterrupt:
             pass
