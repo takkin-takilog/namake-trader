@@ -10,7 +10,7 @@ from PySide2.QtWidgets import QCheckBox, QGroupBox, QVBoxLayout
 from PySide2.QtWidgets import QMenu, QWidgetAction
 from PySide2.QtWidgets import QToolButton, QFileDialog, QMessageBox
 from trade_apl_msgs.srv import TechSmaMntSrv
-from trade_apl_msgs.srv import TechSmaMethod01MntSrv
+from trade_apl_msgs.srv import TechSmaMth01MntSrv
 from trade_apl_msgs.srv import TechMacdMntSrv
 from trade_apl_msgs.srv import TechChartMntSrv
 from trade_monitor.widget_base import PandasTreeView
@@ -401,7 +401,7 @@ class TechUi():
         self._srv_sma_cli = ros_com.get_node().create_client(srv_type, fullname)
 
         # Create service client "tech_sma_method01_monitor"
-        srv_type = TechSmaMethod01MntSrv
+        srv_type = TechSmaMth01MntSrv
         srv_name = "tech_sma_method01_monitor"
         fullname = ns + srv_name
         self._srv_sma_mth01_cli = ros_com.get_node().create_client(srv_type, fullname)
@@ -534,7 +534,7 @@ class TechUi():
                               .format(inst_param.text))
         else:
             # fetch Tech data
-            req = TechSmaMethod01MntSrv.Request()
+            req = TechSmaMth01MntSrv.Request()
             rsp = ros_com.call_servive_sync(self._srv_sma_mth01_cli, req)
 
             # ---------- compose Table "SMA Method01" ----------
@@ -543,12 +543,19 @@ class TechUi():
                 record = [
                     dt.datetime.strptime(rec.en_datetime, FMT_YMDHMS),
                     rec.cross_type,
-                    dt.datetime.strptime(rec.co_datetime, FMT_YMDHMS),
                     dt.datetime.strptime(rec.ex_datetime, FMT_YMDHMS),
+                    rec.co_bs_h,
+                    rec.co_bs_w,
+                    rec.co_bs_hhw,
+                    rec.co_tp_h,
+                    rec.co_tp_w,
+                    rec.co_tp_hhw,
                     rec.co_sma_h,
                     rec.co_sma_w,
                     rec.co_sma_hhw,
+                    rec.area,
                     rec.profit,
+                    rec.max_profit,
                 ]
                 tbl.append(record)
             df_sma_mth01 = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())
@@ -567,12 +574,19 @@ class TechUi():
                 record = [
                     idx.strftime(fmt),
                     SMA_MTH01_CRS_TYP_DICT[int(row[ColSmaMth01.CROSS_TYP.value])],
-                    row[ColSmaMth01.CO_DATETIME.value].strftime(fmt),
                     row[ColSmaMth01.EX_DATETIME.value].strftime(fmt),
-                    utl.roundf(row[ColSmaMth01.CO_SMA_H.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.CO_SMA_W.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.CO_SMA_HHW.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.PROFIT.value], digit=inst_param.digit),
+                    row[ColSmaMth01.CO_BS_H.value],
+                    row[ColSmaMth01.CO_BS_W.value],
+                    row[ColSmaMth01.CO_BS_HHW.value],
+                    row[ColSmaMth01.CO_TP_H.value],
+                    row[ColSmaMth01.CO_TP_W.value],
+                    row[ColSmaMth01.CO_TP_HHW.value],
+                    row[ColSmaMth01.CO_SMA_H.value],
+                    row[ColSmaMth01.CO_SMA_W.value],
+                    row[ColSmaMth01.CO_SMA_HHW.value],
+                    row[ColSmaMth01.AREA.value],
+                    row[ColSmaMth01.PROFIT.value],
+                    row[ColSmaMth01.MAX_PROFIT.value],
                 ]
                 tbl.append(record)
             df = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())

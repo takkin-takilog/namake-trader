@@ -2,7 +2,7 @@ from enum import Enum, IntEnum, auto
 from dataclasses import dataclass
 from trade_monitor.constant import InstParam, GranParam
 from trade_apl_msgs.msg import TechTblSmaRecMsg as SmaMsg
-from trade_apl_msgs.msg import TechTblSmaMethod01RecMsg as SmaMth01Msg
+from trade_apl_msgs.msg import TechTblSmaMth01RecMsg as SmaMth01Msg
 from trade_apl_msgs.msg import TechTblMacdGdcRecMsg as MacdGdcMsg
 from trade_apl_msgs.msg import TechTblMacdZlcRecMsg as MacdZlcMsg
 
@@ -157,12 +157,19 @@ class ColSmaMth01(Enum):
     """
     EN_DATETIME = "en_datetime"
     CROSS_TYP = "cross_type"
-    CO_DATETIME = "co_datetime"
     EX_DATETIME = "ex_datetime"
+    CO_BS_H = "co_base_h"
+    CO_BS_W = "co_base_w"
+    CO_BS_HHW = "co_base_h*h/w"
+    CO_TP_H = "co_top_h"
+    CO_TP_W = "co_top_w"
+    CO_TP_HHW = "co_top_h*h/w"
     CO_SMA_H = "co_sma_h"
     CO_SMA_W = "co_sma_w"
     CO_SMA_HHW = "co_sma_h*h/w"
     PROFIT = "profit"
+    AREA = "area"
+    MAX_PROFIT = "max_profit"
 
     @classmethod
     def to_list(cls):
