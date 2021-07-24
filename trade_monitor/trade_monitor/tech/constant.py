@@ -167,8 +167,8 @@ class ColSmaMth01(Enum):
     CO_SMA_H = "co_sma_h"
     CO_SMA_W = "co_sma_w"
     CO_SMA_HHW = "co_sma_h*h/w"
-    PROFIT = "profit"
     AREA = "area"
+    PROFIT = "profit"
     MAX_PROFIT = "max_profit"
 
     @classmethod
