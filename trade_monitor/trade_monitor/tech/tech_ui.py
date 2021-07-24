@@ -392,8 +392,7 @@ class TechUi():
         self._init_ros_service()
 
     def _init_ros_service(self):
-        ns = self._inst_param.namespace + "_" \
-            + self._gran_param.namespace + "/"
+        ns = self._inst_param.namespace + "/" + self._gran_param.namespace + "/"
 
         # Create service client "tech_sma_monitor"
         srv_type = TechSmaMntSrv
@@ -538,26 +537,18 @@ class TechUi():
             req = TechSmaMethod01MntSrv.Request()
             rsp = ros_com.call_servive_sync(self._srv_sma_mth01_cli, req)
 
-            # ---------- compose Table "SMA Method 1" ----------
+            # ---------- compose Table "SMA Method01" ----------
             tbl = []
             for rec in rsp.tbl:
                 record = [
                     dt.datetime.strptime(rec.en_datetime, FMT_YMDHMS),
-                    # dt.datetime.strptime(rec.base_datetime, FMT_YMDHMS),
-                    # rec.base_price,
                     rec.cross_type,
-                    # dt.datetime.strptime(rec.lt_datetime, FMT_YMDHMS),
                     dt.datetime.strptime(rec.co_datetime, FMT_YMDHMS),
                     dt.datetime.strptime(rec.ex_datetime, FMT_YMDHMS),
-                    # rec.co_bs_smam_h,
-                    # rec.co_bs_smam_w,
-                    # rec.co_tp_smam_h,
-                    # rec.co_tp_smam_w,
-                    rec.co_smam_smal_h,
-                    rec.co_smam_smal_w,
+                    rec.co_sma_h,
+                    rec.co_sma_w,
+                    rec.co_sma_hhw,
                     rec.profit,
-                    rec.en_ex_w,
-                    # rec.area
                 ]
                 tbl.append(record)
             df_sma_mth01 = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())
@@ -575,21 +566,13 @@ class TechUi():
             for idx, row in df_sma_mth01.iterrows():
                 record = [
                     idx.strftime(fmt),
-                    # row[ColSmaMth01.BASE_DATETIME.value].strftime(fmt),
-                    # utl.roundf(row[ColSmaMth01.BASE_PRICE.value], digit=inst_param.digit),
                     SMA_MTH01_CRS_TYP_DICT[int(row[ColSmaMth01.CROSS_TYP.value])],
-                    # row[ColSmaMth01.LT_DATETIME.value].strftime(fmt),
                     row[ColSmaMth01.CO_DATETIME.value].strftime(fmt),
                     row[ColSmaMth01.EX_DATETIME.value].strftime(fmt),
-                    # utl.roundf(row[ColSmaMth01.CO_BS_SMAM_H.value], digit=inst_param.digit),
-                    # utl.roundf(row[ColSmaMth01.CO_BS_SMAM_W.value], digit=inst_param.digit),
-                    # utl.roundf(row[ColSmaMth01.CO_TP_SMAM_H.value], digit=inst_param.digit),
-                    # utl.roundf(row[ColSmaMth01.CO_TP_SMAM_W.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.CO_SMAM_SMAL_H.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.CO_SMAM_SMAL_W.value], digit=inst_param.digit),
+                    utl.roundf(row[ColSmaMth01.CO_SMA_H.value], digit=inst_param.digit),
+                    utl.roundf(row[ColSmaMth01.CO_SMA_W.value], digit=inst_param.digit),
+                    utl.roundf(row[ColSmaMth01.CO_SMA_HHW.value], digit=inst_param.digit),
                     utl.roundf(row[ColSmaMth01.PROFIT.value], digit=inst_param.digit),
-                    utl.roundf(row[ColSmaMth01.EN_EX_W.value], digit=inst_param.digit),
-                    # utl.roundf(row[ColSmaMth01.AREA.value], digit=inst_param.digit)
                 ]
                 tbl.append(record)
             df = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())
@@ -853,8 +836,10 @@ class TechUi():
         columns = self._ohlc_columns + ColTrnd.to_list_all()
         df_trnd = df_all[columns]
 
-        max_y = df_trnd.max().max()
-        min_y = df_trnd.min().min()
+        df_tmp = df_trnd.where(df_trnd > 0.0)
+        max_y = df_tmp.max().max()
+        min_y = df_tmp.min().min()
+
         self._target_datetime = df_trnd.index.get_loc(dt_str)
         self._df_all = df_all
 

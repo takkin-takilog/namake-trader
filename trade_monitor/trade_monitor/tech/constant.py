@@ -153,24 +153,16 @@ class ColOsci(Enum):
 
 class ColSmaMth01(Enum):
     """
-    Pandas SMA method 1 dataframe column name.
+    Pandas SMA method01 dataframe column name.
     """
-    # BASE_DATETIME = "base_datetime"
-    # BASE_PRICE = "base_price"
     EN_DATETIME = "en_datetime"
     CROSS_TYP = "cross_type"
-    # LT_DATETIME = "lt_datetime"
     CO_DATETIME = "co_datetime"
     EX_DATETIME = "ex_datetime"
-    # CO_BS_SMAM_H = "co_bs_smam_h"
-    # CO_BS_SMAM_W = "co_bs_smam_w"
-    # CO_TP_SMAM_H = "co_tp_smam_h"
-    # CO_TP_SMAM_W = "co_tp_smam_w"
-    CO_SMAM_SMAL_H = "co_smam_smal_h"
-    CO_SMAM_SMAL_W = "co_smam_smal_w"
+    CO_SMA_H = "co_sma_h"
+    CO_SMA_W = "co_sma_w"
+    CO_SMA_HHW = "co_sma_h*h/w"
     PROFIT = "profit"
-    EN_EX_W = "en_ex_w"
-    # AREA = "area"
 
     @classmethod
     def to_list(cls):
