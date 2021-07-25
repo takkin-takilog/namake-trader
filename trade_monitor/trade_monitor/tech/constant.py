@@ -170,6 +170,7 @@ class ColSmaMth01(Enum):
     AREA = "area"
     PROFIT = "profit"
     MAX_PROFIT = "max_profit"
+    MAX_LOSS = "max_loss"
 
     @classmethod
     def to_list(cls):

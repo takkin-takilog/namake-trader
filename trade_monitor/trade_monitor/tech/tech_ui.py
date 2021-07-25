@@ -556,6 +556,7 @@ class TechUi():
                     rec.area,
                     rec.profit,
                     rec.max_profit,
+                    rec.max_loss
                 ]
                 tbl.append(record)
             df_sma_mth01 = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())
@@ -587,6 +588,7 @@ class TechUi():
                     row[ColSmaMth01.AREA.value],
                     row[ColSmaMth01.PROFIT.value],
                     row[ColSmaMth01.MAX_PROFIT.value],
+                    row[ColSmaMth01.MAX_LOSS.value]
                 ]
                 tbl.append(record)
             df = pd.DataFrame(tbl, columns=ColSmaMth01.to_list())
