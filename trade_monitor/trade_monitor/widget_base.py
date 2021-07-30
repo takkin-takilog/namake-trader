@@ -10,6 +10,7 @@ from PySide2.QtWidgets import QTreeView
 from PySide2.QtWidgets import QHeaderView
 from PySide2.QtWidgets import QGridLayout
 from PySide2.QtWidgets import QAbstractItemView
+from PySide2.QtWidgets import QLabel, QProgressBar
 from PySide2.QtCharts import QtCharts
 from PySide2.QtCore import QAbstractTableModel, QSortFilterProxyModel
 from PySide2.QtCore import Qt, QPointF, QRectF, QRect, QLineF
@@ -1181,3 +1182,39 @@ class BaseView(QtCharts.QChartView):
 
         if self._min_y is not None:
             self.chart().axisY().setMin(self._min_y)
+
+
+class StatusProgressBar():
+
+    def __init__(self, parent):
+
+        sts_label = QLabel()
+        sts_label.setVisible(False)
+
+        prog_bar = QProgressBar()
+        prog_bar.setVisible(False)
+        prog_bar.setTextVisible(True)
+
+        parent.addPermanentWidget(sts_label)
+        parent.addPermanentWidget(prog_bar, 1)
+
+        self._parent = parent
+        self._sts_label = sts_label
+        self._prog_bar = prog_bar
+
+    def __del__(self):
+        self._parent.removeWidget(self._sts_label)
+        self._parent.removeWidget(self._prog_bar)
+        del self._sts_label
+        del self._prog_bar
+
+    def set_label_text(self, text):
+        self._sts_label.setText(text)
+        self._sts_label.setVisible(True)
+
+    def set_bar_range(self, minimum, maximum):
+        self._prog_bar.setVisible(True)
+        self._prog_bar.setRange(minimum, maximum)
+
+    def set_bar_value(self, value):
+        self._prog_bar.setValue(value)

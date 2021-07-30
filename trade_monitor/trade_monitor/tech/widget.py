@@ -1,8 +1,12 @@
+import os
 import pandas as pd
 from typing import List
 from PySide2.QtCore import Qt, QPointF, QLineF, QRectF
 from PySide2.QtGui import QColor, QPen, QBrush
+from PySide2.QtWidgets import QMainWindow
 from PySide2.QtWidgets import QGraphicsLineItem
+from PySide2.QtUiTools import QUiLoader
+from PySide2.QtCore import QFile
 from PySide2.QtCharts import QtCharts
 from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import InstParam
@@ -12,6 +16,22 @@ from trade_monitor.widget_base import LineChartViewBarCategoryAxis
 from trade_monitor.tech.constant import ColTrnd
 from trade_monitor.tech.constant import ColLine
 from trade_monitor.constant import QtColor
+
+
+class BaseUi(QMainWindow):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def _load_ui(self, parent, ui_name: str):
+        loader = QUiLoader()
+        path = os.path.join(os.path.dirname(__file__), ui_name)
+        ui_file = QFile(path)
+        ui_file.open(QFile.ReadOnly)
+        ui = loader.load(ui_file, parent)
+        ui_file.close()
+
+        return ui
 
 
 class CandlestickChartView(CandlestickChartViewBarCategoryAxis):

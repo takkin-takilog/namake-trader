@@ -32,6 +32,7 @@ from trade_monitor.tech.constant import MACD_GDC_SIG_TYP_DICT, MACD_GDC_EXIT_DIC
 from trade_monitor.tech.constant import MACD_ZLC_SIG_TYP_DICT, MACD_ZLC_EXIT_DICT
 from trade_monitor.tech.widget import CandlestickChartView
 from trade_monitor.tech.widget import LineChartViewTech as LineChartView
+from trade_monitor.tech.sma_mth01_ui import SmaMethod01Ui
 from trade_monitor import ros_common as ros_com
 from trade_manager_msgs.msg import Instrument as Inst
 from trade_manager_msgs.msg import Granularity as Gran
@@ -84,6 +85,9 @@ class TechUi():
 
         callback = self._on_csv_out_clicked
         ui.pushButton_tech_csv_out.clicked.connect(callback)
+
+        callback = self._on_tech_sma_mth01_details_clicked
+        ui.pushButton_tech_sma_mth01_details.clicked.connect(callback)
 
         # --------------- Tree View ---------------
         # ----- SMA -----
@@ -290,10 +294,11 @@ class TechUi():
         self._inst_param = VALID_INST_LIST[0]
         self._gran_param = VALID_GRAN_LIST[0]
         self._target_datetime = None
-
         self._df_sma_mth01 = pd.DataFrame()
 
         self._init_ros_service()
+
+        self._sma_mth01_ui = SmaMethod01Ui()
 
     def _on_checkbox_trn_stateChanged(self, _):
 
@@ -467,7 +472,7 @@ class TechUi():
         gran_param = self._gran_param
 
         if not self._srv_sma_cli.service_is_ready():
-            self.logger.error("service server [{}] not to become ready"
+            self.logger.error("Service server [{}] not ready"
                               .format(inst_param.text))
         else:
             # fetch Tech data
@@ -530,7 +535,7 @@ class TechUi():
         gran_param = self._gran_param
 
         if not self._srv_sma_mth01_cli.service_is_ready():
-            self.logger.error("service server [{}] not to become ready"
+            self.logger.error("Service server [{}] not ready"
                               .format(inst_param.text))
         else:
             # fetch Tech data
@@ -602,13 +607,19 @@ class TechUi():
 
             self._df_sma_mth01 = df_sma_mth01
 
+    def _on_tech_sma_mth01_details_clicked(self):
+
+        self._sma_mth01_ui.set_data(self._inst_param,
+                                    self._gran_param)
+        self._sma_mth01_ui.show()
+
     def _on_fetch_tech_macd_clicked(self):
 
         inst_param = self._inst_param
         gran_param = self._gran_param
 
         if not self._srv_macd_cli.service_is_ready():
-            self.logger.error("service server [{}] not to become ready"
+            self.logger.error("Service server [{}] not ready"
                               .format(inst_param.text))
         else:
             # fetch Tech data
@@ -710,7 +721,7 @@ class TechUi():
         self.logger.debug("----- _on_sma_selection_changed -----")
         if not selected.isEmpty():
             if not self._srv_chart_cli.service_is_ready():
-                self.logger.error("service server [{}] not to become ready"
+                self.logger.error("Service server [{}] not ready"
                                   .format(self._inst_param.text))
             else:
                 model_index = selected.at(0).indexes()[0]
@@ -733,7 +744,7 @@ class TechUi():
         self.logger.debug("----- _on_sma_mth01_selection_changed -----")
         if not selected.isEmpty():
             if not self._srv_chart_cli.service_is_ready():
-                self.logger.error("service server [{}] not to become ready"
+                self.logger.error("Service server [{}] not ready"
                                   .format(self._inst_param.text))
             else:
                 model_index = selected.at(0).indexes()[0]
@@ -756,7 +767,7 @@ class TechUi():
         self.logger.debug("----- _on_macd_gdc_selection_changed -----")
         if not selected.isEmpty():
             if not self._srv_chart_cli.service_is_ready():
-                self.logger.error("service server [{}] not to become ready"
+                self.logger.error("Service server [{}] not ready"
                                   .format(self._inst_param.text))
             else:
                 model_index = selected.at(0).indexes()[0]
@@ -779,7 +790,7 @@ class TechUi():
         self.logger.debug("----- _on_macd_zlc_selection_changed -----")
         if not selected.isEmpty():
             if not self._srv_chart_cli.service_is_ready():
-                self.logger.error("service server [{}] not to become ready"
+                self.logger.error("Service server [{}] not ready"
                                   .format(self._inst_param.text))
             else:
                 model_index = selected.at(0).indexes()[0]

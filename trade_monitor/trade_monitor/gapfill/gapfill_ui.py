@@ -157,7 +157,7 @@ class GapFillUi():
 
         srv_cli = self._srv_cli_list[inst_idx]
         if not srv_cli.service_is_ready():
-            self._logger.error("service server [{}] not to become ready"
+            self._logger.error("Service server [{}] not ready"
                                .format(inst_param.text))
         else:
 

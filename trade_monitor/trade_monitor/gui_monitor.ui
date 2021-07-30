@@ -664,7 +664,7 @@
                      </spacer>
                     </item>
                     <item>
-                     <widget class="QPushButton" name="pushButton_tech_csv_out_2">
+                     <widget class="QPushButton" name="pushButton_tech_sma_mth01_details">
                       <property name="sizePolicy">
                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                         <horstretch>0</horstretch>
