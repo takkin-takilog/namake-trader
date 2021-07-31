@@ -177,6 +177,19 @@ class ColSmaMth01(Enum):
         return [m.value for m in cls]
 
 
+class ColSmaMth01Bt(Enum):
+    """
+    Pandas SMA method01 back test dataframe column name.
+    """
+    EN_DATETIME = "en_datetime"
+    EX_DATETIME = "ex_datetime"
+    PROFIT = "profit"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
 class ColSma(Enum):
     """
     Pandas SMA(Simple Moving Average) dataframe column name.

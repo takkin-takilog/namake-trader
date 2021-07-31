@@ -1,6 +1,9 @@
 from enum import Enum, IntEnum, auto
 import pandas as pd
+import datetime as dt
 from rclpy.action import ActionClient
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.callback_groups import ReentrantCallbackGroup
 from action_msgs.msg import GoalStatus
 from PySide2.QtWidgets import QHeaderView
 from PySide2.QtWidgets import QTableWidgetItem
@@ -11,10 +14,12 @@ from trade_monitor import ros_common as ros_com
 from trade_monitor import utility as utl
 from trade_monitor.widget_base import StatusProgressBar
 from trade_monitor.constant import FMT_QT_DATE_YMD
+from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD, FMT_DISP_YMDHMS
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.utility import DateRangeManager
 from trade_monitor.tech.constant import VALID_INST_LIST
 from trade_monitor.tech.constant import VALID_GRAN_LIST
+from trade_monitor.tech.constant import ColSmaMth01Bt
 from trade_monitor.tech.widget import BaseUi
 
 
@@ -46,6 +51,8 @@ class SmaMethod01Ui(BaseUi):
 
         callback = self._on_analysis_start_clicked
         ui.pushButton_analysis_start.clicked.connect(callback)
+
+        self._sts_bar = StatusProgressBar(ui.statusbar)
 
         self._ui = ui
         self._inst_param = VALID_INST_LIST[0]
@@ -83,7 +90,6 @@ class SmaMethod01Ui(BaseUi):
 
     def _on_analysis_start_clicked(self):
 
-        self._sts_bar = StatusProgressBar(self._ui.statusbar)
         self._sts_bar.set_label_text("Analyzing...")
         self._sts_bar.set_bar_range(0, 100)
 
@@ -97,8 +103,8 @@ class SmaMethod01Ui(BaseUi):
             goal_msg = TechSmaMth01BtAct.Goal()
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
-            goal_msg.take_profit_th = self._ui.spinBox_TakeProfitTh.value()
-            goal_msg.stop_loss_th = self._ui.spinBox_StopLossTh.value()
+            goal_msg.take_profit_th_pips = self._ui.spinBox_TakeProfitTh.value()
+            goal_msg.stop_loss_th_pips = self._ui.spinBox_StopLossTh.value()
 
             feedback_callback = self._feedback_callback
             self._future = self._act_cli.send_goal_async(goal_msg,
@@ -114,6 +120,7 @@ class SmaMethod01Ui(BaseUi):
             self.logger.debug("goal rejected")
             return
 
+        self._sts_bar.set_bar_value(100)
         self._result_future = send_gol_rsp.get_result_async()
 
         callback = self._get_result_callback
@@ -124,10 +131,30 @@ class SmaMethod01Ui(BaseUi):
         rsp = future.result()
         status = rsp.status
         if status == GoalStatus.STATUS_SUCCEEDED:
-            self.logger.debug("result: {0}".format(rsp.result.test))
+            self.logger.debug("STATUS_SUCCEEDED")
+
+            # ---------- compose Table "SMA Method01" ----------
+            tbl = []
+            for rec in rsp.result.tbl:
+                record = [
+                    dt.datetime.strptime(rec.en_datetime, FMT_YMDHMS),
+                    dt.datetime.strptime(rec.ex_datetime, FMT_YMDHMS),
+                    rec.profit_pips,
+                ]
+                tbl.append(record)
+            df_sma_mth01bt = pd.DataFrame(tbl, columns=ColSmaMth01Bt.to_list())
+            df_sma_mth01bt.set_index(ColSmaMth01Bt.EN_DATETIME.value,
+                                     inplace=True)
+
+            self._df_sma_mth01bt = df_sma_mth01bt
+            self.logger.debug("----- df_sma_mth01bt -----\n{}"
+                              .format(self._df_sma_mth01bt))
 
     def _feedback_callback(self, msg):
-        self._sts_bar.set_bar_value(msg.feedback.progress_rate)
+        self.logger.debug("----- feedback -----")
+        rsp = self._future.result()
+        if rsp.status == GoalStatus.STATUS_EXECUTING:
+            self._sts_bar.set_bar_value(msg.feedback.progress_rate)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

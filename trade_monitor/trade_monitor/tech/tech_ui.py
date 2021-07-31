@@ -568,7 +568,7 @@ class TechUi():
             df_sma_mth01.set_index(ColSmaMth01.EN_DATETIME.value,
                                    inplace=True)
 
-            self.logger.debug("\n  << --- df_sma_mth01 --- >>\n{}".format(df_sma_mth01))
+            # self.logger.debug("\n  << --- df_sma_mth01 --- >>\n{}".format(df_sma_mth01))
 
             # ---------- compose Table "SMA Method01" for TreeView ----------
             if gran_param == GranParam.D:

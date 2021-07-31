@@ -8,6 +8,7 @@ from PySide2.QtUiTools import QUiLoader
 
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from std_msgs.msg import String, Bool
@@ -44,10 +45,11 @@ class GuiMonitor(QMainWindow):
             ui.comboBox_gran_main.addItem(obj.text)
         """
 
+        """
         # QTimer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._on_timeout_1s)
-
+        """
 
         """
         ui.labe_srvcon_status.setAlignment(Qt.AlignCenter)
@@ -191,10 +193,24 @@ def main():
     widget.show()
     widget.init_resize_qchart()
 
-    ros_th = threading.Thread(target=rclpy.spin, args=(widget.node,))
+    # ROS and application loop
+    try:
+        while rclpy.ok():
+            rclpy.spin_once(widget.node, timeout_sec=0.01)
+            app.processEvents()
+    except KeyboardInterrupt:
+        pass
+
+    rclpy.shutdown()
+    sys.exit()
+
+    """
+    executor = SingleThreadedExecutor()
+    ros_th = threading.Thread(target=rclpy.spin, args=(widget.node, executor))
     ros_th.start()
 
     errcd = app.exec_()
     widget.node.destroy_node()
     rclpy.shutdown()
     sys.exit(errcd)
+    """
