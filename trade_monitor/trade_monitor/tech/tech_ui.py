@@ -754,7 +754,7 @@ class TechUi():
                 if self._gran_param == GranParam.D:
                     fmt = FMT_DATE_YMD
                     dt_ = dt.datetime.strptime(dt_str, fmt)
-                    lvl = self._df_sma.index.get_level_values(ColSmaMth01.BASE_DATETIME.value)
+                    lvl = self._df_sma.index.get_level_values(ColSmaMth01.EN_DATETIME.value)
                     idx_dt = lvl[dt_ < lvl][0]
                 else:
                     fmt = FMT_DISP_YMDHMS
