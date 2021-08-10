@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>737</width>
+    <width>938</width>
     <height>732</height>
    </rect>
   </property>
@@ -227,7 +227,10 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_tech_csv_out">
+         <widget class="QPushButton" name="pushButton_csv_out">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>CSV保存</string>
           </property>
@@ -250,12 +253,8 @@
       </item>
      </layout>
     </item>
-    <item row="0" column="1">
-     <layout class="QVBoxLayout" name="verticalLayout_5">
-      <item>
-       <widget class="QTreeView" name="treeView"/>
-      </item>
-     </layout>
+    <item row="0" column="1" colspan="2">
+     <widget class="QTreeView" name="treeView"/>
     </item>
     <item row="1" column="1">
      <layout class="QGridLayout" name="gridLayout">
@@ -297,7 +296,7 @@
        </spacer>
       </item>
       <item row="1" column="0" colspan="2">
-       <widget class="QWidget" name="widget_ChartView" native="true">
+       <widget class="QWidget" name="widget_chartView" native="true">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -314,6 +313,22 @@
       </item>
      </layout>
     </item>
+    <item row="1" column="2">
+     <widget class="QWidget" name="widget_graph" native="true">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(255, 255, 255);</string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -321,7 +336,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>737</width>
+     <width>938</width>
      <height>28</height>
     </rect>
    </property>

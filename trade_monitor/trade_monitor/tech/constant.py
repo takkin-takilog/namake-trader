@@ -190,6 +190,7 @@ class ColSmaMth01Bt(Enum):
     Pandas SMA method01 back test dataframe column name.
     """
     EN_DATETIME = "en_datetime"
+    EN_PRICE = "en_price"
     EX_DATETIME = "ex_datetime"
     CROSS_TYP = "cross_type"
     CO_BS_H = "co_base_h"

@@ -1,3 +1,4 @@
+import os
 import sys
 import pandas as pd
 import datetime as dt
@@ -6,6 +7,7 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.callback_groups import ReentrantCallbackGroup
 from action_msgs.msg import GoalStatus
 from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QToolButton, QFileDialog, QMessageBox
 from trade_apl_msgs.action import TechSmaMth01BtAct
 from trade_apl_msgs.srv import TechChartMntSrv
 from trade_monitor import ros_common as ros_com
@@ -64,6 +66,9 @@ class SmaMethod01Ui(BaseUi):
         callback = self._on_analysis_start_clicked
         ui.pushButton_analysis_start.clicked.connect(callback)
 
+        callback = self._on_csv_out_clicked
+        ui.pushButton_csv_out.clicked.connect(callback)
+
         self._sts_bar = StatusProgressBar(ui.statusbar)
 
         # --------------- Tree View ---------------
@@ -79,7 +84,7 @@ class SmaMethod01Ui(BaseUi):
         header.sectionClicked.connect(callback)
 
         # --------------- Candlestick Chart View ---------------
-        chartview = CandlestickChartView(ui.widget_ChartView)
+        chartview = CandlestickChartView(ui.widget_chartView)
 
         self._ui = ui
         self._inst_param = VALID_INST_LIST[0]
@@ -177,6 +182,7 @@ class SmaMethod01Ui(BaseUi):
             for rec in rsp.result.tbl:
                 record = [
                     dt.datetime.strptime(rec.en_datetime, FMT_YMDHMS),
+                    rec.en_price,
                     dt.datetime.strptime(rec.ex_datetime, FMT_YMDHMS),
                     rec.cross_type,
                     rec.co_bs_h,
@@ -206,6 +212,7 @@ class SmaMethod01Ui(BaseUi):
             for idx, row in df_bt.iterrows():
                 record = [
                     idx.strftime(fmt),
+                    utl.roundf(row[ColSmaMth01Bt.EN_PRICE.value], digit=self._inst_param.digit),
                     row[ColSmaMth01Bt.EX_DATETIME.value].strftime(fmt),
                     SMA_MTH01_CRS_TYP_DICT[int(row[ColSmaMth01Bt.CROSS_TYP.value])],
                     row[ColSmaMth01Bt.CO_BS_H.value],
@@ -229,6 +236,27 @@ class SmaMethod01Ui(BaseUi):
             selmdl = self._pdtreeview.selectionModel()
             callback = self._on_selection_changed
             selmdl.selectionChanged.connect(callback)
+
+            self._draw_graph()
+            self._ui.widget_graph.setEnabled(True)
+            self._ui.pushButton_csv_out.setEnabled(True)
+
+    def _draw_graph(self):
+        # is_selected = self._pdtreeview.is_selected()
+        # df = self._pdtreeview.get_dataframe(is_selected=is_selected)
+        df = self._pdtreeview.get_dataframe()
+
+        series_cumsum = df[ColSmaMth01Bt.PROFIT.value].cumsum()
+        series_cumsum.rename("profit_cumsum", inplace=True)
+
+        df = pd.concat([df, series_cumsum], axis=1)
+
+        self.logger.debug("\n{}".format(df))
+        min_ = series_cumsum.min()
+        end = series_cumsum[-1]
+        self.logger.debug("series_cumsum_min:{}".format(min_))
+        self.logger.debug("series_cumsum_tail:{}".format(end))
+        self.logger.debug("real_profit:{}".format(end - min_))
 
     def _feedback_callback(self, msg):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -258,10 +286,9 @@ class SmaMethod01Ui(BaseUi):
 
                 self._df_ohlc = self._fech_ohlc(idx_dt)
                 self._draw_chart(self._spread_idx, target_dt_str)
-
                 self._target_dt_str = target_dt_str
 
-                self._ui.widget_ChartView.setEnabled(True)
+                self._ui.widget_chartView.setEnabled(True)
 
     def _fech_ohlc(self, idx_dt: dt.datetime):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -269,6 +296,7 @@ class SmaMethod01Ui(BaseUi):
         # fetch Tech chart data
         req = TechChartMntSrv.Request()
         req.datetime = idx_dt.strftime(FMT_YMDHMS)
+        req.half_num_of_candles = 20
         rsp = ros_com.call_servive_sync(self._srv_chart_cli, req)
 
         tbl = []
@@ -356,6 +384,7 @@ class SmaMethod01Ui(BaseUi):
     def _on_sma_header_sectionClicked(self, logical_index):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._pdtreeview.show_header_menu(logical_index)
+        self._draw_graph()
 
     def _comboBox_spread_changed(self, idx):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -364,6 +393,16 @@ class SmaMethod01Ui(BaseUi):
             self._draw_chart(idx, self._target_dt_str)
 
         self._spread_idx = idx
+
+    def _on_csv_out_clicked(self):
+
+        file_name, filter = QFileDialog.getSaveFileName(caption="Save file",
+                                                        dir=os.path.expanduser("~"),
+                                                        filter="*.csv")
+
+        if (file_name != ""):
+            df = self._pdtreeview.get_dataframe()
+            df.to_csv(file_name + ".csv")
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

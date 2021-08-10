@@ -826,6 +826,7 @@ class TechUi():
         # fetch Tech chart data
         req = TechChartMntSrv.Request()
         req.datetime = idx_dt.strftime(FMT_YMDHMS)
+        req.half_num_of_candles = 50
         rsp = ros_com.call_servive_sync(self._srv_chart_cli, req)
 
         # ---------- compose Table "OHLC" ----------
