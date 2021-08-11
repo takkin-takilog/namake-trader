@@ -251,7 +251,7 @@ class SmaMethod01Ui(BaseUi):
 
         df = pd.concat([df, series_cumsum], axis=1)
 
-        self.logger.debug("\n{}".format(df))
+        # self.logger.debug("\n{}".format(df))
         min_ = series_cumsum.min()
         end = series_cumsum[-1]
         self.logger.debug("series_cumsum_min:{}".format(min_))
