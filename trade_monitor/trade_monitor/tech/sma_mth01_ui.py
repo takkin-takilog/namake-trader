@@ -69,6 +69,17 @@ class SmaMethod01Ui(BaseUi):
         callback = self._on_csv_out_clicked
         ui.pushButton_csv_out.clicked.connect(callback)
 
+        callback = self._on_spinBox_takeProfitThStr_valueChanged
+        ui.spinBox_takeProfitThStr.valueChanged.connect(callback)
+        callback = self._on_spinBox_takeProfitThEnd_valueChanged
+        ui.spinBox_takeProfitThEnd.valueChanged.connect(callback)
+
+        callback = self._on_spinBox_stopLossThStr_valueChanged
+        ui.spinBox_stopLossThStr.valueChanged.connect(callback)
+        callback = self._on_spinBox_stopLossThEnd_valueChanged
+        ui.spinBox_stopLossThEnd.valueChanged.connect(callback)
+
+
         self._sts_bar = StatusProgressBar(ui.statusbar)
 
         # --------------- Tree View ---------------
@@ -132,9 +143,6 @@ class SmaMethod01Ui(BaseUi):
 
     def _on_analysis_start_clicked(self):
 
-        self._sts_bar.set_label_text("Analyzing...")
-        self._sts_bar.set_bar_range(0, 100)
-
         inst_param = self._inst_param
         gran_param = self._gran_param
 
@@ -142,11 +150,19 @@ class SmaMethod01Ui(BaseUi):
             self.logger.error("Action server [{}][{}] not ready"
                               .format(inst_param.text, gran_param.text))
         else:
+            self._sts_bar.set_label_text("Stanby...")
+            self._sts_bar.set_bar_range(0, 100)
+            self._sts_bar.set_bar_value(0)
+
             goal_msg = TechSmaMth01BtAct.Goal()
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
-            goal_msg.take_profit_th_pips = self._ui.spinBox_TakeProfitTh.value()
-            goal_msg.stop_loss_th_pips = self._ui.spinBox_StopLossTh.value()
+            goal_msg.take_profit_th_start_pips = self._ui.spinBox_takeProfitThStr.value()
+            goal_msg.take_profit_th_end_pips = self._ui.spinBox_takeProfitThEnd.value()
+            goal_msg.stop_loss_th_start_pips = self._ui.spinBox_stopLossThStr.value()
+            goal_msg.stop_loss_th_end_pips = self._ui.spinBox_stopLossThEnd.value()
+            goal_msg.decimation = self._ui.spinBox_decimation.value()
+            goal_msg.valid_th_pips = self._ui.spinBox_valid_th.value()
 
             feedback_callback = self._feedback_callback
             self._future = self._act_cli.send_goal_async(goal_msg,
@@ -262,6 +278,9 @@ class SmaMethod01Ui(BaseUi):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         rsp = self._future.result()
         if rsp.status == GoalStatus.STATUS_EXECUTING:
+            self._sts_bar.set_label_text("Analyzing...[{}/{}]"
+                                         .format(msg.feedback.current_num,
+                                                 msg.feedback.total_num))
             self._sts_bar.set_bar_value(msg.feedback.progress_rate)
 
     def _on_selection_changed(self, selected, _):
@@ -403,6 +422,18 @@ class SmaMethod01Ui(BaseUi):
         if (file_name != ""):
             df = self._pdtreeview.get_dataframe()
             df.to_csv(file_name + ".csv")
+
+    def _on_spinBox_takeProfitThStr_valueChanged(self, value: int):
+        self._ui.spinBox_takeProfitThEnd.setMinimum(value)
+
+    def _on_spinBox_takeProfitThEnd_valueChanged(self, value: int):
+        self._ui.spinBox_takeProfitThStr.setMaximum(value)
+
+    def _on_spinBox_stopLossThStr_valueChanged(self, value: int):
+        self._ui.spinBox_stopLossThEnd.setMinimum(value)
+
+    def _on_spinBox_stopLossThEnd_valueChanged(self, value: int):
+        self._ui.spinBox_stopLossThStr.setMaximum(value)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
