@@ -69,17 +69,6 @@ class SmaMethod01Ui(BaseUi):
         callback = self._on_csv_out_clicked
         ui.pushButton_csv_out.clicked.connect(callback)
 
-        callback = self._on_spinBox_takeProfitThStr_valueChanged
-        ui.spinBox_takeProfitThStr.valueChanged.connect(callback)
-        callback = self._on_spinBox_takeProfitThEnd_valueChanged
-        ui.spinBox_takeProfitThEnd.valueChanged.connect(callback)
-
-        callback = self._on_spinBox_stopLossThStr_valueChanged
-        ui.spinBox_stopLossThStr.valueChanged.connect(callback)
-        callback = self._on_spinBox_stopLossThEnd_valueChanged
-        ui.spinBox_stopLossThEnd.valueChanged.connect(callback)
-
-
         self._sts_bar = StatusProgressBar(ui.statusbar)
 
         # --------------- Tree View ---------------
@@ -157,12 +146,27 @@ class SmaMethod01Ui(BaseUi):
             goal_msg = TechSmaMth01BtAct.Goal()
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
+            goal_msg.sma_l_th_start = self._ui.spinBox_SmaLngThStr.value()
+            goal_msg.sma_l_th_end = self._ui.spinBox_SmaLngThEnd.value()
             goal_msg.take_profit_th_start_pips = self._ui.spinBox_takeProfitThStr.value()
             goal_msg.take_profit_th_end_pips = self._ui.spinBox_takeProfitThEnd.value()
             goal_msg.stop_loss_th_start_pips = self._ui.spinBox_stopLossThStr.value()
             goal_msg.stop_loss_th_end_pips = self._ui.spinBox_stopLossThEnd.value()
             goal_msg.decimation = self._ui.spinBox_decimation.value()
             goal_msg.valid_th_pips = self._ui.spinBox_valid_th.value()
+
+            sma_l_rng = range(goal_msg.sma_l_th_start,
+                              goal_msg.sma_l_th_end + 1,
+                              goal_msg.decimation)
+            tp_th_pips_rng = range(goal_msg.take_profit_th_start_pips,
+                                   goal_msg.take_profit_th_end_pips + 1,
+                                   goal_msg.decimation)
+            sl_th_pips_rng = range(goal_msg.stop_loss_th_start_pips,
+                                   goal_msg.stop_loss_th_end_pips + 1,
+                                   goal_msg.decimation)
+
+            self._sma_l_len_max = len(sma_l_rng)
+            self._tpsl_len_max = len(tp_th_pips_rng) * len(sl_th_pips_rng)
 
             feedback_callback = self._feedback_callback
             self._future = self._act_cli.send_goal_async(goal_msg,
@@ -197,26 +201,24 @@ class SmaMethod01Ui(BaseUi):
             tbl = []
             for rec in rsp.result.tbl:
                 record = [
+                    rec.sma_l,
+                    rec.take_profit_th,
+                    rec.stop_loss_th,
                     dt.datetime.strptime(rec.en_datetime, FMT_YMDHMS),
                     rec.en_price,
                     dt.datetime.strptime(rec.ex_datetime, FMT_YMDHMS),
                     rec.cross_type,
-                    rec.co_bs_h,
-                    rec.co_bs_w,
-                    rec.co_bs_hhw,
-                    rec.co_tp_h,
-                    rec.co_tp_w,
-                    rec.co_tp_hhw,
-                    rec.co_sma_h,
-                    rec.co_sma_w,
                     rec.co_sma_hhw,
-                    rec.area,
-                    rec.profit_pips,
+                    rec.profit_pips
                 ]
                 tbl.append(record)
             df_bt = pd.DataFrame(tbl, columns=ColSmaMth01Bt.to_list())
-            df_bt.set_index(ColSmaMth01Bt.EN_DATETIME.value,
-                            inplace=True)
+            idx_columns = [
+                ColSmaMth01Bt.SMA_L.value,
+                ColSmaMth01Bt.TAKE_PROFIT.value,
+                ColSmaMth01Bt.STOP_LOSS.value
+            ]
+            df_bt.set_index(idx_columns, inplace=True)
             self._df_bt = df_bt
 
             # ---------- compose Table "SMA Method01 BackTest" for TreeView ----------
@@ -225,35 +227,28 @@ class SmaMethod01Ui(BaseUi):
             else:
                 fmt = FMT_DISP_YMDHMS
             tbl = []
-            for idx, row in df_bt.iterrows():
+            for idxs, row in df_bt.iterrows():
                 record = [
-                    idx.strftime(fmt),
+                    idxs[0],
+                    idxs[1],
+                    idxs[2],
+                    row[ColSmaMth01Bt.EN_DATETIME.value].strftime(fmt),
                     utl.roundf(row[ColSmaMth01Bt.EN_PRICE.value], digit=self._inst_param.digit),
                     row[ColSmaMth01Bt.EX_DATETIME.value].strftime(fmt),
                     SMA_MTH01_CRS_TYP_DICT[int(row[ColSmaMth01Bt.CROSS_TYP.value])],
-                    row[ColSmaMth01Bt.CO_BS_H.value],
-                    row[ColSmaMth01Bt.CO_BS_W.value],
-                    row[ColSmaMth01Bt.CO_BS_HHW.value],
-                    row[ColSmaMth01Bt.CO_TP_H.value],
-                    row[ColSmaMth01Bt.CO_TP_W.value],
-                    row[ColSmaMth01Bt.CO_TP_HHW.value],
-                    row[ColSmaMth01Bt.CO_SMA_H.value],
-                    row[ColSmaMth01Bt.CO_SMA_W.value],
                     row[ColSmaMth01Bt.CO_SMA_HHW.value],
-                    row[ColSmaMth01Bt.AREA.value],
-                    row[ColSmaMth01Bt.PROFIT.value],
+                    row[ColSmaMth01Bt.PROFIT.value]
                 ]
                 tbl.append(record)
             df = pd.DataFrame(tbl, columns=ColSmaMth01Bt.to_list())
-            index = ColSmaMth01Bt.EN_DATETIME.value
-            df.set_index(index, inplace=True)
+            df.set_index(idx_columns, inplace=True)
 
             self._pdtreeview.set_dataframe(df)
             selmdl = self._pdtreeview.selectionModel()
             callback = self._on_selection_changed
             selmdl.selectionChanged.connect(callback)
 
-            self._draw_graph()
+            # self._draw_graph()
             self._ui.widget_graph.setEnabled(True)
             self._ui.pushButton_csv_out.setEnabled(True)
 
@@ -278,9 +273,11 @@ class SmaMethod01Ui(BaseUi):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         rsp = self._future.result()
         if rsp.status == GoalStatus.STATUS_EXECUTING:
-            self._sts_bar.set_label_text("Analyzing...[{}/{}]"
-                                         .format(msg.feedback.current_num,
-                                                 msg.feedback.total_num))
+            self._sts_bar.set_label_text("Analyzing...[{}/{}][{}/{}]"
+                                         .format(msg.feedback.sma_l_pos,
+                                                 self._sma_l_len_max,
+                                                 msg.feedback.tpsl_pos,
+                                                 self._tpsl_len_max))
             self._sts_bar.set_bar_value(msg.feedback.progress_rate)
 
     def _on_selection_changed(self, selected, _):
@@ -422,18 +419,6 @@ class SmaMethod01Ui(BaseUi):
         if (file_name != ""):
             df = self._pdtreeview.get_dataframe()
             df.to_csv(file_name + ".csv")
-
-    def _on_spinBox_takeProfitThStr_valueChanged(self, value: int):
-        self._ui.spinBox_takeProfitThEnd.setMinimum(value)
-
-    def _on_spinBox_takeProfitThEnd_valueChanged(self, value: int):
-        self._ui.spinBox_takeProfitThStr.setMaximum(value)
-
-    def _on_spinBox_stopLossThStr_valueChanged(self, value: int):
-        self._ui.spinBox_stopLossThEnd.setMinimum(value)
-
-    def _on_spinBox_stopLossThEnd_valueChanged(self, value: int):
-        self._ui.spinBox_stopLossThStr.setMaximum(value)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
