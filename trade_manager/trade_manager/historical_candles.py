@@ -12,6 +12,7 @@ import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from rclpy.task import Future
 import trade_manager.utility as utl
@@ -19,7 +20,7 @@ from trade_manager.utility import RosParam
 from trade_manager.constant import Transitions as Tr
 from trade_manager.constant import WeekDay
 from trade_manager.constant import FMT_YMDHMS, FMT_TIME_HMS
-from trade_manager.constant import GranParam
+from trade_manager.constant import GranParam, InstParam
 from trade_manager.constant import CandleColumnNames as ColName
 from trade_manager.constant import INST_DICT, GRAN_DICT
 from trade_manager.constant import MIN_TIME, MAX_TIME
@@ -29,6 +30,7 @@ from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
 from trade_manager_msgs.srv import CandlesDataSrv
 from trade_manager_msgs.msg import Candle
+from trade_manager_msgs.msg import LatestData
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -277,6 +279,16 @@ class CandlesData():
             self.logger.error("  future result is False")
             raise InitializerErrorException("\"CandlesData\" initialize failed.")
 
+        # Declare publisher and subscriber
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
+        inst_name = InstParam.get_member_by_msgid(self._inst_id).namespace
+        gran_name = GranParam.get_member_by_msgid(self._gran_id).namespace
+        TPCNM_LATEST_DATA = inst_name + "_" + gran_name + "_latest_data"
+        self._pub = node.create_publisher(LatestData,
+                                          TPCNM_LATEST_DATA,
+                                          qos_profile)
+
         self._on_entry_waiting()
 
     @property
@@ -294,7 +306,9 @@ class CandlesData():
     def _get_latest_datetime_in_dataframe(self) -> dt.datetime:
         return self._df_comp.index[-1].to_pydatetime()
 
-    def _get_next_update_datetime(self, latest_datetime: dt.datetime):
+    def _get_next_update_datetime(self,
+                                  latest_datetime: dt.datetime
+                                  ) -> dt.datetime:
 
         next_update_dt = latest_datetime + self._GRAN_INTERVAL
 
@@ -333,6 +347,23 @@ class CandlesData():
             self.logger.debug("========== DF Update OK! ==========")
             latest_dt = self._get_latest_datetime_in_dataframe()
             self._next_updatetime = self._get_next_update_datetime(latest_dt)
+            latest_sr = self._df_comp.iloc[-1]
+            msg = LatestData()
+            msg.candle.ask_o = latest_sr[ColName.ASK_OP.value]
+            msg.candle.ask_h = latest_sr[ColName.ASK_HI.value]
+            msg.candle.ask_l = latest_sr[ColName.ASK_LO.value]
+            msg.candle.ask_c = latest_sr[ColName.ASK_CL.value]
+            msg.candle.bid_o = latest_sr[ColName.BID_OP.value]
+            msg.candle.bid_h = latest_sr[ColName.BID_HI.value]
+            msg.candle.bid_l = latest_sr[ColName.BID_LO.value]
+            msg.candle.bid_c = latest_sr[ColName.BID_CL.value]
+            msg.candle.mid_o = latest_sr[ColName.MID_OP.value]
+            msg.candle.mid_h = latest_sr[ColName.MID_HI.value]
+            msg.candle.mid_l = latest_sr[ColName.MID_LO.value]
+            msg.candle.mid_c = latest_sr[ColName.MID_CL.value]
+            msg.candle.time = latest_dt.strftime(FMT_YMDHMS)
+            msg.next_update_time = self._next_updatetime.strftime(FMT_YMDHMS)
+            self._pub.publish(msg)
         else:
             self.logger.debug("========== DF Update NG! ==========")
             dt_now = dt_now.replace(second=0, microsecond=0)

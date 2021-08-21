@@ -60,3 +60,19 @@ def get_market_close_time(dt_: dt.date) -> dt.time:
         close_time = dt.time(7, 0)
 
     return close_time
+
+
+def limit(val, min_val, max_val):
+
+    if val < min_val:
+        ret_val = min_val
+    elif max_val < val:
+        ret_val = max_val
+    else:
+        ret_val = val
+
+    return ret_val
+
+
+def roundi(val: float) -> int:
+    return int((val * 2 + 1) // 2)
