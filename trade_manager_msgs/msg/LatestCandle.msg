@@ -1,4 +1,4 @@
-# The latest candles data.
+# The latest candle data.
 
 # The list of candle message.
 trade_manager_msgs/Candle candle

@@ -30,7 +30,7 @@ from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
 from trade_manager_msgs.srv import CandlesDataSrv
 from trade_manager_msgs.msg import Candle
-from trade_manager_msgs.msg import LatestData
+from trade_manager_msgs.msg import LatestCandle
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -284,9 +284,9 @@ class CandlesData():
                                  reliability=QoSReliabilityPolicy.RELIABLE)
         inst_name = InstParam.get_member_by_msgid(self._inst_id).namespace
         gran_name = GranParam.get_member_by_msgid(self._gran_id).namespace
-        TPCNM_LATEST_DATA = inst_name + "_" + gran_name + "_latest_data"
-        self._pub = node.create_publisher(LatestData,
-                                          TPCNM_LATEST_DATA,
+        TPCNM_LATEST_CANDLE = inst_name + "_" + gran_name + "_latest_candle"
+        self._pub = node.create_publisher(LatestCandle,
+                                          TPCNM_LATEST_CANDLE,
                                           qos_profile)
 
         self._on_entry_waiting()
@@ -348,7 +348,7 @@ class CandlesData():
             latest_dt = self._get_latest_datetime_in_dataframe()
             self._next_updatetime = self._get_next_update_datetime(latest_dt)
             latest_sr = self._df_comp.iloc[-1]
-            msg = LatestData()
+            msg = LatestCandle()
             msg.candle.ask_o = latest_sr[ColName.ASK_OP.value]
             msg.candle.ask_h = latest_sr[ColName.ASK_HI.value]
             msg.candle.ask_l = latest_sr[ColName.ASK_LO.value]
