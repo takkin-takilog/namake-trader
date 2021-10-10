@@ -1,5 +1,6 @@
 import os
 import sys
+import gc
 import pandas as pd
 import datetime as dt
 from rclpy.action import ActionClient
@@ -168,6 +169,7 @@ class SmaMethod01Ui(BaseUi):
             self._sma_l_len_max = len(sma_l_rng)
             self._tpsl_len_max = len(tp_th_pips_rng) * len(sl_th_pips_rng)
 
+            self._sma_l_pos = 0
             feedback_callback = self._feedback_callback
             self._future = self._act_cli.send_goal_async(goal_msg,
                                                          feedback_callback)
@@ -279,6 +281,10 @@ class SmaMethod01Ui(BaseUi):
                                                  msg.feedback.tpsl_pos,
                                                  self._tpsl_len_max))
             self._sts_bar.set_bar_value(msg.feedback.progress_rate)
+
+            if self._sma_l_pos != msg.feedback.sma_l_pos:
+                gc.collect()
+                self._sma_l_pos = msg.feedback.sma_l_pos
 
     def _on_selection_changed(self, selected, _):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
