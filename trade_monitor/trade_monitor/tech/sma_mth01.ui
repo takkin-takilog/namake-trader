@@ -117,7 +117,7 @@
             <number>999</number>
            </property>
            <property name="value">
-            <number>73</number>
+            <number>60</number>
            </property>
           </widget>
          </item>
@@ -136,7 +136,7 @@
             <number>999</number>
            </property>
            <property name="value">
-            <number>71</number>
+            <number>60</number>
            </property>
           </widget>
          </item>
@@ -178,7 +178,7 @@
             <number>999</number>
            </property>
            <property name="value">
-            <number>12</number>
+            <number>30</number>
            </property>
           </widget>
          </item>
@@ -197,7 +197,7 @@
             <number>999</number>
            </property>
            <property name="value">
-            <number>10</number>
+            <number>30</number>
            </property>
           </widget>
          </item>
@@ -239,7 +239,7 @@
             <number>999</number>
            </property>
            <property name="value">
-            <number>12</number>
+            <number>30</number>
            </property>
           </widget>
          </item>
@@ -258,7 +258,7 @@
             <number>999</number>
            </property>
            <property name="value">
-            <number>10</number>
+            <number>30</number>
            </property>
           </widget>
          </item>
