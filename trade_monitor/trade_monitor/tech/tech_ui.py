@@ -10,7 +10,7 @@ from PySide2.QtWidgets import QCheckBox, QGroupBox, QVBoxLayout
 from PySide2.QtWidgets import QMenu, QWidgetAction
 from PySide2.QtWidgets import QToolButton, QFileDialog, QMessageBox
 from trade_apl_msgs.srv import TechSmaMntSrv
-from trade_apl_msgs.srv import TechSmaMth01MntSrv
+# from trade_apl_msgs.srv import TechSmaMth01MntSrv
 from trade_apl_msgs.srv import TechMacdMntSrv
 from trade_apl_msgs.srv import TechChartMntSrv
 from trade_monitor.widget_base import PandasTreeView
@@ -27,7 +27,7 @@ from trade_monitor.tech.constant import ColSmaMth01
 from trade_monitor.tech.constant import ColMacdGdc, ColMacdZlc
 from trade_monitor.tech.constant import OsciTyp
 from trade_monitor.tech.constant import SMA_CRS_TYP_DICT, SMA_CRS_LVL_DICT
-from trade_monitor.tech.constant import SMA_MTH01_CRS_TYP_DICT
+# from trade_monitor.tech.constant import SMA_MTH01_CRS_TYP_DICT
 from trade_monitor.tech.constant import MACD_GDC_SIG_TYP_DICT, MACD_GDC_EXIT_DICT
 from trade_monitor.tech.constant import MACD_ZLC_SIG_TYP_DICT, MACD_ZLC_EXIT_DICT
 from trade_monitor.tech.widget import CandlestickChartView
@@ -86,7 +86,7 @@ class TechUi():
         callback = self._on_csv_out_clicked
         ui.pushButton_tech_csv_out.clicked.connect(callback)
 
-        callback = self._on_tech_sma_mth01_details_clicked
+        callback = self._on_tech_sma01_details_clicked
         ui.pushButton_tech_sma_mth01_details.clicked.connect(callback)
 
         # --------------- Tree View ---------------
@@ -294,7 +294,7 @@ class TechUi():
         self._inst_param = VALID_INST_LIST[0]
         self._gran_param = VALID_GRAN_LIST[0]
         self._target_datetime = None
-        self._df_sma_mth01 = pd.DataFrame()
+        # self._df_sma_mth01 = pd.DataFrame()
 
         self._init_ros_service()
 
@@ -406,10 +406,12 @@ class TechUi():
         self._srv_sma_cli = ros_com.get_node().create_client(srv_type, fullname)
 
         # Create service client "tech_sma_method01_monitor"
+        """
         srv_type = TechSmaMth01MntSrv
         srv_name = "tech_sma_method01_monitor"
         fullname = ns + srv_name
         self._srv_sma_mth01_cli = ros_com.get_node().create_client(srv_type, fullname)
+        """
 
         # Create service client "tech_macd_gdc_monitor"
         srv_type = TechMacdMntSrv
@@ -431,7 +433,8 @@ class TechUi():
             if sub_tab_name == "cross":
                 self._on_fetch_tech_sma_clicked()
             elif sub_tab_name == "method1":
-                self._on_fetch_tech_sma_mth01_clicked()
+                pass
+                # self._on_fetch_tech_sma_mth01_clicked()
             else:
                 pass
         elif tab_name == "macd":
@@ -457,7 +460,7 @@ class TechUi():
                 self.logger.debug("---------- SMA Cross 01 ----------")
             elif sub_tab_name == "method1":
                 self.logger.debug("---------- SMA Method 01 ----------")
-                self._df_sma_mth01.to_csv(file_name + ".csv")
+                # self._df_sma_mth01.to_csv(file_name + ".csv")
             else:
                 pass
         elif tab_name == "macd":
@@ -529,6 +532,7 @@ class TechUi():
             self.logger.debug("\n  << --- Head --- >>\n{}".format(df_sma))
             """
 
+    """
     def _on_fetch_tech_sma_mth01_clicked(self):
 
         inst_param = self._inst_param
@@ -606,8 +610,9 @@ class TechUi():
             selmdl.selectionChanged.connect(callback)
 
             self._df_sma_mth01 = df_sma_mth01
+    """
 
-    def _on_tech_sma_mth01_details_clicked(self):
+    def _on_tech_sma01_details_clicked(self):
 
         self._sma_mth01_ui.set_data(self._inst_param,
                                     self._gran_param)

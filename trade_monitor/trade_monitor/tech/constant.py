@@ -2,7 +2,7 @@ from enum import Enum, IntEnum, auto
 from dataclasses import dataclass
 from trade_monitor.constant import InstParam, GranParam
 from trade_apl_msgs.msg import TechTblSmaRecMsg as SmaMsg
-from trade_apl_msgs.msg import TechTblSmaMth01RecMsg as SmaMth01Msg
+# from trade_apl_msgs.msg import TechTblSmaMth01RecMsg as SmaMth01Msg
 from trade_apl_msgs.msg import TechTblMacdGdcRecMsg as MacdGdcMsg
 from trade_apl_msgs.msg import TechTblMacdZlcRecMsg as MacdZlcMsg
 
@@ -185,7 +185,7 @@ class ColSmaMth01(Enum):
         return [m.value for m in cls]
 
 
-class ColSmaMth01Bt(Enum):
+class ColSma01Bt(Enum):
     """
     Pandas SMA method01 back test dataframe column name.
     """
@@ -311,10 +311,12 @@ SMA_CRS_LVL_DICT = {
     SmaMsg.CROSS_LVL_MIDSHR: "Mid-Short"
 }
 
+"""
 SMA_MTH01_CRS_TYP_DICT = {
     SmaMth01Msg.CROSS_TYP_UP: "Up",
     SmaMth01Msg.CROSS_TYP_DOWN: "Down"
 }
+"""
 
 MACD_GDC_SIG_TYP_DICT = {
     MacdGdcMsg.CROSS_TYP_UP: "Cross-Up",

@@ -9,7 +9,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from action_msgs.msg import GoalStatus
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QToolButton, QFileDialog, QMessageBox
-from trade_apl_msgs.action import TechSmaMth01BtAct
+from trade_apl_msgs.action import TechSma01BtAct
 from trade_apl_msgs.srv import TechChartMntSrv
 from trade_monitor import ros_common as ros_com
 from trade_monitor import utility as utl
@@ -19,8 +19,8 @@ from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD, FMT_DISP_YMDHMS
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.tech.constant import VALID_INST_LIST
 from trade_monitor.tech.constant import VALID_GRAN_LIST
-from trade_monitor.tech.constant import SMA_MTH01_CRS_TYP_DICT
-from trade_monitor.tech.constant import ColSmaMth01Bt
+# from trade_monitor.tech.constant import SMA_MTH01_CRS_TYP_DICT
+from trade_monitor.tech.constant import ColSma01Bt
 from trade_monitor.tech.constant import ColOhlc, ColTrnd, SpreadTyp
 from trade_monitor.tech.widget import BaseUi
 from trade_monitor.tech.widget import CandlestickSmaChartView as CandlestickChartView
@@ -120,7 +120,7 @@ class SmaMethod01Ui(BaseUi):
 
         # Create action client "TechnicalSmaMethod01BackTest"
         node = ros_com.get_node()
-        act_type = TechSmaMth01BtAct
+        act_type = TechSma01BtAct
         act_name = "tech_sma_method01_backtest"
         fullname = ns + act_name
         self._act_cli = ActionClient(node, act_type, fullname)
@@ -144,7 +144,7 @@ class SmaMethod01Ui(BaseUi):
             self._sts_bar.set_bar_range(0, 100)
             self._sts_bar.set_bar_value(0)
 
-            goal_msg = TechSmaMth01BtAct.Goal()
+            goal_msg = TechSma01BtAct.Goal()
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
             goal_msg.sma_l_th_start = self._ui.spinBox_SmaLngThStr.value()
@@ -200,6 +200,7 @@ class SmaMethod01Ui(BaseUi):
             self.logger.debug("STATUS_SUCCEEDED")
 
             # ---------- compose Table "SMA Method01 BackTest" ----------
+            """
             tbl = []
             for rec in rsp.result.tbl:
                 record = [
@@ -214,11 +215,11 @@ class SmaMethod01Ui(BaseUi):
                     rec.profit_pips
                 ]
                 tbl.append(record)
-            df_bt = pd.DataFrame(tbl, columns=ColSmaMth01Bt.to_list())
+            df_bt = pd.DataFrame(tbl, columns=ColSma01Bt.to_list())
             idx_columns = [
-                ColSmaMth01Bt.SMA_L.value,
-                ColSmaMth01Bt.TAKE_PROFIT.value,
-                ColSmaMth01Bt.STOP_LOSS.value
+                ColSma01Bt.SMA_L.value,
+                ColSma01Bt.TAKE_PROFIT.value,
+                ColSma01Bt.STOP_LOSS.value
             ]
             df_bt.set_index(idx_columns, inplace=True)
             self._df_bt = df_bt
@@ -234,15 +235,15 @@ class SmaMethod01Ui(BaseUi):
                     idxs[0],
                     idxs[1],
                     idxs[2],
-                    row[ColSmaMth01Bt.EN_DATETIME.value].strftime(fmt),
-                    utl.roundf(row[ColSmaMth01Bt.EN_PRICE.value], digit=self._inst_param.digit),
-                    row[ColSmaMth01Bt.EX_DATETIME.value].strftime(fmt),
-                    SMA_MTH01_CRS_TYP_DICT[int(row[ColSmaMth01Bt.CROSS_TYP.value])],
-                    row[ColSmaMth01Bt.CO_SMA_HHW.value],
-                    row[ColSmaMth01Bt.PROFIT.value]
+                    row[ColSma01Bt.EN_DATETIME.value].strftime(fmt),
+                    utl.roundf(row[ColSma01Bt.EN_PRICE.value], digit=self._inst_param.digit),
+                    row[ColSma01Bt.EX_DATETIME.value].strftime(fmt),
+                    SMA_MTH01_CRS_TYP_DICT[int(row[ColSma01Bt.CROSS_TYP.value])],
+                    row[ColSma01Bt.CO_SMA_HHW.value],
+                    row[ColSma01Bt.PROFIT.value]
                 ]
                 tbl.append(record)
-            df = pd.DataFrame(tbl, columns=ColSmaMth01Bt.to_list())
+            df = pd.DataFrame(tbl, columns=ColSma01Bt.to_list())
             df.set_index(idx_columns, inplace=True)
 
             self._pdtreeview.set_dataframe(df)
@@ -253,13 +254,15 @@ class SmaMethod01Ui(BaseUi):
             # self._draw_graph()
             self._ui.widget_graph.setEnabled(True)
             self._ui.pushButton_csv_out.setEnabled(True)
+            """
 
+    """
     def _draw_graph(self):
         # is_selected = self._pdtreeview.is_selected()
         # df = self._pdtreeview.get_dataframe(is_selected=is_selected)
         df = self._pdtreeview.get_dataframe()
 
-        series_cumsum = df[ColSmaMth01Bt.PROFIT.value].cumsum()
+        series_cumsum = df[ColSma01Bt.PROFIT.value].cumsum()
         series_cumsum.rename("profit_cumsum", inplace=True)
 
         df = pd.concat([df, series_cumsum], axis=1)
@@ -270,6 +273,7 @@ class SmaMethod01Ui(BaseUi):
         self.logger.debug("series_cumsum_min:{}".format(min_))
         self.logger.debug("series_cumsum_tail:{}".format(end))
         self.logger.debug("real_profit:{}".format(end - min_))
+    """
 
     def _feedback_callback(self, msg):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -300,7 +304,7 @@ class SmaMethod01Ui(BaseUi):
                 if self._gran_param == GranParam.D:
                     fmt = FMT_DATE_YMD
                     dt_ = dt.datetime.strptime(target_dt_str, fmt)
-                    lvl = self._df_bt.index.get_level_values(ColSmaMth01Bt.EN_DATETIME.value)
+                    lvl = self._df_bt.index.get_level_values(ColSma01Bt.EN_DATETIME.value)
                     idx_dt = lvl[dt_ < lvl][0]
                 else:
                     fmt = FMT_DISP_YMDHMS
@@ -312,6 +316,7 @@ class SmaMethod01Ui(BaseUi):
 
                 self._ui.widget_chartView.setEnabled(True)
 
+    """
     def _fech_ohlc(self, idx_dt: dt.datetime):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
@@ -343,6 +348,7 @@ class SmaMethod01Ui(BaseUi):
         self._min_y = df.min().min()
 
         return df
+    """
 
     def _draw_chart(self,
                     spread_idx: int,
