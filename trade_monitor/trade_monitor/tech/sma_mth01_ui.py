@@ -121,7 +121,7 @@ class SmaMethod01Ui(BaseUi):
         # Create action client "TechnicalSmaMethod01BackTest"
         node = ros_com.get_node()
         act_type = TechSma01BtAct
-        act_name = "tech_sma_method01_backtest"
+        act_name = "tech_sma01_backtest"
         fullname = ns + act_name
         self._act_cli = ActionClient(node, act_type, fullname)
 
