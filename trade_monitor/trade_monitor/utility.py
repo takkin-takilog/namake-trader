@@ -3,7 +3,7 @@ from PySide2.QtCore import Qt, QRectF
 from PySide2.QtCore import QDateTime, QDate, QTime
 from PySide2.QtGui import QImage, QPixmap, QBrush, QIcon, QPainter
 from PySide2.QtGui import QLinearGradient, QColor
-
+from trade_monitor.constant import FMT_YMDHMS, FMT_DISP_YMDHMS
 
 def remove_all_items_of_comboBox(combo_box):
 
@@ -39,6 +39,16 @@ def convert_to_qdatetime(dt_: dt.datetime):
     qd = QDate(dt_.year, dt_.month, dt_.day)
     qt = QTime(dt_.hour, dt_.minute, dt_.second)
     return QDateTime(qd, qt)
+
+
+def convert_ymdhms_fmt_from_disp(ymdhms: str):
+    dt_ = dt.datetime.strptime(ymdhms, FMT_DISP_YMDHMS)
+    return dt_.strftime(FMT_YMDHMS)
+
+
+def convert_ymdhms_fmt_to_disp(ymdhms: str):
+    dt_ = dt.datetime.strptime(ymdhms, FMT_YMDHMS)
+    return dt_.strftime(FMT_DISP_YMDHMS)
 
 
 class GradientManager():

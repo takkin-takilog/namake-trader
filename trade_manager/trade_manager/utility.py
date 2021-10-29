@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import datetime as dt
 import pandas as pd
-from trade_manager.constant import WeekDay
+from trade_manager.constant import SATURDAY, SUNDAY, MONDAY
 
 
 @dataclass
@@ -16,13 +16,13 @@ class RosParam():
 def is_market_close(dt_: dt.datetime) -> bool:
 
     is_close = False
-    if dt_.weekday() == WeekDay.SAT.value:
+    if dt_.weekday() == SATURDAY:
         close_time = get_market_close_time(dt_.date())
         if close_time <= dt_.time():
             is_close = True
-    elif dt_.weekday() == WeekDay.SUN.value:
+    elif dt_.weekday() == SUNDAY:
         is_close = True
-    elif dt_.weekday() == WeekDay.MON.value:
+    elif dt_.weekday() == MONDAY:
         open_time = get_market_open_time(dt_.date())
         if dt_.time() < open_time:
             is_close = True
@@ -60,3 +60,19 @@ def get_market_close_time(dt_: dt.date) -> dt.time:
         close_time = dt.time(7, 0)
 
     return close_time
+
+
+def limit(val, min_val, max_val):
+
+    if val < min_val:
+        ret_val = min_val
+    elif max_val < val:
+        ret_val = max_val
+    else:
+        ret_val = val
+
+    return ret_val
+
+
+def roundi(val: float) -> int:
+    return int((val * 2 + 1) // 2)

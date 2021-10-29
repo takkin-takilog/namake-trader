@@ -8,12 +8,14 @@ from PySide2.QtUiTools import QUiLoader
 
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from std_msgs.msg import String, Bool
 from trade_manager_msgs.srv import CandlesDataSrv
 from trade_monitor.gapfill.gapfill_ui import GapFillUi
 from trade_monitor.ttm.ttm_ui import TtmUi
+from trade_monitor.tech.tech_ui import TechUi
 from trade_monitor.main_ui import MainUi
 from trade_monitor import utility as utl
 # from trade_monitor.constant import INST_MSG_LIST
@@ -43,14 +45,18 @@ class GuiMonitor(QMainWindow):
             ui.comboBox_gran_main.addItem(obj.text)
         """
 
+        """
         # QTimer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._on_timeout_1s)
+        """
 
+        """
         ui.labe_srvcon_status.setAlignment(Qt.AlignCenter)
 
         callback = self._on_srvcon_toggled
         ui.pushButton_srvcon.toggled.connect(callback)
+        """
 
         ui.tabWidget.currentChanged.connect(self._on_tab_changed)
 
@@ -88,6 +94,7 @@ class GuiMonitor(QMainWindow):
         self._main_ui = MainUi(ui)
         self._gapfill_ui = GapFillUi(ui)
         self._ttm_ui = TtmUi(ui)
+        self._tech_ui = TechUi(ui)
 
     def listener_callback(self, msg):
         self.logger.debug("----- ROS Callback!")
@@ -120,6 +127,7 @@ class GuiMonitor(QMainWindow):
 
         return ui
 
+    """
     def _on_srvcon_toggled(self, flag):
 
         if flag is True:
@@ -141,6 +149,7 @@ class GuiMonitor(QMainWindow):
             self._ui.labe_srvcon_status.setStyleSheet(str_)
 
             self.timer.stop()
+    """
 
     def init_resize_qchart(self) -> None:
         self._main_ui.resize_chart_widget()
@@ -161,7 +170,8 @@ class GuiMonitor(QMainWindow):
             pass
 
     def _on_timeout_1s(self) -> None:
-
+        pass
+        """
         if self._ui.pushButton_srvcon.isChecked():
             self.logger.debug("publish start")
         else:
@@ -170,6 +180,7 @@ class GuiMonitor(QMainWindow):
         msg = Bool()
         msg.data = True
         self._pub_alive.publish(msg)
+        """
 
 
 def main():
@@ -182,10 +193,24 @@ def main():
     widget.show()
     widget.init_resize_qchart()
 
-    ros_th = threading.Thread(target=rclpy.spin, args=(widget.node,))
+    # ROS and application loop
+    try:
+        while rclpy.ok():
+            rclpy.spin_once(widget.node, timeout_sec=0.01)
+            app.processEvents()
+    except KeyboardInterrupt:
+        pass
+
+    rclpy.shutdown()
+    sys.exit()
+
+    """
+    executor = SingleThreadedExecutor()
+    ros_th = threading.Thread(target=rclpy.spin, args=(widget.node, executor))
     ros_th.start()
 
     errcd = app.exec_()
     widget.node.destroy_node()
     rclpy.shutdown()
     sys.exit(errcd)
+    """

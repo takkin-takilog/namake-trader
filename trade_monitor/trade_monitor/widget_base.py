@@ -1,5 +1,6 @@
 from enum import Enum
 import pandas as pd
+from typing import List
 from PySide2.QtWidgets import QGraphicsItem
 from PySide2.QtWidgets import QWidget
 from PySide2.QtWidgets import QStyleOptionGraphicsItem
@@ -9,15 +10,18 @@ from PySide2.QtWidgets import QTreeView
 from PySide2.QtWidgets import QHeaderView
 from PySide2.QtWidgets import QGridLayout
 from PySide2.QtWidgets import QAbstractItemView
+from PySide2.QtWidgets import QLabel, QProgressBar
 from PySide2.QtCharts import QtCharts
 from PySide2.QtCore import QAbstractTableModel, QSortFilterProxyModel
 from PySide2.QtCore import Qt, QPointF, QRectF, QRect, QLineF
 from PySide2.QtCore import QDateTime, QDate, QTime, QRegExp, QModelIndex
 from PySide2.QtCore import QSignalMapper, QPoint
 from PySide2.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath
-from PySide2.QtGui import QLinearGradient, QPen
-from trade_monitor.constant import GranParam, InstParam
+from PySide2.QtGui import QPen
+from trade_monitor.constant import FMT_QT_TIME
+from trade_monitor.constant import GranParam, InstParam, QtColor
 from trade_monitor import utility as utl
+from trade_monitor import ros_common as ros_com
 
 CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
 CALLOUT_DATE_COLOR = QColor(0, 204, 51)
@@ -481,8 +485,9 @@ class BaseCandlestickChartView(QtCharts.QChartView):
 
         # ---------- Add Series on chart ----------
         series = QtCharts.QCandlestickSeries()
-        series.setDecreasingColor(Qt.red)
-        series.setIncreasingColor(Qt.green)
+        series.setDecreasingColor(QtColor.DEEPSKYBLUE.value)
+        series.setIncreasingColor(QtColor.TOMATO.value)
+        series.setBodyOutlineVisible(False)
         chart.addSeries(series)
 
         """
@@ -493,10 +498,12 @@ class BaseCandlestickChartView(QtCharts.QChartView):
         """
 
         # ---------- Set PlotAreaBackground on chart ----------
+        """
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
         plotAreaGradient.setColorAt(1.0, QColor("#ffffff"))
-        chart.setPlotAreaBackgroundBrush(plotAreaGradient)
+        """
+        chart.setPlotAreaBackgroundBrush(QColor("#fAfAfA"))
         chart.setPlotAreaBackgroundVisible(True)
 
         # ---------- Set X Axis on chart ----------
@@ -562,6 +569,9 @@ class BaseCandlestickChartView(QtCharts.QChartView):
 
     def get_candle_labels_list(self):
         return self.CandleLabel.to_list()
+
+    def set_title(self, text: str):
+        self.chart().setTitle(text)
 
 
 class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
@@ -754,7 +764,7 @@ class CandlestickChartViewDateTimeAxis(BaseCandlestickChartView):
 
 class BaseLineChartView(QtCharts.QChartView):
 
-    def __init__(self, parent=None):
+    def __init__(self, config_tbl: List, parent=None):
         super().__init__(parent)
 
         if parent is not None:
@@ -762,14 +772,36 @@ class BaseLineChartView(QtCharts.QChartView):
             lay.setMargin(0)
             lay.addWidget(self, 0, 0, 1, 1)
 
+        self.logger = ros_com.get_logger()
+
+        # ---------- Define const value ----------
+        self._COL_IDX = "Index"
+        self._COL_PEN = "Pen"
+        self._COL_NAME = "Name"
+        self._COL_SERIES = "Series"
+
         # ---------- Create Chart ----------
         chart = QtCharts.QChart()
-        chart.setBackgroundBrush(Qt.red)
         chart.layout().setContentsMargins(0, 0, 0, 0)
         chart.setBackgroundRoundness(0)
 
         # ---------- Add Series on chart ----------
-        """ override """
+        tbl = []
+        for rec in config_tbl:
+            series = QtCharts.QLineSeries()
+            series.setName(rec[2])
+            tbl.append(rec + [series])
+        config_df = pd.DataFrame(tbl,
+                                 columns=[self._COL_IDX,
+                                          self._COL_PEN,
+                                          self._COL_NAME,
+                                          self._COL_SERIES])
+        config_df.set_index(self._COL_IDX, inplace=True)
+
+        for _, row in config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.setPen(row[self._COL_PEN])
+            chart.addSeries(series)
 
         """
         # ---------- Set font on chart ----------
@@ -779,25 +811,17 @@ class BaseLineChartView(QtCharts.QChartView):
         """
 
         # ---------- Set PlotAreaBackground on chart ----------
+        """
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
         plotAreaGradient.setColorAt(1.0, QColor("#ffffff"))
         chart.setPlotAreaBackgroundBrush(plotAreaGradient)
+        """
+        chart.setPlotAreaBackgroundBrush(QColor("#fAfAfA"))
         chart.setPlotAreaBackgroundVisible(True)
 
         # ---------- Set X Axis on chart ----------
-        axis_x = QtCharts.QDateTimeAxis()
-        axis_x.setTickCount(2)
-        # axis_x.setTitleText("Date")
-        axis_x.setFormat("h:mm")
-        axis_x.setLabelsAngle(0)
-
-        now = QDateTime.currentDateTime()
-        today = QDateTime(now.date())
-        yesterday = today.addDays(-1)
-        axis_x.setRange(yesterday, today)
-
-        chart.addAxis(axis_x, Qt.AlignBottom)
+        """ override """
 
         # ---------- Set Y Axis on chart ----------
         axis_y = QtCharts.QValueAxis()
@@ -838,14 +862,9 @@ class BaseLineChartView(QtCharts.QChartView):
         self._callout_hl.setZValue(100)
         self.scene().addItem(self._callout_hl)
 
-        self._gran_param = GranParam.D
-        self._inst_param = InstParam.USDJPY
-        self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
+        self._config_df = config_df
         self._max_y = None
         self._min_y = None
-
-    def set_callout_dt_format(self, fmt: str):
-        self._callout_dt_fmt = fmt
 
     def set_max_y(self, max_y):
         self._max_y = max_y
@@ -853,7 +872,7 @@ class BaseLineChartView(QtCharts.QChartView):
     def set_min_y(self, min_y):
         self._min_y = min_y
 
-    def update(self, gran_param: GranParam, inst_param: InstParam):
+    def update(self):
 
         if self._max_y is not None:
             self.chart().axisY().setMax(self._max_y)
@@ -861,8 +880,182 @@ class BaseLineChartView(QtCharts.QChartView):
         if self._min_y is not None:
             self.chart().axisY().setMin(self._min_y)
 
-        self._gran_param = gran_param
+    def set_title(self, text: str):
+        self.chart().setTitle(text)
+
+
+class LineChartViewBarCategoryAxis(BaseLineChartView):
+
+    def __init__(self, config_tbl: List, parent=None):
+        super().__init__(config_tbl, parent)
+
+        # ---------- Set X Axis on chart ----------
+        axis_x = QtCharts.QBarCategoryAxis()
+        # axis_x.setTickCount(2)
+        # axis_x.setTitleText("Date")
+        # axis_x.setFormat("h:mm")
+        axis_x.setLabelsAngle(0)
+        axis_x.setLabelsVisible(False)
+        axis_x.setMinorGridLineVisible(False)
+        axis_x.setLineVisible(False)
+        axis_x.setGridLineVisible(False)
+        self.chart().addAxis(axis_x, Qt.AlignBottom)
+
+        # ---------- Attach X/Y Axis to series ----------
+        axis_y = self.chart().axes(Qt.Vertical)[0]
+
+        for _, row in self._config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.attachAxis(axis_x)
+            series.attachAxis(axis_y)
+
+        self._inst_param = InstParam.USDJPY
+
+    def update(self,
+               df: pd.DataFrame,
+               inst_param: InstParam):
+        super().update()
+
+        max_y = None
+        min_y = None
+        for idx, row in self._config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.clear()
+            pdsr = df[idx]
+
+            if self._max_y is None:
+                if max_y is None:
+                    max_y = pdsr.max()
+                else:
+                    max_y = max(pdsr.max(), max_y)
+            if self._min_y is None:
+                if min_y is None:
+                    min_y = pdsr.min()
+                else:
+                    min_y = min(pdsr.min(), min_y)
+
+            # if not pdsr.isnull().any():
+            for idx, val in enumerate(pdsr):
+                series.append(idx, val)
+
+        self.chart().axisX().setCategories(df.index.to_list())
+
+        if max_y is not None:
+            self.chart().axisY().setMax(max_y)
+        if min_y is not None:
+            self.chart().axisY().setMin(min_y)
+
         self._inst_param = inst_param
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+        chart = self.chart()
+        flag = chart.plotArea().contains(event.pos())
+        if flag:
+            m2v = chart.mapToValue(event.pos())
+            xpos = utl.roundi(m2v.x())
+            ypos = utl.roundf(m2v.y(), digit=self._inst_param.digit)
+            new_pos = QPointF(xpos, ypos)
+            m2p = chart.mapToPosition(new_pos)
+
+            x_label_list = chart.axisX().categories()
+            dtstr = x_label_list[xpos]
+            self._callout_dt.updateGeometry(dtstr, m2p)
+            self._callout_dt.show()
+
+            fmt = "{:." + str(self._inst_param.digit) + "f}"
+            prstr = fmt.format(new_pos.y())
+            self._callout_pr.updateGeometry(prstr, m2p)
+            self._callout_pr.show()
+
+            plotAreaRect = chart.plotArea()
+            self._callout_vl.setLine(QLineF(m2p.x(),
+                                            plotAreaRect.top(),
+                                            m2p.x(),
+                                            plotAreaRect.bottom()))
+            self._callout_vl.show()
+
+            self._callout_hl.setLine(QLineF(plotAreaRect.left(),
+                                            m2p.y(),
+                                            plotAreaRect.right(),
+                                            m2p.y()))
+            self._callout_hl.show()
+
+        else:
+            self._callout_dt.hide()
+            self._callout_pr.hide()
+            self._callout_vl.hide()
+            self._callout_hl.hide()
+
+
+class LineChartViewDateTimeAxis(BaseLineChartView):
+
+    def __init__(self, config_tbl: List, parent=None):
+        super().__init__(config_tbl, parent)
+
+        # ---------- Set X Axis on chart ----------
+        axis_x = QtCharts.QDateTimeAxis()
+        axis_x.setTickCount(2)
+        # axis_x.setTitleText("Date")
+        axis_x.setFormat("h:mm")
+        axis_x.setLabelsAngle(0)
+
+        now = QDateTime.currentDateTime()
+        today = QDateTime(now.date())
+        yesterday = today.addDays(-1)
+        axis_x.setRange(yesterday, today)
+        self.chart().addAxis(axis_x, Qt.AlignBottom)
+
+        # ---------- Attach X/Y Axis to series ----------
+        axis_y = self.chart().axes(Qt.Vertical)[0]
+
+        for _, row in self._config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.attachAxis(axis_x)
+            series.attachAxis(axis_y)
+
+        self._inst_param = InstParam.USDJPY
+        self._gran_param = GranParam.D
+        self._callout_dt_fmt = "yyyy/MM/dd hh:mm"
+
+    def update(self,
+               df: pd.DataFrame,
+               inst_param: InstParam,
+               gran_param: GranParam):
+        super().update()
+
+        max_y = None
+        min_y = None
+        for idx, row in self._config_df.iterrows():
+            series = row[self._COL_SERIES]
+            series.clear()
+            pdsr = df[idx]
+
+            if self._max_y is None:
+                if max_y is None:
+                    max_y = pdsr.max()
+                else:
+                    max_y = max(pdsr.max(), max_y)
+            if self._min_y is None:
+                if min_y is None:
+                    min_y = pdsr.min()
+                else:
+                    min_y = min(pdsr.min(), min_y)
+
+            # if not pdsr.isnull().any():
+            for idx in pdsr.index:
+                qtm = QTime.fromString(idx, FMT_QT_TIME)
+                qdttm = QDateTime(self._QDT_BASE, qtm)
+                series.append(qdttm.toMSecsSinceEpoch(), pdsr[idx])
+
+        if max_y is not None:
+            self.chart().axisY().setMax(max_y)
+        if min_y is not None:
+            self.chart().axisY().setMin(min_y)
+
+        self._inst_param = inst_param
+        self._gran_param = gran_param
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -908,6 +1101,9 @@ class BaseLineChartView(QtCharts.QChartView):
             self._callout_vl.hide()
             self._callout_hl.hide()
 
+    def set_callout_dt_format(self, fmt: str):
+        self._callout_dt_fmt = fmt
+
 
 class BaseView(QtCharts.QChartView):
 
@@ -935,10 +1131,13 @@ class BaseView(QtCharts.QChartView):
         """
 
         # ---------- Set PlotAreaBackground on chart ----------
+        """
         plotAreaGradient = QLinearGradient(0, 100, 0, 400)
         plotAreaGradient.setColorAt(0.0, QColor("#f1f1f1"))
         plotAreaGradient.setColorAt(1.0, QColor("#ffffff"))
         chart.setPlotAreaBackgroundBrush(plotAreaGradient)
+        """
+        chart.setPlotAreaBackgroundBrush(QColor("#fAfAfA"))
         chart.setPlotAreaBackgroundVisible(True)
 
         # ---------- Set X Axis on chart ----------
@@ -983,3 +1182,39 @@ class BaseView(QtCharts.QChartView):
 
         if self._min_y is not None:
             self.chart().axisY().setMin(self._min_y)
+
+
+class StatusProgressBar():
+
+    def __init__(self, parent):
+
+        sts_label = QLabel()
+        sts_label.setVisible(False)
+
+        prog_bar = QProgressBar()
+        prog_bar.setVisible(False)
+        prog_bar.setTextVisible(True)
+
+        parent.addPermanentWidget(sts_label)
+        parent.addPermanentWidget(prog_bar, 1)
+
+        self._parent = parent
+        self._sts_label = sts_label
+        self._prog_bar = prog_bar
+
+    def __del__(self):
+        self._parent.removeWidget(self._sts_label)
+        self._parent.removeWidget(self._prog_bar)
+        del self._sts_label
+        del self._prog_bar
+
+    def set_label_text(self, text):
+        self._sts_label.setText(text)
+        self._sts_label.setVisible(True)
+
+    def set_bar_range(self, minimum, maximum):
+        self._prog_bar.setVisible(True)
+        self._prog_bar.setRange(minimum, maximum)
+
+    def set_bar_value(self, value):
+        self._prog_bar.setValue(value)

@@ -7,13 +7,12 @@ from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QFile
 from PySide2.QtCharts import QtCharts
-from trade_monitor import ros_common as ros_com
 from trade_monitor import utility as utl
 from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
 from trade_monitor.widget_base import CalloutDataTime
-from trade_monitor.widget_base import BaseLineChartView
+from trade_monitor.widget_base import LineChartViewDateTimeAxis
 from trade_monitor.ttm.constant import ColumnName, GapType, DataType
 from trade_monitor.ttm.constant import ChartTag
 from trade_monitor.ttm.histogram_ui import ColumnName as HistColumnName
@@ -168,14 +167,10 @@ class CandlestickChartView(CandlestickChartViewDateTimeAxis):
         self._callout_ttm_dt.show()
 
 
-class BaseLineChartViewTtm(BaseLineChartView):
+class BaseLineChartViewTtm(LineChartViewDateTimeAxis):
 
-    _COL_DATA_TYP = "DataType"
-    _COL_PEN = "Pen"
-    _COL_SERIES = "Series"
-
-    def __init__(self, widget=None):
-        super().__init__(widget)
+    def __init__(self, config_tbl, parent=None):
+        super().__init__(config_tbl, parent)
 
         color = QColor(Qt.blue)
 
@@ -210,66 +205,32 @@ class BaseLineChartViewTtm(BaseLineChartView):
         self._QDT_BASE = QDate(2010, 1, 1)
         self._QDTTM_TTM = QDateTime(self._QDT_BASE, QTime(9, 55))
 
-        self._df_date = pd.DataFrame()
         self._is_update = False
-        self._logger = ros_com.get_logger()
-
-    def _init_chart(self, data_list):
-
-        chart_tbl = pd.DataFrame(data_list,
-                                 columns=[self._COL_DATA_TYP,
-                                          self._COL_PEN,
-                                          self._COL_SERIES])
-        chart_tbl.set_index(self._COL_DATA_TYP, inplace=True)
-
-        # ---------- Attach X/Y Axis to series ----------
-        axis_x = self.chart().axes(Qt.Horizontal)[0]
-        axis_y = self.chart().axes(Qt.Vertical)[0]
-
-        for _, row in chart_tbl.iterrows():
-            series = row[self._COL_SERIES]
-            series.setPen(row[self._COL_PEN])
-            self.chart().addSeries(series)
-            series.attachAxis(axis_x)
-            series.attachAxis(axis_y)
-
-        self._chart_tbl = chart_tbl
 
     def clear(self):
 
-        for _, row in self._chart_tbl.iterrows():
+        for _, row in self._config_df.iterrows():
             series = row[self._COL_SERIES]
             series.clear()
 
-        chart = self.chart()
-        chart.axisY().setRange(self._min_y, self._max_y)
+        self.chart().axisY().setRange(self._min_y, self._max_y)
 
     def update(self,
                df: pd.DataFrame,
-               gran_param: GranParam,
-               inst_param: InstParam):
-        super().update(gran_param, inst_param)
+               inst_param: InstParam,
+               gran_param: GranParam):
+        super().update(df, inst_param, gran_param)
 
-        for data_type, row in self._chart_tbl.iterrows():
-            series = row[self._COL_SERIES]
-            series.clear()
-            pdsr = df.loc[data_type]
-
-            if not pdsr.isnull().any():
-                for idx in pdsr.index:
-                    qtm = QTime.fromString(idx, FMT_QT_TIME)
-                    qdttm = QDateTime(self._QDT_BASE, qtm)
-                    series.append(qdttm.toMSecsSinceEpoch(), pdsr[idx])
-
-        qtm = QTime.fromString(df.columns[-1], FMT_QT_TIME)
+        qtm = QTime.fromString(df.index[-1], FMT_QT_TIME)
         max_x = QDateTime(self._QDT_BASE, qtm)
 
-        qtm = QTime.fromString(df.columns[0], FMT_QT_TIME)
+        qtm = QTime.fromString(df.index[0], FMT_QT_TIME)
         min_x = QDateTime(self._QDT_BASE, qtm)
 
         self.chart().axisX().setRange(min_x, max_x)
 
         self._update_callout_ttm(self._QDTTM_TTM)
+        self._df_date = pd.DataFrame()
         self._is_update = True
 
     def set_dataframe_date(self, df_date):
@@ -324,7 +285,6 @@ class BaseLineChartViewTtm(BaseLineChartView):
 class LineChartViewStats(BaseLineChartViewTtm):
 
     def __init__(self, tag: ChartTag, parent=None):
-        super().__init__(parent)
 
         pen_ho_m = QPen()
         pen_ho_m.setColor(Qt.magenta)
@@ -346,16 +306,17 @@ class LineChartViewStats(BaseLineChartViewTtm):
         pen_co_s.setWidth(1)
         pen_co_s.setStyle(Qt.DashLine)
 
-        data_list = [
-            [DataType.HO_MEAN.value, pen_ho_m, QtCharts.QLineSeries()],
-            # [DataType.HO_STD.value, Qt.blue, QtCharts.QLineSeries()],
-            [DataType.LO_MEAN.value, pen_lo_m, QtCharts.QLineSeries()],
-            # [DataType.LO_STD.value, Qt.green, QtCharts.QLineSeries()],
-            [DataType.CO_MEAN.value, pen_co_m, QtCharts.QLineSeries()],
-            [DataType.CO_STD.value, pen_co_s, QtCharts.QLineSeries()]
+        config_tbl = [
+            [DataType.HO_MEAN.value, pen_ho_m],
+            # [DataType.HO_STD.value, Qt.blue],
+            [DataType.LO_MEAN.value, pen_lo_m],
+            # [DataType.LO_STD.value, Qt.green],
+            [DataType.CO_MEAN.value, pen_co_m],
+            [DataType.CO_STD.value, pen_co_s]
         ]
 
-        self._init_chart(data_list)
+        super().__init__(config_tbl, parent)
+
         self._hist_ui = HistogramUi(tag)
 
     def mousePressEvent(self, event):
@@ -388,15 +349,14 @@ class LineChartViewStats(BaseLineChartViewTtm):
 class LineChartViewCumsum(BaseLineChartViewTtm):
 
     def __init__(self, parent=None):
-        super().__init__(parent)
 
         pen = QPen()
         pen.setColor(Qt.blue)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
 
-        data_list = [
-            [DataType.CO_CSUM.value, pen, QtCharts.QLineSeries()]
+        config_tbl = [
+            [DataType.CO_CSUM.value, pen]
         ]
 
-        self._init_chart(data_list)
+        super().__init__(config_tbl, parent)
