@@ -848,6 +848,7 @@ class HistoricalCandles(Node):
                 pass
 
             if not df_comp.empty:
+                """
                 for idx, sr in df_comp.iterrows():
                     msg = Candle()
                     msg.ask_o = sr[ColName.ASK_OP.value]
@@ -863,6 +864,23 @@ class HistoricalCandles(Node):
                     msg.bid_l = sr[ColName.BID_LO.value]
                     msg.bid_c = sr[ColName.BID_CL.value]
                     msg.time = idx.strftime(FMT_YMDHMS)
+                    rsp.cndl_msg_list.append(msg)
+                """
+                for t in df_comp.itertuples():
+                    msg = Candle()
+                    msg.ask_o = t.ask_op
+                    msg.ask_h = t.ask_hi
+                    msg.ask_l = t.ask_lo
+                    msg.ask_c = t.ask_cl
+                    msg.mid_o = t.mid_op
+                    msg.mid_h = t.mid_hi
+                    msg.mid_l = t.mid_lo
+                    msg.mid_c = t.mid_cl
+                    msg.bid_o = t.bid_op
+                    msg.bid_h = t.bid_hi
+                    msg.bid_l = t.bid_lo
+                    msg.bid_c = t.bid_cl
+                    msg.time = t.Index.strftime(FMT_YMDHMS)
                     rsp.cndl_msg_list.append(msg)
 
         rsp.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
@@ -904,6 +922,7 @@ class HistoricalCandles(Node):
             df_comp = df_comp.tail(req.length)
 
             if not df_comp.empty:
+                """
                 for idx, sr in df_comp.iterrows():
                     msg = Candle()
                     msg.ask_o = sr[ColName.ASK_OP.value]
@@ -919,6 +938,23 @@ class HistoricalCandles(Node):
                     msg.bid_l = sr[ColName.BID_LO.value]
                     msg.bid_c = sr[ColName.BID_CL.value]
                     msg.time = idx.strftime(FMT_YMDHMS)
+                    rsp.cndl_msg_list.append(msg)
+                """
+                for t in df_comp.itertuples():
+                    msg = Candle()
+                    msg.ask_o = t.ask_op
+                    msg.ask_h = t.ask_hi
+                    msg.ask_l = t.ask_lo
+                    msg.ask_c = t.ask_cl
+                    msg.mid_o = t.mid_op
+                    msg.mid_h = t.mid_hi
+                    msg.mid_l = t.mid_lo
+                    msg.mid_c = t.mid_cl
+                    msg.bid_o = t.bid_op
+                    msg.bid_h = t.bid_hi
+                    msg.bid_l = t.bid_lo
+                    msg.bid_c = t.bid_cl
+                    msg.time = t.Index.strftime(FMT_YMDHMS)
                     rsp.cndl_msg_list.append(msg)
 
         rsp.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
