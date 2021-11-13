@@ -12,7 +12,7 @@ from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from std_msgs.msg import String, Bool
-from trade_manager_msgs.srv import CandlesDataSrv
+from trade_manager_msgs.srv import CandlesByDatetimeSrv
 from trade_monitor.gapfill.gapfill_ui import GapFillUi
 from trade_monitor.ttm.ttm_ui import TtmUi
 from trade_monitor.tech.tech_ui import TechUi
@@ -71,9 +71,9 @@ class GuiMonitor(QMainWindow):
                                             self.listener_callback,
                                             qos_profile)
 
-        # Create service client "CandlesData"
-        srv_type = CandlesDataSrv
-        srv_name = "candles_data"
+        # Create service client "CandlesByDatetime"
+        srv_type = CandlesByDatetimeSrv
+        srv_name = "candles_by_datetime"
         cli_cdl = self._create_client(node, srv_type, srv_name)
 
         # Create publisher "Alive"
