@@ -1,0 +1,21 @@
+# Cabdlestick by length service.
+
+# ========================= Request =========================
+# The granularity.
+trade_manager_msgs/Granularity gran_msg
+
+# The Instrument.
+trade_manager_msgs/Instrument inst_msg
+
+# The length from latest to fetch candlesticks for.
+int32 length
+
+---
+# ========================= Response =========================
+
+# The list of candle message.
+trade_manager_msgs/Candle[] cndl_msg_list
+
+# The next update time.
+# Format is "%Y-%m-%dT%H:%M:%S"
+string next_update_time

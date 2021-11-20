@@ -28,7 +28,8 @@ from trade_manager.data import INST_DICT, GRAN_DICT
 from api_msgs.srv import CandlesSrv
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
-from trade_manager_msgs.srv import CandlesDataSrv
+from trade_manager_msgs.srv import CandlesByDatetimeSrv
+from trade_manager_msgs.srv import CandlesByLengthSrv
 from trade_manager_msgs.msg import Candle
 from trade_manager_msgs.msg import LatestCandle
 
@@ -302,6 +303,10 @@ class CandlesData():
     @property
     def df_comp(self):
         return self._df_comp
+
+    @property
+    def next_updatetime(self):
+        return self._next_updatetime
 
     def _get_latest_datetime_in_dataframe(self) -> dt.datetime:
         return self._df_comp.index[-1].to_pydatetime()
@@ -739,10 +744,20 @@ class HistoricalCandles(Node):
                 candles_data = CandlesData(self, inst_id, gran_data)
                 self._candles_data_list.append(candles_data)
 
-        # Create service server "CandlesData"
-        srv_type = CandlesDataSrv
-        srv_name = "candles_data"
-        callback = self._on_recv_candles_data
+        # Create service server "CandlesByDatetime"
+        srv_type = CandlesByDatetimeSrv
+        srv_name = "candles_by_datetime"
+        callback = self._on_recv_candles_by_datetime
+        self._hc_srv = self.create_service(srv_type,
+                                           srv_name,
+                                           callback=callback,
+                                           callback_group=ReentrantCallbackGroup()
+                                           )
+
+        # Create service server "CandlesByLength"
+        srv_type = CandlesByLengthSrv
+        srv_name = "candles_by_length"
+        callback = self._on_recv_candles_by_length
         self._hc_srv = self.create_service(srv_type,
                                            srv_name,
                                            callback=callback,
@@ -769,11 +784,11 @@ class HistoricalCandles(Node):
             self.logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
-    async def _on_recv_candles_data(self,
-                                    req: SrvTypeRequest,
-                                    rsp: SrvTypeResponse
-                                    ) -> SrvTypeResponse:
-        self.logger.debug("{:=^50}".format(" Service[candles_data]:Start "))
+    async def _on_recv_candles_by_datetime(self,
+                                           req: SrvTypeRequest,
+                                           rsp: SrvTypeResponse
+                                           ) -> SrvTypeResponse:
+        self.logger.debug("{:=^50}".format(" Service[candles_by_datetime]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
         self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
@@ -801,12 +816,12 @@ class HistoricalCandles(Node):
         df_comp = None
         for candles_data in self._candles_data_list:
             if ((inst_id == candles_data.inst_id) and (gran_id == candles_data.gran_id)):
-                df_comp = candles_data._df_comp
+                df_comp = candles_data.df_comp
+                next_updatetime = candles_data.next_updatetime
                 break
 
         rsp.cndl_msg_list = []
         if df_comp is not None:
-
             if not req.datetime_start == "":
                 start_dt = dt.datetime.strptime(req.datetime_start, FMT_YMDHMS)
                 if gran_id == GranApi.GRAN_D:
@@ -833,6 +848,7 @@ class HistoricalCandles(Node):
                 pass
 
             if not df_comp.empty:
+                """
                 for idx, sr in df_comp.iterrows():
                     msg = Candle()
                     msg.ask_o = sr[ColName.ASK_OP.value]
@@ -849,13 +865,107 @@ class HistoricalCandles(Node):
                     msg.bid_c = sr[ColName.BID_CL.value]
                     msg.time = idx.strftime(FMT_YMDHMS)
                     rsp.cndl_msg_list.append(msg)
+                """
+                for t in df_comp.itertuples():
+                    msg = Candle()
+                    msg.ask_o = t.ask_op
+                    msg.ask_h = t.ask_hi
+                    msg.ask_l = t.ask_lo
+                    msg.ask_c = t.ask_cl
+                    msg.mid_o = t.mid_op
+                    msg.mid_h = t.mid_hi
+                    msg.mid_l = t.mid_lo
+                    msg.mid_c = t.mid_cl
+                    msg.bid_o = t.bid_op
+                    msg.bid_h = t.bid_hi
+                    msg.bid_l = t.bid_lo
+                    msg.bid_c = t.bid_cl
+                    msg.time = t.Index.strftime(FMT_YMDHMS)
+                    rsp.cndl_msg_list.append(msg)
+
+        rsp.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
 
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
         self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
+        self.logger.debug("  - next_update_time:[{}]".format(rsp.next_update_time))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
-        self.logger.debug("{:=^50}".format(" Service[historical_candles]:End "))
+        self.logger.debug("{:=^50}".format(" Service[candles_by_datetime]:End "))
+
+        return rsp
+
+    async def _on_recv_candles_by_length(self,
+                                         req: SrvTypeRequest,
+                                         rsp: SrvTypeResponse
+                                         ) -> SrvTypeResponse:
+        self.logger.debug("{:=^50}".format(" Service[candles_by_length]:Start "))
+        self.logger.debug("<Request>")
+        self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
+        self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
+        self.logger.debug("  - length:[{}]".format(req.length))
+
+        inst_id = INST_DICT[req.inst_msg.inst_id]
+        gran_id = GRAN_DICT[req.gran_msg.gran_id]
+
+        dbg_tm_start = dt.datetime.now()
+
+        df_comp = None
+        for candles_data in self._candles_data_list:
+            if ((inst_id == candles_data.inst_id) and (gran_id == candles_data.gran_id)):
+                df_comp = candles_data._df_comp
+                next_updatetime = candles_data.next_updatetime
+                break
+
+        rsp.cndl_msg_list = []
+        if ((df_comp is not None) and (0 < req.length)):
+            df_comp = df_comp.tail(req.length)
+
+            if not df_comp.empty:
+                """
+                for idx, sr in df_comp.iterrows():
+                    msg = Candle()
+                    msg.ask_o = sr[ColName.ASK_OP.value]
+                    msg.ask_h = sr[ColName.ASK_HI.value]
+                    msg.ask_l = sr[ColName.ASK_LO.value]
+                    msg.ask_c = sr[ColName.ASK_CL.value]
+                    msg.mid_o = sr[ColName.MID_OP.value]
+                    msg.mid_h = sr[ColName.MID_HI.value]
+                    msg.mid_l = sr[ColName.MID_LO.value]
+                    msg.mid_c = sr[ColName.MID_CL.value]
+                    msg.bid_o = sr[ColName.BID_OP.value]
+                    msg.bid_h = sr[ColName.BID_HI.value]
+                    msg.bid_l = sr[ColName.BID_LO.value]
+                    msg.bid_c = sr[ColName.BID_CL.value]
+                    msg.time = idx.strftime(FMT_YMDHMS)
+                    rsp.cndl_msg_list.append(msg)
+                """
+                for t in df_comp.itertuples():
+                    msg = Candle()
+                    msg.ask_o = t.ask_op
+                    msg.ask_h = t.ask_hi
+                    msg.ask_l = t.ask_lo
+                    msg.ask_c = t.ask_cl
+                    msg.mid_o = t.mid_op
+                    msg.mid_h = t.mid_hi
+                    msg.mid_l = t.mid_lo
+                    msg.mid_c = t.mid_cl
+                    msg.bid_o = t.bid_op
+                    msg.bid_h = t.bid_hi
+                    msg.bid_l = t.bid_lo
+                    msg.bid_c = t.bid_cl
+                    msg.time = t.Index.strftime(FMT_YMDHMS)
+                    rsp.cndl_msg_list.append(msg)
+
+        rsp.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
+
+        dbg_tm_end = dt.datetime.now()
+        self.logger.debug("<Response>")
+        self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
+        self.logger.debug("  - next_update_time:[{}]".format(rsp.next_update_time))
+        self.logger.debug("[Performance]")
+        self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        self.logger.debug("{:=^50}".format(" Service[candles_by_length]:End "))
 
         return rsp
 

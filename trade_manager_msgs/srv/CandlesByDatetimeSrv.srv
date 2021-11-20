@@ -1,4 +1,4 @@
-# Cabdlestick data service.
+# Cabdlestick by atetime service.
 
 # ========================= Request =========================
 # The granularity.
@@ -42,3 +42,7 @@ string time_to
 
 # The list of candle message.
 trade_manager_msgs/Candle[] cndl_msg_list
+
+# The next update time.
+# Format is "%Y-%m-%dT%H:%M:%S"
+string next_update_time

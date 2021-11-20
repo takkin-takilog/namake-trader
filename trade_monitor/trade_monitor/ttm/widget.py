@@ -307,12 +307,12 @@ class LineChartViewStats(BaseLineChartViewTtm):
         pen_co_s.setStyle(Qt.DashLine)
 
         config_tbl = [
-            [DataType.HO_MEAN.value, pen_ho_m],
+            [DataType.HO_MEAN.value, pen_ho_m, "mean_high-open"],
             # [DataType.HO_STD.value, Qt.blue],
-            [DataType.LO_MEAN.value, pen_lo_m],
+            [DataType.LO_MEAN.value, pen_lo_m, "mean_low-open"],
             # [DataType.LO_STD.value, Qt.green],
-            [DataType.CO_MEAN.value, pen_co_m],
-            [DataType.CO_STD.value, pen_co_s]
+            [DataType.CO_MEAN.value, pen_co_m, "mean_close-open"],
+            [DataType.CO_STD.value, pen_co_s, "std_close-open"]
         ]
 
         super().__init__(config_tbl, parent)
@@ -356,7 +356,7 @@ class LineChartViewCumsum(BaseLineChartViewTtm):
         pen.setStyle(Qt.SolidLine)
 
         config_tbl = [
-            [DataType.CO_CSUM.value, pen]
+            [DataType.CO_CSUM.value, pen, "cumsum_close-open"]
         ]
 
         super().__init__(config_tbl, parent)

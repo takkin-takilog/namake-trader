@@ -19,7 +19,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Instrument.msg"
   "msg/LatestCandle.msg"
   "msg/OrderRequest.msg"
-  "srv/CandlesDataSrv.srv"
+  "srv/CandlesByDatetimeSrv.srv"
+  "srv/CandlesByLengthSrv.srv"
   DEPENDENCIES std_msgs action_msgs
 )
 
