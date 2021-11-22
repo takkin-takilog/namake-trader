@@ -1,45 +1,55 @@
 import os
 import sys
 import gc
-import pandas as pd
-import datetime as dt
+# import pandas as pd
+# import datetime as dt
+from enum import Enum
 from rclpy.action import ActionClient
-from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-from rclpy.callback_groups import ReentrantCallbackGroup
 from action_msgs.msg import GoalStatus
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QToolButton, QFileDialog, QMessageBox
+# from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QFileDialog
 from trade_apl_msgs.action import TechSma01BtAct
-from trade_apl_msgs.srv import TechChartMntSrv
 from trade_monitor import ros_common as ros_com
 from trade_monitor import utility as utl
-from trade_monitor.widget_base import PandasTreeView
+# from trade_monitor.widget_base import PandasTreeView
 from trade_monitor.widget_base import StatusProgressBar
-from trade_monitor.constant import FMT_YMDHMS, FMT_DATE_YMD, FMT_DISP_YMDHMS
+# from trade_monitor.constant import FMT_DATE_YMD, FMT_DISP_YMDHMS
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.tech.constant import VALID_INST_LIST
 from trade_monitor.tech.constant import VALID_GRAN_LIST
 # from trade_monitor.tech.constant import SMA_MTH01_CRS_TYP_DICT
-from trade_monitor.tech.constant import ColSma01Bt
-from trade_monitor.tech.constant import ColOhlc, ColTrnd, SpreadTyp
+from trade_monitor.tech.constant import SpreadTyp
 from trade_monitor.tech.widget import BaseUi
-from trade_monitor.tech.widget import CandlestickSmaChartView as CandlestickChartView
+# from trade_monitor.tech.widget import CandlestickSmaChartView as CandlestickChartView
 
 
-class SmaMethod01Ui(BaseUi):
+class ColSma01Bt(Enum):
+    """
+    Pandas SMA method01 back test dataframe column name.
+    """
+    SMA_L = "sma_l"
+    TAKE_PROFIT = "take_profit"
+    STOP_LOSS = "stop_loss"
+    EN_DATETIME = "en_datetime"
+    EN_PRICE = "en_price"
+    EX_DATETIME = "ex_datetime"
+    CROSS_TYP = "cross_type"
+    CO_SMA_HHW = "co_sma_h*h/w"
+    PROFIT = "profit"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
+class Sma01Ui(BaseUi):
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._OHLC_COLUMNS = [CandlestickChartView.CandleLabel.OP.value,
-                              CandlestickChartView.CandleLabel.HI.value,
-                              CandlestickChartView.CandleLabel.LO.value,
-                              CandlestickChartView.CandleLabel.CL.value
-                              ]
-
         self.logger = ros_com.get_logger()
 
-        ui = self._load_ui(parent, "sma_mth01.ui")
+        ui = self._load_ui(parent, "sma01.ui")
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
         self.setWindowTitle("SMA Method01 Details")
@@ -72,6 +82,7 @@ class SmaMethod01Ui(BaseUi):
 
         self._sts_bar = StatusProgressBar(ui.statusbar)
 
+        """
         # --------------- Tree View ---------------
         # ----- SMA -----
         pdtreeview = PandasTreeView(ui.treeView)
@@ -86,14 +97,17 @@ class SmaMethod01Ui(BaseUi):
 
         # --------------- Candlestick Chart View ---------------
         chartview = CandlestickChartView(ui.widget_chartView)
+        """
 
         self._ui = ui
         self._inst_param = VALID_INST_LIST[0]
         self._gran_param = VALID_GRAN_LIST[0]
+        """
         self._pdtreeview = pdtreeview
         self._spread_idx = 0
         self._chartview = chartview
         self._is_chart_drawing = False
+        """
 
         self._init_ros_service()
 
@@ -124,12 +138,6 @@ class SmaMethod01Ui(BaseUi):
         act_name = "tech_sma01_backtest"
         fullname = ns + act_name
         self._act_cli = ActionClient(node, act_type, fullname)
-
-        # Create service client "tech_chart_monitor"
-        srv_type = TechChartMntSrv
-        srv_name = "tech_chart_monitor"
-        fullname = ns + srv_name
-        self._srv_chart_cli = ros_com.get_node().create_client(srv_type, fullname)
 
     def _on_analysis_start_clicked(self):
 
@@ -276,7 +284,7 @@ class SmaMethod01Ui(BaseUi):
     """
 
     def _feedback_callback(self, msg):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         rsp = self._future.result()
         if rsp.status == GoalStatus.STATUS_EXECUTING:
             self._sts_bar.set_label_text("Analyzing...[{}/{}][{}/{}]"
@@ -290,6 +298,7 @@ class SmaMethod01Ui(BaseUi):
                 gc.collect()
                 self._sma_l_pos = msg.feedback.sma_l_pos
 
+    """
     def _on_selection_changed(self, selected, _):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if not selected.isEmpty():
@@ -315,6 +324,7 @@ class SmaMethod01Ui(BaseUi):
                 self._target_dt_str = target_dt_str
 
                 self._ui.widget_chartView.setEnabled(True)
+    """
 
     """
     def _fech_ohlc(self, idx_dt: dt.datetime):
@@ -349,7 +359,7 @@ class SmaMethod01Ui(BaseUi):
 
         return df
     """
-
+    """
     def _draw_chart(self,
                     spread_idx: int,
                     dt_str: str):
@@ -414,13 +424,17 @@ class SmaMethod01Ui(BaseUi):
         self._pdtreeview.show_header_menu(logical_index)
         self._draw_graph()
 
+    """
+
     def _comboBox_spread_changed(self, idx):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
+        """
         if self._is_chart_drawing:
             self._draw_chart(idx, self._target_dt_str)
 
         self._spread_idx = idx
+        """
 
     def _on_csv_out_clicked(self):
 

@@ -1,14 +1,13 @@
 import sys
 import os
-import threading
 
 from PySide2.QtWidgets import QApplication, QMainWindow
-from PySide2.QtCore import Qt, QFile, QTimer, QCoreApplication
+from PySide2.QtCore import Qt, QFile, QCoreApplication
 from PySide2.QtUiTools import QUiLoader
 
 import rclpy
 from rclpy.node import Node
-from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
+# from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from std_msgs.msg import String, Bool
@@ -17,7 +16,7 @@ from trade_monitor.gapfill.gapfill_ui import GapFillUi
 from trade_monitor.ttm.ttm_ui import TtmUi
 from trade_monitor.tech.tech_ui import TechUi
 from trade_monitor.main_ui import MainUi
-from trade_monitor import utility as utl
+# from trade_monitor import utility as utl
 # from trade_monitor.constant import INST_MSG_LIST
 # from trade_monitor.constant import GRAN_MSG_LIST
 from trade_monitor import ros_common as ros_com

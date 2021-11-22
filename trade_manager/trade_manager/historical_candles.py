@@ -448,7 +448,7 @@ class CandlesData():
                                     self._self_retry_counter += 1
                                     self._trans_self_updating()
                         else:
-                            self.logger.error(" - rsp.cndl_msg_list is empty")
+                            self.logger.warn(" - rsp.cndl_msg_list is empty")
                             self._trans_updating_common()
                     else:
                         self.logger.error("{:!^50}".format(" Call ROS Service Fail (Updating) "))
