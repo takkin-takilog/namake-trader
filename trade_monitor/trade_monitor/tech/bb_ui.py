@@ -151,7 +151,6 @@ class BollingerBandUi():
 
     def _TechBb01_analy_goal_response_callback(self, future):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._ui.pushButton_TechBb01_analy_start.setEnabled(True)
         send_gol_rsp = future.result()
         if not send_gol_rsp.accepted:
             self.logger.debug("goal rejected")
@@ -190,6 +189,7 @@ class BollingerBandUi():
                 df.set_index(ColBtRslt.ENTRY_TIME.value, inplace=True)
                 bt_rsl_tbl.append(Result(rsltbl.sma_th, rsltbl.std_th, df))
                 self.logger.debug("{}".format(bt_rsl_tbl[0]))
+
             """
 
             # ---------- compose Table "SMA Method01 BackTest" for TreeView ----------
@@ -223,6 +223,7 @@ class BollingerBandUi():
             self._ui.widget_graph.setEnabled(True)
             self._ui.pushButton_csv_out.setEnabled(True)
             """
+        self._ui.pushButton_TechBb01_analy_start.setEnabled(True)
 
     """
     def _draw_graph(self):
