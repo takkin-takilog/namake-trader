@@ -5,6 +5,7 @@ from PySide2.QtGui import QImage, QPixmap, QBrush, QIcon, QPainter
 from PySide2.QtGui import QLinearGradient, QColor
 from trade_monitor.constant import FMT_YMDHMS, FMT_DISP_YMDHMS
 
+
 def remove_all_items_of_comboBox(combo_box):
 
     idx = combo_box.currentIndex()

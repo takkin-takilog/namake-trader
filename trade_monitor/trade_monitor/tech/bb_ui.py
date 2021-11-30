@@ -4,11 +4,14 @@ from enum import Enum, IntEnum
 import pandas as pd
 import datetime as dt
 from dataclasses import dataclass
+from PySide2.QtCore import Qt
 from rclpy.action import ActionClient
 from action_msgs.msg import GoalStatus
-from trade_monitor.constant import FMT_YMDHMS
+from trade_monitor.constant import FMT_YMDHMS, FMT_DISP_YMDHMS
+from trade_monitor.constant import SPREAD_MSG_LIST
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
+from trade_monitor.widget_base import PandasTreeView
 from trade_monitor.widget_base import StatusProgressBar
 from trade_monitor.tech.constant import VALID_INST_LIST
 from trade_monitor.tech.constant import VALID_GRAN_LIST
@@ -40,8 +43,8 @@ class ColBtRslt(Enum):
     ENTRY_PRICE = "entry_price"
     ENTRY_DIR = "entry_dir"
     ENTRY_STD_SLOP = "entry_std_slope"
-    GAP_STD_SMA = "gap_std_sma"
-    MAX_LOSS = "max_loss"
+    GAP_STD_SMA_PIPS = "gap_std_sma"
+    MAX_LOSS_PIPS = "max_loss"
     EXIT_TIME = "exit_time"
     EXIT_PRICE = "exit_price"
 
@@ -58,6 +61,29 @@ class BollingerBandUi():
         # ---------- set Bollinger Bands ----------
         callback = self._on_pushButton_TechBb01_analy_start_clicked
         ui.pushButton_TechBb01_analy_start.clicked.connect(callback)
+
+        # ---------- set TreeView ----------
+        self._pdtreeview = PandasTreeView(ui.widget_TreeView_TechBb01)
+
+        header = self._pdtreeview.header()
+        callback = self._on_view_header_bb01_sectionClicked
+        header.sectionClicked.connect(callback)
+
+        # ---------- set Ask,Mid,Bid ----------
+        utl.remove_all_items_of_comboBox(ui.comboBox_TechBb01_amb)
+        for text in SPREAD_MSG_LIST:
+            ui.comboBox_TechBb01_amb.addItem(text)
+
+        callback = self._on_comboBox_TechBb01_amb_changed_currentIndexChanged
+        ui.comboBox_TechBb01_amb.currentIndexChanged.connect(callback)
+
+        # ----- set SMA comboBox callback -----
+        callback = self._on_comboBox_TechBb01_sma_currentIndexChanged
+        ui.comboBox_TechBb01_sma.currentIndexChanged.connect(callback)
+
+        # ----- set STD comboBox callback -----
+        callback = self._on_comboBox_TechBb01_std_currentIndexChanged
+        ui.comboBox_TechBb01_std.currentIndexChanged.connect(callback)
 
         # ---------- set field ----------
         self._act_cli_bb01_bt = None
@@ -169,61 +195,118 @@ class BollingerBandUi():
         status = rsp.status
         if status == GoalStatus.STATUS_SUCCEEDED:
             self.logger.debug("STATUS_SUCCEEDED")
+        else:
+            return
 
-            bt_rsl_tbl = []
-            for rsltbl in rsp.result.tbl_list:
-                tbl = []
-                for rec in rsltbl.tbl:
-                    record = [
-                        dt.datetime.strptime(rec.entry_time, FMT_YMDHMS),
-                        rec.entry_price,
-                        rec.entry_dir,
-                        rec.entry_std_slope,
-                        rec.gap_std_sma,
-                        rec.max_loss,
-                        dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
-                        rec.exit_price,
-                    ]
-                    tbl.append(record)
-                df = pd.DataFrame(tbl, columns=ColBtRslt.to_list())
-                df.set_index(ColBtRslt.ENTRY_TIME.value, inplace=True)
-                bt_rsl_tbl.append(Result(rsltbl.sma_th, rsltbl.std_th, df))
-                self.logger.debug("{}".format(bt_rsl_tbl[0]))
-
-            """
-
-            # ---------- compose Table "SMA Method01 BackTest" for TreeView ----------
-            if self._gran_param == GranParam.D:
-                fmt = FMT_DATE_YMD
-            else:
-                fmt = FMT_DISP_YMDHMS
+        bt_rsl_list = []
+        for rsltbl in rsp.result.tbl_list:
             tbl = []
-            for idxs, row in df_bt.iterrows():
+            for rec in rsltbl.tbl:
                 record = [
-                    idxs[0],
-                    idxs[1],
-                    idxs[2],
-                    row[ColSma01Bt.EN_DATETIME.value].strftime(fmt),
-                    utl.roundf(row[ColSma01Bt.EN_PRICE.value], digit=self._inst_param.digit),
-                    row[ColSma01Bt.EX_DATETIME.value].strftime(fmt),
-                    SMA_MTH01_CRS_TYP_DICT[int(row[ColSma01Bt.CROSS_TYP.value])],
-                    row[ColSma01Bt.CO_SMA_HHW.value],
-                    row[ColSma01Bt.PROFIT.value]
+                    dt.datetime.strptime(rec.entry_time, FMT_YMDHMS),
+                    utl.roundf(rec.entry_price, digit=self._inst_param.digit),
+                    rec.entry_dir,
+                    "{:.5f}".format(rec.entry_std_slope),
+                    self._inst_param.convert_phy2raw(rec.gap_std_sma),
+                    self._inst_param.convert_phy2raw(rec.max_loss),
+                    dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
+                    utl.roundf(rec.exit_price, digit=self._inst_param.digit)
                 ]
                 tbl.append(record)
-            df = pd.DataFrame(tbl, columns=ColSma01Bt.to_list())
-            df.set_index(idx_columns, inplace=True)
+            df = pd.DataFrame(tbl, columns=ColBtRslt.to_list())
+            df.set_index(ColBtRslt.ENTRY_TIME.value, inplace=True)
+            bt_rsl_list.append(Result(rsltbl.sma_th, rsltbl.std_th, df))
 
-            self._pdtreeview.set_dataframe(df)
-            selmdl = self._pdtreeview.selectionModel()
-            callback = self._on_selection_changed
-            selmdl.selectionChanged.connect(callback)
+        # ----- set SMA comboBox -----
+        sma_th_start = self._ui.spinBox_TechBb01_SmaThStr.value()
+        sma_th_end = self._ui.spinBox_TechBb01_SmaThEnd.value()
+        sma_th_deci = self._ui.spinBox_TechBb01_SmaThDeci.value()
+        sma_th_list = list(range(sma_th_start, sma_th_end + 1, sma_th_deci))
 
-            # self._draw_graph()
-            self._ui.widget_graph.setEnabled(True)
-            self._ui.pushButton_csv_out.setEnabled(True)
-            """
+        wasBlocked = self._ui.comboBox_TechBb01_sma.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechBb01_sma)
+        for sma_th in sma_th_list:
+            self._ui.comboBox_TechBb01_sma.addItem(str(sma_th))
+        self._ui.comboBox_TechBb01_sma.blockSignals(wasBlocked)
+
+        # ----- set STD comboBox -----
+        std_th_start = self._ui.spinBox_TechBb01_StdThStr.value()
+        std_th_end = self._ui.spinBox_TechBb01_StdThEnd.value()
+        std_th_deci = self._ui.spinBox_TechBb01_StdThDeci.value()
+        std_th_list = list(range(std_th_start, std_th_end + 1, std_th_deci))
+
+        wasBlocked = self._ui.comboBox_TechBb01_std.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechBb01_std)
+        for std_th in std_th_list:
+            self._ui.comboBox_TechBb01_std.addItem(str(std_th))
+        self._ui.comboBox_TechBb01_std.blockSignals(wasBlocked)
+
+        # ----- make DF search table -----
+        df_mat = []
+        for sma_th in sma_th_list:
+            std_df_list = []
+            for std_th in std_th_list:
+                for bt_rsl in bt_rsl_list:
+                    if ((bt_rsl.sma_th == sma_th) and (bt_rsl.std_th == std_th)):
+                        std_df_list.append(bt_rsl.df)
+                        break
+            df_mat.append(std_df_list)
+        self._df_mat = df_mat
+
+        self._update_treeview()
+
         self._ui.pushButton_TechBb01_analy_start.setEnabled(True)
+
+    def _update_treeview(self):
+        sma_idx = self._ui.comboBox_TechBb01_sma.currentIndex()
+        std_idx = self._ui.comboBox_TechBb01_std.currentIndex()
+
+        self.logger.debug("-------------------------------------------")
+        self.logger.debug("sma_idx:{}".format(sma_idx))
+        self.logger.debug("std_idx:{}".format(std_idx))
+
+        df = self._df_mat[sma_idx][std_idx]
+
+        self.logger.debug("\n{}".format(df))
+
+        # ---------- compose Table for TreeView ----------
+        tbl = []
+        for t in df.itertuples():
+            record = [
+                t.Index.strftime(FMT_DISP_YMDHMS),
+                t.entry_price,
+                t.entry_dir,
+                t.entry_std_slope,
+                t.gap_std_sma,
+                t.max_loss,
+                t.exit_time.strftime(FMT_DISP_YMDHMS),
+                t.exit_price
+            ]
+            tbl.append(record)
+        df = pd.DataFrame(tbl, columns=ColBtRslt.to_list())
+        df.set_index(ColBtRslt.ENTRY_TIME.value, inplace=True)
+        self._pdtreeview.set_dataframe(df)
+
+        selmdl = self._pdtreeview.selectionModel()
+        callback = self._on_selection_bb01_changed
+        selmdl.selectionChanged.connect(callback)
+
+        """
+        # self._draw_graph()
+        self._ui.widget_graph.setEnabled(True)
+        self._ui.pushButton_csv_out.setEnabled(True)
+        """
+
+    def _on_selection_bb01_changed(self, selected, _):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+
+        if not selected.isEmpty():
+
+            model_index = selected.at(0).indexes()[0]
+            r = model_index.row()
+            proxy = self._pdtreeview.proxy
+            date_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
+            self.logger.debug(" - selected date:{}".format(date_str))
 
     """
     def _draw_graph(self):
@@ -243,3 +326,18 @@ class BollingerBandUi():
         self.logger.debug("series_cumsum_tail:{}".format(end))
         self.logger.debug("real_profit:{}".format(end - min_))
     """
+
+    def _on_view_header_bb01_sectionClicked(self, logical_index):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self._pdtreeview.show_header_menu(logical_index)
+
+    def _on_comboBox_TechBb01_amb_changed_currentIndexChanged(self, index):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+
+    def _on_comboBox_TechBb01_sma_currentIndexChanged(self, index):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self._update_treeview()
+
+    def _on_comboBox_TechBb01_std_currentIndexChanged(self, index):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self._update_treeview()

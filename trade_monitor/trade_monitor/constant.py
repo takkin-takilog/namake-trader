@@ -15,6 +15,7 @@ FMT_QT_TIME = "HH:mm"
 
 FMT_DISP_YMDHMS = "%Y-%m-%d %H:%M:%S"
 
+
 class QtColor(Enum):
     """
     Qt color name.
