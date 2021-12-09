@@ -85,6 +85,14 @@ class BollingerBandUi():
         callback = self._on_comboBox_TechBb01_std_currentIndexChanged
         ui.comboBox_TechBb01_std.currentIndexChanged.connect(callback)
 
+        # ----- set widget disable -----
+        ui.comboBox_TechBb01_sma.setEnabled(False)
+        ui.comboBox_TechBb01_std.setEnabled(False)
+        ui.pushButton_TechBb01_fetch_treeView.setEnabled(False)
+        ui.widget_TreeView_TechBb01.setEnabled(False)
+        ui.comboBox_TechBb01_amb.setEnabled(False)
+        ui.widget_ChartView_TechBb01.setEnabled(False)
+
         # ---------- set field ----------
         self._act_cli_bb01_bt = None
         self._ui = ui
@@ -255,7 +263,14 @@ class BollingerBandUi():
 
         self._update_treeview()
 
+        # ----- set widget enable -----
         self._ui.pushButton_TechBb01_analy_start.setEnabled(True)
+        self._ui.comboBox_TechBb01_sma.setEnabled(True)
+        self._ui.comboBox_TechBb01_std.setEnabled(True)
+        self._ui.pushButton_TechBb01_fetch_treeView.setEnabled(True)
+        self._ui.widget_TreeView_TechBb01.setEnabled(True)
+        self._ui.comboBox_TechBb01_amb.setEnabled(True)
+        self._ui.widget_ChartView_TechBb01.setEnabled(True)
 
     def _update_treeview(self):
         sma_idx = self._ui.comboBox_TechBb01_sma.currentIndex()
