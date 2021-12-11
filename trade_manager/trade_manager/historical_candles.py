@@ -790,8 +790,8 @@ class HistoricalCandles(Node):
                                            ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_datetime]:Start "))
         self.logger.debug("<Request>")
-        self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
-        self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
+        self.logger.debug("  - gran_id:[{}]".format(req.gran_msg.gran_id))
+        self.logger.debug("  - inst_id:[{}]".format(req.inst_msg.inst_id))
         self.logger.debug("  - datetime_start:[{}]".format(req.datetime_start))
         self.logger.debug("  - datetime_end:[{}]".format(req.datetime_end))
         self.logger.debug("  - dayofweeks:[{}]".format(req.dayofweeks))
@@ -901,8 +901,8 @@ class HistoricalCandles(Node):
                                          ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_length]:Start "))
         self.logger.debug("<Request>")
-        self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
-        self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
+        self.logger.debug("  - gran_id:[{}]".format(req.gran_msg.gran_id))
+        self.logger.debug("  - inst_id:[{}]".format(req.inst_msg.inst_id))
         self.logger.debug("  - length:[{}]".format(req.length))
 
         inst_id = INST_DICT[req.inst_msg.inst_id]
