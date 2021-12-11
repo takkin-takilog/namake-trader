@@ -372,7 +372,9 @@ class CandlesData():
         else:
             self.logger.debug("========== DF Update NG! ==========")
             dt_now = dt_now.replace(second=0, microsecond=0)
-            self._next_updatetime = dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
+            next_updatetime = dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
+            if self._next_updatetime < next_updatetime:
+                self._next_updatetime = next_updatetime
 
         self.logger.debug(" ---------- Next update time ----------")
         self.logger.debug(" - Now time:        [{}]".format(dt_now))
@@ -397,6 +399,7 @@ class CandlesData():
                           .format(self.inst_id, self.gran_id,
                                   sys._getframe().f_code.co_name))
         self._future = None
+        self._dt_to = dt.datetime.now()
 
     def _on_do_updating(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -413,6 +416,7 @@ class CandlesData():
 
             try:
                 self._future = self._request_async_candles(dt_from, dt_to)
+                self._dt_to = dt_to
             except Exception as err:
                 self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
                 self.logger.error("{}".format(err))
@@ -449,7 +453,19 @@ class CandlesData():
                                     self._trans_self_updating()
                         else:
                             self.logger.warn(" - rsp.cndl_msg_list is empty")
-                            self._trans_updating_common()
+                            latest_dt = self._get_latest_datetime_in_dataframe()
+                            close_time = utl.get_market_close_time(latest_dt.date())
+                            if latest_dt.weekday() == WeekDay.SAT.value:
+                                close_datetime = dt.datetime.combine(latest_dt.date(), close_time)
+                                self.logger.debug(" - close datetime:[{}]".format(close_datetime))
+                                if close_datetime < self._dt_to:
+                                    self._next_updatetime = self._get_next_update_datetime(self._dt_to)
+                                    self.logger.debug(" - Next update time:[{}]".format(self._next_updatetime))
+                                    self._trans_from_updating_to_waiting()
+                                else:
+                                    self._trans_updating_common()
+                            else:
+                                self._trans_updating_common()
                     else:
                         self.logger.error("{:!^50}".format(" Call ROS Service Fail (Updating) "))
                         self._trans_updating_common()
