@@ -23,7 +23,8 @@ from trade_monitor.constant import GranParam, InstParam, QtColor
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 
-CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
+# CALLOUT_PRICE_COLOR = QColor(204, 0, 51)
+CALLOUT_PRICE_COLOR = QColor(0, 204, 51)
 CALLOUT_DATE_COLOR = QColor(0, 204, 51)
 
 

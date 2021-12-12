@@ -17,7 +17,7 @@ from trade_monitor import ros_common as ros_com
 from trade_monitor.constant import GranParam, InstParam
 from trade_monitor import utility as utl
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
-from trade_monitor.widget_base import CalloutDataTime
+from trade_monitor.widget_base import CalloutDataTime, CallouPrice
 
 
 @dataclass
@@ -88,6 +88,22 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         self._co_entry_time.setZValue(0)
         self.scene().addItem(self._co_entry_time)
 
+        # ---------- Add HorizontalLine "EntryPrice" on scene ----------
+        self._hl_entry_price = QGraphicsLineItem()
+        pen = self._hl_entry_price.pen()
+        pen.setColor(color_entry)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._hl_entry_price.setPen(pen)
+        self._hl_entry_price.setZValue(1)
+        self.scene().addItem(self._hl_entry_price)
+
+        # ---------- Add Callout "EntryPrice" on scene ----------
+        self._co_entry_price = CallouPrice(self.chart())
+        self._co_entry_price.setBackgroundColor(color_entry)
+        self._co_entry_price.setZValue(0)
+        self.scene().addItem(self._co_entry_price)
+
         # ---------- Add VerticalLine "ExitTime" on scene ----------
         self._vl_exit_time = QGraphicsLineItem()
         pen = self._vl_exit_time.pen()
@@ -103,6 +119,22 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         self._co_exit_time.setBackgroundColor(color_exit)
         self._co_exit_time.setZValue(0)
         self.scene().addItem(self._co_exit_time)
+
+        # ---------- Add HorizontalLine "ExitPrice" on scene ----------
+        self._hl_exit_price = QGraphicsLineItem()
+        pen = self._hl_exit_price.pen()
+        pen.setColor(color_exit)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        self._hl_exit_price.setPen(pen)
+        self._hl_exit_price.setZValue(1)
+        self.scene().addItem(self._hl_exit_price)
+
+        # ---------- Add Callout "ExitPrice" on scene ----------
+        self._co_exit_price = CallouPrice(self.chart())
+        self._co_exit_price.setBackgroundColor(color_exit)
+        self._co_exit_price.setZValue(0)
+        self.scene().addItem(self._co_exit_price)
 
         # ==================== Bollinger bands ====================
         config_tbl = []
@@ -183,8 +215,12 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         if self._is_update:
             self._vl_entry_time.show()
             self._co_entry_time.show()
+            self._hl_entry_price.show()
+            self._co_entry_price.show()
             self._vl_exit_time.show()
             self._co_exit_time.show()
+            self._hl_exit_price.show()
+            self._co_exit_price.show()
 
     def _update_callout_target_datetime(self):
 
@@ -204,6 +240,20 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         self._co_entry_time.updateGeometry(self._chart_info.entry_time_str, m2p)
         self._co_entry_time.show()
 
+        # ---------- drow HorizontalLine "EntryPrice" ----------
+        point = QPointF(0, self._chart_info.entry_price)
+        m2p = chart.mapToPosition(point)
+        plotAreaRect = chart.plotArea()
+        self._hl_entry_price.setLine(QLineF(plotAreaRect.left(),
+                                            m2p.y(),
+                                            plotAreaRect.right(),
+                                            m2p.y()))
+        self._hl_entry_price.show()
+
+        # ---------- drow Callout "EntryPrice" ----------
+        self._co_entry_price.updateGeometry(str(self._chart_info.entry_price), m2p)
+        self._co_entry_price.show()
+
         # ---------- drow VerticalLine "ExitTime" ----------
         point = QPointF(self._chart_info.exit_time_loc, 0)
         m2p = chart.mapToPosition(point)
@@ -217,3 +267,17 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         # ---------- drow Callout "ExitTime" ----------
         self._co_exit_time.updateGeometry(self._chart_info.exit_time_str, m2p)
         self._co_exit_time.show()
+
+        # ---------- drow HorizontalLine "ExitPrice" ----------
+        point = QPointF(0, self._chart_info.exit_price)
+        m2p = chart.mapToPosition(point)
+        plotAreaRect = chart.plotArea()
+        self._hl_exit_price.setLine(QLineF(plotAreaRect.left(),
+                                           m2p.y(),
+                                           plotAreaRect.right(),
+                                           m2p.y()))
+        self._hl_exit_price.show()
+
+        # ---------- drow Callout "ExitPrice" ----------
+        self._co_exit_price.updateGeometry(str(self._chart_info.exit_price), m2p)
+        self._co_exit_price.show()

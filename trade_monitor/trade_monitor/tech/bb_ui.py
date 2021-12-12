@@ -454,7 +454,10 @@ class BollingerBandUi():
         entry_time_loc = df.index.get_loc(entry_time_str)
         entry_price = row[ColBtRslt.ENTRY_PRICE.value]
         exit_time_str = row[ColBtRslt.EXIT_TIME.value].strftime(FMT_DISP_YMDHMS)
-        exit_time_loc = df.index.get_loc(exit_time_str)
+        if exit_time_str in df.index:
+            exit_time_loc = df.index.get_loc(exit_time_str)
+        else:
+            exit_time_loc = -10000000
         exit_price = row[ColBtRslt.EXIT_PRICE.value]
 
         self._chart_info = ChartInfo(df=df,
