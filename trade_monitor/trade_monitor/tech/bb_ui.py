@@ -13,6 +13,7 @@ from trade_monitor.constant import SPREAD_MSG_LIST
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import PandasTreeView
+from trade_monitor.tech.constant import ColChart
 from trade_monitor.tech.widget import CandlestickChartView as ChartView
 from trade_monitor.tech.widget import ChartInfo
 from trade_apl_msgs.action import TechBb01BtAct
@@ -54,32 +55,6 @@ class ColBtRslt(Enum):
         return [m.value for m in cls]
 
 
-class ColChart(Enum):
-    """
-    Pandas SMA back test result dataframe column name.
-    """
-    TIME = "time"
-    ASK_O = "ask_o"
-    ASK_H = "ask_h"
-    ASK_L = "ask_l"
-    ASK_C = "ask_c"
-    MID_O = "mid_o"
-    MID_H = "mid_h"
-    MID_L = "mid_l"
-    MID_C = "mid_c"
-    BID_O = "bid_o"
-    BID_H = "bid_h"
-    BID_L = "bid_l"
-    BID_C = "bid_c"
-    BASE_SMA = "base_sma"
-    POS_STD = "pos_std"
-    NEG_STD = "neg_std"
-
-    @classmethod
-    def to_list(cls):
-        return [m.value for m in cls]
-
-
 class BollingerBandUi():
 
     def __init__(self, ui, inst_param, gran_param, sts_bar) -> None:
@@ -109,6 +84,10 @@ class BollingerBandUi():
         callback = self._on_comboBox_TechBb01_amb_changed_currentIndexChanged
         ui.comboBox_TechBb01_amb.currentIndexChanged.connect(callback)
 
+        # ---------- set spinBox barNum ----------
+        callback = self._on_spinBox_TechBb01_barNum_valueChanged
+        ui.spinBox_TechBb01_barNum.valueChanged.connect(callback)
+
         # ----- set ChartView widget -----
         self._chartview = ChartView(ui.widget_ChartView_TechBb01)
 
@@ -118,9 +97,12 @@ class BollingerBandUi():
         ui.pushButton_TechBb01_fetch_treeView.setEnabled(False)
         ui.widget_TreeView_TechBb01.setEnabled(False)
         ui.comboBox_TechBb01_amb.setEnabled(False)
+        ui.spinBox_TechBb01_barNum.setEnabled(False)
         ui.widget_ChartView_TechBb01.setEnabled(False)
 
         # ---------- set field ----------
+        self._selected_entry_time = None
+        self._chart_info = None
         self._act_cli_bb01_bt = None
         self._act_cli_bb01_tv = None
         self._ui = ui
@@ -370,6 +352,7 @@ class BollingerBandUi():
         # ----- set widget enable -----
         self._ui.pushButton_TechBb01_fetch_treeView.setEnabled(True)
         self._ui.comboBox_TechBb01_amb.setEnabled(True)
+        self._ui.spinBox_TechBb01_barNum.setEnabled(True)
         self._ui.widget_ChartView_TechBb01.setEnabled(True)
 
     def _update_treeview(self, df: pd.DataFrame):
@@ -399,7 +382,7 @@ class BollingerBandUi():
         selmdl.selectionChanged.connect(callback)
 
         """
-        # self._draw_graph()
+        # self._draw_graph_by_candle_type()
         self._ui.widget_graph.setEnabled(True)
         self._ui.pushButton_csv_out.setEnabled(True)
         """
@@ -421,15 +404,21 @@ class BollingerBandUi():
                               .format(self._inst_param.text))
             return
 
+        entry_time = dt.datetime.strptime(entry_time_disp_str, FMT_DISP_YMDHMS)
+        bar_num = self._ui.spinBox_TechBb01_barNum.value()
+        self._draw_graph(entry_time, bar_num)
+        self._selected_entry_time = entry_time
+
+    def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
+
         sma_idx = self._ui.comboBox_TechBb01_sma.currentIndex()
         std_idx = self._ui.comboBox_TechBb01_std.currentIndex()
-        entry_time = dt.datetime.strptime(entry_time_disp_str, FMT_DISP_YMDHMS)
 
         req = TechBb01ChartSrv.Request()
         req.sma_th = self._sma_th_list[sma_idx]
         req.std_th = self._std_th_list[std_idx]
         req.time = entry_time.strftime(FMT_YMDHMS)
-        req.number_of_bars = self._ui.spinBox_TechBb01_barNum.value()
+        req.number_of_bars = bar_num
 
         rsp = ros_com.call_servive_sync(self._srv_cli_bb01_chart, req)
 
@@ -468,10 +457,16 @@ class BollingerBandUi():
                                      exit_time_loc=exit_time_loc,
                                      exit_price=exit_price)
 
-        self._draw_graph()
+        max_y = self._chart_info.df.max().max()
+        min_y = self._chart_info.df.min().min()
+        margin = (max_y - min_y) * 0.05
+        self._chartview.set_max_y(max_y + margin)
+        self._chartview.set_min_y(min_y - margin)
 
-    def _draw_graph(self):
         smb_idx = self._ui.comboBox_TechBb01_amb.currentIndex()
+        self._draw_graph_by_candle_type(smb_idx)
+
+    def _draw_graph_by_candle_type(self, smb_idx):
         bb_col = [ColChart.BASE_SMA.value,
                   ColChart.POS_STD.value,
                   ColChart.NEG_STD.value]
@@ -495,12 +490,6 @@ class BollingerBandUi():
         df = self._chart_info.df[col]
         df.columns = ChartView.CandleLabel.to_list() + bb_col
 
-        max_y = df[ChartView.CandleLabel.HI.value].max()
-        min_y = df[ChartView.CandleLabel.LO.value].min()
-
-        self._chartview.set_max_y(max_y)
-        self._chartview.set_min_y(min_y)
-
         self._chartview.update(df,
                                self._chart_info,
                                self._gran_param,
@@ -512,4 +501,10 @@ class BollingerBandUi():
 
     def _on_comboBox_TechBb01_amb_changed_currentIndexChanged(self, index):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._draw_graph()
+        if self._chart_info is not None:
+            self._draw_graph_by_candle_type(index)
+
+    def _on_spinBox_TechBb01_barNum_valueChanged(self, value: int):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        if self._selected_entry_time is not None:
+            self._draw_graph(self._selected_entry_time, value)

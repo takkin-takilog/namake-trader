@@ -1,3 +1,4 @@
+from typing import List
 import os
 import pandas as pd
 import datetime as dt
@@ -18,6 +19,7 @@ from trade_monitor.constant import GranParam, InstParam
 from trade_monitor import utility as utl
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
 from trade_monitor.widget_base import CalloutDataTime, CallouPrice
+from trade_monitor.tech.constant import ColChart
 
 
 @dataclass
@@ -143,7 +145,21 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         pen.setColor(Qt.blue)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
-        config_tbl.append(["base_sma", pen, QtCharts.QLineSeries()])
+        config_tbl.append([ColChart.BASE_SMA.value, pen, QtCharts.QLineSeries()])
+
+        # ---------- Add +Std Line on scene ----------
+        pen = QPen()
+        pen.setColor(Qt.magenta)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        config_tbl.append([ColChart.POS_STD.value, pen, QtCharts.QLineSeries()])
+
+        # ---------- Add -Std Line on scene ----------
+        pen = QPen()
+        pen.setColor(Qt.magenta)
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        config_tbl.append([ColChart.NEG_STD.value, pen, QtCharts.QLineSeries()])
 
         df_bb_conf = pd.DataFrame(config_tbl,
                                   columns=ColNameLine.to_list())
