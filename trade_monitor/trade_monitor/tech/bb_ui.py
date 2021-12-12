@@ -5,6 +5,7 @@ import pandas as pd
 import datetime as dt
 from dataclasses import dataclass
 from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QAbstractItemView
 from rclpy.action import ActionClient
 from action_msgs.msg import GoalStatus
 from trade_monitor.constant import FMT_YMDHMS, FMT_DISP_YMDHMS
@@ -12,12 +13,11 @@ from trade_monitor.constant import SPREAD_MSG_LIST
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import PandasTreeView
-from trade_monitor.widget_base import StatusProgressBar
-from trade_monitor.tech.constant import VALID_INST_LIST
-from trade_monitor.tech.constant import VALID_GRAN_LIST
-from trade_monitor.tech.sma01_ui import Sma01Ui
+from trade_monitor.tech.widget import CandlestickChartView as ChartView
+from trade_monitor.tech.widget import ChartInfo
 from trade_apl_msgs.action import TechBb01BtAct
 from trade_apl_msgs.action import TechBb01TreeViewAct
+from trade_apl_msgs.srv import TechBb01ChartSrv
 
 
 pd.set_option("display.max_columns", 1000)
@@ -54,14 +54,40 @@ class ColBtRslt(Enum):
         return [m.value for m in cls]
 
 
+class ColChart(Enum):
+    """
+    Pandas SMA back test result dataframe column name.
+    """
+    TIME = "time"
+    ASK_O = "ask_o"
+    ASK_H = "ask_h"
+    ASK_L = "ask_l"
+    ASK_C = "ask_c"
+    MID_O = "mid_o"
+    MID_H = "mid_h"
+    MID_L = "mid_l"
+    MID_C = "mid_c"
+    BID_O = "bid_o"
+    BID_H = "bid_h"
+    BID_L = "bid_l"
+    BID_C = "bid_c"
+    BASE_SMA = "base_sma"
+    POS_STD = "pos_std"
+    NEG_STD = "neg_std"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
 class BollingerBandUi():
 
     def __init__(self, ui, inst_param, gran_param, sts_bar) -> None:
         self.logger = ros_com.get_logger()
 
         # ---------- set pushButton analy start ----------
-        callback = self._on_pushButton_TechBb01_analy_start_clicked
-        ui.pushButton_TechBb01_analy_start.clicked.connect(callback)
+        callback = self._on_pushButton_TechBb01_backtest_start_clicked
+        ui.pushButton_TechBb01_backtest_start.clicked.connect(callback)
 
         # ---------- set pushButton fetch treeView ----------
         callback = self._on_pushButton_TechBb01_fetch_treeView_clicked
@@ -69,6 +95,7 @@ class BollingerBandUi():
 
         # ---------- set TreeView ----------
         self._pdtreeview = PandasTreeView(ui.widget_TreeView_TechBb01)
+        self._pdtreeview.setSelectionMode(QAbstractItemView.SingleSelection)
 
         header = self._pdtreeview.header()
         callback = self._on_view_header_bb01_sectionClicked
@@ -81,6 +108,9 @@ class BollingerBandUi():
 
         callback = self._on_comboBox_TechBb01_amb_changed_currentIndexChanged
         ui.comboBox_TechBb01_amb.currentIndexChanged.connect(callback)
+
+        # ----- set ChartView widget -----
+        self._chartview = ChartView(ui.widget_ChartView_TechBb01)
 
         # ----- set widget disable -----
         ui.comboBox_TechBb01_sma.setEnabled(False)
@@ -132,7 +162,13 @@ class BollingerBandUi():
         fullname = ns + act_name
         self._act_cli_bb01_tv = ActionClient(node, act_type, fullname)
 
-    def _on_pushButton_TechBb01_analy_start_clicked(self):
+        # Create service client "tech_bb01_fetch_chart"
+        srv_type = TechBb01ChartSrv
+        srv_name = "tech_bb01_fetch_chart"
+        fullname = ns + srv_name
+        self._srv_cli_bb01_chart = ros_com.get_node().create_client(srv_type, fullname)
+
+    def _on_pushButton_TechBb01_backtest_start_clicked(self):
 
         inst_param = self._inst_param
         gran_param = self._gran_param
@@ -142,7 +178,7 @@ class BollingerBandUi():
                               .format(inst_param.text, gran_param.text))
             return
 
-        self._ui.pushButton_TechBb01_analy_start.setEnabled(False)
+        self._ui.pushButton_TechBb01_backtest_start.setEnabled(False)
 
         self._sts_bar.set_label_text("Stanby...")
         self._sts_bar.set_bar_range(0, 100)
@@ -169,14 +205,14 @@ class BollingerBandUi():
         self._std_len_max = len(std_rng)
 
         self._sma_pos = 0
-        callback_fb = self._TechBb01_analy_feedback_callback
+        callback_fb = self._TechBb01_backtest_feedback_callback
         self._future = self._act_cli_bb01_bt.send_goal_async(goal_msg,
                                                              callback_fb)
 
-        callback = self._TechBb01_analy_goal_response_callback
+        callback = self._TechBb01_backtest_goal_response_callback
         self._future.add_done_callback(callback)
 
-    def _TechBb01_analy_feedback_callback(self, msg):
+    def _TechBb01_backtest_feedback_callback(self, msg):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         rsp = self._future.result()
         if rsp.status == GoalStatus.STATUS_EXECUTING:
@@ -191,7 +227,7 @@ class BollingerBandUi():
                 gc.collect()
                 self._sma_pos = msg.feedback.sma_th_pos
 
-    def _TechBb01_analy_goal_response_callback(self, future):
+    def _TechBb01_backtest_goal_response_callback(self, future):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         send_gol_rsp = future.result()
         if not send_gol_rsp.accepted:
@@ -201,10 +237,10 @@ class BollingerBandUi():
         self._sts_bar.set_bar_value(100)
         self._result_future = send_gol_rsp.get_result_async()
 
-        callback = self._TechBb01_analy_get_result_callback
+        callback = self._TechBb01_backtest_get_result_callback
         self._result_future.add_done_callback(callback)
 
-    def _TechBb01_analy_get_result_callback(self, future):
+    def _TechBb01_backtest_get_result_callback(self, future):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._sts_bar.set_bar_value(100)
         rsp = future.result()
@@ -239,7 +275,7 @@ class BollingerBandUi():
         self._ui.comboBox_TechBb01_std.blockSignals(wasBlocked)
 
         # ----- set widget enable -----
-        self._ui.pushButton_TechBb01_analy_start.setEnabled(True)
+        self._ui.pushButton_TechBb01_backtest_start.setEnabled(True)
         self._ui.comboBox_TechBb01_sma.setEnabled(True)
         self._ui.comboBox_TechBb01_std.setEnabled(True)
         self._ui.pushButton_TechBb01_fetch_treeView.setEnabled(True)
@@ -329,6 +365,7 @@ class BollingerBandUi():
         df.set_index(ColBtRslt.ENTRY_TIME.value, inplace=True)
 
         self._update_treeview(df)
+        self._df_tv = df
 
         # ----- set widget enable -----
         self._ui.pushButton_TechBb01_fetch_treeView.setEnabled(True)
@@ -370,32 +407,101 @@ class BollingerBandUi():
     def _on_selection_bb01_changed(self, selected, _):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
-        if not selected.isEmpty():
+        if selected.isEmpty():
+            return
 
-            model_index = selected.at(0).indexes()[0]
-            r = model_index.row()
-            proxy = self._pdtreeview.proxy
-            date_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
-            self.logger.debug(" - selected date:{}".format(date_str))
+        model_index = selected.at(0).indexes()[0]
+        r = model_index.row()
+        proxy = self._pdtreeview.proxy
+        entry_time_disp_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
+        self.logger.debug(" - selected date:{}".format(entry_time_disp_str))
 
-    """
+        if not self._srv_cli_bb01_chart.service_is_ready():
+            self.logger.error("Service server [{}] not ready"
+                              .format(self._inst_param.text))
+            return
+
+        sma_idx = self._ui.comboBox_TechBb01_sma.currentIndex()
+        std_idx = self._ui.comboBox_TechBb01_std.currentIndex()
+        entry_time = dt.datetime.strptime(entry_time_disp_str, FMT_DISP_YMDHMS)
+
+        req = TechBb01ChartSrv.Request()
+        req.sma_th = self._sma_th_list[sma_idx]
+        req.std_th = self._std_th_list[std_idx]
+        req.time = entry_time.strftime(FMT_YMDHMS)
+        req.number_of_bars = self._ui.spinBox_TechBb01_barNum.value()
+
+        rsp = ros_com.call_servive_sync(self._srv_cli_bb01_chart, req)
+
+        tbl = []
+        for msg in rsp.tbl:
+            rec = [
+                # dt.datetime.strptime(msg.entry_time, FMT_YMDHMS),
+                utl.convert_ymdhms_fmt_to_disp(msg.time),
+                msg.ask_o, msg.ask_h, msg.ask_l, msg.ask_c,
+                msg.mid_o, msg.mid_h, msg.mid_l, msg.mid_c,
+                msg.bid_o, msg.bid_h, msg.bid_l, msg.bid_c,
+                msg.base_sma,
+                msg.base_sma + msg.std,
+                msg.base_sma - msg.std
+            ]
+            tbl.append(rec)
+        df = pd.DataFrame(tbl, columns=ColChart.to_list())
+        df.set_index(ColChart.TIME.value, inplace=True)
+
+        row = self._df_tv.loc[entry_time]
+        entry_time_str = entry_time.strftime(FMT_DISP_YMDHMS)
+        entry_time_loc = df.index.get_loc(entry_time_str)
+        entry_price = row[ColBtRslt.ENTRY_PRICE.value]
+        exit_time_str = row[ColBtRslt.EXIT_TIME.value].strftime(FMT_DISP_YMDHMS)
+        exit_time_loc = df.index.get_loc(exit_time_str)
+        exit_price = row[ColBtRslt.EXIT_PRICE.value]
+
+        self._chart_info = ChartInfo(df=df,
+                                     entry_time_str=entry_time_str,
+                                     entry_time_loc=entry_time_loc,
+                                     entry_price=entry_price,
+                                     exit_time_str=exit_time_str,
+                                     exit_time_loc=exit_time_loc,
+                                     exit_price=exit_price)
+
+        self._draw_graph()
+
     def _draw_graph(self):
-        # is_selected = self._pdtreeview.is_selected()
-        # df = self._pdtreeview.get_dataframe(is_selected=is_selected)
-        df = self._pdtreeview.get_dataframe()
+        smb_idx = self._ui.comboBox_TechBb01_amb.currentIndex()
+        bb_col = [ColChart.BASE_SMA.value,
+                  ColChart.POS_STD.value,
+                  ColChart.NEG_STD.value]
 
-        series_cumsum = df[ColSma01Bt.PROFIT.value].cumsum()
-        series_cumsum.rename("profit_cumsum", inplace=True)
+        if smb_idx == 0:    # Mid
+            col = [ColChart.MID_O.value,
+                   ColChart.MID_H.value,
+                   ColChart.MID_L.value,
+                   ColChart.MID_C.value] + bb_col
+        elif smb_idx == 1:  # Ask
+            col = [ColChart.ASK_O.value,
+                   ColChart.ASK_H.value,
+                   ColChart.ASK_L.value,
+                   ColChart.ASK_C.value] + bb_col
+        else:               # Bid
+            col = [ColChart.BID_O.value,
+                   ColChart.BID_H.value,
+                   ColChart.BID_L.value,
+                   ColChart.BID_C.value] + bb_col
 
-        df = pd.concat([df, series_cumsum], axis=1)
+        df = self._chart_info.df[col]
+        df.columns = ChartView.CandleLabel.to_list() + bb_col
 
-        # self.logger.debug("\n{}".format(df))
-        min_ = series_cumsum.min()
-        end = series_cumsum[-1]
-        self.logger.debug("series_cumsum_min:{}".format(min_))
-        self.logger.debug("series_cumsum_tail:{}".format(end))
-        self.logger.debug("real_profit:{}".format(end - min_))
-    """
+        max_y = df[ChartView.CandleLabel.HI.value].max()
+        min_y = df[ChartView.CandleLabel.LO.value].min()
+
+        self._chartview.set_max_y(max_y)
+        self._chartview.set_min_y(min_y)
+
+        self._chartview.update(df,
+                               self._chart_info,
+                               self._gran_param,
+                               self._inst_param)
 
     def _on_view_header_bb01_sectionClicked(self, logical_index):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -403,3 +509,4 @@ class BollingerBandUi():
 
     def _on_comboBox_TechBb01_amb_changed_currentIndexChanged(self, index):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self._draw_graph()
