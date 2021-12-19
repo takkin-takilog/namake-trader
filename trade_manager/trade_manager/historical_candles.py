@@ -245,6 +245,8 @@ class CandlesData():
         self._df_prov = pd.DataFrame()
         self._future = None
         self._is_update_complete = True
+        self._needs_weekend_update = False
+        self._weekend_close_time = None
 
         self.logger.debug("{:-^40}".format(" Create CandlesData:Start "))
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
@@ -369,12 +371,36 @@ class CandlesData():
             msg.candle.time = latest_dt.strftime(FMT_YMDHMS)
             msg.next_update_time = self._next_updatetime.strftime(FMT_YMDHMS)
             self._pub.publish(msg)
+        elif self._needs_weekend_update:
+            self.logger.debug("========== DF Update OK! (But needs weekend update) ==========")
+            self._needs_weekend_update = False
+            self._next_updatetime = self._get_next_update_datetime(self._weekend_close_time)
+            latest_sr = self._df_comp.iloc[-1]
+            msg = LatestCandle()
+            latest_close_ask = latest_sr[ColName.ASK_CL.value]
+            latest_close_bid = latest_sr[ColName.BID_CL.value]
+            latest_close_mid = latest_sr[ColName.MID_CL.value]
+            time = self._weekend_close_time - self._GRAN_INTERVAL
+            msg.candle.ask_o = latest_close_ask
+            msg.candle.ask_h = latest_close_ask
+            msg.candle.ask_l = latest_close_ask
+            msg.candle.ask_c = latest_close_ask
+            msg.candle.bid_o = latest_close_bid
+            msg.candle.bid_h = latest_close_bid
+            msg.candle.bid_l = latest_close_bid
+            msg.candle.bid_c = latest_close_bid
+            msg.candle.mid_o = latest_close_mid
+            msg.candle.mid_h = latest_close_mid
+            msg.candle.mid_l = latest_close_mid
+            msg.candle.mid_c = latest_close_mid
+            msg.candle.time = time.strftime(FMT_YMDHMS)
+            msg.next_update_time = self._next_updatetime.strftime(FMT_YMDHMS)
+            self._pub.publish(msg)
+            self._weekend_close_time = None
         else:
             self.logger.debug("========== DF Update NG! ==========")
             dt_now = dt_now.replace(second=0, microsecond=0)
-            next_updatetime = dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
-            if self._next_updatetime < next_updatetime:
-                self._next_updatetime = next_updatetime
+            self._next_updatetime = dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
 
         self.logger.debug(" ---------- Next update time ----------")
         self.logger.debug(" - Now time:        [{}]".format(dt_now))
@@ -459,8 +485,9 @@ class CandlesData():
                                 close_datetime = dt.datetime.combine(latest_dt.date(), close_time)
                                 self.logger.debug(" - close datetime:[{}]".format(close_datetime))
                                 if close_datetime < self._dt_to:
-                                    self._next_updatetime = self._get_next_update_datetime(self._dt_to)
-                                    self.logger.debug(" - Next update time:[{}]".format(self._next_updatetime))
+                                    self.logger.debug(" - dt_to:[{}]".format(self._dt_to))
+                                    self._weekend_close_time = close_datetime
+                                    self._needs_weekend_update = True
                                     self._trans_from_updating_to_waiting()
                                 else:
                                     self._trans_updating_common()
