@@ -46,9 +46,10 @@ class ColBtRslt(Enum):
     ENTRY_DIR = "entry_dir"
     ENTRY_STD_SLOP = "entry_std_slope"
     GAP_STD_SMA_PIPS = "gap_std_sma"
-    MAX_LOSS_PIPS = "max_loss"
+    MAX_LOSS_PIPS = "max_loss_pips"
     EXIT_TIME = "exit_time"
     EXIT_PRICE = "exit_price"
+    TAKE_PROFIT_PIPS = "take_profit_pips"
 
     @classmethod
     def to_list(cls):
@@ -175,6 +176,9 @@ class BollingerBandUi():
         goal_msg.std_th_start = self._ui.spinBox_TechBb01_StdThStr.value()
         goal_msg.std_th_end = self._ui.spinBox_TechBb01_StdThEnd.value()
         goal_msg.std_th_decimation = self._ui.spinBox_TechBb01_StdThDeci.value()
+        goal_msg.loss_th_start = self._ui.spinBox_TechBb01_LossThStr.value()
+        goal_msg.loss_th_end = self._ui.spinBox_TechBb01_LossThEnd.value()
+        goal_msg.loss_th_decimation = self._ui.spinBox_TechBb01_LossThDeci.value()
 
         sma_rng = range(goal_msg.sma_th_start,
                         goal_msg.sma_th_end + 1,
@@ -182,9 +186,13 @@ class BollingerBandUi():
         std_rng = range(goal_msg.std_th_start,
                         goal_msg.std_th_end + 1,
                         goal_msg.std_th_decimation)
+        loss_rng = range(goal_msg.loss_th_start,
+                         goal_msg.loss_th_end + 1,
+                         goal_msg.loss_th_decimation)
 
         self._sma_len_max = len(sma_rng)
         self._std_len_max = len(std_rng)
+        self._loss_len_max = len(loss_rng)
 
         self._sma_pos = 0
         callback_fb = self._TechBb01_backtest_feedback_callback
@@ -198,16 +206,33 @@ class BollingerBandUi():
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         rsp = self._future.result()
         if rsp.status == GoalStatus.STATUS_EXECUTING:
-            self._sts_bar.set_label_text("Analyzing...[{}/{}][{}/{}]"
-                                         .format(msg.feedback.sma_th_pos,
-                                                 self._sma_len_max,
-                                                 msg.feedback.std_th_pos,
-                                                 self._std_len_max))
-            self._sts_bar.set_bar_value(msg.feedback.progress_rate)
+            fb = msg.feedback
+            if fb.sequence_num == 1:
+                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}][{}/{}]"
+                                             .format(fb.sequence_num,
+                                                     fb.sma_th_pos,
+                                                     self._sma_len_max,
+                                                     fb.std_th_pos,
+                                                     self._std_len_max))
+                self._sts_bar.set_bar_value(fb.progress_rate)
 
-            if self._sma_pos != msg.feedback.sma_th_pos:
-                gc.collect()
-                self._sma_pos = msg.feedback.sma_th_pos
+                if self._sma_pos != fb.sma_th_pos:
+                    gc.collect()
+                    self._sma_pos = fb.sma_th_pos
+            elif fb.sequence_num == 2:
+                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}][{}/{}][{}/{}]"
+                                             .format(fb.sequence_num,
+                                                     fb.loss_th_pos,
+                                                     self._loss_len_max,
+                                                     fb.sma_th_pos,
+                                                     self._sma_len_max,
+                                                     fb.std_th_pos,
+                                                     self._std_len_max))
+                self._sts_bar.set_bar_value(fb.progress_rate)
+
+                if self._sma_pos != fb.sma_th_pos:
+                    gc.collect()
+                    self._sma_pos = fb.sma_th_pos
 
     def _TechBb01_backtest_goal_response_callback(self, future):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -289,10 +314,6 @@ class BollingerBandUi():
         goal_msg.sma_th = self._sma_th_list[sma_idx]
         goal_msg.std_th = self._std_th_list[std_idx]
 
-        self.logger.debug("**********************************************")
-        self.logger.debug("goal_msg.sma_th:{}".format(goal_msg.sma_th))
-        self.logger.debug("goal_msg.std_th:{}".format(goal_msg.std_th))
-
         callback_fb = self._TechBb01_fetch_treeview_feedback_callback
         self._future = self._act_cli_bb01_tv.send_goal_async(goal_msg,
                                                              callback_fb)
@@ -338,9 +359,10 @@ class BollingerBandUi():
                 rec.entry_dir,
                 "{:.5f}".format(rec.entry_std_slope),
                 self._inst_param.convert_phy2raw(rec.gap_std_sma),
-                self._inst_param.convert_phy2raw(rec.max_loss),
+                rec.max_loss_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
-                utl.roundf(rec.exit_price, digit=self._inst_param.digit)
+                utl.roundf(rec.exit_price, digit=self._inst_param.digit),
+                rec.take_profit_pips,
             ]
             tbl.append(record)
         df = pd.DataFrame(tbl, columns=ColBtRslt.to_list())
@@ -368,9 +390,10 @@ class BollingerBandUi():
                 t.entry_dir,
                 t.entry_std_slope,
                 t.gap_std_sma,
-                t.max_loss,
+                t.max_loss_pips,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
-                t.exit_price
+                t.exit_price,
+                t.take_profit_pips
             ]
             tbl.append(record)
         df = pd.DataFrame(tbl, columns=ColBtRslt.to_list())
