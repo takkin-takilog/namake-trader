@@ -352,51 +352,52 @@ class CandlesData():
         dt_now = dt.datetime.now()
         if self._is_update_complete:
             self.logger.debug("========== DF Update OK! ==========")
-            latest_dt = self._get_latest_datetime_in_dataframe()
-            self._next_updatetime = self._get_next_update_datetime(latest_dt)
-            latest_sr = self._df_comp.iloc[-1]
             msg = LatestCandle()
-            msg.candle.ask_o = latest_sr[ColName.ASK_OP.value]
-            msg.candle.ask_h = latest_sr[ColName.ASK_HI.value]
-            msg.candle.ask_l = latest_sr[ColName.ASK_LO.value]
-            msg.candle.ask_c = latest_sr[ColName.ASK_CL.value]
-            msg.candle.bid_o = latest_sr[ColName.BID_OP.value]
-            msg.candle.bid_h = latest_sr[ColName.BID_HI.value]
-            msg.candle.bid_l = latest_sr[ColName.BID_LO.value]
-            msg.candle.bid_c = latest_sr[ColName.BID_CL.value]
-            msg.candle.mid_o = latest_sr[ColName.MID_OP.value]
-            msg.candle.mid_h = latest_sr[ColName.MID_HI.value]
-            msg.candle.mid_l = latest_sr[ColName.MID_LO.value]
-            msg.candle.mid_c = latest_sr[ColName.MID_CL.value]
-            msg.candle.time = latest_dt.strftime(FMT_YMDHMS)
-            msg.next_update_time = self._next_updatetime.strftime(FMT_YMDHMS)
+            if self._needs_weekend_update:
+                self.logger.debug("  ***** Needs weekend update *****")
+                next_updatetime = self._get_next_update_datetime(self._weekend_close_time)
+                latest_sr = self._df_comp.iloc[-1]
+                latest_close_ask = latest_sr[ColName.ASK_CL.value]
+                latest_close_bid = latest_sr[ColName.BID_CL.value]
+                latest_close_mid = latest_sr[ColName.MID_CL.value]
+                time = self._weekend_close_time - self._GRAN_INTERVAL
+                msg.candle.ask_o = latest_close_ask
+                msg.candle.ask_h = latest_close_ask
+                msg.candle.ask_l = latest_close_ask
+                msg.candle.ask_c = latest_close_ask
+                msg.candle.bid_o = latest_close_bid
+                msg.candle.bid_h = latest_close_bid
+                msg.candle.bid_l = latest_close_bid
+                msg.candle.bid_c = latest_close_bid
+                msg.candle.mid_o = latest_close_mid
+                msg.candle.mid_h = latest_close_mid
+                msg.candle.mid_l = latest_close_mid
+                msg.candle.mid_c = latest_close_mid
+                msg.candle.time = time.strftime(FMT_YMDHMS)
+                msg.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
+                self._weekend_close_time = None
+                self._needs_weekend_update = False
+            else:
+                latest_dt = self._get_latest_datetime_in_dataframe()
+                next_updatetime = self._get_next_update_datetime(latest_dt)
+                latest_sr = self._df_comp.iloc[-1]
+                msg.candle.ask_o = latest_sr[ColName.ASK_OP.value]
+                msg.candle.ask_h = latest_sr[ColName.ASK_HI.value]
+                msg.candle.ask_l = latest_sr[ColName.ASK_LO.value]
+                msg.candle.ask_c = latest_sr[ColName.ASK_CL.value]
+                msg.candle.bid_o = latest_sr[ColName.BID_OP.value]
+                msg.candle.bid_h = latest_sr[ColName.BID_HI.value]
+                msg.candle.bid_l = latest_sr[ColName.BID_LO.value]
+                msg.candle.bid_c = latest_sr[ColName.BID_CL.value]
+                msg.candle.mid_o = latest_sr[ColName.MID_OP.value]
+                msg.candle.mid_h = latest_sr[ColName.MID_HI.value]
+                msg.candle.mid_l = latest_sr[ColName.MID_LO.value]
+                msg.candle.mid_c = latest_sr[ColName.MID_CL.value]
+                msg.candle.time = latest_dt.strftime(FMT_YMDHMS)
+                msg.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
+
+            self._next_updatetime = next_updatetime
             self._pub.publish(msg)
-        elif self._needs_weekend_update:
-            self.logger.debug("========== DF Update OK! (But needs weekend update) ==========")
-            self._needs_weekend_update = False
-            self._next_updatetime = self._get_next_update_datetime(self._weekend_close_time)
-            latest_sr = self._df_comp.iloc[-1]
-            msg = LatestCandle()
-            latest_close_ask = latest_sr[ColName.ASK_CL.value]
-            latest_close_bid = latest_sr[ColName.BID_CL.value]
-            latest_close_mid = latest_sr[ColName.MID_CL.value]
-            time = self._weekend_close_time - self._GRAN_INTERVAL
-            msg.candle.ask_o = latest_close_ask
-            msg.candle.ask_h = latest_close_ask
-            msg.candle.ask_l = latest_close_ask
-            msg.candle.ask_c = latest_close_ask
-            msg.candle.bid_o = latest_close_bid
-            msg.candle.bid_h = latest_close_bid
-            msg.candle.bid_l = latest_close_bid
-            msg.candle.bid_c = latest_close_bid
-            msg.candle.mid_o = latest_close_mid
-            msg.candle.mid_h = latest_close_mid
-            msg.candle.mid_l = latest_close_mid
-            msg.candle.mid_c = latest_close_mid
-            msg.candle.time = time.strftime(FMT_YMDHMS)
-            msg.next_update_time = self._next_updatetime.strftime(FMT_YMDHMS)
-            self._pub.publish(msg)
-            self._weekend_close_time = None
         else:
             self.logger.debug("========== DF Update NG! ==========")
             dt_now = dt_now.replace(second=0, microsecond=0)
@@ -487,6 +488,7 @@ class CandlesData():
                                 if close_datetime < self._dt_to:
                                     self.logger.debug(" - dt_to:[{}]".format(self._dt_to))
                                     self._weekend_close_time = close_datetime
+                                    self._is_update_complete = True
                                     self._needs_weekend_update = True
                                     self._trans_from_updating_to_waiting()
                                 else:
