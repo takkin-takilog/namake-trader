@@ -44,7 +44,7 @@ class ColBtRslt(Enum):
     ENTRY_TIME = "entry_time"
     ENTRY_PRICE = "entry_price"
     ENTRY_DIR = "entry_dir"
-    ENTRY_STD_SLOP = "entry_std_slope"
+    ENTRY_SMA_SLOP_ABS = "entry_sma_slope_abs"
     GAP_STD_SMA_PIPS = "gap_std_sma"
     MAX_LOSS_PIPS = "max_loss_pips"
     EXIT_TIME = "exit_time"
@@ -203,7 +203,7 @@ class BollingerBandUi():
         self._future.add_done_callback(callback)
 
     def _TechBb01_backtest_feedback_callback(self, msg):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         rsp = self._future.result()
         if rsp.status == GoalStatus.STATUS_EXECUTING:
             fb = msg.feedback
@@ -248,7 +248,7 @@ class BollingerBandUi():
         self._result_future.add_done_callback(callback)
 
     def _TechBb01_backtest_get_result_callback(self, future):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._sts_bar.set_bar_value(100)
         rsp = future.result()
         status = rsp.status
@@ -357,8 +357,8 @@ class BollingerBandUi():
                 dt.datetime.strptime(rec.entry_time, FMT_YMDHMS),
                 utl.roundf(rec.entry_price, digit=self._inst_param.digit),
                 rec.entry_dir,
-                "{:.5f}".format(rec.entry_std_slope),
-                self._inst_param.convert_phy2raw(rec.gap_std_sma),
+                "{:.5f}".format(rec.entry_sma_slope_abs),
+                rec.gap_std_sma,
                 rec.max_loss_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
                 utl.roundf(rec.exit_price, digit=self._inst_param.digit),
@@ -388,7 +388,7 @@ class BollingerBandUi():
                 t.Index.strftime(FMT_DISP_YMDHMS),
                 t.entry_price,
                 t.entry_dir,
-                t.entry_std_slope,
+                t.entry_sma_slope_abs,
                 t.gap_std_sma,
                 t.max_loss_pips,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
