@@ -632,7 +632,7 @@
               <item>
                <layout class="QVBoxLayout" name="verticalLayout_5">
                 <item>
-                 <widget class="QPushButton" name="pushButton_TechBb01_backtest_start">
+                 <widget class="QPushButton" name="pushButton_TechBb_backtest_start">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                     <horstretch>0</horstretch>
@@ -670,7 +670,7 @@
                     </widget>
                    </item>
                    <item row="0" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb01_SmaThStr">
+                    <widget class="QSpinBox" name="spinBox_TechBb_SmaThStr">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -702,7 +702,7 @@
                     </widget>
                    </item>
                    <item row="1" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb01_SmaThEnd">
+                    <widget class="QSpinBox" name="spinBox_TechBb_SmaThEnd">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -734,7 +734,7 @@
                     </widget>
                    </item>
                    <item row="2" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb01_SmaThDeci">
+                    <widget class="QSpinBox" name="spinBox_TechBb_SmaThDeci">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -791,7 +791,7 @@
                     </widget>
                    </item>
                    <item row="2" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb01_StdThDeci">
+                    <widget class="QSpinBox" name="spinBox_TechBb_StdThDeci">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -807,7 +807,7 @@
                     </widget>
                    </item>
                    <item row="0" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb01_StdThStr">
+                    <widget class="QSpinBox" name="spinBox_TechBb_StdThStr">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -839,7 +839,7 @@
                     </widget>
                    </item>
                    <item row="1" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb01_StdThEnd">
+                    <widget class="QSpinBox" name="spinBox_TechBb_StdThEnd">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -899,7 +899,7 @@
                     </widget>
                    </item>
                    <item row="2" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb01_LossThDeci">
+                    <widget class="QSpinBox" name="spinBox_TechBb_LossThDeci">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -915,7 +915,7 @@
                     </widget>
                    </item>
                    <item row="0" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb01_LossThStr">
+                    <widget class="QSpinBox" name="spinBox_TechBb_LossThStr">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -947,7 +947,7 @@
                     </widget>
                    </item>
                    <item row="1" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb01_LossThEnd">
+                    <widget class="QSpinBox" name="spinBox_TechBb_LossThEnd">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -1008,7 +1008,7 @@
                        </widget>
                       </item>
                       <item>
-                       <widget class="QComboBox" name="comboBox_TechBb01_sma">
+                       <widget class="QComboBox" name="comboBox_TechBb_sma">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                           <horstretch>0</horstretch>
@@ -1060,7 +1060,7 @@
                        </widget>
                       </item>
                       <item>
-                       <widget class="QComboBox" name="comboBox_TechBb01_std">
+                       <widget class="QComboBox" name="comboBox_TechBb_std">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                           <horstretch>0</horstretch>
@@ -1097,7 +1097,7 @@
                      </spacer>
                     </item>
                     <item>
-                     <widget class="QPushButton" name="pushButton_TechBb01_fetch_treeView">
+                     <widget class="QPushButton" name="pushButton_TechBb_fetch_treeView">
                       <property name="text">
                        <string>Fetch</string>
                       </property>
@@ -1119,7 +1119,7 @@
                    </layout>
                   </item>
                   <item row="1" column="0">
-                   <widget class="QWidget" name="widget_TreeView_TechBb01" native="true">
+                   <widget class="QWidget" name="widget_TreeView_TechBb" native="true">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                       <horstretch>0</horstretch>
@@ -1136,7 +1136,7 @@
                 <item>
                  <layout class="QGridLayout" name="gridLayout_5">
                   <item row="1" column="0" colspan="3">
-                   <widget class="QWidget" name="widget_ChartView_TechBb01" native="true">
+                   <widget class="QWidget" name="widget_ChartView_TechBb" native="true">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                       <horstretch>0</horstretch>
@@ -1149,7 +1149,7 @@
                    </widget>
                   </item>
                   <item row="0" column="0">
-                   <widget class="QComboBox" name="comboBox_TechBb01_amb">
+                   <widget class="QComboBox" name="comboBox_TechBb_amb">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                       <horstretch>0</horstretch>
@@ -1183,7 +1183,7 @@
                    </spacer>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QSpinBox" name="spinBox_TechBb01_barNum">
+                   <widget class="QSpinBox" name="spinBox_TechBb_barNum">
                     <property name="minimum">
                      <number>10</number>
                     </property>

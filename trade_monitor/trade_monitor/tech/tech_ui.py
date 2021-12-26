@@ -43,7 +43,6 @@ class TechUi():
         self._sts_bar = StatusProgressBar(ui.statusbar)
 
         # ---------- set field ----------
-        self._act_cli_bb01_bt = None
         self._ui = ui
         self._inst_param = VALID_INST_LIST[0]
         self._gran_param = VALID_GRAN_LIST[0]
