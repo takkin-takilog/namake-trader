@@ -8,11 +8,13 @@ from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QAbstractItemView
 from rclpy.action import ActionClient
 from action_msgs.msg import GoalStatus
+from trade_apl_msgs.action import TechBbFllwBtAct
 from trade_apl_msgs.action import TechBbCntrBtAct
 from trade_apl_msgs.action import TechBbTreeViewAct
 from trade_apl_msgs.srv import TechBbChartSrv
 from trade_monitor.constant import FMT_YMDHMS, FMT_DISP_YMDHMS
 from trade_monitor.constant import SPREAD_MSG_LIST
+from trade_monitor.constant import TRADE_TYP_LIST
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import PandasTreeView
@@ -61,6 +63,11 @@ class BollingerBandUi():
     def __init__(self, ui, inst_param, gran_param, sts_bar) -> None:
         self.logger = ros_com.get_logger()
 
+        # ---------- set comboBox Analysis Type ----------
+        utl.remove_all_items_of_comboBox(ui.comboBox_TechBb_AnalyTyp)
+        for text in TRADE_TYP_LIST:
+            ui.comboBox_TechBb_AnalyTyp.addItem(text)
+
         # ---------- set pushButton analy start ----------
         callback = self._on_pushButton_TechBb_backtest_start_clicked
         ui.pushButton_TechBb_backtest_start.clicked.connect(callback)
@@ -104,6 +111,7 @@ class BollingerBandUi():
         # ---------- set field ----------
         self._selected_entry_time = None
         self._chart_info = None
+        self._act_cli_bb_fllw_bt = None
         self._act_cli_bb_cntr_bt = None
         self._act_cli_bb_tv = None
         self._ui = ui
@@ -125,33 +133,102 @@ class BollingerBandUi():
     def _init_ros_service(self, inst_param, gran_param):
         ns = inst_param.namespace + "/" + gran_param.namespace + "/"
 
+        if isinstance(self._act_cli_bb_fllw_bt, ActionClient):
+            self._act_cli_bb_fllw_bt.destroy()
+
         if isinstance(self._act_cli_bb_cntr_bt, ActionClient):
             self._act_cli_bb_cntr_bt.destroy()
 
         if isinstance(self._act_cli_bb_tv, ActionClient):
             self._act_cli_bb_tv.destroy()
 
-        # Create action client "TechnicalSmaMethodBackTest"
+        # Create action client "TechnicalBbContrarianBackTest"
+        node = ros_com.get_node()
+        act_type = TechBbFllwBtAct
+        act_name = "tech_bb_fllw_backtest"
+        fullname = ns + act_name
+        self._act_cli_bb_fllw_bt = ActionClient(node, act_type, fullname)
+
+        # Create action client "TechnicalBbContrarianBackTest"
         node = ros_com.get_node()
         act_type = TechBbCntrBtAct
         act_name = "tech_bb_cntr_backtest"
         fullname = ns + act_name
         self._act_cli_bb_cntr_bt = ActionClient(node, act_type, fullname)
 
-        # Create action client "TechnicalSmaMethodBackTest"
+        # Create action client "TechnicalBbTreeView"
         node = ros_com.get_node()
         act_type = TechBbTreeViewAct
         act_name = "tech_bb_fetch_treeview"
         fullname = ns + act_name
         self._act_cli_bb_tv = ActionClient(node, act_type, fullname)
 
-        # Create service client "tech_bb_fetch_chart"
+        # Create service client "TechBbChart"
         srv_type = TechBbChartSrv
         srv_name = "tech_bb_fetch_chart"
         fullname = ns + srv_name
         self._srv_cli_bb_chart = ros_com.get_node().create_client(srv_type, fullname)
 
     def _on_pushButton_TechBb_backtest_start_clicked(self):
+
+        analy_typ_idx = self._ui.comboBox_TechBb_AnalyTyp.currentIndex()
+        if analy_typ_idx == 0:  # Follower
+            self._start_backtest_follower()
+        else:   # Contrarian
+            self._start_backtest_contrarian()
+
+    def _start_backtest_follower(self):
+
+        inst_param = self._inst_param
+        gran_param = self._gran_param
+
+        if not self._act_cli_bb_fllw_bt.server_is_ready():
+            self.logger.error("Action server [{}][{}] not ready"
+                              .format(inst_param.text, gran_param.text))
+            return
+
+        self._ui.pushButton_TechBb_backtest_start.setEnabled(False)
+
+        self._sts_bar.set_label_text("Stanby...")
+        self._sts_bar.set_bar_range(0, 100)
+        self._sts_bar.set_bar_value(0)
+
+        goal_msg = TechBbFllwBtAct.Goal()
+        goal_msg.start_datetime = ""
+        goal_msg.end_datetime = ""
+        goal_msg.sma_th_start = self._ui.spinBox_TechBb_SmaThStr.value()
+        goal_msg.sma_th_end = self._ui.spinBox_TechBb_SmaThEnd.value()
+        goal_msg.sma_th_decimation = self._ui.spinBox_TechBb_SmaThDeci.value()
+        goal_msg.std_th_start = self._ui.spinBox_TechBb_StdThStr.value()
+        goal_msg.std_th_end = self._ui.spinBox_TechBb_StdThEnd.value()
+        goal_msg.std_th_decimation = self._ui.spinBox_TechBb_StdThDeci.value()
+        goal_msg.loss_th_start = self._ui.spinBox_TechBb_LossThStr.value()
+        goal_msg.loss_th_end = self._ui.spinBox_TechBb_LossThEnd.value()
+        goal_msg.loss_th_decimation = self._ui.spinBox_TechBb_LossThDeci.value()
+
+        sma_rng = range(goal_msg.sma_th_start,
+                        goal_msg.sma_th_end + 1,
+                        goal_msg.sma_th_decimation)
+        std_rng = range(goal_msg.std_th_start,
+                        goal_msg.std_th_end + 1,
+                        goal_msg.std_th_decimation)
+        loss_rng = range(goal_msg.loss_th_start,
+                         goal_msg.loss_th_end + 1,
+                         goal_msg.loss_th_decimation)
+
+        self._sma_len_max = len(sma_rng)
+        self._std_len_max = len(std_rng)
+        self._loss_len_max = len(loss_rng)
+
+        self._sma_pos = 0
+        callback_fb = self._TechBb_backtest_feedback_callback
+        self._future = self._act_cli_bb_fllw_bt.send_goal_async(goal_msg,
+                                                                callback_fb)
+
+        callback = self._TechBb_backtest_goal_response_callback
+        self._future.add_done_callback(callback)
+
+    def _start_backtest_contrarian(self):
 
         inst_param = self._inst_param
         gran_param = self._gran_param
@@ -248,7 +325,7 @@ class BollingerBandUi():
         self._result_future.add_done_callback(callback)
 
     def _TechBb_backtest_get_result_callback(self, future):
-        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._sts_bar.set_bar_value(100)
         rsp = future.result()
         status = rsp.status

@@ -155,3 +155,8 @@ SPREAD_MSG_LIST = [
     "Ask",
     "Bid"
 ]
+
+TRADE_TYP_LIST = [
+    "Follower",
+    "Contrarian",
+]
