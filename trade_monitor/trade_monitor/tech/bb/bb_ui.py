@@ -436,10 +436,10 @@ class BollingerBandUi():
                 rec.entry_dir,
                 "{:.5f}".format(rec.entry_sma_slope_abs),
                 rec.gap_std_sma,
-                rec.max_loss_pips,
+                rec.max_pl_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
                 utl.roundf(rec.exit_price, digit=self._inst_param.digit),
-                rec.take_profit_pips,
+                rec.exit_pl_pips,
             ]
             tbl.append(record)
         df = pd.DataFrame(tbl, columns=ColBtRslt.to_list())
