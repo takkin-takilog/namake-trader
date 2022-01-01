@@ -48,10 +48,12 @@ class ColBtRslt(Enum):
     ENTRY_DIR = "entry_dir"
     ENTRY_SMA_SLOP_ABS = "entry_sma_slope_abs"
     GAP_STD_SMA_PIPS = "gap_std_sma"
-    MAX_LOSS_PIPS = "max_loss_pips"
+    # MAX_LOSS_PIPS = "max_loss_pips"
+    MAX_PL_PIPS = "max_pl_pips"
     EXIT_TIME = "exit_time"
     EXIT_PRICE = "exit_price"
-    TAKE_PROFIT_PIPS = "take_profit_pips"
+    # TAKE_PROFIT_PIPS = "take_profit_pips"
+    EXIT_PL_PIPS = "exit_pl_pips"
 
     @classmethod
     def to_list(cls):
@@ -173,11 +175,11 @@ class BollingerBandUi():
 
         analy_typ_idx = self._ui.comboBox_TechBb_AnalyTyp.currentIndex()
         if analy_typ_idx == 0:  # Follower
-            self._start_backtest_follower()
+            self._start_backtest_fllw()
         else:   # Contrarian
-            self._start_backtest_contrarian()
+            self._start_backtest_cntr()
 
-    def _start_backtest_follower(self):
+    def _start_backtest_fllw(self):
 
         inst_param = self._inst_param
         gran_param = self._gran_param
@@ -202,9 +204,9 @@ class BollingerBandUi():
         goal_msg.std_th_start = self._ui.spinBox_TechBb_StdThStr.value()
         goal_msg.std_th_end = self._ui.spinBox_TechBb_StdThEnd.value()
         goal_msg.std_th_decimation = self._ui.spinBox_TechBb_StdThDeci.value()
-        goal_msg.loss_th_start = self._ui.spinBox_TechBb_LossThStr.value()
-        goal_msg.loss_th_end = self._ui.spinBox_TechBb_LossThEnd.value()
-        goal_msg.loss_th_decimation = self._ui.spinBox_TechBb_LossThDeci.value()
+        goal_msg.profit_th_start = self._ui.spinBox_TechBb_PlThStr.value()
+        goal_msg.profit_th_end = self._ui.spinBox_TechBb_PlThEnd.value()
+        goal_msg.profit_th_decimation = self._ui.spinBox_TechBb_PlThDeci.value()
 
         sma_rng = range(goal_msg.sma_th_start,
                         goal_msg.sma_th_end + 1,
@@ -212,23 +214,23 @@ class BollingerBandUi():
         std_rng = range(goal_msg.std_th_start,
                         goal_msg.std_th_end + 1,
                         goal_msg.std_th_decimation)
-        loss_rng = range(goal_msg.loss_th_start,
-                         goal_msg.loss_th_end + 1,
-                         goal_msg.loss_th_decimation)
+        profit_rng = range(goal_msg.profit_th_start,
+                           goal_msg.profit_th_end + 1,
+                           goal_msg.profit_th_decimation)
 
         self._sma_len_max = len(sma_rng)
         self._std_len_max = len(std_rng)
-        self._loss_len_max = len(loss_rng)
+        self._pl_len_max = len(profit_rng)
 
         self._sma_pos = 0
-        callback_fb = self._TechBb_backtest_feedback_callback
+        callback_fb = self._backtest_fllw_feedback_callback
         self._future = self._act_cli_bb_fllw_bt.send_goal_async(goal_msg,
                                                                 callback_fb)
 
-        callback = self._TechBb_backtest_goal_response_callback
+        callback = self._backtest_goal_response_callback
         self._future.add_done_callback(callback)
 
-    def _start_backtest_contrarian(self):
+    def _start_backtest_cntr(self):
 
         inst_param = self._inst_param
         gran_param = self._gran_param
@@ -253,9 +255,9 @@ class BollingerBandUi():
         goal_msg.std_th_start = self._ui.spinBox_TechBb_StdThStr.value()
         goal_msg.std_th_end = self._ui.spinBox_TechBb_StdThEnd.value()
         goal_msg.std_th_decimation = self._ui.spinBox_TechBb_StdThDeci.value()
-        goal_msg.loss_th_start = self._ui.spinBox_TechBb_LossThStr.value()
-        goal_msg.loss_th_end = self._ui.spinBox_TechBb_LossThEnd.value()
-        goal_msg.loss_th_decimation = self._ui.spinBox_TechBb_LossThDeci.value()
+        goal_msg.loss_th_start = self._ui.spinBox_TechBb_PlThStr.value()
+        goal_msg.loss_th_end = self._ui.spinBox_TechBb_PlThEnd.value()
+        goal_msg.loss_th_decimation = self._ui.spinBox_TechBb_PlThDeci.value()
 
         sma_rng = range(goal_msg.sma_th_start,
                         goal_msg.sma_th_end + 1,
@@ -269,17 +271,49 @@ class BollingerBandUi():
 
         self._sma_len_max = len(sma_rng)
         self._std_len_max = len(std_rng)
-        self._loss_len_max = len(loss_rng)
+        self._pl_len_max = len(loss_rng)
 
         self._sma_pos = 0
-        callback_fb = self._TechBb_backtest_feedback_callback
+        callback_fb = self._backtest_cntr_feedback_callback
         self._future = self._act_cli_bb_cntr_bt.send_goal_async(goal_msg,
                                                                 callback_fb)
 
-        callback = self._TechBb_backtest_goal_response_callback
+        callback = self._backtest_goal_response_callback
         self._future.add_done_callback(callback)
 
-    def _TechBb_backtest_feedback_callback(self, msg):
+    def _backtest_fllw_feedback_callback(self, msg):
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        rsp = self._future.result()
+        if rsp.status == GoalStatus.STATUS_EXECUTING:
+            fb = msg.feedback
+            if fb.sequence_num == 1:
+                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}][{}/{}]"
+                                             .format(fb.sequence_num,
+                                                     fb.sma_th_pos,
+                                                     self._sma_len_max,
+                                                     fb.std_th_pos,
+                                                     self._std_len_max))
+                self._sts_bar.set_bar_value(fb.progress_rate)
+
+                if self._sma_pos != fb.sma_th_pos:
+                    gc.collect()
+                    self._sma_pos = fb.sma_th_pos
+            elif fb.sequence_num == 2:
+                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}][{}/{}][{}/{}]"
+                                             .format(fb.sequence_num,
+                                                     fb.profit_th_pos,
+                                                     self._pl_len_max,
+                                                     fb.sma_th_pos,
+                                                     self._sma_len_max,
+                                                     fb.std_th_pos,
+                                                     self._std_len_max))
+                self._sts_bar.set_bar_value(fb.progress_rate)
+
+                if self._sma_pos != fb.sma_th_pos:
+                    gc.collect()
+                    self._sma_pos = fb.sma_th_pos
+
+    def _backtest_cntr_feedback_callback(self, msg):
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         rsp = self._future.result()
         if rsp.status == GoalStatus.STATUS_EXECUTING:
@@ -300,7 +334,7 @@ class BollingerBandUi():
                 self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}][{}/{}][{}/{}]"
                                              .format(fb.sequence_num,
                                                      fb.loss_th_pos,
-                                                     self._loss_len_max,
+                                                     self._pl_len_max,
                                                      fb.sma_th_pos,
                                                      self._sma_len_max,
                                                      fb.std_th_pos,
@@ -311,7 +345,7 @@ class BollingerBandUi():
                     gc.collect()
                     self._sma_pos = fb.sma_th_pos
 
-    def _TechBb_backtest_goal_response_callback(self, future):
+    def _backtest_goal_response_callback(self, future):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         send_gol_rsp = future.result()
         if not send_gol_rsp.accepted:
@@ -321,10 +355,10 @@ class BollingerBandUi():
         self._sts_bar.set_bar_value(100)
         self._result_future = send_gol_rsp.get_result_async()
 
-        callback = self._TechBb_backtest_get_result_callback
+        callback = self._backtest_get_result_callback
         self._result_future.add_done_callback(callback)
 
-    def _TechBb_backtest_get_result_callback(self, future):
+    def _backtest_get_result_callback(self, future):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._sts_bar.set_bar_value(100)
         rsp = future.result()
@@ -467,10 +501,10 @@ class BollingerBandUi():
                 t.entry_dir,
                 t.entry_sma_slope_abs,
                 t.gap_std_sma,
-                t.max_loss_pips,
+                t.max_pl_pips,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
                 t.exit_price,
-                t.take_profit_pips
+                t.exit_pl_pips
             ]
             tbl.append(record)
         df = pd.DataFrame(tbl, columns=ColBtRslt.to_list())

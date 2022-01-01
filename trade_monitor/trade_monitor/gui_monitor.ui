@@ -922,7 +922,7 @@
                    </sizepolicy>
                   </property>
                   <property name="title">
-                   <string>Loss Threshold</string>
+                   <string>Prpfot or Loss Threshold</string>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_7">
                    <item row="1" column="0">
@@ -952,7 +952,7 @@
                     </widget>
                    </item>
                    <item row="2" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb_LossThDeci">
+                    <widget class="QSpinBox" name="spinBox_TechBb_PlThDeci">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -968,7 +968,7 @@
                     </widget>
                    </item>
                    <item row="0" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb_LossThStr">
+                    <widget class="QSpinBox" name="spinBox_TechBb_PlThStr">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -1000,7 +1000,7 @@
                     </widget>
                    </item>
                    <item row="1" column="1">
-                    <widget class="QSpinBox" name="spinBox_TechBb_LossThEnd">
+                    <widget class="QSpinBox" name="spinBox_TechBb_PlThEnd">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                        <horstretch>0</horstretch>
