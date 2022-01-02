@@ -207,6 +207,7 @@ class BollingerBandUi():
         goal_msg.profit_th_start = self._ui.spinBox_TechBb_PlThStr.value()
         goal_msg.profit_th_end = self._ui.spinBox_TechBb_PlThEnd.value()
         goal_msg.profit_th_decimation = self._ui.spinBox_TechBb_PlThDeci.value()
+        goal_msg.entry_offset = self._ui.spinBox_TechBb_EntryOfs.value()
 
         sma_rng = range(goal_msg.sma_th_start,
                         goal_msg.sma_th_end + 1,
@@ -258,6 +259,7 @@ class BollingerBandUi():
         goal_msg.loss_th_start = self._ui.spinBox_TechBb_PlThStr.value()
         goal_msg.loss_th_end = self._ui.spinBox_TechBb_PlThEnd.value()
         goal_msg.loss_th_decimation = self._ui.spinBox_TechBb_PlThDeci.value()
+        goal_msg.entry_offset = self._ui.spinBox_TechBb_EntryOfs.value()
 
         sma_rng = range(goal_msg.sma_th_start,
                         goal_msg.sma_th_end + 1,
