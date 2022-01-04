@@ -332,7 +332,7 @@ class CandlesData():
 
         return next_update_dt
 
-    def do_timeout_event(self) -> None:
+    def do_cyclic_event(self) -> None:
         # self.logger.debug("state:[{}]".format(self.state))
 
         if self.state == self.States.waiting:
@@ -809,11 +809,11 @@ class HistoricalCandles(Node):
                                            callback_group=ReentrantCallbackGroup()
                                            )
 
-    def do_timeout_event(self) -> None:
+    def do_cyclic_event(self) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
         for candles_data in self._candles_data_list:
-            candles_data.do_timeout_event()
+            candles_data.do_cyclic_event()
             """
             self.logger.debug("inst_id:{}, gran_id:{}"
                               .format(candles_data._inst_id, candles_data._gran_id))
@@ -1028,7 +1028,7 @@ def main(args=None):
         try:
             while rclpy.ok():
                 rclpy.spin_once(hc, executor=executor, timeout_sec=1.0)
-                hc.do_timeout_event()
+                hc.do_cyclic_event()
         except KeyboardInterrupt:
             pass
 

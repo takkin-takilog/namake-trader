@@ -261,14 +261,14 @@ class OrderTicket():
             self.logger.debug("  - entry_exp_time:[{}]".format(self._entry_exp_time))
         self.logger.debug("  - exit_exp_time:[{}]".format(self._exit_exp_time))
 
-        self.do_timeout_event()
+        self.do_cyclic_event()
 
     def __del__(self) -> None:
         self.logger.debug("----- del -----")
         self.logger.debug("  - order_id:[{}]".format(self._order_id))
         self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
 
-    def do_timeout_event(self) -> None:
+    def do_cyclic_event(self) -> None:
 
         self.logger.debug("state:[{}]".format(self.state))
 
@@ -631,10 +631,10 @@ class OrderScheduler(Node):
             self.destroy_node()
             raise InitializerErrorException("create service client failed.")
 
-    def do_timeout_event(self) -> None:
+    def do_cyclic_event(self) -> None:
 
         for ticket in self._tickets:
-            ticket.do_timeout_event()
+            ticket.do_cyclic_event()
 
         # remove "Complete" States element
         self._tickets = [ticket for ticket in self._tickets
@@ -695,7 +695,7 @@ def main(args=None):
         try:
             while rclpy.ok():
                 rclpy.spin_once(os, timeout_sec=1.0)
-                os.do_timeout_event()
+                os.do_cyclic_event()
         except KeyboardInterrupt:
             pass
 
