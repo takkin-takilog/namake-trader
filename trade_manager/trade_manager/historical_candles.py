@@ -161,7 +161,7 @@ class CandlesData():
         self._NEXT_UPDATETIME_OFS_SEC = dt.timedelta(seconds=5)
         self._RETRY_INTERVAL = dt.timedelta(minutes=1)
         self._FAIL_INTERVAL = dt.timedelta(minutes=10)
-        self._RETRY_COUNT_MAX = 2
+        self._RETRY_COUNT_MAX = 30
         self._SELF_RETRY_COUNT_MAX = 2
 
         # ---------- Create State Machine ----------
