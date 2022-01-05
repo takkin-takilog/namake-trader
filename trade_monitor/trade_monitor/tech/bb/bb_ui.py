@@ -4,15 +4,17 @@ from enum import Enum, IntEnum
 import pandas as pd
 import datetime as dt
 from dataclasses import dataclass
-from PySide2.QtCore import Qt
+from PySide2.QtCore import QDateTime, Qt
 from PySide2.QtWidgets import QAbstractItemView
 from rclpy.action import ActionClient
+from rclpy.client import Client
 from action_msgs.msg import GoalStatus
 from trade_apl_msgs.action import TechBbFllwBtAct
 from trade_apl_msgs.action import TechBbCntrBtAct
 from trade_apl_msgs.action import TechBbTreeViewAct
+from trade_apl_msgs.srv import PeriodSrv
 from trade_apl_msgs.srv import TechBbChartSrv
-from trade_monitor.constant import FMT_YMDHMS, FMT_DISP_YMDHMS
+from trade_monitor.constant import FMT_YMDHMS, FMT_DISP_YMDHMS, FMT_QT_YMDHMS
 from trade_monitor.constant import SPREAD_MSG_LIST
 from trade_monitor.constant import TRADE_TYP_LIST
 from trade_monitor import utility as utl
@@ -74,6 +76,10 @@ class BollingerBandUi():
         callback = self._on_pushButton_TechBb_backtest_start_clicked
         ui.pushButton_TechBb_backtest_start.clicked.connect(callback)
 
+        # ---------- set pushButton period load ----------
+        callback = self._on_pushButton_TechBb_period_load_clicked
+        ui.pushButton_TechBb_PeriodLoad.clicked.connect(callback)
+
         # ---------- set pushButton fetch treeView ----------
         callback = self._on_pushButton_TechBb_fetch_treeView_clicked
         ui.pushButton_TechBb_fetch_treeView.clicked.connect(callback)
@@ -111,11 +117,14 @@ class BollingerBandUi():
         ui.widget_ChartView_TechBb.setEnabled(False)
 
         # ---------- set field ----------
+        self._enable_period = False
         self._selected_entry_time = None
         self._chart_info = None
-        self._act_cli_bb_fllw_bt = None
-        self._act_cli_bb_cntr_bt = None
-        self._act_cli_bb_tv = None
+        self._srv_cli_period = None
+        self._srv_cli_chart = None
+        self._act_cli_fllw_bt = None
+        self._act_cli_cntr_bt = None
+        self._act_cli_tv = None
         self._ui = ui
 
         self._init_ros_service(inst_param, gran_param)
@@ -135,41 +144,52 @@ class BollingerBandUi():
     def _init_ros_service(self, inst_param, gran_param):
         ns = inst_param.namespace + "/" + gran_param.namespace + "/"
 
-        if isinstance(self._act_cli_bb_fllw_bt, ActionClient):
-            self._act_cli_bb_fllw_bt.destroy()
+        if isinstance(self._srv_cli_period, Client):
+            self._srv_cli_period.destroy()
 
-        if isinstance(self._act_cli_bb_cntr_bt, ActionClient):
-            self._act_cli_bb_cntr_bt.destroy()
+        if isinstance(self._srv_cli_chart, Client):
+            self._srv_cli_chart.destroy()
 
-        if isinstance(self._act_cli_bb_tv, ActionClient):
-            self._act_cli_bb_tv.destroy()
+        if isinstance(self._act_cli_fllw_bt, ActionClient):
+            self._act_cli_fllw_bt.destroy()
 
-        # Create action client "TechnicalBbContrarianBackTest"
+        if isinstance(self._act_cli_cntr_bt, ActionClient):
+            self._act_cli_cntr_bt.destroy()
+
+        if isinstance(self._act_cli_tv, ActionClient):
+            self._act_cli_tv.destroy()
+
         node = ros_com.get_node()
-        act_type = TechBbFllwBtAct
-        act_name = "tech_bb_fllw_backtest"
-        fullname = ns + act_name
-        self._act_cli_bb_fllw_bt = ActionClient(node, act_type, fullname)
 
-        # Create action client "TechnicalBbContrarianBackTest"
-        node = ros_com.get_node()
-        act_type = TechBbCntrBtAct
-        act_name = "tech_bb_cntr_backtest"
-        fullname = ns + act_name
-        self._act_cli_bb_cntr_bt = ActionClient(node, act_type, fullname)
-
-        # Create action client "TechnicalBbTreeView"
-        node = ros_com.get_node()
-        act_type = TechBbTreeViewAct
-        act_name = "tech_bb_fetch_treeview"
-        fullname = ns + act_name
-        self._act_cli_bb_tv = ActionClient(node, act_type, fullname)
+        # Create service client "Period"
+        srv_type = PeriodSrv
+        srv_name = "tech_bb_period"
+        fullname = ns + srv_name
+        self._srv_cli_period = node.create_client(srv_type, fullname)
 
         # Create service client "TechBbChart"
         srv_type = TechBbChartSrv
         srv_name = "tech_bb_fetch_chart"
         fullname = ns + srv_name
-        self._srv_cli_bb_chart = ros_com.get_node().create_client(srv_type, fullname)
+        self._srv_cli_chart = node.create_client(srv_type, fullname)
+
+        # Create action client "TechnicalBbContrarianBackTest"
+        act_type = TechBbFllwBtAct
+        act_name = "tech_bb_fllw_backtest"
+        fullname = ns + act_name
+        self._act_cli_fllw_bt = ActionClient(node, act_type, fullname)
+
+        # Create action client "TechnicalBbContrarianBackTest"
+        act_type = TechBbCntrBtAct
+        act_name = "tech_bb_cntr_backtest"
+        fullname = ns + act_name
+        self._act_cli_cntr_bt = ActionClient(node, act_type, fullname)
+
+        # Create action client "TechnicalBbTreeView"
+        act_type = TechBbTreeViewAct
+        act_name = "tech_bb_fetch_treeview"
+        fullname = ns + act_name
+        self._act_cli_tv = ActionClient(node, act_type, fullname)
 
     def _on_pushButton_TechBb_backtest_start_clicked(self):
 
@@ -179,12 +199,42 @@ class BollingerBandUi():
         else:   # Contrarian
             self._start_backtest_cntr()
 
+    def _on_pushButton_TechBb_period_load_clicked(self):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+
+        if not self._srv_cli_period.service_is_ready():
+            self.logger.error("Service server [{}] not ready"
+                              .format(self._inst_param.text))
+            return
+
+        req = PeriodSrv.Request()
+        rsp = ros_com.call_servive_sync(self._srv_cli_period, req)
+
+        q_start_datetime = QDateTime.fromString(rsp.start_datetime, FMT_QT_YMDHMS)
+        q_end_datetime = QDateTime.fromString(rsp.end_datetime, FMT_QT_YMDHMS)
+
+        wasBlocked1 = self._ui.dateTimeEdit_TechBb_PeriodStr.blockSignals(True)
+        wasBlocked2 = self._ui.dateTimeEdit_TechBb_PeriodEnd.blockSignals(True)
+
+        self._ui.dateTimeEdit_TechBb_PeriodStr.setDateTimeRange(q_start_datetime,
+                                                                q_end_datetime)
+        self._ui.dateTimeEdit_TechBb_PeriodStr.setDateTime(q_start_datetime)
+
+        self._ui.dateTimeEdit_TechBb_PeriodEnd.setDateTimeRange(q_start_datetime,
+                                                                q_end_datetime)
+        self._ui.dateTimeEdit_TechBb_PeriodEnd.setDateTime(q_end_datetime)
+
+        self._ui.dateTimeEdit_TechBb_PeriodStr.blockSignals(wasBlocked1)
+        self._ui.dateTimeEdit_TechBb_PeriodEnd.blockSignals(wasBlocked2)
+
+        self._enable_period = True
+
     def _start_backtest_fllw(self):
 
         inst_param = self._inst_param
         gran_param = self._gran_param
 
-        if not self._act_cli_bb_fllw_bt.server_is_ready():
+        if not self._act_cli_fllw_bt.server_is_ready():
             self.logger.error("Action server [{}][{}] not ready"
                               .format(inst_param.text, gran_param.text))
             return
@@ -196,8 +246,12 @@ class BollingerBandUi():
         self._sts_bar.set_bar_value(0)
 
         goal_msg = TechBbFllwBtAct.Goal()
-        goal_msg.start_datetime = ""
-        goal_msg.end_datetime = ""
+        if self._enable_period:
+            goal_msg.start_datetime = self._ui.dateTimeEdit_TechBb_PeriodStr.dateTime().toString(FMT_QT_YMDHMS)
+            goal_msg.end_datetime = self._ui.dateTimeEdit_TechBb_PeriodEnd.dateTime().toString(FMT_QT_YMDHMS)
+        else:
+            goal_msg.start_datetime = ""
+            goal_msg.end_datetime = ""
         goal_msg.sma_th_start = self._ui.spinBox_TechBb_SmaThStr.value()
         goal_msg.sma_th_end = self._ui.spinBox_TechBb_SmaThEnd.value()
         goal_msg.sma_th_decimation = self._ui.spinBox_TechBb_SmaThDeci.value()
@@ -225,8 +279,8 @@ class BollingerBandUi():
 
         self._sma_pos = 0
         callback_fb = self._backtest_fllw_feedback_callback
-        self._future = self._act_cli_bb_fllw_bt.send_goal_async(goal_msg,
-                                                                callback_fb)
+        self._future = self._act_cli_fllw_bt.send_goal_async(goal_msg,
+                                                             callback_fb)
 
         callback = self._backtest_goal_response_callback
         self._future.add_done_callback(callback)
@@ -236,7 +290,7 @@ class BollingerBandUi():
         inst_param = self._inst_param
         gran_param = self._gran_param
 
-        if not self._act_cli_bb_cntr_bt.server_is_ready():
+        if not self._act_cli_cntr_bt.server_is_ready():
             self.logger.error("Action server [{}][{}] not ready"
                               .format(inst_param.text, gran_param.text))
             return
@@ -248,8 +302,12 @@ class BollingerBandUi():
         self._sts_bar.set_bar_value(0)
 
         goal_msg = TechBbCntrBtAct.Goal()
-        goal_msg.start_datetime = ""
-        goal_msg.end_datetime = ""
+        if self._enable_period:
+            goal_msg.start_datetime = self._ui.dateTimeEdit_TechBb_PeriodStr.dateTime().toString(FMT_QT_YMDHMS)
+            goal_msg.end_datetime = self._ui.dateTimeEdit_TechBb_PeriodEnd.dateTime().toString(FMT_QT_YMDHMS)
+        else:
+            goal_msg.start_datetime = ""
+            goal_msg.end_datetime = ""
         goal_msg.sma_th_start = self._ui.spinBox_TechBb_SmaThStr.value()
         goal_msg.sma_th_end = self._ui.spinBox_TechBb_SmaThEnd.value()
         goal_msg.sma_th_decimation = self._ui.spinBox_TechBb_SmaThDeci.value()
@@ -277,8 +335,8 @@ class BollingerBandUi():
 
         self._sma_pos = 0
         callback_fb = self._backtest_cntr_feedback_callback
-        self._future = self._act_cli_bb_cntr_bt.send_goal_async(goal_msg,
-                                                                callback_fb)
+        self._future = self._act_cli_cntr_bt.send_goal_async(goal_msg,
+                                                             callback_fb)
 
         callback = self._backtest_goal_response_callback
         self._future.add_done_callback(callback)
@@ -409,7 +467,7 @@ class BollingerBandUi():
         inst_param = self._inst_param
         gran_param = self._gran_param
 
-        if not self._act_cli_bb_tv.server_is_ready():
+        if not self._act_cli_tv.server_is_ready():
             self.logger.error("Action server [{}][{}] not ready"
                               .format(inst_param.text, gran_param.text))
             return
@@ -428,8 +486,8 @@ class BollingerBandUi():
         goal_msg.std_th = self._std_th_list[std_idx]
 
         callback_fb = self._TechBb_fetch_treeview_feedback_callback
-        self._future = self._act_cli_bb_tv.send_goal_async(goal_msg,
-                                                           callback_fb)
+        self._future = self._act_cli_tv.send_goal_async(goal_msg,
+                                                        callback_fb)
 
         callback = self._TechBb_fetch_treeview_goal_response_callback
         self._future.add_done_callback(callback)
@@ -535,7 +593,7 @@ class BollingerBandUi():
         entry_time_disp_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
         self.logger.debug(" - selected date:{}".format(entry_time_disp_str))
 
-        if not self._srv_cli_bb_chart.service_is_ready():
+        if not self._srv_cli_chart.service_is_ready():
             self.logger.error("Service server [{}] not ready"
                               .format(self._inst_param.text))
             return
@@ -556,7 +614,7 @@ class BollingerBandUi():
         req.time = entry_time.strftime(FMT_YMDHMS)
         req.number_of_bars = bar_num
 
-        rsp = ros_com.call_servive_sync(self._srv_cli_bb_chart, req)
+        rsp = ros_com.call_servive_sync(self._srv_cli_chart, req)
 
         tbl = []
         for msg in rsp.tbl:

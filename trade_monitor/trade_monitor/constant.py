@@ -10,6 +10,7 @@ FMT_DATE_YMD = "%Y-%m-%d"
 FMT_TIME_HM = "%H:%M"
 FMT_TIME_HMS = "%H:%M:%S"
 
+FMT_QT_YMDHMS = "yyyy-MM-ddTHH:mm:ss"
 FMT_QT_DATE_YMD = "yyyy-MM-dd"
 FMT_QT_TIME = "HH:mm"
 
