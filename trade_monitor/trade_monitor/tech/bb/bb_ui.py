@@ -420,12 +420,17 @@ class BollingerBandUi():
 
     def _backtest_get_result_callback(self, future):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+
         self._sts_bar.set_bar_value(100)
-        rsp = future.result()
-        status = rsp.status
+
+        # ----- set widget enable -----
+        self._ui.pushButton_TechBb_backtest_start.setEnabled(True)
+
+        status = future.result().status
         if status == GoalStatus.STATUS_SUCCEEDED:
-            self.logger.debug("STATUS_SUCCEEDED")
+            self.logger.debug("GoalStatus:\"Succeeded\"")
         else:
+            self.logger.debug("GoalStatus:\"Not Succeeded\"")
             return
 
         # ----- set SMA comboBox -----
@@ -453,7 +458,6 @@ class BollingerBandUi():
         self._ui.comboBox_TechBb_std.blockSignals(wasBlocked)
 
         # ----- set widget enable -----
-        self._ui.pushButton_TechBb_backtest_start.setEnabled(True)
         self._ui.comboBox_TechBb_sma.setEnabled(True)
         self._ui.comboBox_TechBb_std.setEnabled(True)
         self._ui.pushButton_TechBb_fetch_treeView.setEnabled(True)
