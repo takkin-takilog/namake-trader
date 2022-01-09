@@ -41,5 +41,5 @@ string exit_exp_time
 ---
 # ========================= Response =========================
 
-# Requested ID
+# Requested ID.
 int32 requested_id

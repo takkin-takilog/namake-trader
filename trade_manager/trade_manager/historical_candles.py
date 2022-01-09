@@ -168,17 +168,17 @@ class CandlesData():
         states = [
             {
                 Tr.NAME.value: self.States.waiting,
-                Tr.ON_ENTER.value: "_on_entry_waiting",
+                Tr.ON_ENTER.value: "_on_enter_waiting",
                 Tr.ON_EXIT.value: "_on_exit_waiting"
             },
             {
                 Tr.NAME.value: self.States.updating,
-                Tr.ON_ENTER.value: "_on_entry_updating",
+                Tr.ON_ENTER.value: "_on_enter_updating",
                 Tr.ON_EXIT.value: None
             },
             {
                 Tr.NAME.value: self.States.retrying,
-                Tr.ON_ENTER.value: "_on_enrty_retrying",
+                Tr.ON_ENTER.value: "_on_enter_retrying",
                 Tr.ON_EXIT.value: "_on_exit_retrying"
             },
         ]
@@ -295,7 +295,7 @@ class CandlesData():
                                           qos_profile)
 
         # --------------- Initial process ---------------
-        self._on_entry_waiting()
+        self._on_enter_waiting()
 
     @property
     def inst_id(self):
@@ -347,7 +347,7 @@ class CandlesData():
         else:
             pass
 
-    def _on_entry_waiting(self):
+    def _on_enter_waiting(self):
         self.logger.debug("--- <inst_id:[{}], gran_id:[{}]> Call \"{}\""
                           .format(self.inst_id, self.gran_id,
                                   sys._getframe().f_code.co_name))
@@ -424,7 +424,7 @@ class CandlesData():
         self._is_update_complete = False
         self._self_retry_counter = 0
 
-    def _on_entry_updating(self):
+    def _on_enter_updating(self):
         self.logger.debug("--- <inst_id:[{}], gran_id:[{}]> Call \"{}\""
                           .format(self.inst_id, self.gran_id,
                                   sys._getframe().f_code.co_name))
@@ -514,7 +514,7 @@ class CandlesData():
         else:
             self._trans_from_updating_to_retrying()
 
-    def _on_enrty_retrying(self):
+    def _on_enter_retrying(self):
         self.logger.debug("--- <inst_id:[{}], gran_id:[{}]> Call \"{}\""
                           .format(self.inst_id, self.gran_id,
                                   sys._getframe().f_code.co_name))
@@ -612,14 +612,12 @@ class HistoricalCandles(Node):
     def __init__(self) -> None:
         super().__init__("historical_candles")
 
-        # Set logger lebel
+        # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
         CandlesData.logger = self.logger
 
-        # Define Constant value.
-
-        # Declare ROS parameter
+        # --------------- Declare ROS parameter ---------------
         self._rosprm = _RosParams()
         self.declare_parameter(self._rosprm.ENA_INST_USDJPY.name)
         self.declare_parameter(self._rosprm.ENA_INST_EURJPY.name)
@@ -659,7 +657,6 @@ class HistoricalCandles(Node):
         self.declare_parameter(self._rosprm.LENG_D.name)
         self.declare_parameter(self._rosprm.LENG_W.name)
 
-        # Set ROS parameter
         para = self.get_parameter(self._rosprm.ENA_INST_USDJPY.name)
         self._rosprm.ENA_INST_USDJPY.value = para.value
         para = self.get_parameter(self._rosprm.ENA_INST_EURJPY.name)
@@ -776,6 +773,7 @@ class HistoricalCandles(Node):
         self.logger.debug("  - D:  [{}]".format(self._rosprm.LENG_D.value))
         self.logger.debug("  - W:  [{}]".format(self._rosprm.LENG_W.value))
 
+        # --------------- Create ROS Communication ---------------
         try:
             # Create service client "Candles"
             srv_type = CandlesSrv

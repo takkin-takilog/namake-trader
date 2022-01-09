@@ -1,0 +1,14 @@
+# Trade close request service.
+
+# ========================= Request =========================
+
+# Requested ID to close trade.
+int32 requested_id
+
+---
+# ========================= Response =========================
+
+# Result of service request.
+#   True:success
+#   False:fail
+bool success

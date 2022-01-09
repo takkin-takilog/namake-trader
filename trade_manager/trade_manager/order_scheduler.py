@@ -10,12 +10,13 @@ import rclpy
 from rclpy.node import Node
 from rclpy.client import Client
 from std_msgs.msg import Bool
-from trade_manager.constant import FMT_YMDHMS, FMT_YMDHMSF
+from trade_manager.constant import FMT_YMDHMS
 from trade_manager.exception import InitializerErrorException
 from trade_manager.data import Transitions as Tr
 from trade_manager.data import INST_DICT
 from trade_manager_msgs.msg import OrderType, OrderDir
 from trade_manager_msgs.srv import OrderRequestSrv
+from trade_manager_msgs.srv import TradeCloseRequestSrv
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
@@ -65,7 +66,7 @@ class OrderTicket():
             },
             {
                 Tr.NAME.value: self.States.EntryWaiting,
-                Tr.ON_ENTER.value: "_on_entry_EntryWaiting",
+                Tr.ON_ENTER.value: "_on_enter_EntryWaiting",
                 Tr.ON_EXIT.value: None
             },
             {
@@ -80,7 +81,7 @@ class OrderTicket():
             },
             {
                 Tr.NAME.value: self.States.ExitWaiting,
-                Tr.ON_ENTER.value: "_on_entry_ExitWaiting",
+                Tr.ON_ENTER.value: "_on_enter_ExitWaiting",
                 Tr.ON_EXIT.value: None
             },
             {
@@ -284,6 +285,7 @@ class OrderTicket():
             raise InitializerErrorException("Unexpected order type.")
 
         self._is_entry_exp_time_over = False
+        self._enable_trade_close = False
 
         self.logger.debug("---------- Create OrderTicket ----------")
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
@@ -309,8 +311,18 @@ class OrderTicket():
         self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
 
     @property
-    def requested_id(self):
+    def requested_id(self) -> int:
         return self._requested_id
+
+    def enable_trade_close(self) -> bool:
+        success = False
+        if (self.state == self.States.ExitWaiting
+            or self.state == self.States.ExitChecking
+            or self.state == self.States.ExitOrdering
+                or self.state == self.States.Complete):
+            self._enable_trade_close = True
+            success = True
+        return success
 
     def do_cyclic_event(self) -> None:
 
@@ -377,7 +389,7 @@ class OrderTicket():
             else:
                 self.logger.debug("  Requesting now...")
 
-    def _on_entry_EntryWaiting(self) -> None:
+    def _on_enter_EntryWaiting(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
@@ -492,13 +504,14 @@ class OrderTicket():
             else:
                 self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
 
-    def _on_entry_ExitWaiting(self) -> None:
+    def _on_enter_ExitWaiting(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_ExitWaiting(self) -> None:
         now = dt.datetime.now()
-        if ((self._exit_exp_time is not None) and (self._exit_exp_time < now)):
+        if (self._enable_trade_close
+                or ((self._exit_exp_time is not None) and (self._exit_exp_time < now))):
             self._trans_from_ExitWaiting_to_ExitOrdering()
         elif self._next_pol_time < now:
             self.logger.debug("<<< Timeout >>> in ExitWaiting")
@@ -624,6 +637,13 @@ class OrderScheduler(Node):
                                                srv_name,
                                                callback=callback)
 
+        # Create service server "TradeCloseRequest"
+        srv_type = TradeCloseRequestSrv
+        srv_name = "trade_close_request"
+        callback = self._on_requested_close
+        self._trdclsreq_srv = self.create_service(srv_type,
+                                                  srv_name,
+                                                  callback=callback)
         try:
             # Create service client "OrderCreate"
             OrderTicket.cli_ordcre = self._create_service_client(
@@ -667,9 +687,12 @@ class OrderScheduler(Node):
             ticket.do_cyclic_event()
 
         # remove "Complete" States element
+        len_bfr = len(self._tickets)
         self._tickets = [ticket for ticket in self._tickets
                          if ticket.state != OrderTicket.States.Complete]
-        gc.collect()
+
+        if len_bfr != len(self._tickets):
+            gc.collect()
 
     def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
         cli = self.create_client(srv_type, srv_name)
@@ -725,6 +748,32 @@ class OrderScheduler(Node):
             return False
 
         return True
+
+    def _on_requested_close(self,
+                            req: SrvTypeRequest,
+                            rsp: SrvTypeResponse
+                            ) -> SrvTypeResponse:
+        self.logger.debug("{:=^50}".format(" Service[trade_close_request]:Start "))
+        self.logger.debug("<Request>")
+        self.logger.debug("  - requested_id:[{}]".format(req.requested_id))
+        dbg_tm_start = dt.datetime.now()
+
+        success = False
+        for ticket in self._tickets:
+            if ticket.requested_id == req.requested_id:
+                success = ticket.enable_trade_close()
+
+        rsp.success = success
+
+        dbg_tm_end = dt.datetime.now()
+        self.logger.debug("<Response>")
+        self.logger.debug("  - success:[{}]".format(rsp.success))
+        self.logger.debug("[Performance]")
+        self.logger.debug("  - Requested time:[{}]".format(dbg_tm_start))
+        self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        self.logger.debug("{:=^50}".format(" Service[trade_close_request]:End "))
+
+        return rsp
 
 
 def main(args=None):
