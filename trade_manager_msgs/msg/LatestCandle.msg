@@ -1,8 +1,8 @@
-# The latest candle data.
+# Latest Cabdlestick(OHLC) data.
 
-# The list of candle message.
+# Candle message.
 trade_manager_msgs/Candle candle
 
-# The next update time.
-# Format is "%Y-%m-%dT%H:%M:%S"
+# Next update time.
+# The format is "%Y-%m-%dT%H:%M:%S"
 string next_update_time

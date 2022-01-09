@@ -155,7 +155,7 @@ class CandlesData():
                  gran_data: _GranData
                  ) -> None:
 
-        # Define Constant value.
+        # --------------- Define Constant value ---------------
         gran_param = GranParam.get_member_by_msgid(gran_data.gran_id)
         self._GRAN_INTERVAL = gran_param.timedelta
         self._NEXT_UPDATETIME_OFS_SEC = dt.timedelta(seconds=5)
@@ -164,7 +164,7 @@ class CandlesData():
         self._RETRY_COUNT_MAX = 30
         self._SELF_RETRY_COUNT_MAX = 2
 
-        # ---------- Create State Machine ----------
+        # --------------- Create State Machine ---------------
         states = [
             {
                 Tr.NAME.value: self.States.waiting,
@@ -239,6 +239,7 @@ class CandlesData():
         if isinstance(self._sm, GraphMachine):
             self._sm.get_graph().view()
 
+        # --------------- Initialize instance variable ---------------
         self._inst_id = inst_id
         self._gran_id = gran_data.gran_id
         self._df_comp = pd.DataFrame()
@@ -252,6 +253,7 @@ class CandlesData():
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
         self.logger.debug("  - gran_id:[{}]".format(self._gran_id))
 
+        # --------------- Create Candles(OHLC) DataFrame ---------------
         dt_now = dt.datetime.now()
         dt_from = dt_now - self._GRAN_INTERVAL * gran_data.length
         dt_to = dt_now
@@ -282,7 +284,7 @@ class CandlesData():
             self.logger.error("  future result is False")
             raise InitializerErrorException("\"CandlesData\" initialize failed.")
 
-        # Declare publisher and subscriber
+        # --------------- Create ROS Communication ---------------
         qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
                                  reliability=QoSReliabilityPolicy.RELIABLE)
         inst_name = InstParam.get_member_by_msgid(self._inst_id).namespace
@@ -292,6 +294,7 @@ class CandlesData():
                                           TPCNM_LATEST_CANDLE,
                                           qos_profile)
 
+        # --------------- Initial process ---------------
         self._on_entry_waiting()
 
     @property

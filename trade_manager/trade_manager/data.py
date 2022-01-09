@@ -4,10 +4,8 @@ import datetime as dt
 from trade_manager import utility as utl
 from trade_manager_msgs.msg import Instrument as InstMng
 from trade_manager_msgs.msg import Granularity as GranMng
-from trade_manager_msgs.msg import OrderRequest
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
-from api_msgs.msg import OrderType
 
 
 class Transitions(Enum):
@@ -169,12 +167,6 @@ class GranParam(Enum):
                 return m
         return None
 
-
-ORDER_TYP_DICT = {
-    OrderRequest.ORDER_TYP_MARKET: OrderType.TYP_MARKET,
-    OrderRequest.ORDER_TYP_LIMIT: OrderType.TYP_LIMIT,
-    OrderRequest.ORDER_TYP_STOP: OrderType.TYP_STOP
-}
 
 INST_DICT = {
     InstMng.INST_USD_JPY: InstApi.INST_USD_JPY,

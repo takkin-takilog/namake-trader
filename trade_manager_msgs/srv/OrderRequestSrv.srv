@@ -1,46 +1,45 @@
-# Limit order request Definitions.
+# Order request service.
 
-# Order Type ID definition
-int32 ORDER_TYP_MARKET=1	# Market Order
-int32 ORDER_TYP_LIMIT=2		# Limit Order
-int32 ORDER_TYP_STOP=3		# Stop Order
+# ========================= Request =========================
 
-# Order Direction ID definition
-int32 DIR_LONG=1	# Long order
-int32 DIR_SHORT=2	# Short Order
-
-# The Instrument.
+# Instrument message.
 trade_manager_msgs/Instrument inst_msg
 
-# The order type(market or limit or stop).
-int32 order_type
+# Order type message.
+trade_manager_msgs/OrderType ordtyp_msg
 
-# The order direction(long or short).
-int32 order_dir
+# Order direction message.
+trade_manager_msgs/OrderDir orddir_msg
 
-# The quantity requested to be filled.
+# Quantity requested to be filled.
 # The value must be "0" or positive.
 # If a negative value is set, the request will be invalid.
 # If "0" is set, be requested maximum order quantity in current account assets.
 int32 units
 
-# The entry price.
+# Entry price on selected "LIMIT" or "STOP" order.
 # If the order type is "MARKET", this parameter is ignored.
 float32 entry_price
 
-# The entry expiration time.
+# Entry expiration time on selected "LIMIT" or "STOP" order.
 # The format is "%Y-%m-%dT%H:%M:%S".
 # If the order type is "MARKET", this parameter is ignored.
 # If is set an empty string(""), indefinite period.
 string entry_exp_time
 
-# The exit order price of take profit.
+# Exit order price of take profit.
 float32 take_profit_price
 
-# The exit order price of stop loss.
+# Exit order price of stop loss.
 float32 stop_loss_price
 
-# The exit expiration time.
+# Exit expiration time.
 # The format is "%Y-%m-%dT%H:%M:%S".
 # If is set an empty string(""), indefinite period.
 string exit_exp_time
+
+---
+# ========================= Response =========================
+
+# Requested ID
+int32 requested_id

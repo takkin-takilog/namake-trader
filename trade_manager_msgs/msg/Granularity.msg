@@ -1,6 +1,6 @@
-# granularity definitions for monitor.
+# Granularity data.
 
-# granularity ID definition
+# Granularity ID definition.
 int32 GRAN_S5=105   # 5 seconds
 int32 GRAN_S10=110  # 10 seconds
 int32 GRAN_S15=115  # 15 seconds
@@ -23,5 +23,5 @@ int32 GRAN_H12=412  # 12 hours
 int32 GRAN_D=501    # 1 Day
 int32 GRAN_W=601    # 1 Week
 
-# The granularity ID.
+# Granularity ID.
 int32 gran_id
