@@ -51,7 +51,7 @@ class ColBtRslt(Enum):
     ENTRY_SMA_SLOP_ABS = "entry_sma_slope_abs"
     GAP_STD_SMA_PIPS = "gap_std_sma"
     # MAX_LOSS_PIPS = "max_loss_pips"
-    MAX_PL_PIPS = "max_pl_pips"
+    MAX_HEIGHT_PIPS = "max_height_pips"
     EXIT_TIME = "exit_time"
     EXIT_PRICE = "exit_price"
     # TAKE_PROFIT_PIPS = "take_profit_pips"
@@ -534,7 +534,7 @@ class BollingerBandUi():
                 rec.entry_dir,
                 "{:.5f}".format(rec.entry_sma_slope_abs),
                 rec.gap_std_sma,
-                rec.max_pl_pips,
+                rec.max_height_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
                 utl.roundf(rec.exit_price, digit=self._inst_param.digit),
                 rec.exit_pl_pips,
@@ -565,7 +565,7 @@ class BollingerBandUi():
                 t.entry_dir,
                 t.entry_sma_slope_abs,
                 t.gap_std_sma,
-                t.max_pl_pips,
+                t.max_height_pips,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
                 t.exit_price,
                 t.exit_pl_pips

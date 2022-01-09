@@ -647,7 +647,7 @@
                  <property name="geometry">
                   <rect>
                    <x>0</x>
-                   <y>0</y>
+                   <y>-138</y>
                    <width>238</width>
                    <height>761</height>
                   </rect>
@@ -988,7 +988,7 @@
                      </sizepolicy>
                     </property>
                     <property name="title">
-                     <string>profit or Loss Threshold</string>
+                     <string>Max height Threshold</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_7">
                      <item row="1" column="0">
