@@ -387,14 +387,10 @@ class BollingerBandUi():
                     gc.collect()
                     self._sma_pos = fb.sma_th_pos
             elif fb.sequence_num == 2:
-                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}][{}/{}][{}/{}]"
+                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}]"
                                              .format(fb.sequence_num,
                                                      fb.loss_th_pos,
-                                                     self._pl_len_max,
-                                                     fb.sma_th_pos,
-                                                     self._sma_len_max,
-                                                     fb.std_th_pos,
-                                                     self._std_len_max))
+                                                     self._pl_len_max))
                 self._sts_bar.set_bar_value(fb.progress_rate)
 
                 if self._sma_pos != fb.sma_th_pos:
