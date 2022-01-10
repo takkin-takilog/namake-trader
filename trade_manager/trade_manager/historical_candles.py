@@ -357,7 +357,7 @@ class CandlesData():
             self.logger.debug("========== DF Update OK! ==========")
             msg = LatestCandle()
             if self._needs_weekend_update:
-                self.logger.debug("  ***** Needs weekend update *****")
+                self.logger.debug("  ----- Needs weekend update -----")
                 next_updatetime = self._get_next_update_datetime(self._weekend_close_time)
                 latest_sr = self._df_comp.iloc[-1]
                 latest_close_ask = latest_sr[ColName.ASK_CL.value]
