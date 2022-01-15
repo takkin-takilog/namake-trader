@@ -475,7 +475,7 @@ class CandlesData():
                                 self._is_update_complete = True
                                 self._trans_from_updating_to_waiting()
                             else:
-                                self.logger.error(" !!!!!!!!!! Unexpected statement !!!!!!!!!!")
+                                self.logger.warn("{:!^50}".format(" Unexpected statement "))
                                 if self._SELF_RETRY_COUNT_MAX <= self._self_retry_counter:
                                     self._trans_updating_common()
                                 else:
