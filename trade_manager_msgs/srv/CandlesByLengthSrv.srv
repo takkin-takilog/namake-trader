@@ -1,21 +1,21 @@
-# Cabdlestick by length service.
+# Cabdlestick(OHLC) data by length service.
 
 # ========================= Request =========================
-# The granularity.
+# Granularity message.
 trade_manager_msgs/Granularity gran_msg
 
-# The Instrument.
+# Instrument message.
 trade_manager_msgs/Instrument inst_msg
 
-# The length from latest to fetch candlesticks for.
+# Length from latest to fetch candlesticks for.
 int32 length
 
 ---
 # ========================= Response =========================
 
-# The list of candle message.
+# List of candle message.
 trade_manager_msgs/Candle[] cndl_msg_list
 
-# The next update time.
+# Next update time.
 # Format is "%Y-%m-%dT%H:%M:%S"
 string next_update_time

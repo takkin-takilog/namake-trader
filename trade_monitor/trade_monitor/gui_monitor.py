@@ -73,7 +73,8 @@ class GuiMonitor(QMainWindow):
         # Create service client "CandlesByDatetime"
         srv_type = CandlesByDatetimeSrv
         srv_name = "candles_by_datetime"
-        cli_cdl = self._create_client(node, srv_type, srv_name)
+        # cli_cdl = self._create_client(node, srv_type, srv_name)
+        cli_cdl = node.create_client(srv_type, srv_name)
 
         # Create publisher "Alive"
         msg_type = Bool

@@ -8,21 +8,25 @@ from transitions import Machine
 from transitions.extensions.factory import GraphMachine
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from std_msgs.msg import Bool
-from trade_manager.constant import FMT_YMDHMS, FMT_YMDHMSF
+from trade_manager.constant import FMT_YMDHMS
 from trade_manager.exception import InitializerErrorException
 from trade_manager.data import Transitions as Tr
-from trade_manager.data import INST_DICT, ORDER_TYP_DICT
-from trade_manager_msgs.msg import OrderRequest
+from trade_manager.data import INST_DICT
+from trade_manager_msgs.msg import OrderType, OrderDir
+from trade_manager_msgs.srv import OrderRequestSrv
+from trade_manager_msgs.srv import TradeCloseRequestSrv
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
 from api_msgs.msg import OrderState, TradeState
+from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
 
 MsgType = TypeVar("MsgType")
+SrvTypeRequest = TypeVar("SrvTypeRequest")
+SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
 class OrderTicket():
@@ -43,17 +47,17 @@ class OrderTicket():
     cli_trddet = None
     cli_trdcrc = None
     cli_trdcls = None
-
     logger = None
 
     _is_trans_lock = False
+    _c_requested_id = 1
 
-    def __init__(self, msg: MsgType) -> None:
+    def __init__(self, req: SrvTypeRequest) -> None:
 
-        # Define Constant value.
+        # --------------- Define Constant value ---------------
         self._POL_INTERVAL = dt.timedelta(minutes=1)
 
-        # ---------- Create State Machine ----------
+        # --------------- Create State Machine ---------------
         states = [
             {
                 Tr.NAME.value: self.States.EntryOrdering,
@@ -62,7 +66,7 @@ class OrderTicket():
             },
             {
                 Tr.NAME.value: self.States.EntryWaiting,
-                Tr.ON_ENTER.value: "_on_entry_EntryWaiting",
+                Tr.ON_ENTER.value: "_on_enter_EntryWaiting",
                 Tr.ON_EXIT.value: None
             },
             {
@@ -77,7 +81,7 @@ class OrderTicket():
             },
             {
                 Tr.NAME.value: self.States.ExitWaiting,
-                Tr.ON_ENTER.value: "_on_entry_ExitWaiting",
+                Tr.ON_ENTER.value: "_on_enter_ExitWaiting",
                 Tr.ON_EXIT.value: None
             },
             {
@@ -134,7 +138,6 @@ class OrderTicket():
                 Tr.AFTER.value: None,
                 Tr.CONDITIONS.value: None
             },
-
             {
                 Tr.TRIGGER.value: "_trans_from_EntryWaiting_to_EntryCanceling",
                 Tr.SOURCE.value: self.States.EntryWaiting,
@@ -162,7 +165,6 @@ class OrderTicket():
                 Tr.AFTER.value: None,
                 Tr.CONDITIONS.value: "_conditions_trans_lock"
             },
-
             {
                 Tr.TRIGGER.value: "_trans_from_EntryChecking_to_ExitWaiting",
                 Tr.SOURCE.value: self.States.EntryChecking,
@@ -225,7 +227,7 @@ class OrderTicket():
                 Tr.BEFORE.value: None,
                 Tr.AFTER.value: None,
                 Tr.CONDITIONS.value: None
-            },
+            }
         ]
 
         self._sm = Machine(model=self,
@@ -236,39 +238,93 @@ class OrderTicket():
         if isinstance(self._sm, GraphMachine):
             self._sm.get_graph().view()
 
-        self._msg = msg
+        # --------------- Initialize instance variable ---------------
         self._future = None
         self._trade_id = None
         self._order_id = None
 
-        if ((self._msg.order_type == OrderRequest.ORDER_TYP_MARKET)
-                or (not self._msg.entry_exp_time)):
+        self._inst_id = req.inst_msg.inst_id
+        self._order_type = req.ordtyp_msg.order_type
+
+        if req.orddir_msg.order_dir == OrderDir.LONG:
+            self._units = req.units
+        else:
+            self._units = -req.units
+
+        if self._order_type == OrderType.MARKET:
+            self._entry_price = 0.0
+        else:
+            self._entry_price = req.entry_price
+
+        if ((self._order_type == OrderType.MARKET) or (not req.entry_exp_time)):
             self._entry_exp_time = None
         else:
-            self._entry_exp_time = dt.datetime.strptime(self._msg.entry_exp_time,
+            self._entry_exp_time = dt.datetime.strptime(req.entry_exp_time,
                                                         FMT_YMDHMS)
 
-        if not self._msg.exit_exp_time:
+        self._take_profit_price = req.take_profit_price
+        self._stop_loss_price = req.stop_loss_price
+
+        if not req.exit_exp_time:
             self._exit_exp_time = None
         else:
-            self._exit_exp_time = dt.datetime.strptime(self._msg.exit_exp_time,
+            self._exit_exp_time = dt.datetime.strptime(req.exit_exp_time,
                                                        FMT_YMDHMS)
 
+        self._api_inst_id = INST_DICT[req.inst_msg.inst_id]
+
+        if self._order_type == OrderType.MARKET:
+            self._api_order_type = ApiOrderType.TYP_MARKET
+        elif self._order_type == OrderType.LIMIT:
+            self._api_order_type = ApiOrderType.TYP_LIMIT
+        elif self._order_type == OrderType.STOP:
+            self._api_order_type = ApiOrderType.TYP_STOP
+        else:
+            self.logger.error("{:!^50}".format(" Unexpected order type "))
+            self.logger.error("order_type:[{}]".format(self._order_type))
+            raise InitializerErrorException("Unexpected order type.")
+
         self._is_entry_exp_time_over = False
+        self._enable_trade_close = False
 
-        self.logger.debug("----- init -----")
-        if not self._msg.order_type == OrderRequest.ORDER_TYP_MARKET:
-            self.logger.debug("  - entry_exp_time:[{}]".format(self._entry_exp_time))
+        self.logger.debug("---------- Create OrderTicket ----------")
+        self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
+        self.logger.debug("  - order_type:[{}]".format(self._order_type))
+        self.logger.debug("  - units:[{}]".format(self._units))
+        self.logger.debug("  - entry_price:[{}]".format(self._entry_price))
+        self.logger.debug("  - entry_exp_time:[{}]".format(self._entry_exp_time))
+        self.logger.debug("  - take_profit_price:[{}]".format(self._take_profit_price))
+        self.logger.debug("  - stop_loss_price:[{}]".format(self._stop_loss_price))
         self.logger.debug("  - exit_exp_time:[{}]".format(self._exit_exp_time))
+        self.logger.debug("  - api_inst_id:[{}]".format(self._api_inst_id))
+        self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
 
-        self.do_timeout_event()
+        # --------------- Initial process ---------------
+        self.do_cyclic_event()
+
+        self._requested_id = OrderTicket._c_requested_id
+        OrderTicket._c_requested_id += 1
 
     def __del__(self) -> None:
-        self.logger.debug("----- del -----")
+        self.logger.debug("---------- Delete OrderTicket ----------")
         self.logger.debug("  - order_id:[{}]".format(self._order_id))
         self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
 
-    def do_timeout_event(self) -> None:
+    @property
+    def requested_id(self) -> int:
+        return self._requested_id
+
+    def enable_trade_close(self) -> bool:
+        success = False
+        if (self.state == self.States.ExitWaiting
+            or self.state == self.States.ExitChecking
+            or self.state == self.States.ExitOrdering
+                or self.state == self.States.Complete):
+            self._enable_trade_close = True
+            success = True
+        return success
+
+    def do_cyclic_event(self) -> None:
 
         self.logger.debug("state:[{}]".format(self.state))
 
@@ -295,21 +351,12 @@ class OrderTicket():
 
         if self._future is None:
             req = OrderCreateSrv.Request()
-            req.ordertype_msg.type = ORDER_TYP_DICT[self._msg.order_type]
-
-            if self._msg.order_type == OrderRequest.ORDER_TYP_MARKET:
-                req.price = 0.0
-            else:
-                req.price = self._msg.entry_price
-
-            if self._msg.order_dir == OrderRequest.DIR_LONG:
-                req.units = self._msg.units
-            else:
-                req.units = -self._msg.units
-
-            req.inst_msg.inst_id = INST_DICT[self._msg.inst_msg.inst_id]
-            req.take_profit_price = self._msg.take_profit_price
-            req.stop_loss_price = self._msg.stop_loss_price
+            req.ordertype_msg.type = self._api_order_type
+            req.price = self._entry_price
+            req.units = self._units
+            req.inst_msg.inst_id = self._api_inst_id
+            req.take_profit_price = self._take_profit_price
+            req.stop_loss_price = self._stop_loss_price
 
             self.logger.debug("----- Requesting \"Order Create\" -----")
             try:
@@ -324,7 +371,7 @@ class OrderTicket():
                 if self._future.result() is not None:
                     rsp = self._future.result()
                     if rsp.result:
-                        if self._msg.order_type == OrderRequest.ORDER_TYP_MARKET:
+                        if self._order_type == OrderType.MARKET:
                             self._trade_id = rsp.id
                             self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
                             self._trans_from_EntryOrdering_to_ExitWaiting()
@@ -342,7 +389,7 @@ class OrderTicket():
             else:
                 self.logger.debug("  Requesting now...")
 
-    def _on_entry_EntryWaiting(self) -> None:
+    def _on_enter_EntryWaiting(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
@@ -457,13 +504,14 @@ class OrderTicket():
             else:
                 self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
 
-    def _on_entry_ExitWaiting(self) -> None:
+    def _on_enter_ExitWaiting(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_ExitWaiting(self) -> None:
         now = dt.datetime.now()
-        if ((self._exit_exp_time is not None) and (self._exit_exp_time < now)):
+        if (self._enable_trade_close
+                or ((self._exit_exp_time is not None) and (self._exit_exp_time < now))):
             self._trans_from_ExitWaiting_to_ExitOrdering()
         elif self._next_pol_time < now:
             self.logger.debug("<<< Timeout >>> in ExitWaiting")
@@ -573,27 +621,29 @@ class OrderScheduler(Node):
     def __init__(self) -> None:
         super().__init__("order_scheduler")
 
-        # Set logger lebel
+        # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
         OrderTicket.logger = self.logger
 
         self._tickets: list[OrderTicket] = []
 
-        TPCNM_ORDER_REQUEST = "order_request"
+        # --------------- Create ROS Communication ---------------
+        # Create service server "OrderRequest"
+        srv_type = OrderRequestSrv
+        srv_name = "order_request"
+        callback = self._on_requested_order
+        self._ordreq_srv = self.create_service(srv_type,
+                                               srv_name,
+                                               callback=callback)
 
-        # Declare publisher and subscriber
-        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
-                                 reliability=QoSReliabilityPolicy.RELIABLE)
-
-        msg_type = OrderRequest
-        topic = TPCNM_ORDER_REQUEST
-        callback = self._on_sub_order_request
-        self._sub_req = self.create_subscription(msg_type,
-                                                 topic,
-                                                 callback,
-                                                 qos_profile)
-
+        # Create service server "TradeCloseRequest"
+        srv_type = TradeCloseRequestSrv
+        srv_name = "trade_close_request"
+        callback = self._on_requested_close
+        self._trdclsreq_srv = self.create_service(srv_type,
+                                                  srv_name,
+                                                  callback=callback)
         try:
             # Create service client "OrderCreate"
             OrderTicket.cli_ordcre = self._create_service_client(
@@ -631,15 +681,18 @@ class OrderScheduler(Node):
             self.destroy_node()
             raise InitializerErrorException("create service client failed.")
 
-    def do_timeout_event(self) -> None:
+    def do_cyclic_event(self) -> None:
 
         for ticket in self._tickets:
-            ticket.do_timeout_event()
+            ticket.do_cyclic_event()
 
         # remove "Complete" States element
+        len_bfr = len(self._tickets)
         self._tickets = [ticket for ticket in self._tickets
                          if ticket.state != OrderTicket.States.Complete]
-        gc.collect()
+
+        if len_bfr != len(self._tickets):
+            gc.collect()
 
     def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
         cli = self.create_client(srv_type, srv_name)
@@ -649,38 +702,78 @@ class OrderScheduler(Node):
             self._logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
-    def _on_sub_order_request(self, msg: MsgType) -> None:
-        dt_now = dt.datetime.now().strftime(FMT_YMDHMSF)
-        self.logger.debug("{:=^50}".format(" Topic[order_request]:Start "))
-        self.logger.debug("  - inst_id:[{}]".format(msg.inst_msg.inst_id))
-        self.logger.debug("  - order_type:[{}]".format(msg.order_type))
-        self.logger.debug("  - order_dir:[{}]".format(msg.order_dir))
-        self.logger.debug("  - units:[{}]".format(msg.units))
-        self.logger.debug("  - entry_price:[{}]".format(msg.entry_price))
-        self.logger.debug("  - entry_exp_time:[{}]".format(msg.entry_exp_time))
-        self.logger.debug("  - take_profit_price:[{}]".format(msg.take_profit_price))
-        self.logger.debug("  - stop_loss_price:[{}]".format(msg.stop_loss_price))
-        self.logger.debug("  - exit_exp_time:[{}]".format(msg.exit_exp_time))
-        self.logger.debug("[Performance]")
-        self.logger.debug("  - request time:[{}]".format(dt_now))
+    def _on_requested_order(self,
+                            req: SrvTypeRequest,
+                            rsp: SrvTypeResponse
+                            ) -> SrvTypeResponse:
+        self.logger.debug("{:=^50}".format(" Service[order_request]:Start "))
+        self.logger.debug("<Request>")
+        self.logger.debug("  - inst_id:[{}]".format(req.inst_msg.inst_id))
+        self.logger.debug("  - order_type:[{}]".format(req.ordtyp_msg.order_type))
+        self.logger.debug("  - order_dir:[{}]".format(req.orddir_msg.order_dir))
+        self.logger.debug("  - units:[{}]".format(req.units))
+        self.logger.debug("  - entry_price:[{}]".format(req.entry_price))
+        self.logger.debug("  - entry_exp_time:[{}]".format(req.entry_exp_time))
+        self.logger.debug("  - take_profit_price:[{}]".format(req.take_profit_price))
+        self.logger.debug("  - stop_loss_price:[{}]".format(req.stop_loss_price))
+        self.logger.debug("  - exit_exp_time:[{}]".format(req.exit_exp_time))
+        dbg_tm_start = dt.datetime.now()
 
-        if self._validate_msg(msg):
+        rsp.requested_id = -1
+        if self._validate_msg(req):
             try:
-                ticket = OrderTicket(msg)
+                ticket = OrderTicket(req)
             except Exception as err:
                 self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
                 self.logger.error(err)
             else:
                 self._tickets.append(ticket)
+                rsp.requested_id = ticket.requested_id
         else:
             self.logger.error("{:!^50}".format(" Validate msg: NG "))
 
-    def _validate_msg(self, msg: MsgType) -> Bool:
+        dbg_tm_end = dt.datetime.now()
+        self.logger.debug("<Response>")
+        self.logger.debug("  - requested_id:[{}]".format(rsp.requested_id))
+        self.logger.debug("[Performance]")
+        self.logger.debug("  - Requested time:[{}]".format(dbg_tm_start))
+        self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        self.logger.debug("{:=^50}".format(" Service[order_request]:End "))
 
-        if msg.units < 0:
+        return rsp
+
+    def _validate_msg(self, req: SrvTypeRequest) -> Bool:
+
+        if req.units < 0:
             return False
 
         return True
+
+    def _on_requested_close(self,
+                            req: SrvTypeRequest,
+                            rsp: SrvTypeResponse
+                            ) -> SrvTypeResponse:
+        self.logger.debug("{:=^50}".format(" Service[trade_close_request]:Start "))
+        self.logger.debug("<Request>")
+        self.logger.debug("  - requested_id:[{}]".format(req.requested_id))
+        dbg_tm_start = dt.datetime.now()
+
+        success = False
+        for ticket in self._tickets:
+            if ticket.requested_id == req.requested_id:
+                success = ticket.enable_trade_close()
+
+        rsp.success = success
+
+        dbg_tm_end = dt.datetime.now()
+        self.logger.debug("<Response>")
+        self.logger.debug("  - success:[{}]".format(rsp.success))
+        self.logger.debug("[Performance]")
+        self.logger.debug("  - Requested time:[{}]".format(dbg_tm_start))
+        self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        self.logger.debug("{:=^50}".format(" Service[trade_close_request]:End "))
+
+        return rsp
 
 
 def main(args=None):
@@ -695,7 +788,7 @@ def main(args=None):
         try:
             while rclpy.ok():
                 rclpy.spin_once(os, timeout_sec=1.0)
-                os.do_timeout_event()
+                os.do_cyclic_event()
         except KeyboardInterrupt:
             pass
 

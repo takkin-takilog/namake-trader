@@ -18,8 +18,8 @@ from trade_monitor.constant import GranParam, InstParam
 from trade_monitor.tech.constant import VALID_INST_LIST
 from trade_monitor.tech.constant import VALID_GRAN_LIST
 # from trade_monitor.tech.constant import SMA_MTH01_CRS_TYP_DICT
-from trade_monitor.tech.constant import SpreadTyp
 from trade_monitor.tech.widget import BaseUi
+from trade_monitor.tech.sma.constant import SpreadTyp
 # from trade_monitor.tech.widget import CandlestickSmaChartView as CandlestickChartView
 
 
@@ -49,7 +49,7 @@ class Sma01Ui(BaseUi):
 
         self.logger = ros_com.get_logger()
 
-        ui = self._load_ui(parent, "sma01.ui")
+        ui = self._load_ui(parent, "sma/sma01.ui")
         self.setCentralWidget(ui)
         self.resize(ui.frameSize())
         self.setWindowTitle("SMA Method01 Details")

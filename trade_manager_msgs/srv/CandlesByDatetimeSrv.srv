@@ -1,23 +1,23 @@
-# Cabdlestick by atetime service.
+# Cabdlestick(OHLC) data by datetime service.
 
 # ========================= Request =========================
-# The granularity.
+# Granularity message.
 trade_manager_msgs/Granularity gran_msg
 
-# The Instrument.
+# Instrument message.
 trade_manager_msgs/Instrument inst_msg
 
-# The start of datetime to fetch candlesticks.
+# Start of datetime to fetch candlesticks.
 # The format is "%Y-%m-%dT%H:%M:%S".
 # If want to set indefinite period, set blank as "".
 string datetime_start
 
-# The end of datetime to fetch candlesticks for.
+# End of datetime to fetch candlesticks for.
 # The format is "%Y-%m-%dT%H:%M:%S".
 # If want to set indefinite period, set blank as "".
 string datetime_end
 
-# The target dayofweeks.
+# Target dayofweeks.
 # - Monday = 0
 # - Tuesday = 1
 # - Wednesday = 2
@@ -27,12 +27,12 @@ string datetime_end
 # - Sunday = 6
 int32[] dayofweeks
 
-# The start of time range.
+# Start of time range to fetch candlesticks.
 # The format is "%H:%M:%S".
 # If want to set indefinite period, set blank as "".
 string time_from
 
-# The end of time range.
+# End of time range to fetch candlesticks.
 # The format is "%H:%M:%S".
 # If want to set indefinite period, set blank as "".
 string time_to
@@ -40,9 +40,9 @@ string time_to
 ---
 # ========================= Response =========================
 
-# The list of candle message.
+# List of candle message.
 trade_manager_msgs/Candle[] cndl_msg_list
 
-# The next update time.
+# Next update time.
 # Format is "%Y-%m-%dT%H:%M:%S"
 string next_update_time
