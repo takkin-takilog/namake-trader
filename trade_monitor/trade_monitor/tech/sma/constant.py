@@ -1,24 +1,26 @@
 from enum import Enum
 
 
-class SpreadTyp(Enum):
+class ColChart(Enum):
     """
-    Spread type.
+    Pandas SMA back test result dataframe column name.
     """
-    MID = "Mid"
-    ASK = "Ask"
-    BID = "Bid"
+    TIME = "time"
+    ASK_O = "ask_o"
+    ASK_H = "ask_h"
+    ASK_L = "ask_l"
+    ASK_C = "ask_c"
+    MID_O = "mid_o"
+    MID_H = "mid_h"
+    MID_L = "mid_l"
+    MID_C = "mid_c"
+    BID_O = "bid_o"
+    BID_H = "bid_h"
+    BID_L = "bid_l"
+    BID_C = "bid_c"
+    SMA_L = "sma_l"
+    SMA_S = "sma_s"
 
     @classmethod
     def to_list(cls):
         return [m.value for m in cls]
-
-    @classmethod
-    def get_index(cls, mem):
-        idx = 0
-        for m in cls:
-            if m == mem:
-                return idx
-            else:
-                idx += 1
-        return -1

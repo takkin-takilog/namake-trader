@@ -110,6 +110,13 @@ class InstParam(Enum):
         """
         return utl.roundi(physical_value / self.lsb_value)
 
+    def round_pips(self, physical_value: float) -> float:
+        """
+        round a price value to the digits.
+        """
+        p = 10 ** self.digit
+        return (physical_value * p * 2 + 1) // 2 / p
+
 
 class GranParam(Enum):
     """
