@@ -19,7 +19,7 @@ from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
 from trade_monitor.widget_base import CalloutDataTime, CallouPrice
-from trade_monitor.tech.bb.constant import ColChart
+from .constant import ColChart
 
 
 @dataclass
@@ -140,26 +140,19 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
 
         # ==================== Bollinger bands ====================
         config_tbl = []
-        # ---------- Add SMA Base Line on scene ----------
+        # ---------- Add SMA(L) Line on scene ----------
         pen = QPen()
-        pen.setColor(Qt.blue)
+        pen.setColor(Qt.magenta)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
-        config_tbl.append([ColChart.BASE_SMA.value, pen, QtCharts.QLineSeries()])
+        config_tbl.append([ColChart.SMA_L.value, pen, QtCharts.QLineSeries()])
 
-        # ---------- Add +Std Line on scene ----------
+        # ---------- Add SMA(S) Line on scene ----------
         pen = QPen()
-        pen.setColor(Qt.magenta)
-        pen.setWidth(1)
-        pen.setStyle(Qt.DashLine)
-        config_tbl.append([ColChart.POS_STD.value, pen, QtCharts.QLineSeries()])
-
-        # ---------- Add -Std Line on scene ----------
-        pen = QPen()
-        pen.setColor(Qt.magenta)
-        pen.setWidth(1)
-        pen.setStyle(Qt.DashLine)
-        config_tbl.append([ColChart.NEG_STD.value, pen, QtCharts.QLineSeries()])
+        pen.setColor(Qt.darkYellow)
+        pen.setWidth(2)
+        pen.setStyle(Qt.SolidLine)
+        config_tbl.append([ColChart.SMA_S.value, pen, QtCharts.QLineSeries()])
 
         df_bb_conf = pd.DataFrame(config_tbl,
                                   columns=ColNameLine.to_list())

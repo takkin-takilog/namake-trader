@@ -19,9 +19,9 @@ from trade_monitor.constant import TRADE_TYP_LIST
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import PandasTreeView
-from trade_monitor.tech.bb.constant import ColChart
-from trade_monitor.tech.bb.widget import CandlestickChartView as ChartView
-from trade_monitor.tech.bb.widget import ChartInfo
+from .constant import ColChart
+from .widget import CandlestickChartView as ChartView
+from .widget import ChartInfo
 
 
 pd.set_option("display.max_columns", 1000)

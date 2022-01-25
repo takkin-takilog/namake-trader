@@ -18,9 +18,9 @@ from trade_monitor.constant import SPREAD_MSG_LIST
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import PandasTreeView
-from trade_monitor.tech.sma.constant import ColChart
-from trade_monitor.tech.sma.widget import CandlestickChartView as ChartView
-from trade_monitor.tech.sma.widget import ChartInfo
+from .constant import ColChart
+from .widget import CandlestickChartView as ChartView
+from .widget import ChartInfo
 
 
 pd.set_option("display.max_columns", 1000)
@@ -41,12 +41,13 @@ class Result():
 
 class ColBtRslt(Enum):
     """
-    Pandas SMA back test result dataframe column name.
+    Pandas backtest result dataframe column name.
     """
     ENTRY_TIME = "entry_time"
     ENTRY_PRICE = "entry_price"
     ENTRY_DIR = "entry_dir"
-    MAX_HEIGHT_PIPS = "max_height_pips"
+    SMA_S_CROSS_TIME = "sma_s_cross_time"
+    EVAL_VALUE = "eval_value"
     EXIT_TIME = "exit_time"
     EXIT_PRICE = "exit_price"
     EXIT_PL_PIPS = "exit_pl_pips"
@@ -416,7 +417,8 @@ class SimpleMovingAverageUi():
                 dt.datetime.strptime(rec.entry_time, FMT_YMDHMS),
                 self._inst_param.round_pips(rec.entry_price),
                 rec.entry_dir,
-                rec.max_height_pips,
+                dt.datetime.strptime(rec.sma_s_cross_time, FMT_YMDHMS),
+                rec.eval_value,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
                 self._inst_param.round_pips(rec.exit_price),
                 rec.exit_pl_pips,
@@ -445,7 +447,8 @@ class SimpleMovingAverageUi():
                 t.Index.strftime(FMT_DISP_YMDHMS),
                 t.entry_price,
                 t.entry_dir,
-                t.max_height_pips,
+                t.sma_s_cross_time.strftime(FMT_DISP_YMDHMS),
+                t.eval_value,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
                 t.exit_price,
                 t.exit_pl_pips
@@ -542,35 +545,32 @@ class SimpleMovingAverageUi():
         self._draw_graph_by_candle_type(smb_idx)
 
     def _draw_graph_by_candle_type(self, smb_idx):
-        """
-        bb_col = [ColChart.BASE_SMA.value,
-                  ColChart.POS_STD.value,
-                  ColChart.NEG_STD.value]
+        sma_col = [ColChart.SMA_L.value,
+                   ColChart.SMA_S.value]
 
         if smb_idx == 0:    # Mid
             col = [ColChart.MID_O.value,
                    ColChart.MID_H.value,
                    ColChart.MID_L.value,
-                   ColChart.MID_C.value] + bb_col
+                   ColChart.MID_C.value] + sma_col
         elif smb_idx == 1:  # Ask
             col = [ColChart.ASK_O.value,
                    ColChart.ASK_H.value,
                    ColChart.ASK_L.value,
-                   ColChart.ASK_C.value] + bb_col
+                   ColChart.ASK_C.value] + sma_col
         else:               # Bid
             col = [ColChart.BID_O.value,
                    ColChart.BID_H.value,
                    ColChart.BID_L.value,
-                   ColChart.BID_C.value] + bb_col
+                   ColChart.BID_C.value] + sma_col
 
         df = self._chart_info.df[col]
-        df.columns = ChartView.CandleLabel.to_list() + bb_col
+        df.columns = ChartView.CandleLabel.to_list() + sma_col
 
         self._chartview.update(df,
                                self._chart_info,
                                self._gran_param,
                                self._inst_param)
-        """
 
     def _on_view_header_sma_sectionClicked(self, logical_index):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))

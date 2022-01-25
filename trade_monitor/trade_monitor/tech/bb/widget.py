@@ -19,7 +19,7 @@ from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import CandlestickChartViewBarCategoryAxis
 from trade_monitor.widget_base import CalloutDataTime, CallouPrice
-from trade_monitor.tech.bb.constant import ColChart
+from .constant import ColChart
 
 
 @dataclass
