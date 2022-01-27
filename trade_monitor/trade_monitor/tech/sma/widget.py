@@ -149,7 +149,7 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
 
         # ---------- Add SMA(S) Line on scene ----------
         pen = QPen()
-        pen.setColor(Qt.darkYellow)
+        pen.setColor(QColor("#ffa500"))
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
         config_tbl.append([ColChart.SMA_S.value, pen, QtCharts.QLineSeries()])
