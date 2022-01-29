@@ -243,17 +243,6 @@ class SimpleMovingAverageUi():
         goal_msg.valid_eval_th = self._ui.doubleSpinBox_TechSma_EvalTh.value()
         goal_msg.entry_offset_pips = self._ui.spinBox_TechSma_EntryOfs.value()
 
-        sma_l_rng = range(goal_msg.sma_l_span_start,
-                          goal_msg.sma_l_span_end + 1,
-                          goal_msg.sma_l_span_deci)
-        sma_s_rng = range(goal_msg.sma_s_span_start,
-                          goal_msg.sma_s_span_end + 1,
-                          goal_msg.sma_s_span_deci)
-
-        self._sma_l_len_max = len(sma_l_rng)
-        self._sma_s_len_max = len(sma_s_rng)
-
-        self._sma_l_pos = 0
         callback_fb = self._backtest_feedback_callback
         self._future = self._act_cli_bt.send_goal_async(goal_msg, callback_fb)
 
@@ -266,17 +255,12 @@ class SimpleMovingAverageUi():
         if rsp.status == GoalStatus.STATUS_EXECUTING:
             fb = msg.feedback
             if fb.sequence_num == 1:
-                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}][{}/{}]"
-                                             .format(fb.sequence_num,
-                                                     fb.sma_l_span_pos,
-                                                     self._sma_l_len_max,
-                                                     fb.sma_s_span_pos,
-                                                     self._sma_s_len_max))
                 self._sts_bar.set_bar_value(fb.progress_rate)
-
-                if self._sma_l_pos != fb.sma_l_span_pos:
-                    gc.collect()
-                    self._sma_l_pos = fb.sma_l_span_pos
+                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}]"
+                                             .format(fb.sequence_num,
+                                                     fb.task_pos,
+                                                     fb.task_count_max)
+                                             )
             """
             elif fb.sequence_num == 2:
                 self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}]"
@@ -292,6 +276,8 @@ class SimpleMovingAverageUi():
 
     def _backtest_goal_response_callback(self, future):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        gc.collect()
+
         send_gol_rsp = future.result()
         if not send_gol_rsp.accepted:
             self.logger.debug("goal rejected")
@@ -361,18 +347,24 @@ class SimpleMovingAverageUi():
                               .format(inst_param.text, gran_param.text))
             return
 
-        self._ui.pushButton_TechSma_fetch_treeView.setEnabled(False)
-
         self._sts_bar.set_label_text("Stanby...")
         self._sts_bar.set_bar_range(0, 100)
         self._sts_bar.set_bar_value(0)
 
         sma_l_idx = self._ui.comboBox_TechSma_SmaLngSpan.currentIndex()
         sma_s_idx = self._ui.comboBox_TechSma_SmaShrSpan.currentIndex()
+        sma_l_span = self._sma_l_span_list[sma_l_idx]
+        sma_s_span = self._sma_s_span_list[sma_s_idx]
+
+        if sma_l_span <= sma_s_span:
+            self._sts_bar.set_label_text("Invalid combination of SMA L and S value.")
+            return
+
+        self._ui.pushButton_TechSma_fetch_treeView.setEnabled(False)
 
         goal_msg = TechSmaTreeViewAct.Goal()
-        goal_msg.sma_l_span = self._sma_l_span_list[sma_l_idx]
-        goal_msg.sma_s_span = self._sma_s_span_list[sma_s_idx]
+        goal_msg.sma_l_span = sma_l_span
+        goal_msg.sma_s_span = sma_s_span
 
         callback_fb = self._fetch_treeview_feedback_callback
         self._future = self._act_cli_tv.send_goal_async(goal_msg,
@@ -429,6 +421,8 @@ class SimpleMovingAverageUi():
 
         self._update_treeview(df)
         self._df_tv = df
+
+        self._sts_bar.set_label_text("Complete...")
 
         # ----- set widget enable -----
         self._ui.pushButton_TechSma_fetch_treeView.setEnabled(True)

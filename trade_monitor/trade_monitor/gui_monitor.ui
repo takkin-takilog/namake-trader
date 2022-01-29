@@ -1054,7 +1054,7 @@
                          </sizepolicy>
                         </property>
                         <property name="text">
-                         <string>STD(S):</string>
+                         <string>SMA(S):</string>
                         </property>
                        </widget>
                       </item>

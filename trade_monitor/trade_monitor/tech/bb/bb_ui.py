@@ -527,6 +527,8 @@ class BollingerBandUi():
         self._update_treeview(df)
         self._df_tv = df
 
+        self._sts_bar.set_label_text("Complete...")
+
         # ----- set widget enable -----
         self._ui.pushButton_TechBb_fetch_treeView.setEnabled(True)
         self._ui.comboBox_TechBb_amb.setEnabled(True)
