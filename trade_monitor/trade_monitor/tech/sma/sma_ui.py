@@ -413,7 +413,9 @@ class SimpleMovingAverageUi():
         self._ui.pushButton_TechSma_fetch_treeView.setEnabled(True)
         self._ui.comboBox_TechSma_amb.setEnabled(True)
         self._ui.spinBox_TechSma_barNum.setEnabled(True)
+        """
         self._ui.widget_ChartView_TechSma.setEnabled(True)
+        """
 
     def _update_treeview(self, df: pd.DataFrame):
 
@@ -468,6 +470,9 @@ class SimpleMovingAverageUi():
         bar_num = self._ui.spinBox_TechSma_barNum.value()
         self._draw_graph(entry_time, bar_num)
         self._selected_entry_time = entry_time
+
+        # ----- set widget enable -----
+        self._ui.widget_ChartView_TechSma.setEnabled(True)
 
     def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
 
