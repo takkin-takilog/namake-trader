@@ -198,12 +198,10 @@ class SimpleMovingAverageUi():
         wasBlocked1 = self._ui.dateTimeEdit_TechSma_PeriodStr.blockSignals(True)
         wasBlocked2 = self._ui.dateTimeEdit_TechSma_PeriodEnd.blockSignals(True)
 
-        self._ui.dateTimeEdit_TechSma_PeriodStr.setDateTimeRange(q_start_datetime,
-                                                                 q_end_datetime)
+        self._ui.dateTimeEdit_TechSma_PeriodStr.setDateTimeRange(q_start_datetime, q_end_datetime)
         self._ui.dateTimeEdit_TechSma_PeriodStr.setDateTime(q_start_datetime)
 
-        self._ui.dateTimeEdit_TechSma_PeriodEnd.setDateTimeRange(q_start_datetime,
-                                                                 q_end_datetime)
+        self._ui.dateTimeEdit_TechSma_PeriodEnd.setDateTimeRange(q_start_datetime, q_end_datetime)
         self._ui.dateTimeEdit_TechSma_PeriodEnd.setDateTime(q_end_datetime)
 
         self._ui.dateTimeEdit_TechSma_PeriodStr.blockSignals(wasBlocked1)
@@ -240,7 +238,7 @@ class SimpleMovingAverageUi():
         goal_msg.sma_s_span_start = self._ui.spinBox_TechSma_SmaShrSpanStr.value()
         goal_msg.sma_s_span_end = self._ui.spinBox_TechSma_SmaShrSpanEnd.value()
         goal_msg.sma_s_span_deci = self._ui.spinBox_TechSma_SmaShrSpanDeci.value()
-        goal_msg.valid_eval_th = self._ui.doubleSpinBox_TechSma_EvalTh.value()
+        goal_msg.valid_eval_th = self._ui.spinBox_TechSma_EvalTh.value()
         goal_msg.entry_offset_pips = self._ui.spinBox_TechSma_EntryOfs.value()
 
         callback_fb = self._backtest_feedback_callback
@@ -254,25 +252,12 @@ class SimpleMovingAverageUi():
         rsp = self._future.result()
         if rsp.status == GoalStatus.STATUS_EXECUTING:
             fb = msg.feedback
-            if fb.sequence_num == 1:
-                self._sts_bar.set_bar_value(fb.progress_rate)
-                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}]"
-                                             .format(fb.sequence_num,
-                                                     fb.task_pos,
-                                                     fb.task_count_max)
-                                             )
-            """
-            elif fb.sequence_num == 2:
-                self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}]"
-                                             .format(fb.sequence_num,
-                                                     fb.profit_th_pos,
-                                                     self._pl_len_max))
-                self._sts_bar.set_bar_value(fb.progress_rate)
-
-                if self._sma_pos != fb.sma_th_pos:
-                    gc.collect()
-                    self._sma_pos = fb.sma_th_pos
-            """
+            self._sts_bar.set_bar_value(fb.progress_rate)
+            self._sts_bar.set_label_text("Analyzing...Seq[{}]:[{}/{}]"
+                                         .format(fb.sequence_num,
+                                                 fb.task_pos,
+                                                 fb.task_count_max)
+                                         )
 
     def _backtest_goal_response_callback(self, future):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -297,14 +282,14 @@ class SimpleMovingAverageUi():
         # ----- set widget enable -----
         self._ui.pushButton_TechSma_backtest_start.setEnabled(True)
 
-        status = future.result().status
-        if status == GoalStatus.STATUS_SUCCEEDED:
+        rsp = future.result()
+        if rsp.status == GoalStatus.STATUS_SUCCEEDED:
             self.logger.debug("GoalStatus:\"Succeeded\"")
         else:
             self.logger.debug("GoalStatus:\"Not Succeeded\"")
             return
 
-        # ----- set SMA comboBox -----
+        # ----- set SMA(L) comboBox -----
         sma_l_span_start = self._ui.spinBox_TechSma_SmaLngSpanStr.value()
         sma_l_span_end = self._ui.spinBox_TechSma_SmaLngSpanEnd.value()
         sma_l_span_deci = self._ui.spinBox_TechSma_SmaLngSpanDeci.value()
@@ -316,7 +301,7 @@ class SimpleMovingAverageUi():
             self._ui.comboBox_TechSma_SmaLngSpan.addItem(str(sma_th))
         self._ui.comboBox_TechSma_SmaLngSpan.blockSignals(wasBlocked)
 
-        # ----- set STD comboBox -----
+        # ----- set SMA(S) comboBox -----
         sma_s_span_start = self._ui.spinBox_TechSma_SmaShrSpanStr.value()
         sma_s_span_end = self._ui.spinBox_TechSma_SmaShrSpanEnd.value()
         sma_s_span_deci = self._ui.spinBox_TechSma_SmaShrSpanDeci.value()
@@ -397,10 +382,10 @@ class SimpleMovingAverageUi():
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._sts_bar.set_bar_value(100)
         rsp = future.result()
-        status = rsp.status
-        if status == GoalStatus.STATUS_SUCCEEDED:
-            self.logger.debug("STATUS_SUCCEEDED")
+        if rsp.status == GoalStatus.STATUS_SUCCEEDED:
+            self.logger.debug("GoalStatus:\"Succeeded\"")
         else:
+            self.logger.debug("GoalStatus:\"Not Succeeded\"")
             return
 
         tbl = []
