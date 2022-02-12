@@ -48,6 +48,7 @@ class ColBtRslt(Enum):
     ENTRY_DIR = "entry_dir"
     SMA_S_CROSS_TIME = "sma_s_cross_time"
     EVAL_VALUE = "eval_value"
+    MAX_HEIGHT_PIPS = "max_height_pips"
     EXIT_TIME = "exit_time"
     EXIT_PRICE = "exit_price"
     EXIT_PL_PIPS = "exit_pl_pips"
@@ -238,6 +239,9 @@ class SimpleMovingAverageUi():
         goal_msg.sma_s_span_start = self._ui.spinBox_TechSma_SmaShrSpanStr.value()
         goal_msg.sma_s_span_end = self._ui.spinBox_TechSma_SmaShrSpanEnd.value()
         goal_msg.sma_s_span_deci = self._ui.spinBox_TechSma_SmaShrSpanDeci.value()
+        goal_msg.profit_th_start = self._ui.spinBox_TechSma_PlThStr.value()
+        goal_msg.profit_th_end = self._ui.spinBox_TechSma_PlThEnd.value()
+        goal_msg.profit_th_deci = self._ui.spinBox_TechSma_PlThDeci.value()
         goal_msg.valid_eval_th = self._ui.spinBox_TechSma_EvalTh.value()
         goal_msg.entry_offset_pips = self._ui.spinBox_TechSma_EntryOfs.value()
 
@@ -396,6 +400,7 @@ class SimpleMovingAverageUi():
                 rec.entry_dir,
                 dt.datetime.strptime(rec.sma_s_cross_time, FMT_YMDHMS),
                 rec.eval_value,
+                rec.max_height_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
                 self._inst_param.round_pips(rec.exit_price),
                 rec.exit_pl_pips,
@@ -430,6 +435,7 @@ class SimpleMovingAverageUi():
                 t.entry_dir,
                 t.sma_s_cross_time.strftime(FMT_DISP_YMDHMS),
                 t.eval_value,
+                t.max_height_pips,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
                 t.exit_price,
                 t.exit_pl_pips
