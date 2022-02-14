@@ -3,19 +3,18 @@ import gc
 from enum import Enum
 import pandas as pd
 import datetime as dt
+from dataclasses import dataclass
 from PySide2.QtCore import QDateTime, Qt
 from PySide2.QtWidgets import QAbstractItemView
 from rclpy.action import ActionClient
 from rclpy.client import Client
 from action_msgs.msg import GoalStatus
-from trade_apl_msgs.action import TechBbFllwBtAct
-from trade_apl_msgs.action import TechBbCntrBtAct
-from trade_apl_msgs.action import TechBbTreeViewAct
+from trade_apl_msgs.action import TechSmaBtAct
+from trade_apl_msgs.action import TechSmaTreeViewAct
 from trade_apl_msgs.srv import PeriodSrv
-from trade_apl_msgs.srv import TechBbChartSrv
+from trade_apl_msgs.srv import TechSmaChartSrv
 from trade_monitor.constant import FMT_YMDHMS, FMT_DISP_YMDHMS, FMT_QT_YMDHMS
 from trade_monitor.constant import SPREAD_MSG_LIST
-from trade_monitor.constant import TRADE_TYP_LIST
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import PandasTreeView
@@ -30,20 +29,28 @@ pd.set_option("display.width", 200)
 # pd.options.display.float_format = '{:.3f}'.format
 
 
+@dataclass
+class Result():
+    """
+    Result.
+    """
+    sma_th: int         # SMA Th
+    std_th: float       # STD Th
+    df: pd.DataFrame    # DataFrame
+
+
 class ColBtRslt(Enum):
     """
-    Pandas SMA back test result dataframe column name.
+    Pandas backtest result dataframe column name.
     """
     ENTRY_TIME = "entry_time"
     ENTRY_PRICE = "entry_price"
     ENTRY_DIR = "entry_dir"
-    ENTRY_SMA_SLOP_ABS = "entry_sma_slope_abs"
-    GAP_STD_SMA_PIPS = "gap_std_sma"
-    # MAX_LOSS_PIPS = "max_loss_pips"
+    SMA_S_CROSS_TIME = "sma_s_cross_time"
+    EVAL_VALUE = "eval_value"
     MAX_HEIGHT_PIPS = "max_height_pips"
     EXIT_TIME = "exit_time"
     EXIT_PRICE = "exit_price"
-    # TAKE_PROFIT_PIPS = "take_profit_pips"
     EXIT_PL_PIPS = "exit_pl_pips"
 
     @classmethod
@@ -51,59 +58,61 @@ class ColBtRslt(Enum):
         return [m.value for m in cls]
 
 
-class BollingerBandUi():
+class SimpleMovingAverageUi():
 
     def __init__(self, ui, inst_param, gran_param, sts_bar) -> None:
         self.logger = ros_com.get_logger()
 
         # ---------- set comboBox Analysis Type ----------
-        utl.remove_all_items_of_comboBox(ui.comboBox_TechBb_AnalyTyp)
+        """
+        utl.remove_all_items_of_comboBox(ui.comboBox_TechSma_AnalyTyp)
         for text in TRADE_TYP_LIST:
-            ui.comboBox_TechBb_AnalyTyp.addItem(text)
+            ui.comboBox_TechSma_AnalyTyp.addItem(text)
+        """
 
         # ---------- set pushButton analy start ----------
         callback = self._on_pushButton_backtest_start_clicked
-        ui.pushButton_TechBb_backtest_start.clicked.connect(callback)
+        ui.pushButton_TechSma_backtest_start.clicked.connect(callback)
 
         # ---------- set pushButton period load ----------
         callback = self._on_pushButton_period_load_clicked
-        ui.pushButton_TechBb_PeriodLoad.clicked.connect(callback)
+        ui.pushButton_TechSma_PeriodLoad.clicked.connect(callback)
 
         # ---------- set pushButton fetch treeView ----------
-        callback = self._on_pushButton_fetch_treeView_clicked
-        ui.pushButton_TechBb_fetch_treeView.clicked.connect(callback)
+        callback = self._on_pushButton_TechSma_fetch_treeView_clicked
+        ui.pushButton_TechSma_fetch_treeView.clicked.connect(callback)
 
         # ---------- set TreeView ----------
-        self._pdtreeview = PandasTreeView(ui.widget_TreeView_TechBb)
+        self._pdtreeview = PandasTreeView(ui.widget_TreeView_TechSma)
         self._pdtreeview.setSelectionMode(QAbstractItemView.SingleSelection)
 
         header = self._pdtreeview.header()
-        callback = self._on_view_header_sectionClicked
+        callback = self._on_view_header_sma_sectionClicked
         header.sectionClicked.connect(callback)
 
         # ---------- set comboBox Ask,Mid,Bid ----------
-        utl.remove_all_items_of_comboBox(ui.comboBox_TechBb_amb)
+        utl.remove_all_items_of_comboBox(ui.comboBox_TechSma_amb)
         for text in SPREAD_MSG_LIST:
-            ui.comboBox_TechBb_amb.addItem(text)
+            ui.comboBox_TechSma_amb.addItem(text)
 
         callback = self._on_comboBox_amb_changed_currentIndexChanged
-        ui.comboBox_TechBb_amb.currentIndexChanged.connect(callback)
+        ui.comboBox_TechSma_amb.currentIndexChanged.connect(callback)
 
         # ---------- set spinBox barNum ----------
         callback = self._on_spinBox_barNum_valueChanged
-        ui.spinBox_TechBb_barNum.valueChanged.connect(callback)
+        ui.spinBox_TechSma_barNum.valueChanged.connect(callback)
 
         # ----- set ChartView widget -----
-        self._chartview = ChartView(ui.widget_ChartView_TechBb)
+        self._chartview = ChartView(ui.widget_ChartView_TechSma)
 
         # ----- set widget disable -----
-        ui.comboBox_TechBb_sma.setEnabled(False)
-        ui.comboBox_TechBb_std.setEnabled(False)
-        ui.pushButton_TechBb_fetch_treeView.setEnabled(False)
-        ui.widget_TreeView_TechBb.setEnabled(False)
-        ui.comboBox_TechBb_amb.setEnabled(False)
-        ui.spinBox_TechBb_barNum.setEnabled(False)
-        ui.widget_ChartView_TechBb.setEnabled(False)
+        ui.comboBox_TechSma_SmaLngSpan.setEnabled(False)
+        ui.comboBox_TechSma_SmaShrSpan.setEnabled(False)
+        ui.pushButton_TechSma_fetch_treeView.setEnabled(False)
+        ui.widget_TreeView_TechSma.setEnabled(False)
+        ui.comboBox_TechSma_amb.setEnabled(False)
+        ui.spinBox_TechSma_barNum.setEnabled(False)
+        ui.widget_ChartView_TechSma.setEnabled(False)
 
         # ---------- set field ----------
         self._enable_period = False
@@ -111,8 +120,7 @@ class BollingerBandUi():
         self._chart_info = None
         self._srv_cli_period = None
         self._srv_cli_chart = None
-        self._act_cli_fllw_bt = None
-        self._act_cli_cntr_bt = None
+        self._act_cli_bt = None
         self._act_cli_tv = None
         self._ui = ui
 
@@ -139,11 +147,8 @@ class BollingerBandUi():
         if isinstance(self._srv_cli_chart, Client):
             self._srv_cli_chart.destroy()
 
-        if isinstance(self._act_cli_fllw_bt, ActionClient):
-            self._act_cli_fllw_bt.destroy()
-
-        if isinstance(self._act_cli_cntr_bt, ActionClient):
-            self._act_cli_cntr_bt.destroy()
+        if isinstance(self._act_cli_bt, ActionClient):
+            self._act_cli_bt.destroy()
 
         if isinstance(self._act_cli_tv, ActionClient):
             self._act_cli_tv.destroy()
@@ -152,43 +157,30 @@ class BollingerBandUi():
 
         # Create service client "Period"
         srv_type = PeriodSrv
-        srv_name = "tech_bb_period"
+        srv_name = "tech_sma_period"
         fullname = ns + srv_name
         self._srv_cli_period = node.create_client(srv_type, fullname)
 
-        # Create service client "TechBbChart"
-        srv_type = TechBbChartSrv
-        srv_name = "tech_bb_fetch_chart"
+        # Create service client "TechSmaChart"
+        srv_type = TechSmaChartSrv
+        srv_name = "tech_sma_fetch_chart"
         fullname = ns + srv_name
         self._srv_cli_chart = node.create_client(srv_type, fullname)
 
-        # Create action client "TechBbFllwBackTest"
-        act_type = TechBbFllwBtAct
-        act_name = "tech_bb_fllw_backtest"
+        # Create action client "TechSmaBackTest"
+        act_type = TechSmaBtAct
+        act_name = "tech_sma_backtest"
         fullname = ns + act_name
-        self._act_cli_fllw_bt = ActionClient(node, act_type, fullname)
+        self._act_cli_bt = ActionClient(node, act_type, fullname)
 
-        # Create action client "TechBbCntrBackTest"
-        act_type = TechBbCntrBtAct
-        act_name = "tech_bb_cntr_backtest"
-        fullname = ns + act_name
-        self._act_cli_cntr_bt = ActionClient(node, act_type, fullname)
-
-        # Create action client "TechBbTreeView"
-        act_type = TechBbTreeViewAct
-        act_name = "tech_bb_fetch_treeview"
+        # Create action client "TechSmaTreeView"
+        act_type = TechSmaTreeViewAct
+        act_name = "tech_sma_fetch_treeview"
         fullname = ns + act_name
         self._act_cli_tv = ActionClient(node, act_type, fullname)
 
     def _on_pushButton_backtest_start_clicked(self):
-
-        analy_typ_idx = self._ui.comboBox_TechBb_AnalyTyp.currentIndex()
-        if analy_typ_idx == 0:
-            # Follower
-            self._start_backtest_fllw()
-        else:
-            # Contrarian
-            self._start_backtest_cntr()
+        self._start_backtest()
 
     def _on_pushButton_period_load_clicked(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -204,96 +196,57 @@ class BollingerBandUi():
         q_start_datetime = QDateTime.fromString(rsp.start_datetime, FMT_QT_YMDHMS)
         q_end_datetime = QDateTime.fromString(rsp.end_datetime, FMT_QT_YMDHMS)
 
-        wasBlocked1 = self._ui.dateTimeEdit_TechBb_PeriodStr.blockSignals(True)
-        wasBlocked2 = self._ui.dateTimeEdit_TechBb_PeriodEnd.blockSignals(True)
+        wasBlocked1 = self._ui.dateTimeEdit_TechSma_PeriodStr.blockSignals(True)
+        wasBlocked2 = self._ui.dateTimeEdit_TechSma_PeriodEnd.blockSignals(True)
 
-        self._ui.dateTimeEdit_TechBb_PeriodStr.setDateTimeRange(q_start_datetime, q_end_datetime)
-        self._ui.dateTimeEdit_TechBb_PeriodStr.setDateTime(q_start_datetime)
+        self._ui.dateTimeEdit_TechSma_PeriodStr.setDateTimeRange(q_start_datetime, q_end_datetime)
+        self._ui.dateTimeEdit_TechSma_PeriodStr.setDateTime(q_start_datetime)
 
-        self._ui.dateTimeEdit_TechBb_PeriodEnd.setDateTimeRange(q_start_datetime, q_end_datetime)
-        self._ui.dateTimeEdit_TechBb_PeriodEnd.setDateTime(q_end_datetime)
+        self._ui.dateTimeEdit_TechSma_PeriodEnd.setDateTimeRange(q_start_datetime, q_end_datetime)
+        self._ui.dateTimeEdit_TechSma_PeriodEnd.setDateTime(q_end_datetime)
 
-        self._ui.dateTimeEdit_TechBb_PeriodStr.blockSignals(wasBlocked1)
-        self._ui.dateTimeEdit_TechBb_PeriodEnd.blockSignals(wasBlocked2)
+        self._ui.dateTimeEdit_TechSma_PeriodStr.blockSignals(wasBlocked1)
+        self._ui.dateTimeEdit_TechSma_PeriodEnd.blockSignals(wasBlocked2)
 
         self._enable_period = True
 
-    def _start_backtest_fllw(self):
+    def _start_backtest(self):
 
         inst_param = self._inst_param
         gran_param = self._gran_param
 
-        if not self._act_cli_fllw_bt.server_is_ready():
+        if not self._act_cli_bt.server_is_ready():
             self.logger.error("Action server [{}][{}] not ready"
                               .format(inst_param.text, gran_param.text))
             return
 
-        self._ui.pushButton_TechBb_backtest_start.setEnabled(False)
+        self._ui.pushButton_TechSma_backtest_start.setEnabled(False)
 
         self._sts_bar.set_label_text("Stanby...")
         self._sts_bar.set_bar_range(0, 100)
         self._sts_bar.set_bar_value(0)
 
-        goal_msg = TechBbFllwBtAct.Goal()
+        goal_msg = TechSmaBtAct.Goal()
         if self._enable_period:
-            goal_msg.start_datetime = self._ui.dateTimeEdit_TechBb_PeriodStr.dateTime().toString(FMT_QT_YMDHMS)
-            goal_msg.end_datetime = self._ui.dateTimeEdit_TechBb_PeriodEnd.dateTime().toString(FMT_QT_YMDHMS)
+            goal_msg.start_datetime = self._ui.dateTimeEdit_TechSma_PeriodStr.dateTime().toString(FMT_QT_YMDHMS)
+            goal_msg.end_datetime = self._ui.dateTimeEdit_TechSma_PeriodEnd.dateTime().toString(FMT_QT_YMDHMS)
         else:
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
-        goal_msg.sma_th_start = self._ui.spinBox_TechBb_SmaThStr.value()
-        goal_msg.sma_th_end = self._ui.spinBox_TechBb_SmaThEnd.value()
-        goal_msg.sma_th_decimation = self._ui.spinBox_TechBb_SmaThDeci.value()
-        goal_msg.std_th_start = self._ui.spinBox_TechBb_StdThStr.value()
-        goal_msg.std_th_end = self._ui.spinBox_TechBb_StdThEnd.value()
-        goal_msg.std_th_decimation = self._ui.spinBox_TechBb_StdThDeci.value()
-        goal_msg.profit_th_start = self._ui.spinBox_TechBb_PlThStr.value()
-        goal_msg.profit_th_end = self._ui.spinBox_TechBb_PlThEnd.value()
-        goal_msg.profit_th_decimation = self._ui.spinBox_TechBb_PlThDeci.value()
-        goal_msg.entry_offset_pips = self._ui.spinBox_TechBb_EntryOfs.value()
+        goal_msg.sma_l_span_start = self._ui.spinBox_TechSma_SmaLngSpanStr.value()
+        goal_msg.sma_l_span_end = self._ui.spinBox_TechSma_SmaLngSpanEnd.value()
+        goal_msg.sma_l_span_deci = self._ui.spinBox_TechSma_SmaLngSpanDeci.value()
+        goal_msg.sma_s_span_start = self._ui.spinBox_TechSma_SmaShrSpanStr.value()
+        goal_msg.sma_s_span_end = self._ui.spinBox_TechSma_SmaShrSpanEnd.value()
+        goal_msg.sma_s_span_deci = self._ui.spinBox_TechSma_SmaShrSpanDeci.value()
+        goal_msg.profit_th_start = self._ui.spinBox_TechSma_PlThStr.value()
+        goal_msg.profit_th_end = self._ui.spinBox_TechSma_PlThEnd.value()
+        goal_msg.profit_th_deci = self._ui.spinBox_TechSma_PlThDeci.value()
+        goal_msg.valid_eval_th = self._ui.spinBox_TechSma_EvalTh.value()
+        goal_msg.entry_offset_pips = self._ui.spinBox_TechSma_EntryOfs.value()
 
         callback_fb = self._backtest_feedback_callback
-        self._future = self._act_cli_fllw_bt.send_goal_async(goal_msg, callback_fb)
-
-        callback = self._backtest_goal_response_callback
-        self._future.add_done_callback(callback)
-
-    def _start_backtest_cntr(self):
-
-        inst_param = self._inst_param
-        gran_param = self._gran_param
-
-        if not self._act_cli_cntr_bt.server_is_ready():
-            self.logger.error("Action server [{}][{}] not ready"
-                              .format(inst_param.text, gran_param.text))
-            return
-
-        self._ui.pushButton_TechBb_backtest_start.setEnabled(False)
-
-        self._sts_bar.set_label_text("Stanby...")
-        self._sts_bar.set_bar_range(0, 100)
-        self._sts_bar.set_bar_value(0)
-
-        goal_msg = TechBbCntrBtAct.Goal()
-        if self._enable_period:
-            goal_msg.start_datetime = self._ui.dateTimeEdit_TechBb_PeriodStr.dateTime().toString(FMT_QT_YMDHMS)
-            goal_msg.end_datetime = self._ui.dateTimeEdit_TechBb_PeriodEnd.dateTime().toString(FMT_QT_YMDHMS)
-        else:
-            goal_msg.start_datetime = ""
-            goal_msg.end_datetime = ""
-        goal_msg.sma_th_start = self._ui.spinBox_TechBb_SmaThStr.value()
-        goal_msg.sma_th_end = self._ui.spinBox_TechBb_SmaThEnd.value()
-        goal_msg.sma_th_decimation = self._ui.spinBox_TechBb_SmaThDeci.value()
-        goal_msg.std_th_start = self._ui.spinBox_TechBb_StdThStr.value()
-        goal_msg.std_th_end = self._ui.spinBox_TechBb_StdThEnd.value()
-        goal_msg.std_th_decimation = self._ui.spinBox_TechBb_StdThDeci.value()
-        goal_msg.loss_th_start = self._ui.spinBox_TechBb_PlThStr.value()
-        goal_msg.loss_th_end = self._ui.spinBox_TechBb_PlThEnd.value()
-        goal_msg.loss_th_decimation = self._ui.spinBox_TechBb_PlThDeci.value()
-        goal_msg.entry_offset_pips = self._ui.spinBox_TechBb_EntryOfs.value()
-
-        callback_fb = self._backtest_feedback_callback
-        self._future = self._act_cli_cntr_bt.send_goal_async(goal_msg, callback_fb)
+        self._future = self._act_cli_bt.send_goal_async(goal_msg, callback_fb)
 
         callback = self._backtest_goal_response_callback
         self._future.add_done_callback(callback)
@@ -331,7 +284,7 @@ class BollingerBandUi():
         self._sts_bar.set_bar_value(100)
 
         # ----- set widget enable -----
-        self._ui.pushButton_TechBb_backtest_start.setEnabled(True)
+        self._ui.pushButton_TechSma_backtest_start.setEnabled(True)
 
         rsp = future.result()
         if rsp.status == GoalStatus.STATUS_SUCCEEDED:
@@ -340,40 +293,40 @@ class BollingerBandUi():
             self.logger.debug("GoalStatus:\"Not Succeeded\"")
             return
 
-        # ----- set SMA comboBox -----
-        sma_th_start = self._ui.spinBox_TechBb_SmaThStr.value()
-        sma_th_end = self._ui.spinBox_TechBb_SmaThEnd.value()
-        sma_th_deci = self._ui.spinBox_TechBb_SmaThDeci.value()
-        sma_th_list = list(range(sma_th_start, sma_th_end + 1, sma_th_deci))
+        # ----- set SMA(L) comboBox -----
+        sma_l_span_start = self._ui.spinBox_TechSma_SmaLngSpanStr.value()
+        sma_l_span_end = self._ui.spinBox_TechSma_SmaLngSpanEnd.value()
+        sma_l_span_deci = self._ui.spinBox_TechSma_SmaLngSpanDeci.value()
+        sma_l_span_list = list(range(sma_l_span_start, sma_l_span_end + 1, sma_l_span_deci))
 
-        wasBlocked = self._ui.comboBox_TechBb_sma.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechBb_sma)
-        for sma_th in sma_th_list:
-            self._ui.comboBox_TechBb_sma.addItem(str(sma_th))
-        self._ui.comboBox_TechBb_sma.blockSignals(wasBlocked)
+        wasBlocked = self._ui.comboBox_TechSma_SmaLngSpan.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechSma_SmaLngSpan)
+        for sma_th in sma_l_span_list:
+            self._ui.comboBox_TechSma_SmaLngSpan.addItem(str(sma_th))
+        self._ui.comboBox_TechSma_SmaLngSpan.blockSignals(wasBlocked)
 
-        # ----- set STD comboBox -----
-        std_th_start = self._ui.spinBox_TechBb_StdThStr.value()
-        std_th_end = self._ui.spinBox_TechBb_StdThEnd.value()
-        std_th_deci = self._ui.spinBox_TechBb_StdThDeci.value()
-        std_th_list = list(range(std_th_start, std_th_end + 1, std_th_deci))
+        # ----- set SMA(S) comboBox -----
+        sma_s_span_start = self._ui.spinBox_TechSma_SmaShrSpanStr.value()
+        sma_s_span_end = self._ui.spinBox_TechSma_SmaShrSpanEnd.value()
+        sma_s_span_deci = self._ui.spinBox_TechSma_SmaShrSpanDeci.value()
+        sma_s_span_list = list(range(sma_s_span_start, sma_s_span_end + 1, sma_s_span_deci))
 
-        wasBlocked = self._ui.comboBox_TechBb_std.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechBb_std)
-        for std_th in std_th_list:
-            self._ui.comboBox_TechBb_std.addItem(str(std_th))
-        self._ui.comboBox_TechBb_std.blockSignals(wasBlocked)
+        wasBlocked = self._ui.comboBox_TechSma_SmaShrSpan.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechSma_SmaShrSpan)
+        for std_th in sma_s_span_list:
+            self._ui.comboBox_TechSma_SmaShrSpan.addItem(str(std_th))
+        self._ui.comboBox_TechSma_SmaShrSpan.blockSignals(wasBlocked)
 
         # ----- set widget enable -----
-        self._ui.comboBox_TechBb_sma.setEnabled(True)
-        self._ui.comboBox_TechBb_std.setEnabled(True)
-        self._ui.pushButton_TechBb_fetch_treeView.setEnabled(True)
-        self._ui.widget_TreeView_TechBb.setEnabled(True)
+        self._ui.comboBox_TechSma_SmaLngSpan.setEnabled(True)
+        self._ui.comboBox_TechSma_SmaShrSpan.setEnabled(True)
+        self._ui.pushButton_TechSma_fetch_treeView.setEnabled(True)
+        self._ui.widget_TreeView_TechSma.setEnabled(True)
 
-        self._sma_th_list = sma_th_list
-        self._std_th_list = std_th_list
+        self._sma_l_span_list = sma_l_span_list
+        self._sma_s_span_list = sma_s_span_list
 
-    def _on_pushButton_fetch_treeView_clicked(self):
+    def _on_pushButton_TechSma_fetch_treeView_clicked(self):
 
         inst_param = self._inst_param
         gran_param = self._gran_param
@@ -387,14 +340,20 @@ class BollingerBandUi():
         self._sts_bar.set_bar_range(0, 100)
         self._sts_bar.set_bar_value(0)
 
-        sma_idx = self._ui.comboBox_TechBb_sma.currentIndex()
-        std_idx = self._ui.comboBox_TechBb_std.currentIndex()
+        sma_l_idx = self._ui.comboBox_TechSma_SmaLngSpan.currentIndex()
+        sma_s_idx = self._ui.comboBox_TechSma_SmaShrSpan.currentIndex()
+        sma_l_span = self._sma_l_span_list[sma_l_idx]
+        sma_s_span = self._sma_s_span_list[sma_s_idx]
 
-        self._ui.pushButton_TechBb_fetch_treeView.setEnabled(False)
+        if sma_l_span <= sma_s_span:
+            self._sts_bar.set_label_text("Invalid combination of SMA L and S value.")
+            return
 
-        goal_msg = TechBbTreeViewAct.Goal()
-        goal_msg.sma_th = self._sma_th_list[sma_idx]
-        goal_msg.std_th = self._std_th_list[std_idx]
+        self._ui.pushButton_TechSma_fetch_treeView.setEnabled(False)
+
+        goal_msg = TechSmaTreeViewAct.Goal()
+        goal_msg.sma_l_span = sma_l_span
+        goal_msg.sma_s_span = sma_s_span
 
         callback_fb = self._fetch_treeview_feedback_callback
         self._future = self._act_cli_tv.send_goal_async(goal_msg,
@@ -437,14 +396,12 @@ class BollingerBandUi():
         for rec in rsp.result.tbl:
             record = [
                 dt.datetime.strptime(rec.entry_time, FMT_YMDHMS),
-                # utl.roundf(rec.entry_price, digit=self._inst_param.digit),
                 self._inst_param.round_pips(rec.entry_price),
                 rec.entry_dir,
-                "{:.5f}".format(rec.entry_sma_slope_abs),
-                rec.gap_std_sma,
+                dt.datetime.strptime(rec.sma_s_cross_time, FMT_YMDHMS),
+                rec.eval_value,
                 rec.max_height_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
-                # utl.roundf(rec.exit_price, digit=self._inst_param.digit),
                 self._inst_param.round_pips(rec.exit_price),
                 rec.exit_pl_pips,
             ]
@@ -458,11 +415,11 @@ class BollingerBandUi():
         self._sts_bar.set_label_text("Complete...")
 
         # ----- set widget enable -----
-        self._ui.pushButton_TechBb_fetch_treeView.setEnabled(True)
-        self._ui.comboBox_TechBb_amb.setEnabled(True)
-        self._ui.spinBox_TechBb_barNum.setEnabled(True)
+        self._ui.pushButton_TechSma_fetch_treeView.setEnabled(True)
+        self._ui.comboBox_TechSma_amb.setEnabled(True)
+        self._ui.spinBox_TechSma_barNum.setEnabled(True)
         """
-        self._ui.widget_ChartView_TechBb.setEnabled(True)
+        self._ui.widget_ChartView_TechSma.setEnabled(True)
         """
 
     def _update_treeview(self, df: pd.DataFrame):
@@ -476,8 +433,8 @@ class BollingerBandUi():
                 t.Index.strftime(FMT_DISP_YMDHMS),
                 t.entry_price,
                 t.entry_dir,
-                t.entry_sma_slope_abs,
-                t.gap_std_sma,
+                t.sma_s_cross_time.strftime(FMT_DISP_YMDHMS),
+                t.eval_value,
                 t.max_height_pips,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
                 t.exit_price,
@@ -516,21 +473,21 @@ class BollingerBandUi():
             return
 
         entry_time = dt.datetime.strptime(entry_time_disp_str, FMT_DISP_YMDHMS)
-        bar_num = self._ui.spinBox_TechBb_barNum.value()
+        bar_num = self._ui.spinBox_TechSma_barNum.value()
         self._draw_graph(entry_time, bar_num)
         self._selected_entry_time = entry_time
 
         # ----- set widget enable -----
-        self._ui.widget_ChartView_TechBb.setEnabled(True)
+        self._ui.widget_ChartView_TechSma.setEnabled(True)
 
     def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
 
-        sma_idx = self._ui.comboBox_TechBb_sma.currentIndex()
-        std_idx = self._ui.comboBox_TechBb_std.currentIndex()
+        sma_l_idx = self._ui.comboBox_TechSma_SmaLngSpan.currentIndex()
+        sma_s_idx = self._ui.comboBox_TechSma_SmaShrSpan.currentIndex()
 
-        req = TechBbChartSrv.Request()
-        req.sma_th = self._sma_th_list[sma_idx]
-        req.std_th = self._std_th_list[std_idx]
+        req = TechSmaChartSrv.Request()
+        req.sma_l_span = self._sma_l_span_list[sma_l_idx]
+        req.sma_s_span = self._sma_s_span_list[sma_s_idx]
         req.time = entry_time.strftime(FMT_YMDHMS)
         req.number_of_bars = bar_num
 
@@ -539,14 +496,11 @@ class BollingerBandUi():
         tbl = []
         for msg in rsp.tbl:
             rec = [
-                # dt.datetime.strptime(msg.entry_time, FMT_YMDHMS),
                 utl.convert_ymdhms_fmt_to_disp(msg.time),
                 msg.ask_o, msg.ask_h, msg.ask_l, msg.ask_c,
                 msg.mid_o, msg.mid_h, msg.mid_l, msg.mid_c,
                 msg.bid_o, msg.bid_h, msg.bid_l, msg.bid_c,
-                msg.base_sma,
-                msg.base_sma + msg.std,
-                msg.base_sma - msg.std
+                msg.sma_l, msg.sma_s
             ]
             tbl.append(rec)
         df = pd.DataFrame(tbl, columns=ColChart.to_list())
@@ -577,39 +531,38 @@ class BollingerBandUi():
         self._chartview.set_max_y(max_y + margin)
         self._chartview.set_min_y(min_y - margin)
 
-        smb_idx = self._ui.comboBox_TechBb_amb.currentIndex()
+        smb_idx = self._ui.comboBox_TechSma_amb.currentIndex()
         self._draw_graph_by_candle_type(smb_idx)
 
     def _draw_graph_by_candle_type(self, smb_idx):
-        bb_col = [ColChart.BASE_SMA.value,
-                  ColChart.POS_STD.value,
-                  ColChart.NEG_STD.value]
+        sma_col = [ColChart.SMA_L.value,
+                   ColChart.SMA_S.value]
 
         if smb_idx == 0:    # Mid
             col = [ColChart.MID_O.value,
                    ColChart.MID_H.value,
                    ColChart.MID_L.value,
-                   ColChart.MID_C.value] + bb_col
+                   ColChart.MID_C.value] + sma_col
         elif smb_idx == 1:  # Ask
             col = [ColChart.ASK_O.value,
                    ColChart.ASK_H.value,
                    ColChart.ASK_L.value,
-                   ColChart.ASK_C.value] + bb_col
+                   ColChart.ASK_C.value] + sma_col
         else:               # Bid
             col = [ColChart.BID_O.value,
                    ColChart.BID_H.value,
                    ColChart.BID_L.value,
-                   ColChart.BID_C.value] + bb_col
+                   ColChart.BID_C.value] + sma_col
 
         df = self._chart_info.df[col]
-        df.columns = ChartView.CandleLabel.to_list() + bb_col
+        df.columns = ChartView.CandleLabel.to_list() + sma_col
 
         self._chartview.update(df,
                                self._chart_info,
                                self._gran_param,
                                self._inst_param)
 
-    def _on_view_header_sectionClicked(self, logical_index):
+    def _on_view_header_sma_sectionClicked(self, logical_index):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._pdtreeview.show_header_menu(logical_index)
 
