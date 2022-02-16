@@ -7,5 +7,5 @@ int32 STS_OPEN=1
 int32 STS_CLOSED=2
 int32 STS_CLOSE_WHEN_TRADEABLE=3
 
-# The current state of the Trade.
+# Current state of the Trade.
 int32 state

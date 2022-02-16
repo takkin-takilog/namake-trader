@@ -19,5 +19,5 @@ float32 mid_l
 float32 mid_c
 
 # Datetime.
-# The format is "%Y-%m-%dT%H:%M:%S"
+# Format is "%Y-%m-%dT%H:%M:%S"
 string time

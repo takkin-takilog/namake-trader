@@ -3,35 +3,35 @@
 #    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/trades/tradeCRCDO.html
 
 # ========================= Request =========================
-# The ID of the Trade that was opened.
+# Trade ID that was opened.
 int32 trade_id
 
 # Instrument to open the order on.
 api_msgs/Instrument inst_msg
 
-# The take profit price.
+# Take profit price.
 float32 take_profit_price
 
-# The stop loss price.
+# Stop loss price.
 float32 stop_loss_price
 
 ---
 # ========================= Response =========================
 
-# The result of this service process.
+# Result of this service process.
 #   True:success
 #   False:fail
 bool result
 
-# The fail reason code.
+# Fail reason code.
 api_msgs/FailReasonCode frc_msg
 
-# The price threshold specified for the TakeProfit Order.
+# Price threshold specified for the TakeProfit Order.
 # The associated Trade will be closed by a market price that is
 # equal to or better than this threshold.
 float32 take_profit_price
 
-# The price threshold specified for the StopLoss Order.
+# Price threshold specified for the StopLoss Order.
 # The associated Trade will be closed by a market price that is
 # equal to or worse than this threshold.
 float32 stop_loss_price

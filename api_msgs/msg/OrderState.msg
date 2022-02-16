@@ -8,5 +8,5 @@ int32 STS_FILLED = 2
 int32 STS_TRIGGERED = 3
 int32 STS_CANCELLED = 4
 
-# The current state of the order.
+# Current state of the order.
 int32 state

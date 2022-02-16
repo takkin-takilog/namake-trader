@@ -39,11 +39,9 @@ class ColBtRslt(Enum):
     ENTRY_DIR = "entry_dir"
     ENTRY_SMA_SLOP_ABS = "entry_sma_slope_abs"
     GAP_STD_SMA_PIPS = "gap_std_sma"
-    # MAX_LOSS_PIPS = "max_loss_pips"
     MAX_HEIGHT_PIPS = "max_height_pips"
     EXIT_TIME = "exit_time"
     EXIT_PRICE = "exit_price"
-    # TAKE_PROFIT_PIPS = "take_profit_pips"
     EXIT_PL_PIPS = "exit_pl_pips"
 
     @classmethod
@@ -97,8 +95,8 @@ class BollingerBandUi():
         self._chartview = ChartView(ui.widget_ChartView_TechBb)
 
         # ----- set widget disable -----
-        ui.comboBox_TechBb_sma.setEnabled(False)
-        ui.comboBox_TechBb_std.setEnabled(False)
+        ui.comboBox_TechBb_SmaSpan.setEnabled(False)
+        ui.comboBox_TechBb_StdSpan.setEnabled(False)
         ui.pushButton_TechBb_fetch_treeView.setEnabled(False)
         ui.widget_TreeView_TechBb.setEnabled(False)
         ui.comboBox_TechBb_amb.setEnabled(False)
@@ -241,15 +239,15 @@ class BollingerBandUi():
         else:
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
-        goal_msg.sma_th_start = self._ui.spinBox_TechBb_SmaThStr.value()
-        goal_msg.sma_th_end = self._ui.spinBox_TechBb_SmaThEnd.value()
-        goal_msg.sma_th_decimation = self._ui.spinBox_TechBb_SmaThDeci.value()
-        goal_msg.std_th_start = self._ui.spinBox_TechBb_StdThStr.value()
-        goal_msg.std_th_end = self._ui.spinBox_TechBb_StdThEnd.value()
-        goal_msg.std_th_decimation = self._ui.spinBox_TechBb_StdThDeci.value()
+        goal_msg.sma_span_start = self._ui.spinBox_TechBb_SmaSpanStr.value()
+        goal_msg.sma_span_end = self._ui.spinBox_TechBb_SmaSpanEnd.value()
+        goal_msg.sma_span_deci = self._ui.spinBox_TechBb_SmaSpanDeci.value()
+        goal_msg.std_span_start = self._ui.spinBox_TechBb_StdSpanStr.value()
+        goal_msg.std_span_end = self._ui.spinBox_TechBb_StdSpanEnd.value()
+        goal_msg.std_span_deci = self._ui.spinBox_TechBb_StdSpanDeci.value()
         goal_msg.profit_th_start = self._ui.spinBox_TechBb_PlThStr.value()
         goal_msg.profit_th_end = self._ui.spinBox_TechBb_PlThEnd.value()
-        goal_msg.profit_th_decimation = self._ui.spinBox_TechBb_PlThDeci.value()
+        goal_msg.profit_th_deci = self._ui.spinBox_TechBb_PlThDeci.value()
         goal_msg.entry_offset_pips = self._ui.spinBox_TechBb_EntryOfs.value()
 
         callback_fb = self._backtest_feedback_callback
@@ -281,15 +279,15 @@ class BollingerBandUi():
         else:
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
-        goal_msg.sma_th_start = self._ui.spinBox_TechBb_SmaThStr.value()
-        goal_msg.sma_th_end = self._ui.spinBox_TechBb_SmaThEnd.value()
-        goal_msg.sma_th_decimation = self._ui.spinBox_TechBb_SmaThDeci.value()
-        goal_msg.std_th_start = self._ui.spinBox_TechBb_StdThStr.value()
-        goal_msg.std_th_end = self._ui.spinBox_TechBb_StdThEnd.value()
-        goal_msg.std_th_decimation = self._ui.spinBox_TechBb_StdThDeci.value()
+        goal_msg.sma_span_start = self._ui.spinBox_TechBb_SmaSpanStr.value()
+        goal_msg.sma_span_end = self._ui.spinBox_TechBb_SmaSpanEnd.value()
+        goal_msg.sma_span_deci = self._ui.spinBox_TechBb_SmaSpanDeci.value()
+        goal_msg.std_span_start = self._ui.spinBox_TechBb_StdSpanStr.value()
+        goal_msg.std_span_end = self._ui.spinBox_TechBb_StdSpanEnd.value()
+        goal_msg.std_span_deci = self._ui.spinBox_TechBb_StdSpanDeci.value()
         goal_msg.loss_th_start = self._ui.spinBox_TechBb_PlThStr.value()
         goal_msg.loss_th_end = self._ui.spinBox_TechBb_PlThEnd.value()
-        goal_msg.loss_th_decimation = self._ui.spinBox_TechBb_PlThDeci.value()
+        goal_msg.loss_th_deci = self._ui.spinBox_TechBb_PlThDeci.value()
         goal_msg.entry_offset_pips = self._ui.spinBox_TechBb_EntryOfs.value()
 
         callback_fb = self._backtest_feedback_callback
@@ -341,37 +339,37 @@ class BollingerBandUi():
             return
 
         # ----- set SMA comboBox -----
-        sma_th_start = self._ui.spinBox_TechBb_SmaThStr.value()
-        sma_th_end = self._ui.spinBox_TechBb_SmaThEnd.value()
-        sma_th_deci = self._ui.spinBox_TechBb_SmaThDeci.value()
-        sma_th_list = list(range(sma_th_start, sma_th_end + 1, sma_th_deci))
+        sma_span_start = self._ui.spinBox_TechBb_SmaSpanStr.value()
+        sma_span_end = self._ui.spinBox_TechBb_SmaSpanEnd.value()
+        sma_span_deci = self._ui.spinBox_TechBb_SmaSpanDeci.value()
+        sma_span_list = list(range(sma_span_start, sma_span_end + 1, sma_span_deci))
 
-        wasBlocked = self._ui.comboBox_TechBb_sma.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechBb_sma)
-        for sma_th in sma_th_list:
-            self._ui.comboBox_TechBb_sma.addItem(str(sma_th))
-        self._ui.comboBox_TechBb_sma.blockSignals(wasBlocked)
+        wasBlocked = self._ui.comboBox_TechBb_SmaSpan.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechBb_SmaSpan)
+        for sma_span in sma_span_list:
+            self._ui.comboBox_TechBb_SmaSpan.addItem(str(sma_span))
+        self._ui.comboBox_TechBb_SmaSpan.blockSignals(wasBlocked)
 
         # ----- set STD comboBox -----
-        std_th_start = self._ui.spinBox_TechBb_StdThStr.value()
-        std_th_end = self._ui.spinBox_TechBb_StdThEnd.value()
-        std_th_deci = self._ui.spinBox_TechBb_StdThDeci.value()
-        std_th_list = list(range(std_th_start, std_th_end + 1, std_th_deci))
+        std_span_start = self._ui.spinBox_TechBb_StdSpanStr.value()
+        std_span_end = self._ui.spinBox_TechBb_StdSpanEnd.value()
+        std_span_deci = self._ui.spinBox_TechBb_StdSpanDeci.value()
+        std_span_list = list(range(std_span_start, std_span_end + 1, std_span_deci))
 
-        wasBlocked = self._ui.comboBox_TechBb_std.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechBb_std)
-        for std_th in std_th_list:
-            self._ui.comboBox_TechBb_std.addItem(str(std_th))
-        self._ui.comboBox_TechBb_std.blockSignals(wasBlocked)
+        wasBlocked = self._ui.comboBox_TechBb_StdSpan.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechBb_StdSpan)
+        for std_span in std_span_list:
+            self._ui.comboBox_TechBb_StdSpan.addItem(str(std_span))
+        self._ui.comboBox_TechBb_StdSpan.blockSignals(wasBlocked)
 
         # ----- set widget enable -----
-        self._ui.comboBox_TechBb_sma.setEnabled(True)
-        self._ui.comboBox_TechBb_std.setEnabled(True)
+        self._ui.comboBox_TechBb_SmaSpan.setEnabled(True)
+        self._ui.comboBox_TechBb_StdSpan.setEnabled(True)
         self._ui.pushButton_TechBb_fetch_treeView.setEnabled(True)
         self._ui.widget_TreeView_TechBb.setEnabled(True)
 
-        self._sma_th_list = sma_th_list
-        self._std_th_list = std_th_list
+        self._sma_span_list = sma_span_list
+        self._std_span_list = std_span_list
 
     def _on_pushButton_fetch_treeView_clicked(self):
 
@@ -387,14 +385,14 @@ class BollingerBandUi():
         self._sts_bar.set_bar_range(0, 100)
         self._sts_bar.set_bar_value(0)
 
-        sma_idx = self._ui.comboBox_TechBb_sma.currentIndex()
-        std_idx = self._ui.comboBox_TechBb_std.currentIndex()
+        sma_idx = self._ui.comboBox_TechBb_SmaSpan.currentIndex()
+        std_idx = self._ui.comboBox_TechBb_StdSpan.currentIndex()
 
         self._ui.pushButton_TechBb_fetch_treeView.setEnabled(False)
 
         goal_msg = TechBbTreeViewAct.Goal()
-        goal_msg.sma_th = self._sma_th_list[sma_idx]
-        goal_msg.std_th = self._std_th_list[std_idx]
+        goal_msg.sma_span = self._sma_span_list[sma_idx]
+        goal_msg.std_span = self._std_span_list[std_idx]
 
         callback_fb = self._fetch_treeview_feedback_callback
         self._future = self._act_cli_tv.send_goal_async(goal_msg,
@@ -525,12 +523,12 @@ class BollingerBandUi():
 
     def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
 
-        sma_idx = self._ui.comboBox_TechBb_sma.currentIndex()
-        std_idx = self._ui.comboBox_TechBb_std.currentIndex()
+        sma_idx = self._ui.comboBox_TechBb_SmaSpan.currentIndex()
+        std_idx = self._ui.comboBox_TechBb_StdSpan.currentIndex()
 
         req = TechBbChartSrv.Request()
-        req.sma_th = self._sma_th_list[sma_idx]
-        req.std_th = self._std_th_list[std_idx]
+        req.sma_span = self._sma_span_list[sma_idx]
+        req.std_span = self._std_span_list[std_idx]
         req.time = entry_time.strftime(FMT_YMDHMS)
         req.number_of_bars = bar_num
 

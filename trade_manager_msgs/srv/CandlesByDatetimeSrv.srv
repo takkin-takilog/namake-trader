@@ -8,12 +8,12 @@ trade_manager_msgs/Granularity gran_msg
 trade_manager_msgs/Instrument inst_msg
 
 # Start of datetime to fetch candlesticks.
-# The format is "%Y-%m-%dT%H:%M:%S".
+# Format is "%Y-%m-%dT%H:%M:%S".
 # If want to set indefinite period, set blank as "".
 string datetime_start
 
 # End of datetime to fetch candlesticks for.
-# The format is "%Y-%m-%dT%H:%M:%S".
+# Format is "%Y-%m-%dT%H:%M:%S".
 # If want to set indefinite period, set blank as "".
 string datetime_end
 
@@ -28,12 +28,12 @@ string datetime_end
 int32[] dayofweeks
 
 # Start of time range to fetch candlesticks.
-# The format is "%H:%M:%S".
+# Format is "%H:%M:%S".
 # If want to set indefinite period, set blank as "".
 string time_from
 
 # End of time range to fetch candlesticks.
-# The format is "%H:%M:%S".
+# Format is "%H:%M:%S".
 # If want to set indefinite period, set blank as "".
 string time_to
 

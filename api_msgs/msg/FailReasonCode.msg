@@ -30,6 +30,5 @@ int32 REASON_CONNECTION_ERROR=1000
 # Others.
 int32 REASON_OTHERS=9999
 
-
-# The fail reason code of Topic and Service failed.
+# Fail reason code of Topic and Service failed.
 int32 reason_code
