@@ -140,20 +140,19 @@ class SimpleMovingAverageUi():
 
     def _init_ros_service(self, inst_param, gran_param):
         ns = inst_param.namespace + "/" + gran_param.namespace + "/"
+        node = ros_com.get_node()
 
         if isinstance(self._srv_cli_period, Client):
-            self._srv_cli_period.destroy()
+            node.destroy_client(self._srv_cli_period)
 
         if isinstance(self._srv_cli_chart, Client):
-            self._srv_cli_chart.destroy()
+            node.destroy_client(self._srv_cli_chart)
 
         if isinstance(self._act_cli_bt, ActionClient):
             self._act_cli_bt.destroy()
 
         if isinstance(self._act_cli_tv, ActionClient):
             self._act_cli_tv.destroy()
-
-        node = ros_com.get_node()
 
         # Create service client "Period"
         srv_type = PeriodSrv
