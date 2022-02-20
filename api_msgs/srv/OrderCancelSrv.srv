@@ -3,16 +3,16 @@
 #    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/orders/ordercancel.html
 
 # ========================= Request =========================
-# The ID  of the order to perform the request on.
+# Order ID to perform the request on.
 int32 order_id
 
 ---
 # ========================= Response =========================
 
-# The result of this service process.
+# Result of this service process.
 #   True:success
 #   False:fail
 bool result
 
-# The fail reason code.
+# Fail reason code.
 api_msgs/FailReasonCode frc_msg

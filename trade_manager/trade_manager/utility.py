@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import datetime as dt
 import pandas as pd
-from trade_manager.constant import SATURDAY, SUNDAY, MONDAY
+from .constant import SATURDAY, SUNDAY, MONDAY
 
 
 @dataclass

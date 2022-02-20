@@ -3,36 +3,36 @@
 #    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/orders/orderdetails.html
 
 # ========================= Request =========================
-# The ID  of the order to perform the request on.
+# Order ID to perform the request on.
 int32 order_id
 
 ---
 # ========================= Response =========================
 
-# The result of this service process.
+# Result of this service process.
 #   True:success
 #   False:fail
 bool result
 
-# The fail reason code.
+# Fail reason code.
 api_msgs/FailReasonCode frc_msg
 
-# The type of the order.
+# Type of the order.
 api_msgs/OrderType ordertype_msg
 
-# The Instrument of the order.
+# Instrument of the order.
 api_msgs/Instrument inst_msg
 
-# The quantity requested to be filled by the Limit Order.
+# Quantity requested to be filled by the Limit Order.
 int32 units
 
-# The price threshold specified for the Limit/Stop Order.
+# Price threshold specified for the Limit/Stop Order.
 float32 price
 
-# The current state of the Order.
+# Current state of the Order.
 api_msgs/OrderState order_state_msg
 
-# The open trade ID.
+# Open trade ID.
 # Only if order_state_msg.state is "STS_FILLED", this value set.
 int32 open_trade_id
 

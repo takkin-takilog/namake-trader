@@ -7,5 +7,5 @@ int32 TYP_MARKET=1
 int32 TYP_LIMIT=2
 int32 TYP_STOP=3
 
-# The type of the Order.
+# Order type.
 int32 type

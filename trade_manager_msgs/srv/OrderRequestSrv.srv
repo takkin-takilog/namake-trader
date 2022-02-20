@@ -22,7 +22,7 @@ int32 units
 float32 entry_price
 
 # Entry expiration time on selected "LIMIT" or "STOP" order.
-# The format is "%Y-%m-%dT%H:%M:%S".
+# Format is "%Y-%m-%dT%H:%M:%S".
 # If the order type is "MARKET", this parameter is ignored.
 # If is set an empty string(""), indefinite period.
 string entry_exp_time
@@ -34,7 +34,7 @@ float32 take_profit_price
 float32 stop_loss_price
 
 # Exit expiration time.
-# The format is "%Y-%m-%dT%H:%M:%S".
+# Format is "%Y-%m-%dT%H:%M:%S".
 # If is set an empty string(""), indefinite period.
 string exit_exp_time
 

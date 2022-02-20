@@ -586,7 +586,7 @@
              </sizepolicy>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="sma">
              <attribute name="title">
@@ -611,7 +611,7 @@
                  <property name="geometry">
                   <rect>
                    <x>0</x>
-                   <y>-136</y>
+                   <y>0</y>
                    <width>238</width>
                    <height>760</height>
                   </rect>
@@ -1477,7 +1477,7 @@
                       </widget>
                      </item>
                      <item row="0" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechBb_SmaThStr">
+                      <widget class="QSpinBox" name="spinBox_TechBb_SmaSpanStr">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -1509,7 +1509,7 @@
                       </widget>
                      </item>
                      <item row="1" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechBb_SmaThEnd">
+                      <widget class="QSpinBox" name="spinBox_TechBb_SmaSpanEnd">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -1541,7 +1541,7 @@
                       </widget>
                      </item>
                      <item row="2" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechBb_SmaThDeci">
+                      <widget class="QSpinBox" name="spinBox_TechBb_SmaSpanDeci">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -1598,7 +1598,7 @@
                       </widget>
                      </item>
                      <item row="2" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechBb_StdThDeci">
+                      <widget class="QSpinBox" name="spinBox_TechBb_StdSpanDeci">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -1614,7 +1614,7 @@
                       </widget>
                      </item>
                      <item row="0" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechBb_StdThStr">
+                      <widget class="QSpinBox" name="spinBox_TechBb_StdSpanStr">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -1646,7 +1646,7 @@
                       </widget>
                      </item>
                      <item row="1" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechBb_StdThEnd">
+                      <widget class="QSpinBox" name="spinBox_TechBb_StdSpanEnd">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -1861,7 +1861,7 @@
                        </widget>
                       </item>
                       <item>
-                       <widget class="QComboBox" name="comboBox_TechBb_sma">
+                       <widget class="QComboBox" name="comboBox_TechBb_SmaSpan">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                           <horstretch>0</horstretch>
@@ -1913,7 +1913,7 @@
                        </widget>
                       </item>
                       <item>
-                       <widget class="QComboBox" name="comboBox_TechBb_std">
+                       <widget class="QComboBox" name="comboBox_TechBb_StdSpan">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                           <horstretch>0</horstretch>

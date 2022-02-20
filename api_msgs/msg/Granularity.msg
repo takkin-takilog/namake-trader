@@ -23,5 +23,5 @@ int32 GRAN_H12=412  # 12 hours
 int32 GRAN_D=501    # 1 Day
 int32 GRAN_W=601    # 1 Week
 
-# The granularity ID.
+# Granularity ID.
 int32 gran_id

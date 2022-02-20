@@ -4,5 +4,5 @@
 trade_manager_msgs/Candle candle
 
 # Next update time.
-# The format is "%Y-%m-%dT%H:%M:%S"
+# Format is "%Y-%m-%dT%H:%M:%S"
 string next_update_time
