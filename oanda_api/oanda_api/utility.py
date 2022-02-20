@@ -1,18 +1,8 @@
-from dataclasses import dataclass
 import datetime as dt
 from typing import Dict
 from oanda_api.constant import FMT_YMDHMSF
 
 _JST_OFS = dt.timedelta(hours=9)
-
-
-@dataclass
-class RosParam():
-    """
-    Chart tag.
-    """
-    name: str = None
-    value = None
 
 
 def convert_datetime_jst(oanda_dt: str,
