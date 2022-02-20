@@ -10,9 +10,9 @@ from api_msgs.msg import Instrument as Inst
 from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error, StreamTerminated
-from oanda_api.constant import InstParam
-from oanda_api.constant import ADD_CIPHERS
-from oanda_api import utility as utl
+from .constant import InstParam
+from .constant import ADD_CIPHERS
+from . import utility as utl
 
 MsgType = TypeVar("MsgType")
 
