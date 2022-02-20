@@ -245,7 +245,6 @@ class CandlesData():
         self._gran_id = gran_data.gran_id
         self._df_comp = pd.DataFrame()
         self._df_prov = pd.DataFrame()
-        self._future = None
         self._is_update_complete = True
         self._needs_weekend_update = False
         self._weekend_close_time = None
@@ -434,6 +433,7 @@ class CandlesData():
         dt_to = dt.datetime.now()
         self.logger.debug("  - time_from:[{}]".format(dt_from))
         self.logger.debug("  - time_to  :[{}]".format(dt_to))
+        self._future = None
         try:
             self._future = self._request_async_candles(dt_from, dt_to)
             self._request_start_dt = dt_from
@@ -441,7 +441,6 @@ class CandlesData():
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
             self.logger.error("{}".format(err))
-            self._future = None
 
     def _on_do_updating(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))

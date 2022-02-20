@@ -419,12 +419,12 @@ class OrderTicket():
                           .format(self._order_id))
         req = OrderDetailsSrv.Request()
         req.order_id = self._order_id
+        self._future = None
         try:
             self._future = OrderTicket.cli_orddet.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
             self.logger.error("{}".format(err))
-            self._future = None
 
     def _on_do_EntryChecking(self) -> None:
 
@@ -473,12 +473,12 @@ class OrderTicket():
                           .format(self._order_id))
         req = OrderCancelSrv.Request()
         req.order_id = self._order_id
+        self._future = None
         try:
             self._future = OrderTicket.cli_ordcnc.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
             self.logger.error("{}".format(err))
-            self._future = None
 
     def _on_do_EntryCanceling(self) -> None:
 
@@ -534,12 +534,12 @@ class OrderTicket():
                           .format(self._trade_id))
         req = TradeDetailsSrv.Request()
         req.trade_id = self._trade_id
+        self._future = None
         try:
             self._future = OrderTicket.cli_trddet.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
             self.logger.error("{}".format(err))
-            self._future = None
 
     def _on_do_ExitChecking(self) -> None:
 
@@ -587,12 +587,12 @@ class OrderTicket():
 
         req = TradeCloseSrv.Request()
         req.trade_id = self._trade_id
+        self._future = None
         try:
             self._future = OrderTicket.cli_trdcls.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
             self.logger.error("{}".format(err))
-            self._future = None
 
     def _on_do_ExitOrdering(self) -> None:
 
