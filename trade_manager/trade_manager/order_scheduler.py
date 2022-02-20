@@ -300,11 +300,24 @@ class OrderTicket():
         self.logger.debug("  - api_inst_id:[{}]".format(self._api_inst_id))
         self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
 
-        # --------------- Initial process ---------------
-        self.do_cyclic_event()
-
+        # --------------- Update requested id ---------------
         self._requested_id = OrderTicket._c_requested_id
         OrderTicket._c_requested_id += 1
+
+        # --------------- Entry order ---------------
+        req = OrderCreateSrv.Request()
+        req.ordertype_msg.type = self._api_order_type
+        req.price = self._entry_price
+        req.units = self._units
+        req.inst_msg.inst_id = self._api_inst_id
+        req.take_profit_price = self._take_profit_price
+        req.stop_loss_price = self._stop_loss_price
+        self.logger.debug("----- Requesting \"Order Create\" -----")
+        try:
+            self._future = OrderTicket.cli_ordcre.call_async(req)
+        except InitializerErrorException as err:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
+            self.logger.error("{}".format(err))
 
     def __del__(self) -> None:
         self.logger.debug("---------- Delete OrderTicket ----------")
@@ -350,45 +363,31 @@ class OrderTicket():
 
     def _on_do_EntryOrdering(self) -> None:
 
-        if self._future is None:
-            req = OrderCreateSrv.Request()
-            req.ordertype_msg.type = self._api_order_type
-            req.price = self._entry_price
-            req.units = self._units
-            req.inst_msg.inst_id = self._api_inst_id
-            req.take_profit_price = self._take_profit_price
-            req.stop_loss_price = self._stop_loss_price
+        if not self._future.done():
+            self.logger.debug("  Requesting now...")
+            return
 
-            self.logger.debug("----- Requesting \"Order Create\" -----")
-            try:
-                self._future = OrderTicket.cli_ordcre.call_async(req)
-            except Exception as err:
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
-                self.logger.error("{}".format(err))
-                self._trans_to_Complete()
+        self.logger.debug("  Request done.")
+        rsp = self._future.result()
+        if rsp is None:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
+            self.logger.error("  future.result() is \"None\".")
+            self._trans_to_Complete()
+            return
+
+        if not rsp.result:
+            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Create) "))
+            self._trans_to_Complete()
+            return
+
+        if self._order_type == OrderType.MARKET:
+            self._trade_id = rsp.id
+            self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
+            self._trans_from_EntryOrdering_to_ExitWaiting()
         else:
-            if self._future.done():
-                self.logger.debug("  Request done.")
-                if self._future.result() is not None:
-                    rsp = self._future.result()
-                    if rsp.result:
-                        if self._order_type == OrderType.MARKET:
-                            self._trade_id = rsp.id
-                            self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
-                            self._trans_from_EntryOrdering_to_ExitWaiting()
-                        else:
-                            self._order_id = rsp.id
-                            self.logger.debug("  - order_id:[{}]".format(self._order_id))
-                            self._trans_from_EntryOrdering_to_EntryWaiting()
-                    else:
-                        self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Create) "))
-                        self._trans_to_Complete()
-                else:
-                    self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
-                    self.logger.error("  future.result() is \"None\".")
-                    self._trans_to_Complete()
-            else:
-                self.logger.debug("  Requesting now...")
+            self._order_id = rsp.id
+            self.logger.debug("  - order_id:[{}]".format(self._order_id))
+            self._trans_from_EntryOrdering_to_EntryWaiting()
 
     def _on_enter_EntryWaiting(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -414,50 +413,54 @@ class OrderTicket():
 
     def _on_enter_EntryChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._future = None
         OrderTicket._is_trans_lock = True
         self.logger.debug("--- Trans \"Locked\"")
+        self.logger.debug("----- Request \"Order Details\" (id:[{}]) -----"
+                          .format(self._order_id))
+        req = OrderDetailsSrv.Request()
+        req.order_id = self._order_id
+        try:
+            self._future = OrderTicket.cli_orddet.call_async(req)
+        except Exception as err:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
+            self.logger.error("{}".format(err))
+            self._future = None
 
     def _on_do_EntryChecking(self) -> None:
 
         if self._future is None:
-            req = OrderDetailsSrv.Request()
-            req.order_id = self._order_id
-            self.logger.debug("----- Requesting \"Order Details\" (id:[{}]) -----"
-                              .format(self._order_id))
-            try:
-                self._future = OrderTicket.cli_orddet.call_async(req)
-            except Exception as err:
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
-                self.logger.error("{}".format(err))
-                self._trans_from_EntryChecking_to_EntryWaiting()
+            self._trans_from_EntryChecking_to_EntryWaiting()
+            return
+
+        if not self._future.done():
+            self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
+            return
+
+        self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
+        rsp = self._future.result()
+        if rsp is None:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
+            self.logger.error("  future.result() is \"None\".")
+            self._trans_from_EntryChecking_to_EntryWaiting()
+            return
+
+        if not rsp.result:
+            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Details) "))
+            self._trans_from_EntryChecking_to_EntryWaiting()
+            return
+
+        if rsp.order_state_msg.state == OrderState.STS_PENDING:
+            self.logger.debug("  - order id:[{}] is Pending.".format(self._order_id))
+            self._trans_from_EntryChecking_to_EntryWaiting()
+        elif rsp.order_state_msg.state == OrderState.STS_FILLED:
+            self._trade_id = rsp.open_trade_id
+            self.logger.debug("  - order_id:[{}] is Filled.".format(self._order_id))
+            self.logger.debug("  - trade_id:[{}] is Opened.".format(self._trade_id))
+            self._trans_from_EntryChecking_to_ExitWaiting()
         else:
-            if self._future.done():
-                self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
-                if self._future.result() is not None:
-                    rsp = self._future.result()
-                    if rsp.result:
-                        if rsp.order_state_msg.state == OrderState.STS_PENDING:
-                            self.logger.debug("  - order id:[{}] is Pending.".format(self._order_id))
-                            self._trans_from_EntryChecking_to_EntryWaiting()
-                        elif rsp.order_state_msg.state == OrderState.STS_FILLED:
-                            self._trade_id = rsp.open_trade_id
-                            self.logger.debug("  - order_id:[{}] is Filled.".format(self._order_id))
-                            self.logger.debug("  - trade_id:[{}] is Opened.".format(self._trade_id))
-                            self._trans_from_EntryChecking_to_ExitWaiting()
-                        else:
-                            self.logger.debug("  - order id:[{}] is Unexpected State! (State No:<{}>)"
-                                              .format(self._order_id, rsp.order_state_msg.state))
-                            self._trans_from_EntryChecking_to_EntryWaiting()
-                    else:
-                        self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Details) "))
-                        self._trans_from_EntryChecking_to_EntryWaiting()
-                else:
-                    self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
-                    self.logger.error("  future.result() is \"None\".")
-                    self._trans_from_EntryChecking_to_EntryWaiting()
-            else:
-                self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
+            self.logger.warn("  - order id:[{}] is Unexpected State! (State No:<{}>)"
+                             .format(self._order_id, rsp.order_state_msg.state))
+            self._trans_from_EntryChecking_to_EntryWaiting()
 
     def _on_exit_EntryChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -466,44 +469,47 @@ class OrderTicket():
 
     def _on_enter_EntryCanceling(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._future = None
-        self._on_do_EntryCanceling()
+        self.logger.debug("----- Request \"Order Cancel\" (id:[{}]) -----"
+                          .format(self._order_id))
+        req = OrderCancelSrv.Request()
+        req.order_id = self._order_id
+        try:
+            self._future = OrderTicket.cli_ordcnc.call_async(req)
+        except Exception as err:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
+            self.logger.error("{}".format(err))
+            self._future = None
 
     def _on_do_EntryCanceling(self) -> None:
 
         if self._future is None:
-            req = OrderCancelSrv.Request()
-            req.order_id = self._order_id
-            self.logger.debug("----- Requesting \"Order Cancel\" (id:[{}]) -----"
-                              .format(self._order_id))
-            try:
-                self._future = OrderTicket.cli_ordcnc.call_async(req)
-            except Exception as err:
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
-                self.logger.error("{}".format(err))
-                self._trans_to_Complete()
+            self._trans_to_Complete()
+            return
+
+        if not self._future.done():
+            self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
+            return
+
+        self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
+        rsp = self._future.result()
+        if rsp is None:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
+            self.logger.error("  future.result() is \"None\".")
+            self._trans_to_Complete()
+            return
+
+        if rsp.result:
+            self.logger.debug("  EntryCanceling complete.(id:[{}])".format(self._order_id))
+            self._trans_from_EntryCanceling_to_Complete()
         else:
-            if self._future.done():
-                self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
-                if self._future.result() is not None:
-                    rsp = self._future.result()
-                    if rsp.result:
-                        self.logger.debug("  EntryCanceling complete.(id:[{}])".format(self._order_id))
-                        self._trans_from_EntryCanceling_to_Complete()
-                    else:
-                        if rsp.frc_msg.reason_code == frc.REASON_ORDER_DOESNT_EXIST:
-                            self.logger.debug("  EntryCanceling fail.(id:[{}])".format(self._order_id))
-                            self.logger.debug("    - Order doesnt exist!")
-                            self._trans_from_EntryCanceling_to_EntryChecking()
-                        else:
-                            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Cancel) "))
-                            self._trans_to_Complete()
-                else:
-                    self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
-                    self.logger.error("  future.result() is \"None\".")
-                    self._trans_to_Complete()
+            if rsp.frc_msg.reason_code == frc.REASON_ORDER_DOESNT_EXIST:
+                self.logger.warn("  EntryCanceling fail.(id:[{}])".format(self._order_id))
+                self.logger.warn("   Order doesnt exist!")
+                self.logger.warn("   Possibility that order have been contracted.")
+                self._trans_from_EntryCanceling_to_EntryChecking()
             else:
-                self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
+                self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Cancel) "))
+                self._trans_to_Complete()
 
     def _on_enter_ExitWaiting(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -522,48 +528,52 @@ class OrderTicket():
 
     def _on_enter_ExitChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._future = None
         OrderTicket._is_trans_lock = True
         self.logger.debug("--- Trans \"Locked\"")
+        self.logger.debug("----- Request \"Trade Details\" (id:[{}]) -----"
+                          .format(self._trade_id))
+        req = TradeDetailsSrv.Request()
+        req.trade_id = self._trade_id
+        try:
+            self._future = OrderTicket.cli_trddet.call_async(req)
+        except Exception as err:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
+            self.logger.error("{}".format(err))
+            self._future = None
 
     def _on_do_ExitChecking(self) -> None:
 
         if self._future is None:
-            req = TradeDetailsSrv.Request()
-            req.trade_id = self._trade_id
-            self.logger.debug("----- Requesting \"Trade Details\" (id:[{}]) -----"
-                              .format(self._trade_id))
-            try:
-                self._future = OrderTicket.cli_trddet.call_async(req)
-            except Exception as err:
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
-                self.logger.error("{}".format(err))
-                self._trans_from_ExitChecking_to_ExitWaiting()
+            self._trans_from_ExitChecking_to_ExitWaiting()
+            return
+
+        if not self._future.done():
+            self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
+            return
+
+        self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
+        rsp = self._future.result()
+        if rsp is None:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
+            self.logger.error("  future.result() is \"None\".")
+            self._trans_from_ExitChecking_to_ExitWaiting()
+            return
+
+        if not rsp.result:
+            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Trade Details) "))
+            self._trans_from_ExitChecking_to_ExitWaiting()
+            return
+
+        if rsp.trade_state_msg.state == TradeState.STS_OPEN:
+            self.logger.debug("  - trade id:[{}] is Opening.".format(self._trade_id))
+            self._trans_from_ExitChecking_to_ExitWaiting()
+        elif rsp.trade_state_msg.state == TradeState.STS_CLOSED:
+            self.logger.debug("  - trade id:[{}] is Closed.".format(self._trade_id))
+            self._trans_from_ExitChecking_to_Complete()
         else:
-            if self._future.done():
-                self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
-                if self._future.result() is not None:
-                    rsp = self._future.result()
-                    if rsp.result:
-                        if rsp.trade_state_msg.state == TradeState.STS_OPEN:
-                            self.logger.debug("  - trade id:[{}] is Opening.".format(self._trade_id))
-                            self._trans_from_ExitChecking_to_ExitWaiting()
-                        elif rsp.trade_state_msg.state == TradeState.STS_CLOSED:
-                            self.logger.debug("  - trade id:[{}] is Closed.".format(self._trade_id))
-                            self._trans_from_ExitChecking_to_Complete()
-                        else:
-                            self.logger.debug("  - trade id:[{}] is Unexpected State! (State No:<{}>)"
-                                              .format(self._trade_id, rsp.trade_state_msg.state))
-                            self._trans_from_ExitChecking_to_ExitWaiting()
-                    else:
-                        self.logger.error("{:!^50}".format(" Call ROS Service Fail (Trade Details) "))
-                        self._trans_from_ExitChecking_to_ExitWaiting()
-                else:
-                    self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
-                    self.logger.error("  future.result() is \"None\".")
-                    self._trans_from_ExitChecking_to_ExitWaiting()
-            else:
-                self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
+            self.logger.warn("  - trade id:[{}] is Unexpected State! (State No:<{}>)"
+                             .format(self._trade_id, rsp.trade_state_msg.state))
+            self._trans_from_ExitChecking_to_ExitWaiting()
 
     def _on_exit_ExitChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -572,41 +582,47 @@ class OrderTicket():
 
     def _on_enter_ExitOrdering(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._future = None
-        self._on_do_ExitOrdering()
+        self.logger.debug("----- Request \"Trade Close\" (id:[{}]) -----"
+                          .format(self._trade_id))
+
+        req = TradeCloseSrv.Request()
+        req.trade_id = self._trade_id
+        try:
+            self._future = OrderTicket.cli_trdcls.call_async(req)
+        except Exception as err:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
+            self.logger.error("{}".format(err))
+            self._future = None
 
     def _on_do_ExitOrdering(self) -> None:
 
         if self._future is None:
-            req = TradeCloseSrv.Request()
-            req.trade_id = self._trade_id
-            self.logger.debug("----- Requesting \"Trade Close\" (id:[{}]) -----"
-                              .format(self._trade_id))
-            try:
-                self._future = OrderTicket.cli_trdcls.call_async(req)
-            except Exception as err:
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
-                self.logger.error("{}".format(err))
-                self._trans_to_Complete()
+            self._trans_to_Complete()
+            return
+
+        if not self._future.done():
+            self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
+            return
+
+        self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
+        rsp = self._future.result()
+        if rsp is None:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
+            self.logger.error("  future.result() is \"None\".")
+            self._trans_to_Complete()
+            return
+
+        if rsp.result:
+            self._trans_from_ExitOrdering_to_Complete()
         else:
-            if self._future.done():
-                self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
-                if self._future.result() is not None:
-                    rsp = self._future.result()
-                    if rsp.result:
-                        self._trans_from_ExitOrdering_to_Complete()
-                    else:
-                        if rsp.frc_msg.reason_code == frc.REASON_TRADE_DOESNT_EXIST:
-                            self._trans_from_ExitOrdering_to_Complete()
-                        else:
-                            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Trade Close) "))
-                            self._trans_to_Complete()
-                else:
-                    self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
-                    self.logger.error("  future.result() is \"None\".")
-                    self._trans_to_Complete()
+            if rsp.frc_msg.reason_code == frc.REASON_TRADE_DOESNT_EXIST:
+                self.logger.warn("  ExitOrdering fail.(id:[{}])".format(self._trade_id))
+                self.logger.warn("   Trade doesnt exist!")
+                self.logger.warn("   Possibility that trade have been contracted.")
+                self._trans_from_ExitOrdering_to_Complete()
             else:
-                self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
+                self.logger.error("{:!^50}".format(" Call ROS Service Fail (Trade Close) "))
+                self._trans_to_Complete()
 
     def _on_do_Complete(self) -> None:
         pass

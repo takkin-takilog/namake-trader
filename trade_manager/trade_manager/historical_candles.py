@@ -429,8 +429,19 @@ class CandlesData():
         self.logger.debug("--- <inst_id:[{}], gran_id:[{}]> Call \"{}\""
                           .format(self.inst_id, self.gran_id,
                                   sys._getframe().f_code.co_name))
-        self._future = None
-        self._dt_to = dt.datetime.now()
+
+        dt_from = self._get_latest_datetime_in_dataframe() + self._GRAN_INTERVAL
+        dt_to = dt.datetime.now()
+        self.logger.debug("  - time_from:[{}]".format(dt_from))
+        self.logger.debug("  - time_to  :[{}]".format(dt_to))
+        try:
+            self._future = self._request_async_candles(dt_from, dt_to)
+            self._request_start_dt = dt_from
+            self._request_end_dt = dt_to
+        except Exception as err:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
+            self.logger.error("{}".format(err))
+            self._future = None
 
     def _on_do_updating(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -438,76 +449,67 @@ class CandlesData():
         self.logger.debug(" - retry_counter:[{}]".format(self._retry_counter))
 
         if self._future is None:
+            self._trans_updating_common()
+            return
+
+        if not self._future.done():
+            self.logger.debug("  Requesting now...")
+            return
+
+        self.logger.debug("  Request done.")
+        rsp = self._future.result()
+        if rsp is None:
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Updating) "))
+            self.logger.error("  future.result() is \"None\".")
+            self._trans_updating_common()
+            return
+
+        if not rsp.result:
+            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Updating) "))
+            self._trans_updating_common()
+            return
+
+        self._update_dataframe(rsp.cndl_msg_list)
+        self.logger.debug("---------- df_comp(length:[{}]) ----------"
+                          .format(len(self._df_comp)))
+        self.logger.debug("  - Head:\n{}".format(self._df_comp[:5]))
+        self.logger.debug("  - Tail:\n{}".format(self._df_comp[-5:]))
+        self.logger.debug("---------- df_prov(length:[{}]) ----------"
+                          .format(len(self._df_prov)))
+        self.logger.debug("\n{}".format(self._df_prov))
+
+        if rsp.cndl_msg_list:
             latest_dt = self._get_latest_datetime_in_dataframe()
-            dt_from = latest_dt + self._GRAN_INTERVAL
-            dt_to = dt.datetime.now()
-            self.logger.debug("  - time_from:[{}]".format(dt_from))
-            self.logger.debug("  - time_to  :[{}]".format(dt_to))
-            self._target_dt = dt_from
-
-            try:
-                self._future = self._request_async_candles(dt_from, dt_to)
-                self._dt_to = dt_to
-            except Exception as err:
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
-                self.logger.error("{}".format(err))
-                self._trans_updating_common()
-        else:
-            if self._future.done():
-                self.logger.debug("  Request done.")
-                if self._future.result() is not None:
-                    rsp = self._future.result()
-                    if rsp.result:
-                        self._update_dataframe(rsp.cndl_msg_list)
-                        self.logger.debug("---------- df_comp(length:[{}]) ----------"
-                                          .format(len(self._df_comp)))
-                        self.logger.debug("  - Head:\n{}".format(self._df_comp[:5]))
-                        self.logger.debug("  - Tail:\n{}".format(self._df_comp[-5:]))
-                        self.logger.debug("---------- df_prov(length:[{}]) ----------"
-                                          .format(len(self._df_prov)))
-                        self.logger.debug("\n{}".format(self._df_prov))
-
-                        if rsp.cndl_msg_list:
-                            latest_dt = self._get_latest_datetime_in_dataframe()
-                            self.logger.debug("  - target_dt <= latest_dt:[{}] <= [{}]"
-                                              .format(self._target_dt, latest_dt))
-                            if self._target_dt <= latest_dt:
-                                self.logger.debug(" - Update complete!")
-                                self._is_update_complete = True
-                                self._trans_from_updating_to_waiting()
-                            else:
-                                self.logger.warn("{:!^50}".format(" Unexpected statement "))
-                                if self._SELF_RETRY_COUNT_MAX <= self._self_retry_counter:
-                                    self._trans_updating_common()
-                                else:
-                                    self._self_retry_counter += 1
-                                    self._trans_self_updating()
-                        else:
-                            self.logger.warn(" - rsp.cndl_msg_list is empty")
-                            latest_dt = self._get_latest_datetime_in_dataframe()
-                            close_time = utl.get_market_close_time(latest_dt.date())
-                            if latest_dt.weekday() == WeekDay.SAT.value:
-                                close_datetime = dt.datetime.combine(latest_dt.date(), close_time)
-                                self.logger.debug(" - close datetime:[{}]".format(close_datetime))
-                                if close_datetime < self._dt_to:
-                                    self.logger.debug(" - dt_to:[{}]".format(self._dt_to))
-                                    self._weekend_close_time = close_datetime
-                                    self._is_update_complete = True
-                                    self._needs_weekend_update = True
-                                    self._trans_from_updating_to_waiting()
-                                else:
-                                    self._trans_updating_common()
-                            else:
-                                self._trans_updating_common()
-                    else:
-                        self.logger.error("{:!^50}".format(" Call ROS Service Fail (Updating) "))
-                        self._trans_updating_common()
+            self.logger.debug("  - target_dt <= latest_dt:[{}] <= [{}]"
+                              .format(self._request_start_dt, latest_dt))
+            if self._request_start_dt <= latest_dt:
+                self.logger.debug(" - Update complete!")
+                self._is_update_complete = True
+                self._trans_from_updating_to_waiting()
+            else:
+                self.logger.warn("{:!^50}".format(" Unexpected statement "))
+                if self._SELF_RETRY_COUNT_MAX <= self._self_retry_counter:
+                    self._trans_updating_common()
                 else:
-                    self.logger.error("{:!^50}".format(" Call ROS Service Error (Updating) "))
-                    self.logger.error("  future.result() is \"None\".")
+                    self._self_retry_counter += 1
+                    self._trans_self_updating()
+        else:
+            self.logger.warn(" - rsp.cndl_msg_list is empty")
+            latest_dt = self._get_latest_datetime_in_dataframe()
+            close_time = utl.get_market_close_time(latest_dt.date())
+            if latest_dt.weekday() == WeekDay.SAT.value:
+                close_datetime = dt.datetime.combine(latest_dt.date(), close_time)
+                self.logger.debug(" - close datetime:[{}]".format(close_datetime))
+                if close_datetime < self._request_end_dt:
+                    self.logger.debug(" - dt_to:[{}]".format(self._request_end_dt))
+                    self._weekend_close_time = close_datetime
+                    self._is_update_complete = True
+                    self._needs_weekend_update = True
+                    self._trans_from_updating_to_waiting()
+                else:
                     self._trans_updating_common()
             else:
-                self.logger.debug("  Requesting now...")
+                self._trans_updating_common()
 
     def _trans_updating_common(self):
         if self._RETRY_COUNT_MAX <= self._retry_counter:
