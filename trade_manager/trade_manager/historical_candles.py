@@ -24,14 +24,14 @@ from trade_manager_msgs.msg import Candle
 from trade_manager_msgs.msg import LatestCandle
 from .constant import FMT_YMDHMS, FMT_TIME_HMS
 from .constant import MIN_TIME, MAX_TIME
+from .constant import Transitions as Tr
+from .constant import WeekDay
+from .constant import CandleColumnNames as ColName
+from .constant import INST_DICT, GRAN_DICT
 from .exception import InitializerErrorException
+from .dataclass import RosParam
+from .parameter import GranParam, InstParam
 from . import utility as utl
-from .utility import RosParam
-from .data import Transitions as Tr
-from .data import WeekDay
-from .data import GranParam, InstParam
-from .data import CandleColumnNames as ColName
-from .data import INST_DICT, GRAN_DICT
 
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
@@ -896,24 +896,6 @@ class HistoricalCandles(Node):
                 pass
 
             if not df_comp.empty:
-                """
-                for idx, sr in df_comp.iterrows():
-                    msg = Candle()
-                    msg.ask_o = sr[ColName.ASK_OP.value]
-                    msg.ask_h = sr[ColName.ASK_HI.value]
-                    msg.ask_l = sr[ColName.ASK_LO.value]
-                    msg.ask_c = sr[ColName.ASK_CL.value]
-                    msg.mid_o = sr[ColName.MID_OP.value]
-                    msg.mid_h = sr[ColName.MID_HI.value]
-                    msg.mid_l = sr[ColName.MID_LO.value]
-                    msg.mid_c = sr[ColName.MID_CL.value]
-                    msg.bid_o = sr[ColName.BID_OP.value]
-                    msg.bid_h = sr[ColName.BID_HI.value]
-                    msg.bid_l = sr[ColName.BID_LO.value]
-                    msg.bid_c = sr[ColName.BID_CL.value]
-                    msg.time = idx.strftime(FMT_YMDHMS)
-                    rsp.cndl_msg_list.append(msg)
-                """
                 for t in df_comp.itertuples():
                     msg = Candle()
                     msg.ask_o = t.ask_op
@@ -970,24 +952,6 @@ class HistoricalCandles(Node):
             df_comp = df_comp.tail(req.length)
 
             if not df_comp.empty:
-                """
-                for idx, sr in df_comp.iterrows():
-                    msg = Candle()
-                    msg.ask_o = sr[ColName.ASK_OP.value]
-                    msg.ask_h = sr[ColName.ASK_HI.value]
-                    msg.ask_l = sr[ColName.ASK_LO.value]
-                    msg.ask_c = sr[ColName.ASK_CL.value]
-                    msg.mid_o = sr[ColName.MID_OP.value]
-                    msg.mid_h = sr[ColName.MID_HI.value]
-                    msg.mid_l = sr[ColName.MID_LO.value]
-                    msg.mid_c = sr[ColName.MID_CL.value]
-                    msg.bid_o = sr[ColName.BID_OP.value]
-                    msg.bid_h = sr[ColName.BID_HI.value]
-                    msg.bid_l = sr[ColName.BID_LO.value]
-                    msg.bid_c = sr[ColName.BID_CL.value]
-                    msg.time = idx.strftime(FMT_YMDHMS)
-                    rsp.cndl_msg_list.append(msg)
-                """
                 for t in df_comp.itertuples():
                     msg = Candle()
                     msg.ask_o = t.ask_op
@@ -1022,19 +986,14 @@ def main(args=None):
 
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()
+    hc = HistoricalCandles()
 
     try:
-        hc = HistoricalCandles()
-    except InitializerErrorException:
+        while rclpy.ok():
+            rclpy.spin_once(hc, executor=executor, timeout_sec=1.0)
+            hc.do_cyclic_event()
+    except KeyboardInterrupt:
         pass
-    else:
-        try:
-            while rclpy.ok():
-                rclpy.spin_once(hc, executor=executor, timeout_sec=1.0)
-                hc.do_cyclic_event()
-        except KeyboardInterrupt:
-            pass
 
-        hc.destroy_node()
-
+    hc.destroy_node()
     rclpy.shutdown()

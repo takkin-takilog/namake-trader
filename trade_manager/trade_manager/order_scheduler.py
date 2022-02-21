@@ -20,9 +20,9 @@ from api_msgs.msg import OrderState, TradeState
 from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
 from .constant import FMT_YMDHMS
+from .constant import Transitions as Tr
+from .constant import INST_DICT
 from .exception import InitializerErrorException
-from .data import Transitions as Tr
-from .data import INST_DICT
 
 
 MsgType = TypeVar("MsgType")
@@ -796,19 +796,14 @@ class OrderScheduler(Node):
 def main(args=None):
 
     rclpy.init(args=args)
+    os = OrderScheduler()
 
     try:
-        os = OrderScheduler()
-    except InitializerErrorException:
+        while rclpy.ok():
+            rclpy.spin_once(os, timeout_sec=1.0)
+            os.do_cyclic_event()
+    except KeyboardInterrupt:
         pass
-    else:
-        try:
-            while rclpy.ok():
-                rclpy.spin_once(os, timeout_sec=1.0)
-                os.do_cyclic_event()
-        except KeyboardInterrupt:
-            pass
 
-        os.destroy_node()
-
+    os.destroy_node()
     rclpy.shutdown()
