@@ -42,16 +42,34 @@ class OrderTicket():
         ExitOrdering = auto()
         Complete = auto()
 
-    cli_ordcre = None
-    cli_orddet = None
-    cli_ordcnc = None
-    cli_trddet = None
-    cli_trdcrc = None
-    cli_trdcls = None
+    # --------------- Define class variable ---------------
+    _c_srvcli_ordcre = None
+    _c_srvcli_orddet = None
+    _c_srvcli_ordcnc = None
+    _c_srvcli_trddet = None
+    _c_srvcli_trdcrc = None
+    _c_srvcli_trdcls = None
+    _c_is_trans_lock = False
+    _c_requested_id = 1
     logger = None
 
-    _is_trans_lock = False
-    _c_requested_id = 1
+    @classmethod
+    def set_class_variable(cls,
+                           srvcli_ordcre: Client,
+                           srvcli_orddet: Client,
+                           srvcli_ordcnc: Client,
+                           srvcli_trddet: Client,
+                           srvcli_trdcrc: Client,
+                           srvcli_trdcls: Client,
+                           logger
+                           ) -> None:
+        cls._c_srvcli_ordcre = srvcli_ordcre
+        cls._c_srvcli_orddet = srvcli_orddet
+        cls._c_srvcli_ordcnc = srvcli_ordcnc
+        cls._c_srvcli_trddet = srvcli_trddet
+        cls._c_srvcli_trdcrc = srvcli_trdcrc
+        cls._c_srvcli_trdcls = srvcli_trdcls
+        cls.logger = logger
 
     def __init__(self, req: SrvTypeRequest) -> None:
 
@@ -301,8 +319,8 @@ class OrderTicket():
         self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
 
         # --------------- Update requested id ---------------
-        self._requested_id = OrderTicket._c_requested_id
-        OrderTicket._c_requested_id += 1
+        self._requested_id = self._c_requested_id
+        self._c_requested_id += 1
 
         # --------------- Entry order ---------------
         req = OrderCreateSrv.Request()
@@ -314,7 +332,7 @@ class OrderTicket():
         req.stop_loss_price = self._stop_loss_price
         self.logger.debug("----- Requesting \"Order Create\" -----")
         try:
-            self._future = OrderTicket.cli_ordcre.call_async(req)
+            self._future = self._c_srvcli_ordcre.call_async(req)
         except InitializerErrorException as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
             self.logger.error("{}".format(err))
@@ -408,12 +426,12 @@ class OrderTicket():
 
     def _conditions_trans_lock(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self.logger.debug("--- trans_lock state:[{}]".format(OrderTicket._is_trans_lock))
-        return not OrderTicket._is_trans_lock
+        self.logger.debug("--- trans_lock state:[{}]".format(self._c_is_trans_lock))
+        return not self._c_is_trans_lock
 
     def _on_enter_EntryChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        OrderTicket._is_trans_lock = True
+        self._c_is_trans_lock = True
         self.logger.debug("--- Trans \"Locked\"")
         self.logger.debug("----- Request \"Order Details\" (id:[{}]) -----"
                           .format(self._order_id))
@@ -421,7 +439,7 @@ class OrderTicket():
         req.order_id = self._order_id
         self._future = None
         try:
-            self._future = OrderTicket.cli_orddet.call_async(req)
+            self._future = self._c_srvcli_orddet.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
             self.logger.error("{}".format(err))
@@ -464,7 +482,7 @@ class OrderTicket():
 
     def _on_exit_EntryChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        OrderTicket._is_trans_lock = False
+        self._c_is_trans_lock = False
         self.logger.debug("--- Trans \"Unlocked\"")
 
     def _on_enter_EntryCanceling(self) -> None:
@@ -475,7 +493,7 @@ class OrderTicket():
         req.order_id = self._order_id
         self._future = None
         try:
-            self._future = OrderTicket.cli_ordcnc.call_async(req)
+            self._future = self._c_srvcli_ordcnc.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
             self.logger.error("{}".format(err))
@@ -528,7 +546,7 @@ class OrderTicket():
 
     def _on_enter_ExitChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        OrderTicket._is_trans_lock = True
+        self._c_is_trans_lock = True
         self.logger.debug("--- Trans \"Locked\"")
         self.logger.debug("----- Request \"Trade Details\" (id:[{}]) -----"
                           .format(self._trade_id))
@@ -536,7 +554,7 @@ class OrderTicket():
         req.trade_id = self._trade_id
         self._future = None
         try:
-            self._future = OrderTicket.cli_trddet.call_async(req)
+            self._future = self._c_srvcli_trddet.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
             self.logger.error("{}".format(err))
@@ -577,7 +595,7 @@ class OrderTicket():
 
     def _on_exit_ExitChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        OrderTicket._is_trans_lock = False
+        self._c_is_trans_lock = False
         self.logger.debug("--- Trans \"Unlocked\"")
 
     def _on_enter_ExitOrdering(self) -> None:
@@ -589,7 +607,7 @@ class OrderTicket():
         req.trade_id = self._trade_id
         self._future = None
         try:
-            self._future = OrderTicket.cli_trdcls.call_async(req)
+            self._future = self._c_srvcli_trdcls.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
             self.logger.error("{}".format(err))
@@ -641,7 +659,6 @@ class OrderScheduler(Node):
         # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-        OrderTicket.logger = self.logger
 
         self._tickets: list[OrderTicket] = []
 
@@ -663,40 +680,42 @@ class OrderScheduler(Node):
                                                   callback=callback)
         try:
             # Create service client "OrderCreate"
-            OrderTicket.cli_ordcre = self._create_service_client(
-                OrderCreateSrv,
-                "order_create")
+            srvcli_ordcre = self._create_service_client(OrderCreateSrv,
+                                                        "order_create")
 
             # Create service client "OrderDetails"
-            OrderTicket.cli_orddet = self._create_service_client(
-                OrderDetailsSrv,
-                "order_details")
+            srvcli_orddet = self._create_service_client(OrderDetailsSrv,
+                                                        "order_details")
 
             # Create service client "OrderCancel"
-            OrderTicket.cli_ordcnc = self._create_service_client(
-                OrderCancelSrv,
-                "order_cancel")
+            srvcli_ordcnc = self._create_service_client(OrderCancelSrv,
+                                                        "order_cancel")
 
             # Create service client "TradeDetails"
-            OrderTicket.cli_trddet = self._create_service_client(
-                TradeDetailsSrv,
-                "trade_details")
+            srvcli_trddet = self._create_service_client(TradeDetailsSrv,
+                                                        "trade_details")
 
             # Create service client "TradeCRCDO"
-            OrderTicket.cli_trdcrc = self._create_service_client(
-                TradeCRCDOSrv,
-                "trade_crcdo")
+            srvcli_trdcrc = self._create_service_client(TradeCRCDOSrv,
+                                                        "trade_crcdo")
 
             # Create service client "TradeClose"
-            OrderTicket.cli_trdcls = self._create_service_client(
-                TradeCloseSrv,
-                "trade_close")
+            srvcli_trdcls = self._create_service_client(TradeCloseSrv,
+                                                        "trade_close")
 
         except Exception as err:
             self.logger.error("{:!^50}".format(" Exception "))
             self.logger.error(err)
             self.destroy_node()
             raise InitializerErrorException("create service client failed.")
+
+        OrderTicket.set_class_variable(srvcli_ordcre,
+                                       srvcli_orddet,
+                                       srvcli_ordcnc,
+                                       srvcli_trddet,
+                                       srvcli_trdcrc,
+                                       srvcli_trdcls,
+                                       self.logger)
 
     def do_cyclic_event(self) -> None:
 

@@ -94,7 +94,7 @@ class HistogramView(BaseView):
         self._LineSeriesList = []
         self._axis_x.setTickCount(self._max_x + 1)
 
-        ofs = inst_param.lsb_value / 2
+        ofs = inst_param.one_pip / 2
         for idx in sr_hist.index:
             series_u = QtCharts.QLineSeries()
             series_u.append(QPointF(0, idx + ofs))
@@ -426,8 +426,8 @@ class HistogramUi(QMainWindow):
         df_hist = df_adjust.apply(pd.value_counts)
         counts_max = df_hist.max().max() + 1
 
-        lsb = inst_param.lsb_value
-        index_max = max(abs(df_hist.index[0]), abs(df_hist.index[-1])) + lsb * 3
+        one_pip = inst_param.one_pip
+        index_max = max(abs(df_hist.index[0]), abs(df_hist.index[-1])) + one_pip * 3
         if self._PRICE_RANGE_MAX < index_max:
             index_max = self._PRICE_RANGE_MAX
 

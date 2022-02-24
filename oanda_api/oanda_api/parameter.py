@@ -3,6 +3,7 @@ from enum import Enum
 import datetime as dt
 from api_msgs.msg import Instrument as Inst
 from api_msgs.msg import Granularity as Gran
+from . import utility as utl
 
 
 class InstParam(Enum):
@@ -19,6 +20,9 @@ class InstParam(Enum):
                  ) -> None:
         self.msg_id = msg_id
         self.digit = digit
+        self._one_pip = math.pow(10, -digit)
+        self._one_pip_inv = int(math.pow(10, digit))
+        self._one_pip_str = format(self._one_pip, "." + str(digit) + "f")
 
     @classmethod
     def get_member_by_msgid(cls, msg_id: int):
@@ -35,20 +39,45 @@ class InstParam(Enum):
         return None
 
     @property
-    def lsb_value(self) -> float:
+    def one_pip(self) -> float:
         """
-        Least significant bit (Resolution).
-        return type is "float".
+        One pip value.
         """
-        return math.pow(10, -self.digit)
+        return self._one_pip
 
     @property
-    def lsb_str(self) -> str:
+    def one_pip_inv(self) -> int:
         """
-        Least significant bit (Resolution).
-        return type is "string".
+        One pip inverse value.
+        return type is "int".
         """
-        return format(self.lsb_value, "." + str(self.digit) + "f")
+        return self._one_pip_inv
+
+    @property
+    def one_pip_str(self) -> str:
+        """
+        One pip string value.
+        """
+        return self._one_pip_str
+
+    def convert_pips2phy(self, pips_value: int) -> float:
+        """
+        convert pips value to physical value.
+        """
+        return pips_value * self.one_pip
+
+    def convert_phy2pips(self, physical_value: float) -> int:
+        """
+        convert physical value to pips value.
+        """
+        return utl.roundi(physical_value * self.one_pip_inv)
+
+    def round_pips(self, physical_value: float) -> float:
+        """
+        round a price value to the digits.
+        """
+        p = 10 ** self.digit
+        return (physical_value * p * 2 + 1) // 2 / p
 
 
 class GranParam(Enum):

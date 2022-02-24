@@ -618,13 +618,13 @@ class OrderService(Node):
         data_order = data["order"]
 
         inst_param = InstParam.get_member_by_msgid(req.inst_msg.inst_id)
-        min_unit = inst_param.lsb_str
+        one_pip_str = inst_param.one_pip_str
 
         if ((req.ordertype_msg.type == OrderType.TYP_LIMIT)
                 or (req.ordertype_msg.type == OrderType.TYP_STOP)):
 
             tmp = {
-                "price": self._fit_unit(req.price, min_unit),
+                "price": self._fit_unit(req.price, one_pip_str),
                 "timeInForce": "GTC",
             }
             data_order.update(tmp)
@@ -635,11 +635,11 @@ class OrderService(Node):
             "positionFill": "DEFAULT",
             "takeProfitOnFill": {
                 "timeInForce": "GTC",
-                "price": self._fit_unit(req.take_profit_price, min_unit)
+                "price": self._fit_unit(req.take_profit_price, one_pip_str)
             },
             "stopLossOnFill": {
                 "timeInForce": "GTC",
-                "price": self._fit_unit(req.stop_loss_price, min_unit)
+                "price": self._fit_unit(req.stop_loss_price, one_pip_str)
             },
         }
         data_order.update(tmp)
@@ -651,23 +651,23 @@ class OrderService(Node):
                                    ) -> JsonFmt:
 
         inst_param = InstParam.get_member_by_msgid(req.inst_msg.inst_id)
-        min_unit = inst_param.lsb_str
+        one_pip_str = inst_param.one_pip_str
 
         data = {
             "takeProfit": {
-                "price": self._fit_unit(req.take_profit_price, min_unit),
+                "price": self._fit_unit(req.take_profit_price, one_pip_str),
                 "timeInForce": "GTC",
             },
             "stopLoss": {
-                "price": self._fit_unit(req.stop_loss_price, min_unit),
+                "price": self._fit_unit(req.stop_loss_price, one_pip_str),
                 "timeInForce": "GTC",
             },
         }
 
         return data
 
-    def _fit_unit(self, value: float, min_unit: str):
-        tmp = Decimal(str(value)).quantize(Decimal(min_unit),
+    def _fit_unit(self, value: float, one_pip_str: str):
+        tmp = Decimal(str(value)).quantize(Decimal(one_pip_str),
                                            rounding=ROUND_HALF_UP)
         return str(tmp)
 

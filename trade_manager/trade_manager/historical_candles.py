@@ -146,9 +146,17 @@ class CandlesData():
         updating = auto()
         retrying = auto()
 
-    cli_cdl = None
+    # --------------- Define class variable ---------------
+    _c_srvcli = None
     logger = None
-    daily_param = None
+
+    @classmethod
+    def set_class_variable(cls,
+                           srvcli: Client,
+                           logger
+                           ) -> None:
+        cls._c_srvcli = srvcli
+        cls.logger = logger
 
     def __init__(self,
                  node: 'Node',
@@ -604,7 +612,7 @@ class CandlesData():
         req.dt_from = dt_from.strftime(FMT_YMDHMS)
         req.dt_to = dt_to.strftime(FMT_YMDHMS)
 
-        future = CandlesData.cli_cdl.call_async(req)
+        future = self._c_srvcli.call_async(req)
 
         return future
 
@@ -617,7 +625,6 @@ class HistoricalCandles(Node):
         # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-        CandlesData.logger = self.logger
 
         # --------------- Declare ROS parameter ---------------
         self._rosprm = _RosParams()
@@ -780,12 +787,13 @@ class HistoricalCandles(Node):
             # Create service client "Candles"
             srv_type = CandlesSrv
             srv_name = "candles"
-            CandlesData.cli_cdl = self._create_service_client(srv_type, srv_name)
+            srvcli = self._create_service_client(srv_type, srv_name)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Exception "))
             self.logger.error(err)
             raise InitializerErrorException("create service client failed.")
 
+        CandlesData.set_class_variable(srvcli, self.logger)
         self._candles_data_list = []
         for gran_data in self._rosprm.enable_gran_list():
             for inst_id in self._rosprm.enable_inst_list():
