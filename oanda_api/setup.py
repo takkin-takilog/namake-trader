@@ -22,8 +22,8 @@ setup(
         "console_scripts": [
             "pricing_exe = " + package_name + ".pricing:main",
             "pricing_stream_exe = " + package_name + ".pricing_stream:main",
-            "order_service_exe = " + package_name + ".order_service:main",
-            "candlestick_service_exe = " + package_name + ".candlestick_service:main",
+            "order_requester_exe = " + package_name + ".order_requester:main",
+            "fetcher_exe = " + package_name + ".fetcher:main",
         ],
     },
 )

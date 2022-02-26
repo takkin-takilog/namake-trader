@@ -2,8 +2,8 @@
 
 # ========================= Request =========================
 
-# Requested ID to close trade.
-int32 requested_id
+# Register ID to close trade.
+int32 register_id
 
 ---
 # ========================= Response =========================

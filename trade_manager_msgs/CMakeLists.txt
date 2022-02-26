@@ -22,7 +22,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/OrderType.msg"
   "srv/CandlesByDatetimeSrv.srv"
   "srv/CandlesByLengthSrv.srv"
-  "srv/OrderRequestSrv.srv"
+  "srv/OrderRegisterSrv.srv"
   "srv/TradeCloseRequestSrv.srv"
   DEPENDENCIES std_msgs action_msgs
 )

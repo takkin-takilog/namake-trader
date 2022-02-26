@@ -15,7 +15,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from rclpy.task import Future
-from api_msgs.srv import CandlesSrv
+from api_msgs.srv import CandlesQuerySrv
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
 from trade_manager_msgs.srv import CandlesByDatetimeSrv
@@ -139,7 +139,7 @@ class _RosParams():
         return gran_list
 
 
-class CandlesData():
+class CandlesElement():
 
     class States(Enum):
         waiting = auto()
@@ -257,7 +257,7 @@ class CandlesData():
         self._needs_weekend_update = False
         self._weekend_close_time = None
 
-        self.logger.debug("{:-^40}".format(" Create CandlesData:Start "))
+        self.logger.debug("{:-^40}".format(" Create CandlesDataFrame:Start "))
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
         self.logger.debug("  - gran_id:[{}]".format(self._gran_id))
 
@@ -272,9 +272,9 @@ class CandlesData():
         try:
             future = self._request_async_candles(dt_from, dt_to)
         except Exception as err:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("{}".format(err))
-            raise InitializerErrorException("\"CandlesData\" initialize failed.")
+            raise InitializerErrorException("\"CandlesDataFrame\" initialize failed.")
 
         rclpy.spin_until_future_complete(node, future)
         rsp = future.result()
@@ -288,9 +288,9 @@ class CandlesData():
                               .format(len(self._df_prov)))
             self.logger.debug("\n{}".format(self._df_prov))
         else:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("  future result is False")
-            raise InitializerErrorException("\"CandlesData\" initialize failed.")
+            raise InitializerErrorException("\"CandlesDataFrame\" initialize failed.")
 
         # --------------- Create ROS Communication ---------------
         qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
@@ -447,7 +447,7 @@ class CandlesData():
             self._request_start_dt = dt_from
             self._request_end_dt = dt_to
         except Exception as err:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("{}".format(err))
 
     def _on_do_updating(self):
@@ -606,7 +606,7 @@ class CandlesData():
                                dt_from: dt.datetime,
                                dt_to: dt.datetime
                                ) -> Future:
-        req = CandlesSrv.Request()
+        req = CandlesQuerySrv.Request()
         req.inst_msg.inst_id = self._inst_id
         req.gran_msg.gran_id = self._gran_id
         req.dt_from = dt_from.strftime(FMT_YMDHMS)
@@ -617,10 +617,10 @@ class CandlesData():
         return future
 
 
-class HistoricalCandles(Node):
+class CandlesStore(Node):
 
     def __init__(self) -> None:
-        super().__init__("historical_candles")
+        super().__init__("candles_store")
 
         # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
@@ -784,21 +784,21 @@ class HistoricalCandles(Node):
 
         # --------------- Create ROS Communication ---------------
         try:
-            # Create service client "Candles"
-            srv_type = CandlesSrv
-            srv_name = "candles"
+            # Create service client "CandlesQuery"
+            srv_type = CandlesQuerySrv
+            srv_name = "candles_query"
             srvcli = self._create_service_client(srv_type, srv_name)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Exception "))
             self.logger.error(err)
             raise InitializerErrorException("create service client failed.")
 
-        CandlesData.set_class_variable(srvcli, self.logger)
-        self._candles_data_list = []
+        CandlesElement.set_class_variable(srvcli, self.logger)
+        self._candles_elem_list = []
         for gran_data in self._rosprm.enable_gran_list():
             for inst_id in self._rosprm.enable_inst_list():
-                candles_data = CandlesData(self, inst_id, gran_data)
-                self._candles_data_list.append(candles_data)
+                candles_elem = CandlesElement(self, inst_id, gran_data)
+                self._candles_elem_list.append(candles_elem)
 
         # Create service server "CandlesByDatetime"
         srv_type = CandlesByDatetimeSrv
@@ -823,11 +823,11 @@ class HistoricalCandles(Node):
     def do_cyclic_event(self) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
-        for candles_data in self._candles_data_list:
-            candles_data.do_cyclic_event()
+        for candles_elem in self._candles_elem_list:
+            candles_elem.do_cyclic_event()
             """
             self.logger.debug("inst_id:{}, gran_id:{}"
-                              .format(candles_data._inst_id, candles_data._gran_id))
+                              .format(candles_elem._inst_id, candles_data._gran_id))
             """
 
     def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
@@ -870,10 +870,10 @@ class HistoricalCandles(Node):
             end_time = dt.datetime.strptime(req.time_to, FMT_TIME_HMS).time()
 
         df_comp = None
-        for candles_data in self._candles_data_list:
-            if ((inst_id == candles_data.inst_id) and (gran_id == candles_data.gran_id)):
-                df_comp = candles_data.df_comp
-                next_updatetime = candles_data.next_updatetime
+        for candles_elem in self._candles_elem_list:
+            if ((inst_id == candles_elem.inst_id) and (gran_id == candles_elem.gran_id)):
+                df_comp = candles_elem.df_comp
+                next_updatetime = candles_elem.next_updatetime
                 break
 
         rsp.cndl_msg_list = []
@@ -949,10 +949,10 @@ class HistoricalCandles(Node):
         dbg_tm_start = dt.datetime.now()
 
         df_comp = None
-        for candles_data in self._candles_data_list:
-            if ((inst_id == candles_data.inst_id) and (gran_id == candles_data.gran_id)):
-                df_comp = candles_data._df_comp
-                next_updatetime = candles_data.next_updatetime
+        for candles_elem in self._candles_elem_list:
+            if ((inst_id == candles_elem.inst_id) and (gran_id == candles_elem.gran_id)):
+                df_comp = candles_elem._df_comp
+                next_updatetime = candles_elem.next_updatetime
                 break
 
         rsp.cndl_msg_list = []
@@ -994,14 +994,14 @@ def main(args=None):
 
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()
-    hc = HistoricalCandles()
+    cs = CandlesStore()
 
     try:
         while rclpy.ok():
-            rclpy.spin_once(hc, executor=executor, timeout_sec=1.0)
-            hc.do_cyclic_event()
+            rclpy.spin_once(cs, executor=executor, timeout_sec=1.0)
+            cs.do_cyclic_event()
     except KeyboardInterrupt:
         pass
 
-    hc.destroy_node()
+    cs.destroy_node()
     rclpy.shutdown()

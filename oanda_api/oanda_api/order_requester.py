@@ -12,7 +12,6 @@ from oandapyV20 import API
 from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
 from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
 from oandapyV20.exceptions import V20Error
-
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
@@ -65,17 +64,17 @@ class _RosParams():
     CONNECTION_TIMEOUT = RosParam("connection_timeout")
 
 
-class OrderService(Node):
+class OrderRequester(Node):
 
     def __init__(self) -> None:
-        super().__init__("order_service")
+        super().__init__("order_register")
 
-        # Set logger lebel
+        # --------------- Set logger lebel ---------------
         logger = super().get_logger()
         logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
         self.logger = logger
 
-        # Declare ROS parameter
+        # --------------- Declare ROS parameter ---------------
         self._rosprm = _RosParams()
         self.declare_parameter(self._rosprm.USE_ENV_LIVE.name)
         self.declare_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)
@@ -84,7 +83,6 @@ class OrderService(Node):
         self.declare_parameter(self._rosprm.LIV_ACCESS_TOKEN.name)
         self.declare_parameter(self._rosprm.CONNECTION_TIMEOUT.name)
 
-        # Set ROS parameter
         para = self.get_parameter(self._rosprm.USE_ENV_LIVE.name)
         self._rosprm.USE_ENV_LIVE.value = para.value
         para = self.get_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)
@@ -128,10 +126,12 @@ class OrderService(Node):
         else:
             request_params = {"timeout": self._rosprm.CONNECTION_TIMEOUT.value}
 
+        # --------------- Initialize instance variable ---------------
         self._api = API(access_token=access_token,
                         environment=environment,
                         request_params=request_params)
 
+        # --------------- Create ROS Communication ---------------
         # Create service server "OrderCreate"
         srv_type = OrderCreateSrv
         srv_name = "order_create"
@@ -677,7 +677,7 @@ def main(args=None):
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)
-    order = OrderService()
+    order = OrderRequester()
 
     try:
         rclpy.spin(order)

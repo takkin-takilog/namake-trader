@@ -11,7 +11,7 @@ from rclpy.node import Node
 from rclpy.client import Client
 from std_msgs.msg import Bool
 from trade_manager_msgs.msg import OrderType, OrderDir
-from trade_manager_msgs.srv import OrderRequestSrv
+from trade_manager_msgs.srv import OrderRegisterSrv
 from trade_manager_msgs.srv import TradeCloseRequestSrv
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
@@ -50,7 +50,7 @@ class OrderTicket():
     _c_srvcli_trdcrc = None
     _c_srvcli_trdcls = None
     _c_is_trans_lock = False
-    _c_requested_id = 1
+    _c_register_id = 1
     logger = None
 
     @classmethod
@@ -319,8 +319,8 @@ class OrderTicket():
         self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
 
         # --------------- Update requested id ---------------
-        self._requested_id = self._c_requested_id
-        self._c_requested_id += 1
+        self._register_id = self._c_register_id
+        self._c_register_id += 1
 
         # --------------- Entry order ---------------
         req = OrderCreateSrv.Request()
@@ -343,8 +343,8 @@ class OrderTicket():
         self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
 
     @property
-    def requested_id(self) -> int:
-        return self._requested_id
+    def register_id(self) -> int:
+        return self._register_id
 
     def enable_trade_close(self) -> bool:
         success = False
@@ -663,10 +663,10 @@ class OrderScheduler(Node):
         self._tickets: list[OrderTicket] = []
 
         # --------------- Create ROS Communication ---------------
-        # Create service server "OrderRequest"
-        srv_type = OrderRequestSrv
-        srv_name = "order_request"
-        callback = self._on_requested_order
+        # Create service server "OrderRegister"
+        srv_type = OrderRegisterSrv
+        srv_name = "order_register"
+        callback = self._on_order_register
         self._ordreq_srv = self.create_service(srv_type,
                                                srv_name,
                                                callback=callback)
@@ -738,11 +738,11 @@ class OrderScheduler(Node):
             self._logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
-    def _on_requested_order(self,
-                            req: SrvTypeRequest,
-                            rsp: SrvTypeResponse
-                            ) -> SrvTypeResponse:
-        self.logger.debug("{:=^50}".format(" Service[order_request]:Start "))
+    def _on_order_register(self,
+                           req: SrvTypeRequest,
+                           rsp: SrvTypeResponse
+                           ) -> SrvTypeResponse:
+        self.logger.debug("{:=^50}".format(" Service[order_register]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - inst_id:[{}]".format(req.inst_msg.inst_id))
         self.logger.debug("  - order_type:[{}]".format(req.ordtyp_msg.order_type))
@@ -755,7 +755,7 @@ class OrderScheduler(Node):
         self.logger.debug("  - exit_exp_time:[{}]".format(req.exit_exp_time))
         dbg_tm_start = dt.datetime.now()
 
-        rsp.requested_id = -1
+        rsp.register_id = -1
         if self._validate_msg(req):
             try:
                 ticket = OrderTicket(req)
@@ -764,17 +764,17 @@ class OrderScheduler(Node):
                 self.logger.error(err)
             else:
                 self._tickets.append(ticket)
-                rsp.requested_id = ticket.requested_id
+                rsp.register_id = ticket.register_id
         else:
             self.logger.error("{:!^50}".format(" Validate msg: NG "))
 
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
-        self.logger.debug("  - requested_id:[{}]".format(rsp.requested_id))
+        self.logger.debug("  - register_id:[{}]".format(rsp.register_id))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Requested time:[{}]".format(dbg_tm_start))
         self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
-        self.logger.debug("{:=^50}".format(" Service[order_request]:End "))
+        self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
 
         return rsp
 
@@ -791,12 +791,12 @@ class OrderScheduler(Node):
                             ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_close_request]:Start "))
         self.logger.debug("<Request>")
-        self.logger.debug("  - requested_id:[{}]".format(req.requested_id))
+        self.logger.debug("  - register_id:[{}]".format(req.register_id))
         dbg_tm_start = dt.datetime.now()
 
         success = False
         for ticket in self._tickets:
-            if ticket.requested_id == req.requested_id:
+            if ticket.register_id == req.register_id:
                 success = ticket.enable_trade_close()
 
         rsp.success = success
