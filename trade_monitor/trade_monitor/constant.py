@@ -74,6 +74,9 @@ class InstParam(Enum):
         self.namespace = namespace
         self.text = text
         self.digit = digit
+        self._one_pip = math.pow(10, -digit)
+        self._one_pip_inv = int(math.pow(10, digit))
+        self._one_pip_str = format(self._one_pip, "." + str(digit) + "f")
 
     @classmethod
     def get_member_by_msgid(cls, msg_id: int):
@@ -83,32 +86,38 @@ class InstParam(Enum):
         return None
 
     @property
-    def lsb_value(self) -> float:
+    def one_pip(self) -> float:
         """
-        Least significant bit (Resolution).
-        return type is "float".
+        One pip value.
         """
-        return math.pow(10, -self.digit)
+        return self._one_pip
 
     @property
-    def lsb_str(self) -> str:
+    def one_pip_inv(self) -> int:
         """
-        Least significant bit (Resolution).
-        return type is "string".
+        One pip inverse value.
+        return type is "int".
         """
-        return format(self.lsb_value, "." + str(self.digit) + "f")
+        return self._one_pip_inv
 
-    def convert_raw2phy(self, raw_value: int) -> float:
+    @property
+    def one_pip_str(self) -> str:
         """
-        convert raw value to physical value.
+        One pip string value.
         """
-        return raw_value * self.lsb_value
+        return self._one_pip_str
 
-    def convert_phy2raw(self, physical_value: float) -> int:
+    def convert_pips2phy(self, pips_value: int) -> float:
         """
-        convert physical value to raw value.
+        convert pips value to physical value.
         """
-        return utl.roundi(physical_value / self.lsb_value)
+        return pips_value * self.one_pip
+
+    def convert_phy2pips(self, physical_value: float) -> int:
+        """
+        convert physical value to pips value.
+        """
+        return utl.roundi(physical_value / self.one_pip)
 
     def round_pips(self, physical_value: float) -> float:
         """

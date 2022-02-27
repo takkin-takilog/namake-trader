@@ -15,7 +15,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.client import Client
 from rclpy.task import Future
-from api_msgs.srv import CandlesSrv
+from api_msgs.srv import CandlesQuerySrv
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
 from trade_manager_msgs.srv import CandlesByDatetimeSrv
@@ -24,27 +24,18 @@ from trade_manager_msgs.msg import Candle
 from trade_manager_msgs.msg import LatestCandle
 from .constant import FMT_YMDHMS, FMT_TIME_HMS
 from .constant import MIN_TIME, MAX_TIME
+from .constant import Transitions as Tr
+from .constant import WeekDay
+from .constant import CandleColumnNames as ColName
+from .constant import INST_DICT, GRAN_DICT
 from .exception import InitializerErrorException
+from .dataclass import RosParam
+from .parameter import GranParam, InstParam
 from . import utility as utl
-from .utility import RosParam
-from .data import Transitions as Tr
-from .data import WeekDay
-from .data import GranParam, InstParam
-from .data import CandleColumnNames as ColName
-from .data import INST_DICT, GRAN_DICT
 
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
-
-
-@dataclass
-class _GranData():
-    """
-    Granularity data.
-    """
-    gran_id: int
-    length: int
 
 
 @dataclass
@@ -103,61 +94,70 @@ class _RosParams():
     def enable_gran_list(self):
         gran_list = []
         if self.ENA_GRAN_M1.value:
-            gran_list.append(_GranData(GranApi.GRAN_M1, self.LENG_M1.value))
+            gran_list.append((GranApi.GRAN_M1, self.LENG_M1.value))
         if self.ENA_GRAN_M2.value:
-            gran_list.append(_GranData(GranApi.GRAN_M2, self.LENG_M2.value))
+            gran_list.append((GranApi.GRAN_M2, self.LENG_M2.value))
         if self.ENA_GRAN_M3.value:
-            gran_list.append(_GranData(GranApi.GRAN_M3, self.LENG_M3.value))
+            gran_list.append((GranApi.GRAN_M3, self.LENG_M3.value))
         if self.ENA_GRAN_M4.value:
-            gran_list.append(_GranData(GranApi.GRAN_M4, self.LENG_M4.value))
+            gran_list.append((GranApi.GRAN_M4, self.LENG_M4.value))
         if self.ENA_GRAN_M5.value:
-            gran_list.append(_GranData(GranApi.GRAN_M5, self.LENG_M5.value))
+            gran_list.append((GranApi.GRAN_M5, self.LENG_M5.value))
         if self.ENA_GRAN_M10.value:
-            gran_list.append(_GranData(GranApi.GRAN_M10, self.LENG_M10.value))
+            gran_list.append((GranApi.GRAN_M10, self.LENG_M10.value))
         if self.ENA_GRAN_M15.value:
-            gran_list.append(_GranData(GranApi.GRAN_M15, self.LENG_M15.value))
+            gran_list.append((GranApi.GRAN_M15, self.LENG_M15.value))
         if self.ENA_GRAN_M30.value:
-            gran_list.append(_GranData(GranApi.GRAN_M30, self.LENG_M30.value))
+            gran_list.append((GranApi.GRAN_M30, self.LENG_M30.value))
         if self.ENA_GRAN_H1.value:
-            gran_list.append(_GranData(GranApi.GRAN_H1, self.LENG_H1.value))
+            gran_list.append((GranApi.GRAN_H1, self.LENG_H1.value))
         if self.ENA_GRAN_H2.value:
-            gran_list.append(_GranData(GranApi.GRAN_H2, self.LENG_H2.value))
+            gran_list.append((GranApi.GRAN_H2, self.LENG_H2.value))
         if self.ENA_GRAN_H3.value:
-            gran_list.append(_GranData(GranApi.GRAN_H3, self.LENG_H3.value))
+            gran_list.append((GranApi.GRAN_H3, self.LENG_H3.value))
         if self.ENA_GRAN_H4.value:
-            gran_list.append(_GranData(GranApi.GRAN_H4, self.LENG_H4.value))
+            gran_list.append((GranApi.GRAN_H4, self.LENG_H4.value))
         if self.ENA_GRAN_H6.value:
-            gran_list.append(_GranData(GranApi.GRAN_H6, self.LENG_H6.value))
+            gran_list.append((GranApi.GRAN_H6, self.LENG_H6.value))
         if self.ENA_GRAN_H8.value:
-            gran_list.append(_GranData(GranApi.GRAN_H8, self.LENG_H8.value))
+            gran_list.append((GranApi.GRAN_H8, self.LENG_H8.value))
         if self.ENA_GRAN_H12.value:
-            gran_list.append(_GranData(GranApi.GRAN_H12, self.LENG_H12.value))
+            gran_list.append((GranApi.GRAN_H12, self.LENG_H12.value))
         if self.ENA_GRAN_D.value:
-            gran_list.append(_GranData(GranApi.GRAN_D, self.LENG_D.value))
+            gran_list.append((GranApi.GRAN_D, self.LENG_D.value))
         if self.ENA_GRAN_W.value:
-            gran_list.append(_GranData(GranApi.GRAN_W, self.LENG_W.value))
+            gran_list.append((GranApi.GRAN_W, self.LENG_W.value))
         return gran_list
 
 
-class CandlesData():
+class CandlesElement():
 
     class States(Enum):
         waiting = auto()
         updating = auto()
         retrying = auto()
 
-    cli_cdl = None
+    # --------------- Define class variable ---------------
+    _c_srvcli = None
     logger = None
-    daily_param = None
+
+    @classmethod
+    def set_class_variable(cls,
+                           srvcli: Client,
+                           logger
+                           ) -> None:
+        cls._c_srvcli = srvcli
+        cls.logger = logger
 
     def __init__(self,
                  node: 'Node',
                  inst_id: int,
-                 gran_data: _GranData
+                 gran_id: int,
+                 gran_leng: int
                  ) -> None:
 
         # --------------- Define Constant value ---------------
-        gran_param = GranParam.get_member_by_msgid(gran_data.gran_id)
+        gran_param = GranParam.get_member_by_msgid(gran_id)
         self._GRAN_INTERVAL = gran_param.timedelta
         self._NEXT_UPDATETIME_OFS_SEC = dt.timedelta(seconds=5)
         self._RETRY_INTERVAL = dt.timedelta(minutes=1)
@@ -242,20 +242,21 @@ class CandlesData():
 
         # --------------- Initialize instance variable ---------------
         self._inst_id = inst_id
-        self._gran_id = gran_data.gran_id
+        self._gran_id = gran_id
         self._df_comp = pd.DataFrame()
         self._df_prov = pd.DataFrame()
         self._is_update_complete = True
         self._needs_weekend_update = False
         self._weekend_close_time = None
 
-        self.logger.debug("{:-^40}".format(" Create CandlesData:Start "))
+        self.logger.debug("{:-^40}".format(" Create CandlesDataFrame:Start "))
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
         self.logger.debug("  - gran_id:[{}]".format(self._gran_id))
+        self.logger.debug("  - gran_leng:[{}]".format(gran_leng))
 
         # --------------- Create Candles(OHLC) DataFrame ---------------
         dt_now = dt.datetime.now()
-        dt_from = dt_now - self._GRAN_INTERVAL * gran_data.length
+        dt_from = dt_now - self._GRAN_INTERVAL * gran_leng
         dt_to = dt_now
 
         self.logger.debug("  - time_from:[{}]".format(dt_from))
@@ -264,9 +265,9 @@ class CandlesData():
         try:
             future = self._request_async_candles(dt_from, dt_to)
         except Exception as err:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("{}".format(err))
-            raise InitializerErrorException("\"CandlesData\" initialize failed.")
+            raise InitializerErrorException("\"CandlesDataFrame\" initialize failed.")
 
         rclpy.spin_until_future_complete(node, future)
         rsp = future.result()
@@ -280,9 +281,9 @@ class CandlesData():
                               .format(len(self._df_prov)))
             self.logger.debug("\n{}".format(self._df_prov))
         else:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("  future result is False")
-            raise InitializerErrorException("\"CandlesData\" initialize failed.")
+            raise InitializerErrorException("\"CandlesDataFrame\" initialize failed.")
 
         # --------------- Create ROS Communication ---------------
         qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
@@ -439,7 +440,7 @@ class CandlesData():
             self._request_start_dt = dt_from
             self._request_end_dt = dt_to
         except Exception as err:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Candles) "))
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("{}".format(err))
 
     def _on_do_updating(self):
@@ -598,26 +599,25 @@ class CandlesData():
                                dt_from: dt.datetime,
                                dt_to: dt.datetime
                                ) -> Future:
-        req = CandlesSrv.Request()
+        req = CandlesQuerySrv.Request()
         req.inst_msg.inst_id = self._inst_id
         req.gran_msg.gran_id = self._gran_id
         req.dt_from = dt_from.strftime(FMT_YMDHMS)
         req.dt_to = dt_to.strftime(FMT_YMDHMS)
 
-        future = CandlesData.cli_cdl.call_async(req)
+        future = self._c_srvcli.call_async(req)
 
         return future
 
 
-class HistoricalCandles(Node):
+class CandlesStore(Node):
 
     def __init__(self) -> None:
-        super().__init__("historical_candles")
+        super().__init__("candles_store")
 
         # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-        CandlesData.logger = self.logger
 
         # --------------- Declare ROS parameter ---------------
         self._rosprm = _RosParams()
@@ -777,20 +777,21 @@ class HistoricalCandles(Node):
 
         # --------------- Create ROS Communication ---------------
         try:
-            # Create service client "Candles"
-            srv_type = CandlesSrv
-            srv_name = "candles"
-            CandlesData.cli_cdl = self._create_service_client(srv_type, srv_name)
+            # Create service client "CandlesQuery"
+            srv_type = CandlesQuerySrv
+            srv_name = "candles_query"
+            srvcli = self._create_service_client(srv_type, srv_name)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Exception "))
             self.logger.error(err)
             raise InitializerErrorException("create service client failed.")
 
-        self._candles_data_list = []
-        for gran_data in self._rosprm.enable_gran_list():
+        CandlesElement.set_class_variable(srvcli, self.logger)
+        self._candles_elem_list = []
+        for gran_id, gran_leng in self._rosprm.enable_gran_list():
             for inst_id in self._rosprm.enable_inst_list():
-                candles_data = CandlesData(self, inst_id, gran_data)
-                self._candles_data_list.append(candles_data)
+                candles_elem = CandlesElement(self, inst_id, gran_id, gran_leng)
+                self._candles_elem_list.append(candles_elem)
 
         # Create service server "CandlesByDatetime"
         srv_type = CandlesByDatetimeSrv
@@ -815,11 +816,11 @@ class HistoricalCandles(Node):
     def do_cyclic_event(self) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
-        for candles_data in self._candles_data_list:
-            candles_data.do_cyclic_event()
+        for candles_elem in self._candles_elem_list:
+            candles_elem.do_cyclic_event()
             """
             self.logger.debug("inst_id:{}, gran_id:{}"
-                              .format(candles_data._inst_id, candles_data._gran_id))
+                              .format(candles_elem._inst_id, candles_data._gran_id))
             """
 
     def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
@@ -862,10 +863,10 @@ class HistoricalCandles(Node):
             end_time = dt.datetime.strptime(req.time_to, FMT_TIME_HMS).time()
 
         df_comp = None
-        for candles_data in self._candles_data_list:
-            if ((inst_id == candles_data.inst_id) and (gran_id == candles_data.gran_id)):
-                df_comp = candles_data.df_comp
-                next_updatetime = candles_data.next_updatetime
+        for candles_elem in self._candles_elem_list:
+            if ((inst_id == candles_elem.inst_id) and (gran_id == candles_elem.gran_id)):
+                df_comp = candles_elem.df_comp
+                next_updatetime = candles_elem.next_updatetime
                 break
 
         rsp.cndl_msg_list = []
@@ -896,24 +897,6 @@ class HistoricalCandles(Node):
                 pass
 
             if not df_comp.empty:
-                """
-                for idx, sr in df_comp.iterrows():
-                    msg = Candle()
-                    msg.ask_o = sr[ColName.ASK_OP.value]
-                    msg.ask_h = sr[ColName.ASK_HI.value]
-                    msg.ask_l = sr[ColName.ASK_LO.value]
-                    msg.ask_c = sr[ColName.ASK_CL.value]
-                    msg.mid_o = sr[ColName.MID_OP.value]
-                    msg.mid_h = sr[ColName.MID_HI.value]
-                    msg.mid_l = sr[ColName.MID_LO.value]
-                    msg.mid_c = sr[ColName.MID_CL.value]
-                    msg.bid_o = sr[ColName.BID_OP.value]
-                    msg.bid_h = sr[ColName.BID_HI.value]
-                    msg.bid_l = sr[ColName.BID_LO.value]
-                    msg.bid_c = sr[ColName.BID_CL.value]
-                    msg.time = idx.strftime(FMT_YMDHMS)
-                    rsp.cndl_msg_list.append(msg)
-                """
                 for t in df_comp.itertuples():
                     msg = Candle()
                     msg.ask_o = t.ask_op
@@ -959,10 +942,10 @@ class HistoricalCandles(Node):
         dbg_tm_start = dt.datetime.now()
 
         df_comp = None
-        for candles_data in self._candles_data_list:
-            if ((inst_id == candles_data.inst_id) and (gran_id == candles_data.gran_id)):
-                df_comp = candles_data._df_comp
-                next_updatetime = candles_data.next_updatetime
+        for candles_elem in self._candles_elem_list:
+            if ((inst_id == candles_elem.inst_id) and (gran_id == candles_elem.gran_id)):
+                df_comp = candles_elem._df_comp
+                next_updatetime = candles_elem.next_updatetime
                 break
 
         rsp.cndl_msg_list = []
@@ -970,24 +953,6 @@ class HistoricalCandles(Node):
             df_comp = df_comp.tail(req.length)
 
             if not df_comp.empty:
-                """
-                for idx, sr in df_comp.iterrows():
-                    msg = Candle()
-                    msg.ask_o = sr[ColName.ASK_OP.value]
-                    msg.ask_h = sr[ColName.ASK_HI.value]
-                    msg.ask_l = sr[ColName.ASK_LO.value]
-                    msg.ask_c = sr[ColName.ASK_CL.value]
-                    msg.mid_o = sr[ColName.MID_OP.value]
-                    msg.mid_h = sr[ColName.MID_HI.value]
-                    msg.mid_l = sr[ColName.MID_LO.value]
-                    msg.mid_c = sr[ColName.MID_CL.value]
-                    msg.bid_o = sr[ColName.BID_OP.value]
-                    msg.bid_h = sr[ColName.BID_HI.value]
-                    msg.bid_l = sr[ColName.BID_LO.value]
-                    msg.bid_c = sr[ColName.BID_CL.value]
-                    msg.time = idx.strftime(FMT_YMDHMS)
-                    rsp.cndl_msg_list.append(msg)
-                """
                 for t in df_comp.itertuples():
                     msg = Candle()
                     msg.ask_o = t.ask_op
@@ -1022,19 +987,14 @@ def main(args=None):
 
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()
+    cs = CandlesStore()
 
     try:
-        hc = HistoricalCandles()
-    except InitializerErrorException:
+        while rclpy.ok():
+            rclpy.spin_once(cs, executor=executor, timeout_sec=1.0)
+            cs.do_cyclic_event()
+    except KeyboardInterrupt:
         pass
-    else:
-        try:
-            while rclpy.ok():
-                rclpy.spin_once(hc, executor=executor, timeout_sec=1.0)
-                hc.do_cyclic_event()
-        except KeyboardInterrupt:
-            pass
 
-        hc.destroy_node()
-
+    cs.destroy_node()
     rclpy.shutdown()

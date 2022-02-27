@@ -12,16 +12,15 @@ from oandapyV20 import API
 from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
 from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
 from oandapyV20.exceptions import V20Error
-
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
 from api_msgs.msg import OrderType, OrderState, TradeState
 from api_msgs.msg import FailReasonCode as frc
-from . import utility as utl
-from .utility import RosParam
 from .constant import ADD_CIPHERS
-from .constant import InstParam
+from .parameter import InstParam
+from .dataclass import RosParam
+from . import utility as utl
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -65,17 +64,17 @@ class _RosParams():
     CONNECTION_TIMEOUT = RosParam("connection_timeout")
 
 
-class OrderService(Node):
+class OrderRequester(Node):
 
     def __init__(self) -> None:
-        super().__init__("order_service")
+        super().__init__("order_register")
 
-        # Set logger lebel
+        # --------------- Set logger lebel ---------------
         logger = super().get_logger()
         logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
         self.logger = logger
 
-        # Declare ROS parameter
+        # --------------- Declare ROS parameter ---------------
         self._rosprm = _RosParams()
         self.declare_parameter(self._rosprm.USE_ENV_LIVE.name)
         self.declare_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)
@@ -84,7 +83,6 @@ class OrderService(Node):
         self.declare_parameter(self._rosprm.LIV_ACCESS_TOKEN.name)
         self.declare_parameter(self._rosprm.CONNECTION_TIMEOUT.name)
 
-        # Set ROS parameter
         para = self.get_parameter(self._rosprm.USE_ENV_LIVE.name)
         self._rosprm.USE_ENV_LIVE.value = para.value
         para = self.get_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)
@@ -128,10 +126,12 @@ class OrderService(Node):
         else:
             request_params = {"timeout": self._rosprm.CONNECTION_TIMEOUT.value}
 
+        # --------------- Initialize instance variable ---------------
         self._api = API(access_token=access_token,
                         environment=environment,
                         request_params=request_params)
 
+        # --------------- Create ROS Communication ---------------
         # Create service server "OrderCreate"
         srv_type = OrderCreateSrv
         srv_name = "order_create"
@@ -618,13 +618,13 @@ class OrderService(Node):
         data_order = data["order"]
 
         inst_param = InstParam.get_member_by_msgid(req.inst_msg.inst_id)
-        min_unit = inst_param.lsb_str
+        one_pip_str = inst_param.one_pip_str
 
         if ((req.ordertype_msg.type == OrderType.TYP_LIMIT)
                 or (req.ordertype_msg.type == OrderType.TYP_STOP)):
 
             tmp = {
-                "price": self._fit_unit(req.price, min_unit),
+                "price": self._fit_unit(req.price, one_pip_str),
                 "timeInForce": "GTC",
             }
             data_order.update(tmp)
@@ -635,11 +635,11 @@ class OrderService(Node):
             "positionFill": "DEFAULT",
             "takeProfitOnFill": {
                 "timeInForce": "GTC",
-                "price": self._fit_unit(req.take_profit_price, min_unit)
+                "price": self._fit_unit(req.take_profit_price, one_pip_str)
             },
             "stopLossOnFill": {
                 "timeInForce": "GTC",
-                "price": self._fit_unit(req.stop_loss_price, min_unit)
+                "price": self._fit_unit(req.stop_loss_price, one_pip_str)
             },
         }
         data_order.update(tmp)
@@ -651,23 +651,23 @@ class OrderService(Node):
                                    ) -> JsonFmt:
 
         inst_param = InstParam.get_member_by_msgid(req.inst_msg.inst_id)
-        min_unit = inst_param.lsb_str
+        one_pip_str = inst_param.one_pip_str
 
         data = {
             "takeProfit": {
-                "price": self._fit_unit(req.take_profit_price, min_unit),
+                "price": self._fit_unit(req.take_profit_price, one_pip_str),
                 "timeInForce": "GTC",
             },
             "stopLoss": {
-                "price": self._fit_unit(req.stop_loss_price, min_unit),
+                "price": self._fit_unit(req.stop_loss_price, one_pip_str),
                 "timeInForce": "GTC",
             },
         }
 
         return data
 
-    def _fit_unit(self, value: float, min_unit: str):
-        tmp = Decimal(str(value)).quantize(Decimal(min_unit),
+    def _fit_unit(self, value: float, one_pip_str: str):
+        tmp = Decimal(str(value)).quantize(Decimal(one_pip_str),
                                            rounding=ROUND_HALF_UP)
         return str(tmp)
 
@@ -677,7 +677,7 @@ def main(args=None):
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)
-    order = OrderService()
+    order = OrderRequester()
 
     try:
         rclpy.spin(order)

@@ -10,8 +10,8 @@ from api_msgs.msg import Instrument as Inst
 from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error
-from .constant import InstParam
 from .constant import ADD_CIPHERS
+from .parameter import InstParam
 from . import utility as utl
 
 MsgType = TypeVar("MsgType")

@@ -4,17 +4,19 @@ import requests
 import datetime as dt
 from requests.exceptions import ConnectionError, ReadTimeout
 import rclpy
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from oandapyV20 import API
 import oandapyV20.endpoints.instruments as instruments
 from oandapyV20.exceptions import V20Error
 from api_msgs.msg import Candle
 from api_msgs.msg import FailReasonCode as frc
-from api_msgs.srv import CandlesSrv
+from api_msgs.srv import CandlesQuerySrv
 from .constant import FMT_DTTM_API, FMT_YMDHMS
 from .constant import ADD_CIPHERS
-from .constant import InstParam, GranParam
-from .utility import RosParam
+from .parameter import InstParam, GranParam
+from .dataclass import RosParam
 from . import utility as utl
 
 
@@ -34,28 +36,27 @@ class _RosParams():
     CONNECTION_TIMEOUT = RosParam("connection_timeout")
 
 
-class CandlestickService(Node):
+class Fetcher(Node):
 
     def __init__(self) -> None:
-        super().__init__("candlestick_service")
+        super().__init__("fetcher")
 
-        # Set logger lebel
+        # --------------- Set logger lebel ---------------
         logger = super().get_logger()
         logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
         self.logger = logger
 
-        # Define Constant value.
+        # --------------- Define Constant value ---------------
         self._MAX_SIZE = 4999
         # self._MAX_SIZE = 10    # For test
 
-        # Declare ROS parameter
+        # --------------- Declare ROS parameter ---------------
         self._rosprm = _RosParams()
         self.declare_parameter(self._rosprm.USE_ENV_LIVE.name)
         self.declare_parameter(self._rosprm.PRA_ACCESS_TOKEN.name)
         self.declare_parameter(self._rosprm.LIV_ACCESS_TOKEN.name)
         self.declare_parameter(self._rosprm.CONNECTION_TIMEOUT.name)
 
-        # Set ROS parameter
         para = self.get_parameter(self._rosprm.USE_ENV_LIVE.name)
         self._rosprm.USE_ENV_LIVE.value = para.value
         para = self.get_parameter(self._rosprm.PRA_ACCESS_TOKEN.name)
@@ -93,20 +94,22 @@ class CandlestickService(Node):
                         environment=environment,
                         request_params=request_params)
 
-        # Create service server "Candles"
-        srv_type = CandlesSrv
-        srv_name = "candles"
-        callback = self._on_recv_candles
-        self._candles_srv = self.create_service(srv_type,
-                                                srv_name,
-                                                callback)
+        # --------------- Create ROS Communication ---------------
+        # Create service server "CandlesQuery"
+        srv_type = CandlesQuerySrv
+        srv_name = "candles_query"
+        callback = self._on_recv_candles_query
+        self._cq_srv = self.create_service(srv_type,
+                                           srv_name,
+                                           callback=callback,
+                                           callback_group=ReentrantCallbackGroup())
 
-    def _on_recv_candles(self,
-                         req: SrvTypeRequest,
-                         rsp: SrvTypeResponse
-                         ) -> SrvTypeResponse:
+    async def _on_recv_candles_query(self,
+                                     req: SrvTypeRequest,
+                                     rsp: SrvTypeResponse
+                                     ) -> SrvTypeResponse:
 
-        self.logger.debug("{:=^50}".format(" Service[candles]:Start "))
+        self.logger.debug("{:=^50}".format(" Service[candles_query]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
         self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
@@ -128,7 +131,7 @@ class CandlestickService(Node):
             self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
             self.logger.debug("[Performance]")
             self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
-            self.logger.debug("{:=^50}".format(" Service[candles]:End "))
+            self.logger.debug("{:=^50}".format(" Service[candles_query]:End "))
             return rsp
 
         gran_param = GranParam.get_member_by_msgid(req.gran_msg.gran_id)
@@ -160,7 +163,7 @@ class CandlestickService(Node):
                 tmpdt = dt_to
             to_ = tmpdt
 
-            self.logger.debug("{:-^40}".format(" Service[candles]:fetch "))
+            self.logger.debug("{:-^40}".format(" Service[candles_query]:fetch "))
             self.logger.debug("  - from:[{}]".format(from_))
             self.logger.debug("  - to:  [{}]".format(to_))
 
@@ -246,7 +249,7 @@ class CandlestickService(Node):
         self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
-        self.logger.debug("{:=^50}".format(" Service[candles]:End "))
+        self.logger.debug("{:=^50}".format(" Service[candles_query]:End "))
 
         return rsp
 
@@ -273,12 +276,13 @@ def main(args=None):
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)
-    cs = CandlestickService()
+    executor = MultiThreadedExecutor()
+    fetcher = Fetcher()
 
     try:
-        rclpy.spin(cs)
+        rclpy.spin(fetcher, executor=executor)
     except KeyboardInterrupt:
         pass
 
-    cs.destroy_node()
+    fetcher.destroy_node()
     rclpy.shutdown()

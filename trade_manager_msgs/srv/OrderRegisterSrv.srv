@@ -1,4 +1,4 @@
-# Order request service.
+# Order register service.
 
 # ========================= Request =========================
 
@@ -41,5 +41,5 @@ string exit_exp_time
 ---
 # ========================= Response =========================
 
-# Requested ID.
-int32 requested_id
+# Register ID.
+int32 register_id

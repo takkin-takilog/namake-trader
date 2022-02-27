@@ -21,7 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'order_scheduler_exe = ' + package_name + '.order_scheduler:main',
-            'historical_candles_exe = ' + package_name + '.historical_candles:main',
+            'candles_store_exe = ' + package_name + '.candles_store:main',
         ],
     },
 )

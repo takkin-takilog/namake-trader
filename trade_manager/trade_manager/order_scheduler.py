@@ -11,7 +11,7 @@ from rclpy.node import Node
 from rclpy.client import Client
 from std_msgs.msg import Bool
 from trade_manager_msgs.msg import OrderType, OrderDir
-from trade_manager_msgs.srv import OrderRequestSrv
+from trade_manager_msgs.srv import OrderRegisterSrv
 from trade_manager_msgs.srv import TradeCloseRequestSrv
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
@@ -20,9 +20,9 @@ from api_msgs.msg import OrderState, TradeState
 from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
 from .constant import FMT_YMDHMS
+from .constant import Transitions as Tr
+from .constant import INST_DICT
 from .exception import InitializerErrorException
-from .data import Transitions as Tr
-from .data import INST_DICT
 
 
 MsgType = TypeVar("MsgType")
@@ -42,16 +42,34 @@ class OrderTicket():
         ExitOrdering = auto()
         Complete = auto()
 
-    cli_ordcre = None
-    cli_orddet = None
-    cli_ordcnc = None
-    cli_trddet = None
-    cli_trdcrc = None
-    cli_trdcls = None
+    # --------------- Define class variable ---------------
+    _c_srvcli_ordcre = None
+    _c_srvcli_orddet = None
+    _c_srvcli_ordcnc = None
+    _c_srvcli_trddet = None
+    _c_srvcli_trdcrc = None
+    _c_srvcli_trdcls = None
+    _c_is_trans_lock = False
+    _c_register_id = 1
     logger = None
 
-    _is_trans_lock = False
-    _c_requested_id = 1
+    @classmethod
+    def set_class_variable(cls,
+                           srvcli_ordcre: Client,
+                           srvcli_orddet: Client,
+                           srvcli_ordcnc: Client,
+                           srvcli_trddet: Client,
+                           srvcli_trdcrc: Client,
+                           srvcli_trdcls: Client,
+                           logger
+                           ) -> None:
+        cls._c_srvcli_ordcre = srvcli_ordcre
+        cls._c_srvcli_orddet = srvcli_orddet
+        cls._c_srvcli_ordcnc = srvcli_ordcnc
+        cls._c_srvcli_trddet = srvcli_trddet
+        cls._c_srvcli_trdcrc = srvcli_trdcrc
+        cls._c_srvcli_trdcls = srvcli_trdcls
+        cls.logger = logger
 
     def __init__(self, req: SrvTypeRequest) -> None:
 
@@ -301,8 +319,8 @@ class OrderTicket():
         self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
 
         # --------------- Update requested id ---------------
-        self._requested_id = OrderTicket._c_requested_id
-        OrderTicket._c_requested_id += 1
+        self._register_id = self._c_register_id
+        self._c_register_id += 1
 
         # --------------- Entry order ---------------
         req = OrderCreateSrv.Request()
@@ -314,7 +332,7 @@ class OrderTicket():
         req.stop_loss_price = self._stop_loss_price
         self.logger.debug("----- Requesting \"Order Create\" -----")
         try:
-            self._future = OrderTicket.cli_ordcre.call_async(req)
+            self._future = self._c_srvcli_ordcre.call_async(req)
         except InitializerErrorException as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
             self.logger.error("{}".format(err))
@@ -325,8 +343,8 @@ class OrderTicket():
         self.logger.debug("  - trade_id:[{}]".format(self._trade_id))
 
     @property
-    def requested_id(self) -> int:
-        return self._requested_id
+    def register_id(self) -> int:
+        return self._register_id
 
     def enable_trade_close(self) -> bool:
         success = False
@@ -408,12 +426,12 @@ class OrderTicket():
 
     def _conditions_trans_lock(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self.logger.debug("--- trans_lock state:[{}]".format(OrderTicket._is_trans_lock))
-        return not OrderTicket._is_trans_lock
+        self.logger.debug("--- trans_lock state:[{}]".format(self._c_is_trans_lock))
+        return not self._c_is_trans_lock
 
     def _on_enter_EntryChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        OrderTicket._is_trans_lock = True
+        self._c_is_trans_lock = True
         self.logger.debug("--- Trans \"Locked\"")
         self.logger.debug("----- Request \"Order Details\" (id:[{}]) -----"
                           .format(self._order_id))
@@ -421,7 +439,7 @@ class OrderTicket():
         req.order_id = self._order_id
         self._future = None
         try:
-            self._future = OrderTicket.cli_orddet.call_async(req)
+            self._future = self._c_srvcli_orddet.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
             self.logger.error("{}".format(err))
@@ -464,7 +482,7 @@ class OrderTicket():
 
     def _on_exit_EntryChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        OrderTicket._is_trans_lock = False
+        self._c_is_trans_lock = False
         self.logger.debug("--- Trans \"Unlocked\"")
 
     def _on_enter_EntryCanceling(self) -> None:
@@ -475,7 +493,7 @@ class OrderTicket():
         req.order_id = self._order_id
         self._future = None
         try:
-            self._future = OrderTicket.cli_ordcnc.call_async(req)
+            self._future = self._c_srvcli_ordcnc.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
             self.logger.error("{}".format(err))
@@ -528,7 +546,7 @@ class OrderTicket():
 
     def _on_enter_ExitChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        OrderTicket._is_trans_lock = True
+        self._c_is_trans_lock = True
         self.logger.debug("--- Trans \"Locked\"")
         self.logger.debug("----- Request \"Trade Details\" (id:[{}]) -----"
                           .format(self._trade_id))
@@ -536,7 +554,7 @@ class OrderTicket():
         req.trade_id = self._trade_id
         self._future = None
         try:
-            self._future = OrderTicket.cli_trddet.call_async(req)
+            self._future = self._c_srvcli_trddet.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
             self.logger.error("{}".format(err))
@@ -577,7 +595,7 @@ class OrderTicket():
 
     def _on_exit_ExitChecking(self) -> None:
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        OrderTicket._is_trans_lock = False
+        self._c_is_trans_lock = False
         self.logger.debug("--- Trans \"Unlocked\"")
 
     def _on_enter_ExitOrdering(self) -> None:
@@ -589,7 +607,7 @@ class OrderTicket():
         req.trade_id = self._trade_id
         self._future = None
         try:
-            self._future = OrderTicket.cli_trdcls.call_async(req)
+            self._future = self._c_srvcli_trdcls.call_async(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
             self.logger.error("{}".format(err))
@@ -641,15 +659,14 @@ class OrderScheduler(Node):
         # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-        OrderTicket.logger = self.logger
 
         self._tickets: list[OrderTicket] = []
 
         # --------------- Create ROS Communication ---------------
-        # Create service server "OrderRequest"
-        srv_type = OrderRequestSrv
-        srv_name = "order_request"
-        callback = self._on_requested_order
+        # Create service server "OrderRegister"
+        srv_type = OrderRegisterSrv
+        srv_name = "order_register"
+        callback = self._on_order_register
         self._ordreq_srv = self.create_service(srv_type,
                                                srv_name,
                                                callback=callback)
@@ -663,40 +680,42 @@ class OrderScheduler(Node):
                                                   callback=callback)
         try:
             # Create service client "OrderCreate"
-            OrderTicket.cli_ordcre = self._create_service_client(
-                OrderCreateSrv,
-                "order_create")
+            srvcli_ordcre = self._create_service_client(OrderCreateSrv,
+                                                        "order_create")
 
             # Create service client "OrderDetails"
-            OrderTicket.cli_orddet = self._create_service_client(
-                OrderDetailsSrv,
-                "order_details")
+            srvcli_orddet = self._create_service_client(OrderDetailsSrv,
+                                                        "order_details")
 
             # Create service client "OrderCancel"
-            OrderTicket.cli_ordcnc = self._create_service_client(
-                OrderCancelSrv,
-                "order_cancel")
+            srvcli_ordcnc = self._create_service_client(OrderCancelSrv,
+                                                        "order_cancel")
 
             # Create service client "TradeDetails"
-            OrderTicket.cli_trddet = self._create_service_client(
-                TradeDetailsSrv,
-                "trade_details")
+            srvcli_trddet = self._create_service_client(TradeDetailsSrv,
+                                                        "trade_details")
 
             # Create service client "TradeCRCDO"
-            OrderTicket.cli_trdcrc = self._create_service_client(
-                TradeCRCDOSrv,
-                "trade_crcdo")
+            srvcli_trdcrc = self._create_service_client(TradeCRCDOSrv,
+                                                        "trade_crcdo")
 
             # Create service client "TradeClose"
-            OrderTicket.cli_trdcls = self._create_service_client(
-                TradeCloseSrv,
-                "trade_close")
+            srvcli_trdcls = self._create_service_client(TradeCloseSrv,
+                                                        "trade_close")
 
         except Exception as err:
             self.logger.error("{:!^50}".format(" Exception "))
             self.logger.error(err)
             self.destroy_node()
             raise InitializerErrorException("create service client failed.")
+
+        OrderTicket.set_class_variable(srvcli_ordcre,
+                                       srvcli_orddet,
+                                       srvcli_ordcnc,
+                                       srvcli_trddet,
+                                       srvcli_trdcrc,
+                                       srvcli_trdcls,
+                                       self.logger)
 
     def do_cyclic_event(self) -> None:
 
@@ -719,11 +738,11 @@ class OrderScheduler(Node):
             self._logger.info("Waiting for [{}] service...".format(srv_name))
         return cli
 
-    def _on_requested_order(self,
-                            req: SrvTypeRequest,
-                            rsp: SrvTypeResponse
-                            ) -> SrvTypeResponse:
-        self.logger.debug("{:=^50}".format(" Service[order_request]:Start "))
+    def _on_order_register(self,
+                           req: SrvTypeRequest,
+                           rsp: SrvTypeResponse
+                           ) -> SrvTypeResponse:
+        self.logger.debug("{:=^50}".format(" Service[order_register]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - inst_id:[{}]".format(req.inst_msg.inst_id))
         self.logger.debug("  - order_type:[{}]".format(req.ordtyp_msg.order_type))
@@ -736,7 +755,7 @@ class OrderScheduler(Node):
         self.logger.debug("  - exit_exp_time:[{}]".format(req.exit_exp_time))
         dbg_tm_start = dt.datetime.now()
 
-        rsp.requested_id = -1
+        rsp.register_id = -1
         if self._validate_msg(req):
             try:
                 ticket = OrderTicket(req)
@@ -745,17 +764,17 @@ class OrderScheduler(Node):
                 self.logger.error(err)
             else:
                 self._tickets.append(ticket)
-                rsp.requested_id = ticket.requested_id
+                rsp.register_id = ticket.register_id
         else:
             self.logger.error("{:!^50}".format(" Validate msg: NG "))
 
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
-        self.logger.debug("  - requested_id:[{}]".format(rsp.requested_id))
+        self.logger.debug("  - register_id:[{}]".format(rsp.register_id))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Requested time:[{}]".format(dbg_tm_start))
         self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
-        self.logger.debug("{:=^50}".format(" Service[order_request]:End "))
+        self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
 
         return rsp
 
@@ -772,12 +791,12 @@ class OrderScheduler(Node):
                             ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_close_request]:Start "))
         self.logger.debug("<Request>")
-        self.logger.debug("  - requested_id:[{}]".format(req.requested_id))
+        self.logger.debug("  - register_id:[{}]".format(req.register_id))
         dbg_tm_start = dt.datetime.now()
 
         success = False
         for ticket in self._tickets:
-            if ticket.requested_id == req.requested_id:
+            if ticket.register_id == req.register_id:
                 success = ticket.enable_trade_close()
 
         rsp.success = success
@@ -796,19 +815,14 @@ class OrderScheduler(Node):
 def main(args=None):
 
     rclpy.init(args=args)
+    os = OrderScheduler()
 
     try:
-        os = OrderScheduler()
-    except InitializerErrorException:
+        while rclpy.ok():
+            rclpy.spin_once(os, timeout_sec=1.0)
+            os.do_cyclic_event()
+    except KeyboardInterrupt:
         pass
-    else:
-        try:
-            while rclpy.ok():
-                rclpy.spin_once(os, timeout_sec=1.0)
-                os.do_cyclic_event()
-        except KeyboardInterrupt:
-            pass
 
-        os.destroy_node()
-
+    os.destroy_node()
     rclpy.shutdown()
