@@ -39,15 +39,6 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
 @dataclass
-class _GranData():
-    """
-    Granularity data.
-    """
-    gran_id: int
-    length: int
-
-
-@dataclass
 class _RosParams():
     """
     ROS Parameter.
@@ -103,39 +94,39 @@ class _RosParams():
     def enable_gran_list(self):
         gran_list = []
         if self.ENA_GRAN_M1.value:
-            gran_list.append(_GranData(GranApi.GRAN_M1, self.LENG_M1.value))
+            gran_list.append((GranApi.GRAN_M1, self.LENG_M1.value))
         if self.ENA_GRAN_M2.value:
-            gran_list.append(_GranData(GranApi.GRAN_M2, self.LENG_M2.value))
+            gran_list.append((GranApi.GRAN_M2, self.LENG_M2.value))
         if self.ENA_GRAN_M3.value:
-            gran_list.append(_GranData(GranApi.GRAN_M3, self.LENG_M3.value))
+            gran_list.append((GranApi.GRAN_M3, self.LENG_M3.value))
         if self.ENA_GRAN_M4.value:
-            gran_list.append(_GranData(GranApi.GRAN_M4, self.LENG_M4.value))
+            gran_list.append((GranApi.GRAN_M4, self.LENG_M4.value))
         if self.ENA_GRAN_M5.value:
-            gran_list.append(_GranData(GranApi.GRAN_M5, self.LENG_M5.value))
+            gran_list.append((GranApi.GRAN_M5, self.LENG_M5.value))
         if self.ENA_GRAN_M10.value:
-            gran_list.append(_GranData(GranApi.GRAN_M10, self.LENG_M10.value))
+            gran_list.append((GranApi.GRAN_M10, self.LENG_M10.value))
         if self.ENA_GRAN_M15.value:
-            gran_list.append(_GranData(GranApi.GRAN_M15, self.LENG_M15.value))
+            gran_list.append((GranApi.GRAN_M15, self.LENG_M15.value))
         if self.ENA_GRAN_M30.value:
-            gran_list.append(_GranData(GranApi.GRAN_M30, self.LENG_M30.value))
+            gran_list.append((GranApi.GRAN_M30, self.LENG_M30.value))
         if self.ENA_GRAN_H1.value:
-            gran_list.append(_GranData(GranApi.GRAN_H1, self.LENG_H1.value))
+            gran_list.append((GranApi.GRAN_H1, self.LENG_H1.value))
         if self.ENA_GRAN_H2.value:
-            gran_list.append(_GranData(GranApi.GRAN_H2, self.LENG_H2.value))
+            gran_list.append((GranApi.GRAN_H2, self.LENG_H2.value))
         if self.ENA_GRAN_H3.value:
-            gran_list.append(_GranData(GranApi.GRAN_H3, self.LENG_H3.value))
+            gran_list.append((GranApi.GRAN_H3, self.LENG_H3.value))
         if self.ENA_GRAN_H4.value:
-            gran_list.append(_GranData(GranApi.GRAN_H4, self.LENG_H4.value))
+            gran_list.append((GranApi.GRAN_H4, self.LENG_H4.value))
         if self.ENA_GRAN_H6.value:
-            gran_list.append(_GranData(GranApi.GRAN_H6, self.LENG_H6.value))
+            gran_list.append((GranApi.GRAN_H6, self.LENG_H6.value))
         if self.ENA_GRAN_H8.value:
-            gran_list.append(_GranData(GranApi.GRAN_H8, self.LENG_H8.value))
+            gran_list.append((GranApi.GRAN_H8, self.LENG_H8.value))
         if self.ENA_GRAN_H12.value:
-            gran_list.append(_GranData(GranApi.GRAN_H12, self.LENG_H12.value))
+            gran_list.append((GranApi.GRAN_H12, self.LENG_H12.value))
         if self.ENA_GRAN_D.value:
-            gran_list.append(_GranData(GranApi.GRAN_D, self.LENG_D.value))
+            gran_list.append((GranApi.GRAN_D, self.LENG_D.value))
         if self.ENA_GRAN_W.value:
-            gran_list.append(_GranData(GranApi.GRAN_W, self.LENG_W.value))
+            gran_list.append((GranApi.GRAN_W, self.LENG_W.value))
         return gran_list
 
 
@@ -161,11 +152,12 @@ class CandlesElement():
     def __init__(self,
                  node: 'Node',
                  inst_id: int,
-                 gran_data: _GranData
+                 gran_id: int,
+                 gran_leng: int
                  ) -> None:
 
         # --------------- Define Constant value ---------------
-        gran_param = GranParam.get_member_by_msgid(gran_data.gran_id)
+        gran_param = GranParam.get_member_by_msgid(gran_id)
         self._GRAN_INTERVAL = gran_param.timedelta
         self._NEXT_UPDATETIME_OFS_SEC = dt.timedelta(seconds=5)
         self._RETRY_INTERVAL = dt.timedelta(minutes=1)
@@ -250,7 +242,7 @@ class CandlesElement():
 
         # --------------- Initialize instance variable ---------------
         self._inst_id = inst_id
-        self._gran_id = gran_data.gran_id
+        self._gran_id = gran_id
         self._df_comp = pd.DataFrame()
         self._df_prov = pd.DataFrame()
         self._is_update_complete = True
@@ -260,10 +252,11 @@ class CandlesElement():
         self.logger.debug("{:-^40}".format(" Create CandlesDataFrame:Start "))
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
         self.logger.debug("  - gran_id:[{}]".format(self._gran_id))
+        self.logger.debug("  - gran_leng:[{}]".format(gran_leng))
 
         # --------------- Create Candles(OHLC) DataFrame ---------------
         dt_now = dt.datetime.now()
-        dt_from = dt_now - self._GRAN_INTERVAL * gran_data.length
+        dt_from = dt_now - self._GRAN_INTERVAL * gran_leng
         dt_to = dt_now
 
         self.logger.debug("  - time_from:[{}]".format(dt_from))
@@ -795,9 +788,9 @@ class CandlesStore(Node):
 
         CandlesElement.set_class_variable(srvcli, self.logger)
         self._candles_elem_list = []
-        for gran_data in self._rosprm.enable_gran_list():
+        for gran_id, gran_leng in self._rosprm.enable_gran_list():
             for inst_id in self._rosprm.enable_inst_list():
-                candles_elem = CandlesElement(self, inst_id, gran_data)
+                candles_elem = CandlesElement(self, inst_id, gran_id, gran_leng)
                 self._candles_elem_list.append(candles_elem)
 
         # Create service server "CandlesByDatetime"
