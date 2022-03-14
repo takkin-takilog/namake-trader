@@ -9,10 +9,12 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from oandapyV20 import API
 import oandapyV20.endpoints.instruments as instruments
+import oandapyV20.endpoints.accounts as accounts
 from oandapyV20.exceptions import V20Error
 from api_msgs.msg import Candle
 from api_msgs.msg import FailReasonCode as frc
 from api_msgs.srv import CandlesQuerySrv
+from api_msgs.srv import AccountQuerySrv
 from .constant import FMT_DTTM_API, FMT_YMDHMS
 from .constant import ADD_CIPHERS
 from .parameter import InstParam, GranParam
@@ -31,7 +33,9 @@ class _RosParams():
     ROS Parameter.
     """
     USE_ENV_LIVE = RosParam("use_env_live")
+    PRA_ACCOUNT_NUMBER = RosParam("env_practice.account_number")
     PRA_ACCESS_TOKEN = RosParam("env_practice.access_token")
+    LIV_ACCOUNT_NUMBER = RosParam("env_live.account_number")
     LIV_ACCESS_TOKEN = RosParam("env_live.access_token")
     CONNECTION_TIMEOUT = RosParam("connection_timeout")
 
@@ -53,14 +57,20 @@ class Fetcher(Node):
         # --------------- Declare ROS parameter ---------------
         self._rosprm = _RosParams()
         self.declare_parameter(self._rosprm.USE_ENV_LIVE.name)
+        self.declare_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)
         self.declare_parameter(self._rosprm.PRA_ACCESS_TOKEN.name)
+        self.declare_parameter(self._rosprm.LIV_ACCOUNT_NUMBER.name)
         self.declare_parameter(self._rosprm.LIV_ACCESS_TOKEN.name)
         self.declare_parameter(self._rosprm.CONNECTION_TIMEOUT.name)
 
         para = self.get_parameter(self._rosprm.USE_ENV_LIVE.name)
         self._rosprm.USE_ENV_LIVE.value = para.value
+        para = self.get_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)
+        self._rosprm.PRA_ACCOUNT_NUMBER.value = para.value
         para = self.get_parameter(self._rosprm.PRA_ACCESS_TOKEN.name)
         self._rosprm.PRA_ACCESS_TOKEN.value = para.value
+        para = self.get_parameter(self._rosprm.LIV_ACCOUNT_NUMBER.name)
+        self._rosprm.LIV_ACCOUNT_NUMBER.value = para.value
         para = self.get_parameter(self._rosprm.LIV_ACCESS_TOKEN.name)
         self._rosprm.LIV_ACCESS_TOKEN.value = para.value
         para = self.get_parameter(self._rosprm.CONNECTION_TIMEOUT.name)
@@ -69,9 +79,13 @@ class Fetcher(Node):
         self.logger.debug("[Param]Use Env Live:[{}]".
                           format(self._rosprm.USE_ENV_LIVE.value))
         self.logger.debug("[Param]Env Practice")
+        self.logger.debug("  - Account_Number:[{}]"
+                          .format(self._rosprm.PRA_ACCOUNT_NUMBER.value))
         self.logger.debug("  - Access Token:[{}]"
                           .format(self._rosprm.PRA_ACCESS_TOKEN.value))
         self.logger.debug("[Param]Env Live")
+        self.logger.debug("  - Account_Number:[{}]"
+                          .format(self._rosprm.LIV_ACCOUNT_NUMBER.value))
         self.logger.debug("  - Access Token:[{}]"
                           .format(self._rosprm.LIV_ACCESS_TOKEN.value))
         self.logger.debug("[Param]Connection Timeout:[{}]"
@@ -80,9 +94,11 @@ class Fetcher(Node):
         if self._rosprm.USE_ENV_LIVE.value:
             environment = "live"
             access_token = self._rosprm.LIV_ACCESS_TOKEN.value
+            account_number = self._rosprm.LIV_ACCOUNT_NUMBER.value
         else:
             environment = "practice"
             access_token = self._rosprm.PRA_ACCESS_TOKEN.value
+            account_number = self._rosprm.PRA_ACCOUNT_NUMBER.value
 
         if self._rosprm.CONNECTION_TIMEOUT.value <= 0:
             request_params = None
@@ -93,6 +109,7 @@ class Fetcher(Node):
         self._api = API(access_token=access_token,
                         environment=environment,
                         request_params=request_params)
+        self._acc = accounts.AccountSummary(account_number)
 
         # --------------- Create ROS Communication ---------------
         # Create service server "CandlesQuery"
@@ -100,6 +117,15 @@ class Fetcher(Node):
         srv_name = "candles_query"
         callback = self._on_recv_candles_query
         self._cq_srv = self.create_service(srv_type,
+                                           srv_name,
+                                           callback=callback,
+                                           callback_group=ReentrantCallbackGroup())
+
+        # Create service server "AccountQuery"
+        srv_type = AccountQuerySrv
+        srv_name = "account_query"
+        callback = self._on_recv_account_query
+        self._aq_srv = self.create_service(srv_type,
                                            srv_name,
                                            callback=callback,
                                            callback_group=ReentrantCallbackGroup())
@@ -121,7 +147,7 @@ class Fetcher(Node):
         rsp.result = False
         rsp.frc_msg.reason_code = frc.REASON_UNSET
 
-        rsp = self._check_consistency(req, rsp)
+        rsp = self._validate_candles_query(req, rsp)
         if rsp.frc_msg.reason_code != frc.REASON_UNSET:
             rsp.result = False
             dbg_tm_end = dt.datetime.now()
@@ -253,10 +279,81 @@ class Fetcher(Node):
 
         return rsp
 
-    def _check_consistency(self,
-                           req: SrvTypeRequest,
-                           rsp: SrvTypeResponse
-                           ) -> SrvTypeResponse:
+    async def _on_recv_account_query(self,
+                                     req: SrvTypeRequest,
+                                     rsp: SrvTypeResponse
+                                     ) -> SrvTypeResponse:
+
+        self.logger.debug("{:=^50}".format(" Service[account_query]:Start "))
+        self.logger.debug("<Request>")
+        self.logger.debug("  - None")
+
+        dbg_tm_start = dt.datetime.now()
+
+        rsp.result = False
+        rsp.frc_msg.reason_code = frc.REASON_UNSET
+        apirsp = None
+        try:
+            apirsp = self._api.request(self._acc)
+        except V20Error as err:
+            self.logger.error("{:!^50}".format(" V20Error "))
+            self.logger.error("{}".format(err))
+            rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
+        except ConnectionError as err:
+            self.logger.error("{:!^50}".format(" ConnectionError "))
+            self.logger.error("{}".format(err))
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+        except ReadTimeout as err:
+            self.logger.error("{:!^50}".format(" ReadTimeout "))
+            self.logger.error("{}".format(err))
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+        except Exception as err:
+            self.logger.error("{:!^50}".format(" OthersError "))
+            self.logger.error("{}".format(err))
+            rsp.frc_msg.reason_code = frc.REASON_OTHERS
+        else:
+            rsp.result = True
+            acc = apirsp["account"]
+            rsp.margin_rate = float(acc["marginRate"])
+            rsp.balance = int(float(acc["balance"]))
+            rsp.open_trade_count = int(acc["openTradeCount"])
+            rsp.open_position_count = int(acc["openPositionCount"])
+            rsp.pending_order_count = int(acc["pendingOrderCount"])
+            rsp.pl = int(float(acc["pl"]))
+            rsp.resettable_pl = int(float(acc["resettablePL"]))
+            rsp.financing = int(float(acc["financing"]))
+            rsp.unrealized_pl = int(float(acc["unrealizedPL"]))
+            rsp.nav = int(float(acc["NAV"]))
+            rsp.margin_used = int(float(acc["marginUsed"]))
+            rsp.margin_available = int(float(acc["marginAvailable"]))
+            rsp.position_value = int(float(acc["positionValue"]))
+
+        dbg_tm_end = dt.datetime.now()
+
+        self.logger.debug("<Response>")
+        self.logger.debug("  - margin_rate:[{}]".format(rsp.margin_rate))
+        self.logger.debug("  - balance:[{}]".format(rsp.balance))
+        self.logger.debug("  - open_trade_count:[{}]".format(rsp.open_trade_count))
+        self.logger.debug("  - open_position_count:[{}]".format(rsp.open_position_count))
+        self.logger.debug("  - pending_order_count:[{}]".format(rsp.pending_order_count))
+        self.logger.debug("  - pl:[{}]".format(rsp.pl))
+        self.logger.debug("  - resettable_pl:[{}]".format(rsp.resettable_pl))
+        self.logger.debug("  - financing:[{}]".format(rsp.financing))
+        self.logger.debug("  - unrealized_pl:[{}]".format(rsp.unrealized_pl))
+        self.logger.debug("  - nav:[{}]".format(rsp.nav))
+        self.logger.debug("  - margin_used:[{}]".format(rsp.margin_used))
+        self.logger.debug("  - margin_available:[{}]".format(rsp.margin_available))
+        self.logger.debug("  - position_value:[{}]".format(rsp.position_value))
+        self.logger.debug("[Performance]")
+        self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        self.logger.debug("{:=^50}".format(" Service[account_query]:End "))
+
+        return rsp
+
+    def _validate_candles_query(self,
+                                req: SrvTypeRequest,
+                                rsp: SrvTypeResponse
+                                ) -> SrvTypeResponse:
 
         dt_from = dt.datetime.strptime(req.dt_from, FMT_YMDHMS)
         dt_to = dt.datetime.strptime(req.dt_to, FMT_YMDHMS)
