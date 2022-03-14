@@ -21,7 +21,6 @@ from .parameter import InstParam, GranParam
 from .dataclass import RosParam
 from . import utility as utl
 
-
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 ApiRsp = TypeVar("ApiRsp")

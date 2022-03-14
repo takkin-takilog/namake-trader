@@ -32,7 +32,6 @@ from .parameter import GranParam, InstParam
 from . import utility as utl
 from .wrapper import RosServiceClient
 
-
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 

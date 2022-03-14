@@ -4,7 +4,6 @@ import rclpy
 from rclpy.node import Node
 from .exception import RosServiceErrorException
 
-
 MsgType = TypeVar("MsgType")
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
