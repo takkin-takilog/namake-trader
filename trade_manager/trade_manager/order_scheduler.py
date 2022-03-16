@@ -897,12 +897,12 @@ class OrderScheduler(Node):
         # --------------- Initialize variable ---------------
         self._tick_price_dict = {}
         self._tickets: list[OrderTicket] = []
-        self._timetrig = TimeTrigger(minute=0, second=30)
+        self._acc_trig = TimeTrigger(minute=0, second=30)
 
     def do_cyclic_event(self) -> None:
 
         if self.state == self.States.Idle:
-            if self._timetrig.triggered():
+            if self._acc_trig.triggered():
                 self._trans_from_Idle_to_AccountUpdating()
         elif self.state == self.States.AccountUpdating:
             if self._future.done():
