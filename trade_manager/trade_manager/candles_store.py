@@ -13,8 +13,6 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
-from rclpy.client import Client
-from rclpy.task import Future
 from api_msgs.srv import CandlesQuerySrv
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
@@ -32,7 +30,7 @@ from .exception import InitializerErrorException
 from .dataclass import RosParam
 from .parameter import GranParam, InstParam
 from . import utility as utl
-
+from .wrapper import RosServiceClient
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -143,7 +141,7 @@ class CandlesElement():
 
     @classmethod
     def set_class_variable(cls,
-                           srvcli: Client,
+                           srvcli: RosServiceClient,
                            logger
                            ) -> None:
         cls._c_srvcli = srvcli
@@ -262,15 +260,18 @@ class CandlesElement():
         self.logger.debug("  - time_from:[{}]".format(dt_from))
         self.logger.debug("  - time_to  :[{}]".format(dt_to))
 
+        req = CandlesQuerySrv.Request()
+        req.inst_msg.inst_id = self._inst_id
+        req.gran_msg.gran_id = self._gran_id
+        req.dt_from = dt_from.strftime(FMT_YMDHMS)
+        req.dt_to = dt_to.strftime(FMT_YMDHMS)
         try:
-            future = self._request_async_candles(dt_from, dt_to)
+            rsp = self._c_srvcli.call(req)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("{}".format(err))
             raise InitializerErrorException("\"CandlesDataFrame\" initialize failed.")
 
-        rclpy.spin_until_future_complete(node, future)
-        rsp = future.result()
         if rsp.result is True:
             self._update_dataframe(rsp.cndl_msg_list)
             self.logger.debug("---------- df_comp(length:[{}]) ----------"
@@ -435,8 +436,14 @@ class CandlesElement():
         self.logger.debug("  - time_from:[{}]".format(dt_from))
         self.logger.debug("  - time_to  :[{}]".format(dt_to))
         self._future = None
+
+        req = CandlesQuerySrv.Request()
+        req.inst_msg.inst_id = self._inst_id
+        req.gran_msg.gran_id = self._gran_id
+        req.dt_from = dt_from.strftime(FMT_YMDHMS)
+        req.dt_to = dt_to.strftime(FMT_YMDHMS)
         try:
-            self._future = self._request_async_candles(dt_from, dt_to)
+            self._future = self._c_srvcli.call_async(req)
             self._request_start_dt = dt_from
             self._request_end_dt = dt_to
         except Exception as err:
@@ -594,20 +601,6 @@ class CandlesElement():
         else:
             df_prov.drop(ColName.COMP.value, axis=1, inplace=True)
             self._df_prov = df_prov
-
-    def _request_async_candles(self,
-                               dt_from: dt.datetime,
-                               dt_to: dt.datetime
-                               ) -> Future:
-        req = CandlesQuerySrv.Request()
-        req.inst_msg.inst_id = self._inst_id
-        req.gran_msg.gran_id = self._gran_id
-        req.dt_from = dt_from.strftime(FMT_YMDHMS)
-        req.dt_to = dt_to.strftime(FMT_YMDHMS)
-
-        future = self._c_srvcli.call_async(req)
-
-        return future
 
 
 class CandlesStore(Node):
@@ -780,9 +773,8 @@ class CandlesStore(Node):
             # Create service client "CandlesQuery"
             srv_type = CandlesQuerySrv
             srv_name = "candles_query"
-            srvcli = self._create_service_client(srv_type, srv_name)
+            srvcli = RosServiceClient(self, srv_type, srv_name)
         except Exception as err:
-            self.logger.error("{:!^50}".format(" Exception "))
             self.logger.error(err)
             raise InitializerErrorException("create service client failed.")
 
@@ -822,16 +814,6 @@ class CandlesStore(Node):
             self.logger.debug("inst_id:{}, gran_id:{}"
                               .format(candles_elem._inst_id, candles_data._gran_id))
             """
-
-    def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
-        # Create service client
-        cli = self.create_client(srv_type, srv_name)
-        # Wait for a service server
-        while not cli.wait_for_service(timeout_sec=1.0):
-            if not rclpy.ok():
-                raise RuntimeError("Interrupted while waiting for service.")
-            self.logger.info("Waiting for [{}] service...".format(srv_name))
-        return cli
 
     async def _on_recv_candles_by_datetime(self,
                                            req: SrvTypeRequest,

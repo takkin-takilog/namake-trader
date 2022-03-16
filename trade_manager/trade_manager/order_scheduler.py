@@ -1,6 +1,7 @@
 import sys
 import gc
 from typing import TypeVar
+from dataclasses import dataclass
 from enum import Enum, auto
 import datetime as dt
 from transitions import Machine
@@ -8,26 +9,50 @@ from transitions import Machine
 from transitions.extensions.factory import GraphMachine
 import rclpy
 from rclpy.node import Node
-from rclpy.client import Client
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from std_msgs.msg import Bool
+from api_msgs.msg import Pricing
 from trade_manager_msgs.msg import OrderType, OrderDir
 from trade_manager_msgs.srv import OrderRegisterSrv
 from trade_manager_msgs.srv import TradeCloseRequestSrv
+from trade_manager_msgs.msg import Instrument as InstMng
+from api_msgs.srv import AccountQuerySrv
 from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
                           TradeCRCDOSrv, TradeCloseSrv,
                           OrderDetailsSrv, OrderCancelSrv)
 from api_msgs.msg import OrderState, TradeState
 from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
-from .constant import FMT_YMDHMS
+from .constant import FMT_YMDHMS, FMT_YMDHMSF
 from .constant import Transitions as Tr
 from .constant import INST_DICT
 from .exception import InitializerErrorException
-
+from .dataclass import RosParam
+from .wrapper import RosServiceClient
+from .trigger import TimeTrigger
 
 MsgType = TypeVar("MsgType")
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
+
+
+@dataclass
+class _RosParams():
+    """
+    ROS Parameter.
+    """
+    MAX_LEVERAGE = RosParam("max_leverage")
+    MAX_POSITION_COUNT = RosParam("max_position_count")
+
+
+@dataclass
+class _TickPrice():
+    """
+    Tick price.
+    """
+    time: str
+    tick_ask: float
+    tick_bid: float
 
 
 class OrderTicket():
@@ -43,6 +68,9 @@ class OrderTicket():
         Complete = auto()
 
     # --------------- Define class variable ---------------
+    _C_CI_CONST = 0
+
+    # --------------- Define class variable ---------------
     _c_srvcli_ordcre = None
     _c_srvcli_orddet = None
     _c_srvcli_ordcnc = None
@@ -51,16 +79,19 @@ class OrderTicket():
     _c_srvcli_trdcls = None
     _c_is_trans_lock = False
     _c_register_id = 1
+    _c_balance = 0
     logger = None
 
     @classmethod
     def set_class_variable(cls,
-                           srvcli_ordcre: Client,
-                           srvcli_orddet: Client,
-                           srvcli_ordcnc: Client,
-                           srvcli_trddet: Client,
-                           srvcli_trdcrc: Client,
-                           srvcli_trdcls: Client,
+                           srvcli_ordcre: RosServiceClient,
+                           srvcli_orddet: RosServiceClient,
+                           srvcli_ordcnc: RosServiceClient,
+                           srvcli_trddet: RosServiceClient,
+                           srvcli_trdcrc: RosServiceClient,
+                           srvcli_trdcls: RosServiceClient,
+                           max_leverage: float,
+                           max_position_count: int,
                            logger
                            ) -> None:
         cls._c_srvcli_ordcre = srvcli_ordcre
@@ -69,9 +100,14 @@ class OrderTicket():
         cls._c_srvcli_trddet = srvcli_trddet
         cls._c_srvcli_trdcrc = srvcli_trdcrc
         cls._c_srvcli_trdcls = srvcli_trdcls
+        cls._C_CI_CONST = max_leverage / max_position_count
         cls.logger = logger
 
-    def __init__(self, req: SrvTypeRequest) -> None:
+    @classmethod
+    def set_balance(cls, balance: int):
+        cls._c_balance = balance
+
+    def __init__(self, req: SrvTypeRequest, tick_price: _TickPrice) -> None:
 
         # --------------- Define Constant value ---------------
         self._POL_INTERVAL = dt.timedelta(minutes=1)
@@ -265,10 +301,26 @@ class OrderTicket():
         self._inst_id = req.inst_msg.inst_id
         self._order_type = req.ordtyp_msg.order_type
 
-        if req.orddir_msg.order_dir == OrderDir.LONG:
-            self._units = req.units
+        if req.units == 0:
+            if self._order_type == OrderType.MARKET:
+                if req.orddir_msg.order_dir == OrderDir.LONG:
+                    price = tick_price.tick_ask
+                else:
+                    price = tick_price.tick_bid
+            else:
+                price = req.entry_price
+
+            units = int(self._C_CI_CONST * self._c_balance / price)
+
+            if req.orddir_msg.order_dir == OrderDir.LONG:
+                self._units = units
+            else:
+                self._units = -units
         else:
-            self._units = -req.units
+            if req.orddir_msg.order_dir == OrderDir.LONG:
+                self._units = req.units
+            else:
+                self._units = -req.units
 
         if self._order_type == OrderType.MARKET:
             self._entry_price = 0.0
@@ -332,10 +384,10 @@ class OrderTicket():
         req.stop_loss_price = self._stop_loss_price
         self.logger.debug("----- Requesting \"Order Create\" -----")
         try:
-            self._future = self._c_srvcli_ordcre.call_async(req)
-        except InitializerErrorException as err:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
+            self._future = self._c_srvcli_ordcre.call_async(req, timeout_sec=5.0)
+        except Exception as err:
             self.logger.error("{}".format(err))
+            raise InitializerErrorException("Call ROS Service Error (Order Create)")
 
     def __del__(self) -> None:
         self.logger.debug("---------- Delete OrderTicket ----------")
@@ -383,6 +435,10 @@ class OrderTicket():
 
         if not self._future.done():
             self.logger.debug("  Requesting now...")
+            if self._future.has_timed_out():
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
+                self.logger.error("  ROS Service Response Timeout.")
+                self._trans_to_Complete()
             return
 
         self.logger.debug("  Request done.")
@@ -439,7 +495,7 @@ class OrderTicket():
         req.order_id = self._order_id
         self._future = None
         try:
-            self._future = self._c_srvcli_orddet.call_async(req)
+            self._future = self._c_srvcli_orddet.call_async(req, timeout_sec=5.0)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
             self.logger.error("{}".format(err))
@@ -452,6 +508,10 @@ class OrderTicket():
 
         if not self._future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
+            if self._future.has_timed_out():
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
+                self.logger.error("  ROS Service Response Timeout.")
+                self._trans_from_EntryChecking_to_EntryWaiting()
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
@@ -493,7 +553,7 @@ class OrderTicket():
         req.order_id = self._order_id
         self._future = None
         try:
-            self._future = self._c_srvcli_ordcnc.call_async(req)
+            self._future = self._c_srvcli_ordcnc.call_async(req, timeout_sec=5.0)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
             self.logger.error("{}".format(err))
@@ -506,6 +566,10 @@ class OrderTicket():
 
         if not self._future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
+            if self._future.has_timed_out():
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
+                self.logger.error("  ROS Service Response Timeout.")
+                self._trans_to_Complete()
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
@@ -554,7 +618,7 @@ class OrderTicket():
         req.trade_id = self._trade_id
         self._future = None
         try:
-            self._future = self._c_srvcli_trddet.call_async(req)
+            self._future = self._c_srvcli_trddet.call_async(req, timeout_sec=5.0)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
             self.logger.error("{}".format(err))
@@ -567,6 +631,10 @@ class OrderTicket():
 
         if not self._future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
+            if self._future.has_timed_out():
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
+                self.logger.error("  ROS Service Response Timeout.")
+                self._trans_from_ExitChecking_to_ExitWaiting()
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
@@ -607,7 +675,7 @@ class OrderTicket():
         req.trade_id = self._trade_id
         self._future = None
         try:
-            self._future = self._c_srvcli_trdcls.call_async(req)
+            self._future = self._c_srvcli_trdcls.call_async(req, timeout_sec=5.0)
         except Exception as err:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
             self.logger.error("{}".format(err))
@@ -620,6 +688,10 @@ class OrderTicket():
 
         if not self._future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
+            if self._future.has_timed_out():
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
+                self.logger.error("  ROS Service Response Timeout.")
+                self._trans_to_Complete()
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
@@ -653,6 +725,10 @@ class OrderTicket():
 
 class OrderScheduler(Node):
 
+    class States(Enum):
+        Idle = auto()
+        AccountUpdating = auto()
+
     def __init__(self) -> None:
         super().__init__("order_scheduler")
 
@@ -660,7 +736,67 @@ class OrderScheduler(Node):
         self.logger = super().get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
-        self._tickets: list[OrderTicket] = []
+        # --------------- Define constant value ---------------
+        self._ACCOUNT_UPDATETIME_SEC = 30
+
+        # --------------- Declare ROS parameter ---------------
+        self._rosprm = _RosParams()
+        self.declare_parameter(self._rosprm.MAX_LEVERAGE.name)
+        self.declare_parameter(self._rosprm.MAX_POSITION_COUNT.name)
+
+        para = self.get_parameter(self._rosprm.MAX_LEVERAGE.name)
+        self._rosprm.MAX_LEVERAGE.value = para.value
+        para = self.get_parameter(self._rosprm.MAX_POSITION_COUNT.name)
+        self._rosprm.MAX_POSITION_COUNT.value = para.value
+
+        self.logger.debug("[Param]")
+        self.logger.debug("  - max_leverage:[{}]"
+                          .format(self._rosprm.MAX_LEVERAGE.value))
+        self.logger.debug("  - max_position_count:[{}]"
+                          .format(self._rosprm.MAX_POSITION_COUNT.value))
+
+        # --------------- Create State Machine ---------------
+        states = [
+            {
+                Tr.NAME.value: self.States.Idle,
+                Tr.ON_ENTER.value: None,
+                Tr.ON_EXIT.value: None
+            },
+            {
+                Tr.NAME.value: self.States.AccountUpdating,
+                Tr.ON_ENTER.value: "_on_enter_AccountUpdating",
+                Tr.ON_EXIT.value: None
+            }
+        ]
+
+        transitions = [
+            {
+                Tr.TRIGGER.value: "_trans_from_Idle_to_AccountUpdating",
+                Tr.SOURCE.value: self.States.Idle,
+                Tr.DEST.value: self.States.AccountUpdating,
+                Tr.PREPARE.value: None,
+                Tr.BEFORE.value: None,
+                Tr.AFTER.value: None,
+                Tr.CONDITIONS.value: None
+            },
+            {
+                Tr.TRIGGER.value: "_trans_from_AccountUpdating_to_Idle",
+                Tr.SOURCE.value: self.States.AccountUpdating,
+                Tr.DEST.value: self.States.Idle,
+                Tr.PREPARE.value: None,
+                Tr.BEFORE.value: None,
+                Tr.AFTER.value: None,
+                Tr.CONDITIONS.value: None
+            }
+        ]
+
+        self._sm = Machine(model=self,
+                           states=states,
+                           initial=self.States.Idle,
+                           transitions=transitions)
+
+        if isinstance(self._sm, GraphMachine):
+            self._sm.get_graph().view()
 
         # --------------- Create ROS Communication ---------------
         # Create service server "OrderRegister"
@@ -680,33 +816,42 @@ class OrderScheduler(Node):
                                                   callback=callback)
         try:
             # Create service client "OrderCreate"
-            srvcli_ordcre = self._create_service_client(OrderCreateSrv,
-                                                        "order_create")
+            srv_type = OrderCreateSrv
+            srv_name = "order_create"
+            srvcli_ordcre = RosServiceClient(self, srv_type, srv_name)
 
             # Create service client "OrderDetails"
-            srvcli_orddet = self._create_service_client(OrderDetailsSrv,
-                                                        "order_details")
+            srv_type = OrderDetailsSrv
+            srv_name = "order_details"
+            srvcli_orddet = RosServiceClient(self, srv_type, srv_name)
 
             # Create service client "OrderCancel"
-            srvcli_ordcnc = self._create_service_client(OrderCancelSrv,
-                                                        "order_cancel")
+            srv_type = OrderCancelSrv
+            srv_name = "order_cancel"
+            srvcli_ordcnc = RosServiceClient(self, srv_type, srv_name)
 
             # Create service client "TradeDetails"
-            srvcli_trddet = self._create_service_client(TradeDetailsSrv,
-                                                        "trade_details")
+            srv_type = TradeDetailsSrv
+            srv_name = "trade_details"
+            srvcli_trddet = RosServiceClient(self, srv_type, srv_name)
 
             # Create service client "TradeCRCDO"
-            srvcli_trdcrc = self._create_service_client(TradeCRCDOSrv,
-                                                        "trade_crcdo")
+            srv_type = TradeCRCDOSrv
+            srv_name = "trade_crcdo"
+            srvcli_trdcrc = RosServiceClient(self, srv_type, srv_name)
 
             # Create service client "TradeClose"
-            srvcli_trdcls = self._create_service_client(TradeCloseSrv,
-                                                        "trade_close")
+            srv_type = TradeCloseSrv
+            srv_name = "trade_close"
+            srvcli_trdcls = RosServiceClient(self, srv_type, srv_name)
+
+            # Create service client "AccountQuery"
+            srv_type = AccountQuerySrv
+            srv_name = "account_query"
+            self._srvcli_acc = RosServiceClient(self, srv_type, srv_name)
 
         except Exception as err:
-            self.logger.error("{:!^50}".format(" Exception "))
             self.logger.error(err)
-            self.destroy_node()
             raise InitializerErrorException("create service client failed.")
 
         OrderTicket.set_class_variable(srvcli_ordcre,
@@ -715,9 +860,60 @@ class OrderScheduler(Node):
                                        srvcli_trddet,
                                        srvcli_trdcrc,
                                        srvcli_trdcls,
+                                       self._rosprm.MAX_LEVERAGE.value,
+                                       self._rosprm.MAX_POSITION_COUNT.value,
                                        self.logger)
 
+        req = AccountQuerySrv.Request()
+        try:
+            rsp = self._srvcli_acc.call(req, timeout_sec=5.0)
+        except Exception as err:
+            self.logger.error("{}".format(err))
+            raise InitializerErrorException("Call ROS Service Error (AccountQuerySrv)")
+
+        OrderTicket.set_balance(rsp.balance)
+
+        # --------------- Create topic subscriber "Pricing" ---------------
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
+                                 reliability=QoSReliabilityPolicy.RELIABLE)
+        callback = self._on_sub_pricing_usdjpy
+        self._sub_pri_usdjpy = self.create_subscription(Pricing,
+                                                        "pricing_usdjpy",
+                                                        callback,
+                                                        qos_profile)
+
+        callback = self._on_sub_pricing_eurjpy
+        self._sub_pri_eurjpy = self.create_subscription(Pricing,
+                                                        "pricing_eurjpy",
+                                                        callback,
+                                                        qos_profile)
+
+        callback = self._on_sub_pricing_eurusd
+        self._sub_pri_eurusd = self.create_subscription(Pricing,
+                                                        "pricing_eurusd",
+                                                        callback,
+                                                        qos_profile)
+
+        # --------------- Initialize variable ---------------
+        self._tick_price_dict = {}
+        self._tickets: list[OrderTicket] = []
+        self._acc_trig = TimeTrigger(minute=0, second=30)
+
     def do_cyclic_event(self) -> None:
+
+        if self.state == self.States.Idle:
+            if self._acc_trig.triggered():
+                self._trans_from_Idle_to_AccountUpdating()
+        elif self.state == self.States.AccountUpdating:
+            if self._future.done():
+                rsp = self._future.result()
+                OrderTicket.set_balance(rsp.balance)
+                self._trans_from_AccountUpdating_to_Idle()
+            elif self._future.has_timed_out():
+                self.logger.error("{:!^50}".format(" ROS Service [AccountQuerySrv] Timeout. "))
+                self._trans_from_AccountUpdating_to_Idle()
+        else:
+            pass
 
         for ticket in self._tickets:
             ticket.do_cyclic_event()
@@ -729,14 +925,16 @@ class OrderScheduler(Node):
 
         if len_bfr != len(self._tickets):
             gc.collect()
+            self._trans_from_Idle_to_AccountUpdating()
 
-    def _create_service_client(self, srv_type: int, srv_name: str) -> Client:
-        cli = self.create_client(srv_type, srv_name)
-        while not cli.wait_for_service(timeout_sec=1.0):
-            if not rclpy.ok():
-                raise RuntimeError("Interrupted while waiting for service.")
-            self._logger.info("Waiting for [{}] service...".format(srv_name))
-        return cli
+    def _on_enter_AccountUpdating(self):
+        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        req = AccountQuerySrv.Request()
+        try:
+            self._future = self._srvcli_acc.call_async(req, timeout_sec=5.0)
+        except Exception as err:
+            self.logger.error("{:!^50}".format(err))
+            self._trans_from_AccountUpdating_to_Idle()
 
     def _on_order_register(self,
                            req: SrvTypeRequest,
@@ -756,17 +954,21 @@ class OrderScheduler(Node):
         dbg_tm_start = dt.datetime.now()
 
         rsp.register_id = -1
-        if self._validate_msg(req):
-            try:
-                ticket = OrderTicket(req)
-            except Exception as err:
-                self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
-                self.logger.error(err)
+        if len(self._tickets) < self._rosprm.MAX_POSITION_COUNT.value:
+            if self._validate_msg(req):
+                tick_price = self._tick_price_dict[req.inst_msg.inst_id]
+                try:
+                    ticket = OrderTicket(req, tick_price)
+                except InitializerErrorException as err:
+                    self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
+                    self.logger.error(err)
+                else:
+                    self._tickets.append(ticket)
+                    rsp.register_id = ticket.register_id
             else:
-                self._tickets.append(ticket)
-                rsp.register_id = ticket.register_id
+                self.logger.error("{:!^50}".format(" Validate msg: NG "))
         else:
-            self.logger.error("{:!^50}".format(" Validate msg: NG "))
+            self.logger.warn("{:!^50}".format(" Positon count is full "))
 
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
@@ -781,8 +983,25 @@ class OrderScheduler(Node):
     def _validate_msg(self, req: SrvTypeRequest) -> Bool:
 
         if req.units < 0:
+            self.logger.warn("units value[{}] < 0".format(req.units))
             return False
 
+        if req.units == 0:
+            try:
+                tick_price = self._tick_price_dict[req.inst_msg.inst_id]
+            except KeyError:
+                self.logger.warn("Key[{}] is not found in a dictionary"
+                                 .format(req.inst_msg.inst_id))
+                return False
+
+            if req.ordtyp_msg.order_type == OrderType.MARKET:
+                msg_time = dt.datetime.strptime(tick_price.time, FMT_YMDHMSF)
+                now = dt.datetime.now()
+                if abs(now - msg_time) > dt.timedelta(minutes=10):
+                    self.logger.warn("There's a big timedelta difference")
+                    self.logger.warn("  - now time:{}".format(now))
+                    self.logger.warn("  - latest tick time:{}".format(msg_time))
+                    return False
         return True
 
     def _on_requested_close(self,
@@ -810,6 +1029,24 @@ class OrderScheduler(Node):
         self.logger.debug("{:=^50}".format(" Service[trade_close_request]:End "))
 
         return rsp
+
+    def _on_sub_pricing_usdjpy(self, msg: Pricing):
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        if (0 < len(msg.asks)) and (0 < len(msg.bids)):
+            tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
+            self._tick_price_dict[InstMng.INST_USD_JPY] = tick_price
+
+    def _on_sub_pricing_eurjpy(self, msg: Pricing):
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        if (0 < len(msg.asks)) and (0 < len(msg.bids)):
+            tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
+            self._tick_price_dict[InstMng.INST_EUR_JPY] = tick_price
+
+    def _on_sub_pricing_eurusd(self, msg: Pricing):
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        if (0 < len(msg.asks)) and (0 < len(msg.bids)):
+            tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
+            self._tick_price_dict[InstMng.INST_EUR_USD] = tick_price
 
 
 def main(args=None):
