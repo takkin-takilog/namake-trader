@@ -1,6 +1,6 @@
-# oandapyV20.endpoints.accounts.AccountDetails(
+# oandapyV20.endpoints.accounts.AccountSummary
 # Reference:
-#    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/accounts/accountdetails.html
+#    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/accounts/accountsummary.html
 
 # ========================= Request =========================
 # None
@@ -15,7 +15,6 @@ bool result
 
 # Fail reason code.
 api_msgs/FailReasonCode frc_msg
-
 
 # Client-provided margin rate override for the Account.
 # The effective margin rate of the Account is the lesser of this value and
