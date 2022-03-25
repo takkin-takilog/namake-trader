@@ -63,6 +63,11 @@ class InstParam(Enum):
     USDJPY = (Inst.INST_USD_JPY, "usdjpy", "USD/JPY", 3)
     EURJPY = (Inst.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3)
     EURUSD = (Inst.INST_EUR_USD, "eurusd", "EUR/USD", 5)
+    GBPJPY = (Inst.INST_GBP_JPY, "gbpjpy", "GBP/JPY", 3)
+    AUDJPY = (Inst.INST_AUD_JPY, "audjpy", "AUD/JPY", 3)
+    NZDJPY = (Inst.INST_NZD_JPY, "nzdjpy", "NZD/JPY", 3)
+    CADJPY = (Inst.INST_CAD_JPY, "cadjpy", "CAD/JPY", 3)
+    CHFJPY = (Inst.INST_CHF_JPY, "chfjpy", "CHF/JPY", 3)
 
     def __init__(self,
                  msg_id: int,       # ROS message ID
@@ -176,4 +181,23 @@ SPREAD_MSG_LIST = [
 TRADE_TYP_LIST = [
     "Follower",
     "Contrarian",
+]
+
+
+VALID_INST_LIST = [
+    InstParam.USDJPY,
+    InstParam.EURJPY,
+    InstParam.EURUSD,
+    InstParam.GBPJPY,
+    InstParam.AUDJPY,
+    InstParam.NZDJPY,
+    InstParam.CADJPY,
+    InstParam.CHFJPY
+]
+
+VALID_GRAN_LIST = [
+    GranParam.D,
+    GranParam.H1,
+    GranParam.M10,
+    GranParam.M1,
 ]

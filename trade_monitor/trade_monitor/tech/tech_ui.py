@@ -2,8 +2,8 @@ import pandas as pd
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
 from trade_monitor.widget_base import StatusProgressBar
-from trade_monitor.tech.constant import VALID_INST_LIST
-from trade_monitor.tech.constant import VALID_GRAN_LIST
+from ..constant import VALID_INST_LIST
+from ..constant import VALID_GRAN_LIST
 from trade_monitor.tech.sma.sma_ui import SimpleMovingAverageUi
 from trade_monitor.tech.bb.bb_ui import BollingerBandUi
 

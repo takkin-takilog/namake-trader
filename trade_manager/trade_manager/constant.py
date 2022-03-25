@@ -72,7 +72,12 @@ class CandleColumnNames(Enum):
 INST_DICT = {
     InstMng.INST_USD_JPY: InstApi.INST_USD_JPY,
     InstMng.INST_EUR_JPY: InstApi.INST_EUR_JPY,
-    InstMng.INST_EUR_USD: InstApi.INST_EUR_USD
+    InstMng.INST_EUR_USD: InstApi.INST_EUR_USD,
+    InstMng.INST_GBP_JPY: InstApi.INST_GBP_JPY,
+    InstMng.INST_AUD_JPY: InstApi.INST_AUD_JPY,
+    InstMng.INST_NZD_JPY: InstApi.INST_NZD_JPY,
+    InstMng.INST_CAD_JPY: InstApi.INST_CAD_JPY,
+    InstMng.INST_CHF_JPY: InstApi.INST_CHF_JPY
 }
 
 GRAN_DICT = {

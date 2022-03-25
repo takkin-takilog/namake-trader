@@ -3,8 +3,8 @@ import pandas as pd
 from trade_apl_msgs.msg import GapFillTblGapRecMsg as GapMsg
 from trade_monitor import utility as utl
 from trade_monitor import ros_common as ros_com
-from trade_monitor.gapfill.constant import VALID_INST_LIST
-from trade_monitor.gapfill.constant import ColNameGap as ColNmGap
+from ..constant import VALID_INST_LIST
+from .constant import ColNameGap as ColNmGap
 
 
 class _GapDir(IntEnum):

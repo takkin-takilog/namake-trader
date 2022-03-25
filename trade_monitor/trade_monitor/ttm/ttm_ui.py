@@ -5,7 +5,7 @@ from PySide2.QtCore import Qt
 from trade_apl_msgs.srv import TtmMntSrv
 from trade_monitor.widget_base import PandasTreeView
 from trade_monitor import utility as utl
-from trade_monitor.ttm.constant import VALID_INST_LIST
+from ..constant import VALID_INST_LIST
 from trade_monitor.constant import GranParam
 from trade_monitor.constant import (FMT_DTTM_API,
                                     FMT_DATE_YMD,
