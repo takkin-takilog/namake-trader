@@ -44,6 +44,11 @@ class _RosParams():
     ENA_INST_USDJPY = RosParam("enable_instrument.usdjpy")
     ENA_INST_EURJPY = RosParam("enable_instrument.eurjpy")
     ENA_INST_EURUSD = RosParam("enable_instrument.eurusd")
+    ENA_INST_GBPJPY = RosParam("enable_instrument.gbpjpy")
+    ENA_INST_AUDJPY = RosParam("enable_instrument.audjpy")
+    ENA_INST_NZDJPY = RosParam("enable_instrument.nzdjpy")
+    ENA_INST_CADJPY = RosParam("enable_instrument.cadjpy")
+    ENA_INST_CHFJPY = RosParam("enable_instrument.chfjpy")
     ENA_GRAN_M1 = RosParam("enable_granularity.m1")
     ENA_GRAN_M2 = RosParam("enable_granularity.m2")
     ENA_GRAN_M3 = RosParam("enable_granularity.m3")
@@ -87,6 +92,16 @@ class _RosParams():
             inst_list.append(InstApi.INST_EUR_JPY)
         if self.ENA_INST_EURUSD.value:
             inst_list.append(InstApi.INST_EUR_USD)
+        if self.ENA_INST_GBPJPY.value:
+            inst_list.append(InstApi.INST_GBP_JPY)
+        if self.ENA_INST_AUDJPY.value:
+            inst_list.append(InstApi.INST_AUD_JPY)
+        if self.ENA_INST_NZDJPY.value:
+            inst_list.append(InstApi.INST_NZD_JPY)
+        if self.ENA_INST_CADJPY.value:
+            inst_list.append(InstApi.INST_CAD_JPY)
+        if self.ENA_INST_CHFJPY.value:
+            inst_list.append(InstApi.INST_CHF_JPY)
         return inst_list
 
     def enable_gran_list(self):
@@ -617,6 +632,11 @@ class CandlesStore(Node):
         self.declare_parameter(self._rosprm.ENA_INST_USDJPY.name)
         self.declare_parameter(self._rosprm.ENA_INST_EURJPY.name)
         self.declare_parameter(self._rosprm.ENA_INST_EURUSD.name)
+        self.declare_parameter(self._rosprm.ENA_INST_GBPJPY.name)
+        self.declare_parameter(self._rosprm.ENA_INST_AUDJPY.name)
+        self.declare_parameter(self._rosprm.ENA_INST_NZDJPY.name)
+        self.declare_parameter(self._rosprm.ENA_INST_CADJPY.name)
+        self.declare_parameter(self._rosprm.ENA_INST_CHFJPY.name)
         self.declare_parameter(self._rosprm.ENA_GRAN_M1.name)
         self.declare_parameter(self._rosprm.ENA_GRAN_M2.name)
         self.declare_parameter(self._rosprm.ENA_GRAN_M3.name)
@@ -658,6 +678,16 @@ class CandlesStore(Node):
         self._rosprm.ENA_INST_EURJPY.value = para.value
         para = self.get_parameter(self._rosprm.ENA_INST_EURUSD.name)
         self._rosprm.ENA_INST_EURUSD.value = para.value
+        para = self.get_parameter(self._rosprm.ENA_INST_GBPJPY.name)
+        self._rosprm.ENA_INST_GBPJPY.value = para.value
+        para = self.get_parameter(self._rosprm.ENA_INST_AUDJPY.name)
+        self._rosprm.ENA_INST_AUDJPY.value = para.value
+        para = self.get_parameter(self._rosprm.ENA_INST_NZDJPY.name)
+        self._rosprm.ENA_INST_NZDJPY.value = para.value
+        para = self.get_parameter(self._rosprm.ENA_INST_CADJPY.name)
+        self._rosprm.ENA_INST_CADJPY.value = para.value
+        para = self.get_parameter(self._rosprm.ENA_INST_CHFJPY.name)
+        self._rosprm.ENA_INST_CHFJPY.value = para.value
         para = self.get_parameter(self._rosprm.ENA_GRAN_M1.name)
         self._rosprm.ENA_GRAN_M1.value = para.value
         para = self.get_parameter(self._rosprm.ENA_GRAN_M2.name)
@@ -731,6 +761,11 @@ class CandlesStore(Node):
         self.logger.debug("  - USD/JPY:[{}]".format(self._rosprm.ENA_INST_USDJPY.value))
         self.logger.debug("  - EUR/JPY:[{}]".format(self._rosprm.ENA_INST_EURJPY.value))
         self.logger.debug("  - EUR/USD:[{}]".format(self._rosprm.ENA_INST_EURUSD.value))
+        self.logger.debug("  - GBP/JPY:[{}]".format(self._rosprm.ENA_INST_GBPJPY.value))
+        self.logger.debug("  - AUD/JPY:[{}]".format(self._rosprm.ENA_INST_AUDJPY.value))
+        self.logger.debug("  - NZD/JPY:[{}]".format(self._rosprm.ENA_INST_NZDJPY.value))
+        self.logger.debug("  - CAD/JPY:[{}]".format(self._rosprm.ENA_INST_CADJPY.value))
+        self.logger.debug("  - CHF/JPY:[{}]".format(self._rosprm.ENA_INST_CHFJPY.value))
         self.logger.debug("[Param]Enable granularity:")
         self.logger.debug("  - M1: [{}]".format(self._rosprm.ENA_GRAN_M1.value))
         self.logger.debug("  - M2: [{}]".format(self._rosprm.ENA_GRAN_M2.value))
@@ -789,21 +824,21 @@ class CandlesStore(Node):
         srv_type = CandlesByDatetimeSrv
         srv_name = "candles_by_datetime"
         callback = self._on_recv_candles_by_datetime
-        self._hc_srv = self.create_service(srv_type,
-                                           srv_name,
-                                           callback=callback,
-                                           callback_group=ReentrantCallbackGroup()
-                                           )
+        self._cbd_srv = self.create_service(srv_type,
+                                            srv_name,
+                                            callback=callback,
+                                            callback_group=ReentrantCallbackGroup()
+                                            )
 
         # Create service server "CandlesByLength"
         srv_type = CandlesByLengthSrv
         srv_name = "candles_by_length"
         callback = self._on_recv_candles_by_length
-        self._hc_srv = self.create_service(srv_type,
-                                           srv_name,
-                                           callback=callback,
-                                           callback_group=ReentrantCallbackGroup()
-                                           )
+        self._cbl_srv = self.create_service(srv_type,
+                                            srv_name,
+                                            callback=callback,
+                                            callback_group=ReentrantCallbackGroup()
+                                            )
 
     def do_cyclic_event(self) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))

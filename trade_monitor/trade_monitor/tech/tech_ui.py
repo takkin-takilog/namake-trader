@@ -1,11 +1,10 @@
 import pandas as pd
-from trade_monitor import utility as utl
-from trade_monitor import ros_common as ros_com
-from trade_monitor.widget_base import StatusProgressBar
-from ..constant import VALID_INST_LIST
-from ..constant import VALID_GRAN_LIST
-from trade_monitor.tech.sma.sma_ui import SimpleMovingAverageUi
-from trade_monitor.tech.bb.bb_ui import BollingerBandUi
+from .. import utility as utl
+from .. import ros_common as ros_com
+from ..widget_base import StatusProgressBar
+from ..parameter import VALID_INST_LIST, VALID_GRAN_LIST
+from .sma.sma_ui import SimpleMovingAverageUi
+from .bb.bb_ui import BollingerBandUi
 
 
 pd.set_option("display.max_columns", 1000)
