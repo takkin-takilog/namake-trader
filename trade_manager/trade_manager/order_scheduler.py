@@ -888,9 +888,33 @@ class OrderScheduler(Node):
                                                         callback,
                                                         qos_profile)
 
-        callback = self._on_sub_pricing_eurusd
-        self._sub_pri_eurusd = self.create_subscription(Pricing,
-                                                        "pricing_eurusd",
+        callback = self._on_sub_pricing_gbpjpy
+        self._sub_pri_gbpjpy = self.create_subscription(Pricing,
+                                                        "pricing_gbpjpy",
+                                                        callback,
+                                                        qos_profile)
+
+        callback = self._on_sub_pricing_audjpy
+        self._sub_pri_audjpy = self.create_subscription(Pricing,
+                                                        "pricing_audjpy",
+                                                        callback,
+                                                        qos_profile)
+
+        callback = self._on_sub_pricing_nzdjpy
+        self._sub_pri_nzdjpy = self.create_subscription(Pricing,
+                                                        "pricing_nzdjpy",
+                                                        callback,
+                                                        qos_profile)
+
+        callback = self._on_sub_pricing_cadjpy
+        self._sub_pri_cadjpy = self.create_subscription(Pricing,
+                                                        "pricing_cadjpy",
+                                                        callback,
+                                                        qos_profile)
+
+        callback = self._on_sub_pricing_chfjpy
+        self._sub_pri_chfjpy = self.create_subscription(Pricing,
+                                                        "pricing_chfjpy",
                                                         callback,
                                                         qos_profile)
 
@@ -1041,12 +1065,37 @@ class OrderScheduler(Node):
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_EUR_JPY] = tick_price
+            self._tick_price_dict[InstMng.INST_EUR_USD] = tick_price
 
-    def _on_sub_pricing_eurusd(self, msg: Pricing):
+    def _on_sub_pricing_gbpjpy(self, msg: Pricing):
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
-            self._tick_price_dict[InstMng.INST_EUR_USD] = tick_price
+            self._tick_price_dict[InstMng.INST_GBP_JPY] = tick_price
+
+    def _on_sub_pricing_audjpy(self, msg: Pricing):
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        if (0 < len(msg.asks)) and (0 < len(msg.bids)):
+            tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
+            self._tick_price_dict[InstMng.INST_AUD_JPY] = tick_price
+
+    def _on_sub_pricing_nzdjpy(self, msg: Pricing):
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        if (0 < len(msg.asks)) and (0 < len(msg.bids)):
+            tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
+            self._tick_price_dict[InstMng.INST_NZD_JPY] = tick_price
+
+    def _on_sub_pricing_cadjpy(self, msg: Pricing):
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        if (0 < len(msg.asks)) and (0 < len(msg.bids)):
+            tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
+            self._tick_price_dict[InstMng.INST_CAD_JPY] = tick_price
+
+    def _on_sub_pricing_chfjpy(self, msg: Pricing):
+        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        if (0 < len(msg.asks)) and (0 < len(msg.bids)):
+            tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
+            self._tick_price_dict[InstMng.INST_CHF_JPY] = tick_price
 
 
 def main(args=None):
