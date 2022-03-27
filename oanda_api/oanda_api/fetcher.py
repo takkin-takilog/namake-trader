@@ -326,6 +326,7 @@ class Fetcher(Node):
             rsp.margin_used = int(float(acc["marginUsed"]))
             rsp.margin_available = int(float(acc["marginAvailable"]))
             rsp.position_value = int(float(acc["positionValue"]))
+            rsp.margin_closeout_percent = float(acc["marginCloseoutPercent"]) * 100
 
         dbg_tm_end = dt.datetime.now()
 
@@ -343,6 +344,7 @@ class Fetcher(Node):
         self.logger.debug("  - margin_used:[{}]".format(rsp.margin_used))
         self.logger.debug("  - margin_available:[{}]".format(rsp.margin_available))
         self.logger.debug("  - position_value:[{}]".format(rsp.position_value))
+        self.logger.debug("  - margin_closeout(%):[{}]".format(rsp.marginCloseoutPercent))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[account_query]:End "))

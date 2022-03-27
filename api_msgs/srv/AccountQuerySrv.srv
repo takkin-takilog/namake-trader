@@ -59,3 +59,7 @@ int32 margin_available
 
 # Value of the Account's open positions represented in the Account's home currency.
 int32 position_value
+
+# Account's margin closeout percentage[%].
+# When this value is 100.0[%] or above the Account is in a margin closeout situation.
+float32 margin_closeout_percent
