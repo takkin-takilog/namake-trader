@@ -344,7 +344,7 @@ class Fetcher(Node):
         self.logger.debug("  - margin_used:[{}]".format(rsp.margin_used))
         self.logger.debug("  - margin_available:[{}]".format(rsp.margin_available))
         self.logger.debug("  - position_value:[{}]".format(rsp.position_value))
-        self.logger.debug("  - margin_closeout(%):[{}]".format(rsp.marginCloseoutPercent))
+        self.logger.debug("  - margin_closeout(%):[{}]".format(rsp.margin_closeout_percent))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[account_query]:End "))
