@@ -2,7 +2,6 @@ import sys
 import os
 import math
 import pandas as pd
-
 from PySide2.QtWidgets import QApplication, QMainWindow, QSizePolicy
 from PySide2.QtWidgets import QStyleOptionGraphicsItem
 from PySide2.QtWidgets import QLabel, QProgressBar, QWidget
@@ -12,11 +11,10 @@ from PySide2.QtUiTools import QUiLoader
 from PySide2.QtGui import QColor, QPen, QPainter, QPainterPath, QPixmap
 from PySide2.QtGui import QLinearGradient, QFontMetrics
 from PySide2.QtCharts import QtCharts
-
-from trade_monitor.widget_base import BaseCalloutChart
-from trade_monitor import utility as utl
-from trade_monitor.utility import GradientManager
-from trade_monitor.gapfill.heatmap import HeatMap
+from .. import utility as utl
+from ..utility import GradientManager
+from ..widget_base import BaseCalloutChart
+from .heatmap import HeatMap
 
 _g_gradMng = GradientManager()
 

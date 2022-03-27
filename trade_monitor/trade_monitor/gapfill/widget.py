@@ -2,9 +2,9 @@ import pandas as pd
 from PySide2.QtCore import Qt, QDateTime, QTime, QPointF, QLineF
 from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtCharts import QtCharts
-from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
-from trade_monitor import utility as utl
-from trade_monitor.constant import GranParam, InstParam
+from ..widget_base import CandlestickChartViewDateTimeAxis
+from .. import utility as utl
+from ..parameter import GranParam, InstParam
 
 
 class BaseCandlestickChartViewGapFill(CandlestickChartViewDateTimeAxis):

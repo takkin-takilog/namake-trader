@@ -1,11 +1,5 @@
 from enum import Enum, IntEnum, auto
 from dataclasses import dataclass
-from trade_monitor.constant import InstParam
-
-VALID_INST_LIST = [InstParam.USDJPY,
-                   InstParam.EURJPY,
-                   InstParam.EURUSD
-                   ]
 
 
 class ColumnName(Enum):
@@ -64,4 +58,3 @@ class ChartTag():
     weekday: str = None
     is_gotoday: str = None
     gotoday: str = None
-

@@ -1,10 +1,4 @@
 from enum import Enum
-from trade_monitor.constant import InstParam
-
-VALID_INST_LIST = [InstParam.USDJPY,
-                   InstParam.EURJPY,
-                   InstParam.EURUSD
-                   ]
 
 
 class ColNameOhlc(Enum):

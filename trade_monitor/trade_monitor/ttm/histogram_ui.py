@@ -7,13 +7,12 @@ from PySide2.QtWidgets import QMainWindow
 from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCharts import QtCharts
-from trade_monitor.widget_base import PandasTreeView
-from trade_monitor.widget_base import BaseView
-from trade_monitor.widget_base import CallouPrice, CalloutDataTime
-from trade_monitor.widget_base import CALLOUT_PRICE_COLOR, CALLOUT_DATE_COLOR
-from trade_monitor.constant import InstParam
-from trade_monitor import utility as utl
-from trade_monitor.ttm.constant import AnalysisType, ChartTag
+from .constant import AnalysisType, ChartTag
+from ..parameter import InstParam
+from .. import utility as utl
+from ..widget_base import PandasTreeView, BaseView
+from ..widget_base import CallouPrice, CalloutDataTime
+from ..widget_base import CALLOUT_PRICE_COLOR, CALLOUT_DATE_COLOR
 
 
 class ColumnName(Enum):

@@ -10,16 +10,25 @@ class InstParam(Enum):
     """
     Instrument parameter.
     """
-    USD_JPY = (Inst.INST_USD_JPY, 3)
-    EUR_JPY = (Inst.INST_EUR_JPY, 3)
-    EUR_USD = (Inst.INST_EUR_USD, 5)
+    USD_JPY = (Inst.INST_USD_JPY, 3, "pricing_usdjpy", "usdjpy")
+    EUR_JPY = (Inst.INST_EUR_JPY, 3, "pricing_eurjpy", "eurjpy")
+    EUR_USD = (Inst.INST_EUR_USD, 5, "pricing_eurusd", "eurusd")
+    GBP_JPY = (Inst.INST_GBP_JPY, 3, "pricing_gbpjpy", "gbpjpy")
+    AUD_JPY = (Inst.INST_AUD_JPY, 3, "pricing_audjpy", "audjpy")
+    NZD_JPY = (Inst.INST_NZD_JPY, 3, "pricing_nzdjpy", "nzdjpy")
+    CAD_JPY = (Inst.INST_CAD_JPY, 3, "pricing_cadjpy", "cadjpy")
+    CHF_JPY = (Inst.INST_CHF_JPY, 3, "pricing_chfjpy", "chfjpy")
 
     def __init__(self,
                  msg_id: int,       # ROS message ID
                  digit: int,        # Number of digits after the decimal point
+                 topic_name: str,   # ROS Topic name
+                 param_name: str    # ROS Parameter name
                  ) -> None:
         self.msg_id = msg_id
         self.digit = digit
+        self.topic_name = topic_name
+        self.param_name = param_name
         self._one_pip = math.pow(10, -digit)
         self._one_pip_inv = int(math.pow(10, digit))
         self._one_pip_str = format(self._one_pip, "." + str(digit) + "f")

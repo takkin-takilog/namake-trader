@@ -7,16 +7,15 @@ from PySide2.QtWidgets import QGraphicsLineItem
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QFile
 from PySide2.QtCharts import QtCharts
-from trade_monitor import utility as utl
-from trade_monitor.constant import FMT_QT_TIME, FMT_TIME_HM
-from trade_monitor.constant import GranParam, InstParam
-from trade_monitor.widget_base import CandlestickChartViewDateTimeAxis
-from trade_monitor.widget_base import CalloutDataTime
-from trade_monitor.widget_base import LineChartViewDateTimeAxis
-from trade_monitor.ttm.constant import ColumnName, GapType, DataType
-from trade_monitor.ttm.constant import ChartTag
-from trade_monitor.ttm.histogram_ui import ColumnName as HistColumnName
-from trade_monitor.ttm.histogram_ui import HistogramUi
+from ..constant import FMT_QT_TIME, FMT_TIME_HM
+from .constant import ColumnName, GapType, DataType, ChartTag
+from ..parameter import GranParam, InstParam
+from .. import utility as utl
+from ..widget_base import CandlestickChartViewDateTimeAxis
+from ..widget_base import CalloutDataTime
+from ..widget_base import LineChartViewDateTimeAxis
+from .histogram_ui import ColumnName as HistColumnName
+from .histogram_ui import HistogramUi
 
 
 class BaseUi(QMainWindow):

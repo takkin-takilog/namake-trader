@@ -6,7 +6,6 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from std_msgs.msg import Bool
 from api_msgs.msg import PriceBucket, Pricing
-from api_msgs.msg import Instrument as Inst
 from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error
@@ -22,6 +21,11 @@ class PricingPublisher(Node):
     def __init__(self) -> None:
         super().__init__("pricing")
 
+        # --------------- Set logger lebel ---------------
+        self._logger = super().get_logger()
+        self._logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+
+        # --------------- Define Constant value ---------------
         PRMNM_USE_ENV_LIVE = "use_env_live"
         ENV_PRAC = "env_practice."
         PRMNM_PRAC_ACCOUNT_NUMBER = ENV_PRAC + "account_number"
@@ -30,32 +34,23 @@ class PricingPublisher(Node):
         PRMNM_LIVE_ACCOUNT_NUMBER = ENV_LIVE + "account_number"
         PRMNM_LIVE_ACCESS_TOKEN = ENV_LIVE + "access_token"
         ENA_INST = "enable_instrument."
-        PRMNM_ENA_INST_USDJPY = ENA_INST + "usdjpy"
-        PRMNM_ENA_INST_EURJPY = ENA_INST + "eurjpy"
-        PRMNM_ENA_INST_EURUSD = ENA_INST + "eurusd"
         PRMNM_CONN_TIMEOUT = "connection_timeout"
-
-        TPCNM_PRICING_USDJPY = "pricing_usdjpy"
-        TPCNM_PRICING_EURJPY = "pricing_eurjpy"
-        TPCNM_PRICING_EURUSD = "pricing_eurusd"
         TPCNM_ACT_FLG = "activate_flag"
 
-        # Set logger lebel
-        logger = super().get_logger()
-        logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-
-        # Declare ROS parameter
+        # --------------- Declare ROS parameter ---------------
         self.declare_parameter(PRMNM_USE_ENV_LIVE)
         self.declare_parameter(PRMNM_PRAC_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_PRAC_ACCESS_TOKEN)
         self.declare_parameter(PRMNM_LIVE_ACCOUNT_NUMBER)
         self.declare_parameter(PRMNM_LIVE_ACCESS_TOKEN)
-        self.declare_parameter(PRMNM_ENA_INST_USDJPY)
-        self.declare_parameter(PRMNM_ENA_INST_EURJPY)
-        self.declare_parameter(PRMNM_ENA_INST_EURUSD)
         self.declare_parameter(PRMNM_CONN_TIMEOUT)
+        enable_inst_dict = {}
+        for i in InstParam:
+            param_name = ENA_INST + i.param_name
+            self.declare_parameter(param_name)
+            enable_inst = self.get_parameter(param_name).value
+            enable_inst_dict[i.name] = enable_inst
 
-        # Set ROS parameter
         USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
         if USE_ENV_LIVE:
             ACCOUNT_NUMBER = self.get_parameter(PRMNM_LIVE_ACCOUNT_NUMBER).value
@@ -63,67 +58,51 @@ class PricingPublisher(Node):
         else:
             ACCOUNT_NUMBER = self.get_parameter(PRMNM_PRAC_ACCOUNT_NUMBER).value
             ACCESS_TOKEN = self.get_parameter(PRMNM_PRAC_ACCESS_TOKEN).value
-        ENA_INST_USDJPY = self.get_parameter(PRMNM_ENA_INST_USDJPY).value
-        ENA_INST_EURJPY = self.get_parameter(PRMNM_ENA_INST_EURJPY).value
-        ENA_INST_EURUSD = self.get_parameter(PRMNM_ENA_INST_EURUSD).value
         CONN_TIMEOUT = self.get_parameter(PRMNM_CONN_TIMEOUT).value
 
-        logger.debug("[Param]Use Env Live:[{}]".format(USE_ENV_LIVE))
-        logger.debug("[Param]Account Number:[{}]".format(ACCOUNT_NUMBER))
-        logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
-        logger.debug("[Param]Enable instrument:")
-        logger.debug("        USD/JPY:[{}]".format(ENA_INST_USDJPY))
-        logger.debug("        EUR/JPY:[{}]".format(ENA_INST_EURJPY))
-        logger.debug("        EUR/USD:[{}]".format(ENA_INST_EURUSD))
-        logger.debug("[Param]Connection Timeout:[{}]".format(CONN_TIMEOUT))
+        self._logger.debug("[Param]Use Env Live:[{}]".format(USE_ENV_LIVE))
+        self._logger.debug("[Param]Account Number:[{}]".format(ACCOUNT_NUMBER))
+        self._logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
+        self._logger.debug("[Param]Connection Timeout:[{}]".format(CONN_TIMEOUT))
+        self._logger.debug("[Param]Enable instrument:")
+        for i in InstParam:
+            enable_inst = enable_inst_dict[i.name]
+            self._logger.debug("  - {}:[{}]".format(i.name.replace("_", "/"),
+                                                    enable_inst))
 
-        # Declare publisher and subscriber
+        # --------------- Initialize ROS topic ---------------
         qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
                                  reliability=QoSReliabilityPolicy.RELIABLE)
         inst_name_list = []
         self._pub_dict = {}
-        if ENA_INST_USDJPY:
-            inst_name = InstParam.get_member_by_msgid(Inst.INST_USD_JPY).name
-            pub = self.create_publisher(Pricing,
-                                        TPCNM_PRICING_USDJPY,
-                                        qos_profile)
-            self._pub_dict[inst_name] = pub.publish
-            inst_name_list.append(inst_name)
-        if ENA_INST_EURJPY:
-            inst_name = InstParam.get_member_by_msgid(Inst.INST_EUR_JPY).name
-            pub = self.create_publisher(Pricing,
-                                        TPCNM_PRICING_EURJPY,
-                                        qos_profile)
-            self._pub_dict[inst_name] = pub.publish
-            inst_name_list.append(inst_name)
-        if ENA_INST_EURUSD:
-            inst_name = InstParam.get_member_by_msgid(Inst.INST_EUR_USD).name
-            pub = self.create_publisher(Pricing,
-                                        TPCNM_PRICING_EURUSD,
-                                        qos_profile)
-            self._pub_dict[inst_name] = pub.publish
-            inst_name_list.append(inst_name)
 
+        # Create topic publisher "pricing_*****"
+        for i in InstParam:
+            enable_inst = enable_inst_dict[i.name]
+            if enable_inst:
+                pub = self.create_publisher(Pricing,
+                                            i.topic_name,
+                                            qos_profile)
+                self._pub_dict[i.name] = pub.publish
+                inst_name_list.append(i.name)
+
+        # Create topic subscriber "ActivateFlag"
         callback = self._on_subs_act_flg
         self.__sub_act = self.create_subscription(Bool,
                                                   TPCNM_ACT_FLG,
                                                   callback,
                                                   qos_profile)
 
-        # Initialize
+        # --------------- Initialize variable ---------------
         self._act_flg = False
-
-        if USE_ENV_LIVE:
-            environment = "live"
-        else:
-            environment = "practice"
 
         if CONN_TIMEOUT <= 0:
             request_params = None
-            logger.debug("Not set Timeout")
+            self._logger.debug("Not set Timeout")
         else:
             request_params = {"timeout": CONN_TIMEOUT}
 
+        environment = "live" if USE_ENV_LIVE else "practice"
         self._api = API(access_token=ACCESS_TOKEN,
                         environment=environment,
                         request_params=request_params)
@@ -132,25 +111,23 @@ class PricingPublisher(Node):
         params = {"instruments": instruments}
         self._pi = pr.PricingInfo(ACCOUNT_NUMBER, params)
 
-        self.logger = logger
-
     def background(self) -> None:
 
         while self._act_flg:
             try:
                 self._request()
             except V20Error as err:
-                self.logger.error("{:!^50}".format(" V20Error "))
-                self.logger.error("{}".format(err))
+                self._logger.error("{:!^50}".format(" V20Error "))
+                self._logger.error("{}".format(err))
             except ConnectionError as err:
-                self.logger.error("{:!^50}".format(" ConnectionError "))
-                self.logger.error("{}".format(err))
+                self._logger.error("{:!^50}".format(" ConnectionError "))
+                self._logger.error("{}".format(err))
             except ReadTimeout as err:
-                self.logger.error("{:!^50}".format(" ReadTimeout "))
-                self.logger.error("{}".format(err))
+                self._logger.error("{:!^50}".format(" ReadTimeout "))
+                self._logger.error("{}".format(err))
             except Exception as err:
-                self.logger.error("{:!^50}".format(" OthersError "))
-                self.logger.error("{}".format(err))
+                self._logger.error("{:!^50}".format(" OthersError "))
+                self._logger.error("{}".format(err))
 
             rclpy.spin_once(self, timeout_sec=0)
 
