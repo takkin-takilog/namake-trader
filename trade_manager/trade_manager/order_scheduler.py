@@ -866,7 +866,7 @@ class OrderScheduler(Node):
 
         req = AccountQuerySrv.Request()
         try:
-            rsp = self._srvcli_acc.call(req, timeout_sec=5.0)
+            rsp = self._srvcli_acc.call(req, timeout_sec=10.0)
         except Exception as err:
             self.logger.error("{}".format(err))
             raise InitializerErrorException("Call ROS Service Error (AccountQuerySrv)")
