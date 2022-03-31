@@ -359,6 +359,7 @@ class OrderTicket():
         self._enable_trade_close = False
 
         self.logger.debug("---------- Create OrderTicket ----------")
+        self.logger.debug("  - Create Time:{}".format(dt.datetime.now()))
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
         self.logger.debug("  - order_type:[{}]".format(self._order_type))
         self.logger.debug("  - units:[{}]".format(self._units))
@@ -371,8 +372,8 @@ class OrderTicket():
         self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
 
         # --------------- Update requested id ---------------
-        self._register_id = self._c_register_id
-        self._c_register_id += 1
+        self._register_id = OrderTicket._c_register_id
+        OrderTicket._c_register_id += 1
 
         # --------------- Entry order ---------------
         req = OrderCreateSrv.Request()
