@@ -9,10 +9,10 @@ from PySide2.QtWidgets import QAbstractItemView
 from rclpy.action import ActionClient
 from rclpy.client import Client
 from action_msgs.msg import GoalStatus
-from trade_apl_msgs.action import TechSmaBtAct
-from trade_apl_msgs.action import TechSmaTreeViewAct
+from trade_apl_msgs.action import TechMacdBtAct
+from trade_apl_msgs.action import TechMacdTreeViewAct
 from trade_apl_msgs.srv import PeriodSrv
-from trade_apl_msgs.srv import TechSmaChartSrv
+from trade_apl_msgs.srv import TechMacdChartSrv
 from ...constant import FMT_YMDHMS, FMT_DISP_YMDHMS, FMT_QT_YMDHMS
 from ...constant import SPREAD_MSG_LIST
 from .constant import ColChart
@@ -58,32 +58,32 @@ class ColBtRslt(Enum):
         return [m.value for m in cls]
 
 
-class SimpleMovingAverageUi():
+class MacdUi():
 
     def __init__(self, ui, inst_param, gran_param, sts_bar) -> None:
         self.logger = ros_com.get_logger()
 
         # ---------- set comboBox Analysis Type ----------
         """
-        utl.remove_all_items_of_comboBox(ui.comboBox_TechSma_AnalyTyp)
+        utl.remove_all_items_of_comboBox(ui.comboBox_TechMacd_AnalyTyp)
         for text in TRADE_TYP_LIST:
-            ui.comboBox_TechSma_AnalyTyp.addItem(text)
+            ui.comboBox_TechMacd_AnalyTyp.addItem(text)
         """
 
         # ---------- set pushButton analy start ----------
         callback = self._on_pushButton_backtest_start_clicked
-        ui.pushButton_TechSma_backtest_start.clicked.connect(callback)
+        ui.pushButton_TechMacd_backtest_start.clicked.connect(callback)
 
         # ---------- set pushButton period load ----------
         callback = self._on_pushButton_period_load_clicked
-        ui.pushButton_TechSma_PeriodLoad.clicked.connect(callback)
+        ui.pushButton_TechMacd_PeriodLoad.clicked.connect(callback)
 
         # ---------- set pushButton fetch treeView ----------
-        callback = self._on_pushButton_TechSma_fetch_treeView_clicked
-        ui.pushButton_TechSma_fetch_treeView.clicked.connect(callback)
+        callback = self._on_pushButton_TechMacd_fetch_treeView_clicked
+        ui.pushButton_TechMacd_fetch_treeView.clicked.connect(callback)
 
         # ---------- set TreeView ----------
-        self._pdtreeview = PandasTreeView(ui.widget_TreeView_TechSma)
+        self._pdtreeview = PandasTreeView(ui.widget_TreeView_TechMacd)
         self._pdtreeview.setSelectionMode(QAbstractItemView.SingleSelection)
 
         header = self._pdtreeview.header()
@@ -91,28 +91,28 @@ class SimpleMovingAverageUi():
         header.sectionClicked.connect(callback)
 
         # ---------- set comboBox Ask,Mid,Bid ----------
-        utl.remove_all_items_of_comboBox(ui.comboBox_TechSma_amb)
+        utl.remove_all_items_of_comboBox(ui.comboBox_TechMacd_amb)
         for text in SPREAD_MSG_LIST:
-            ui.comboBox_TechSma_amb.addItem(text)
+            ui.comboBox_TechMacd_amb.addItem(text)
 
         callback = self._on_comboBox_amb_changed_currentIndexChanged
-        ui.comboBox_TechSma_amb.currentIndexChanged.connect(callback)
+        ui.comboBox_TechMacd_amb.currentIndexChanged.connect(callback)
 
         # ---------- set spinBox barNum ----------
         callback = self._on_spinBox_barNum_valueChanged
-        ui.spinBox_TechSma_barNum.valueChanged.connect(callback)
+        ui.spinBox_TechMacd_barNum.valueChanged.connect(callback)
 
         # ----- set ChartView widget -----
-        self._chartview = ChartView(ui.widget_ChartView_TechSma)
+        self._chartview = ChartView(ui.widget_ChartView_TechMacd)
 
         # ----- set widget disable -----
-        ui.comboBox_TechSma_SmaLngSpan.setEnabled(False)
-        ui.comboBox_TechSma_SmaShrSpan.setEnabled(False)
-        ui.pushButton_TechSma_fetch_treeView.setEnabled(False)
-        ui.widget_TreeView_TechSma.setEnabled(False)
-        ui.comboBox_TechSma_amb.setEnabled(False)
-        ui.spinBox_TechSma_barNum.setEnabled(False)
-        ui.widget_ChartView_TechSma.setEnabled(False)
+        ui.comboBox_TechMacd_SmaLngSpan.setEnabled(False)
+        ui.comboBox_TechMacd_SmaShrSpan.setEnabled(False)
+        ui.pushButton_TechMacd_fetch_treeView.setEnabled(False)
+        ui.widget_TreeView_TechMacd.setEnabled(False)
+        ui.comboBox_TechMacd_amb.setEnabled(False)
+        ui.spinBox_TechMacd_barNum.setEnabled(False)
+        ui.widget_ChartView_TechMacd.setEnabled(False)
 
         # ---------- set field ----------
         self._enable_period = False
@@ -156,25 +156,25 @@ class SimpleMovingAverageUi():
 
         # Create service client "Period"
         srv_type = PeriodSrv
-        srv_name = "tech_sma_period"
+        srv_name = "tech_macd_period"
         fullname = ns + srv_name
         self._srv_cli_period = node.create_client(srv_type, fullname)
 
-        # Create service client "TechSmaChart"
-        srv_type = TechSmaChartSrv
-        srv_name = "tech_sma_fetch_chart"
+        # Create service client "TechMacdChart"
+        srv_type = TechMacdChartSrv
+        srv_name = "tech_macd_fetch_chart"
         fullname = ns + srv_name
         self._srv_cli_chart = node.create_client(srv_type, fullname)
 
-        # Create action client "TechSmaBackTest"
-        act_type = TechSmaBtAct
-        act_name = "tech_sma_backtest"
+        # Create action client "TechMacdBackTest"
+        act_type = TechMacdBtAct
+        act_name = "tech_macd_backtest"
         fullname = ns + act_name
         self._act_cli_bt = ActionClient(node, act_type, fullname)
 
-        # Create action client "TechSmaTreeView"
-        act_type = TechSmaTreeViewAct
-        act_name = "tech_sma_fetch_treeview"
+        # Create action client "TechMacdTreeView"
+        act_type = TechMacdTreeViewAct
+        act_name = "tech_macd_fetch_treeview"
         fullname = ns + act_name
         self._act_cli_tv = ActionClient(node, act_type, fullname)
 
@@ -195,17 +195,17 @@ class SimpleMovingAverageUi():
         q_start_datetime = QDateTime.fromString(rsp.start_datetime, FMT_QT_YMDHMS)
         q_end_datetime = QDateTime.fromString(rsp.end_datetime, FMT_QT_YMDHMS)
 
-        wasBlocked1 = self._ui.dateTimeEdit_TechSma_PeriodStr.blockSignals(True)
-        wasBlocked2 = self._ui.dateTimeEdit_TechSma_PeriodEnd.blockSignals(True)
+        wasBlocked1 = self._ui.dateTimeEdit_TechMacd_PeriodStr.blockSignals(True)
+        wasBlocked2 = self._ui.dateTimeEdit_TechMacd_PeriodEnd.blockSignals(True)
 
-        self._ui.dateTimeEdit_TechSma_PeriodStr.setDateTimeRange(q_start_datetime, q_end_datetime)
-        self._ui.dateTimeEdit_TechSma_PeriodStr.setDateTime(q_start_datetime)
+        self._ui.dateTimeEdit_TechMacd_PeriodStr.setDateTimeRange(q_start_datetime, q_end_datetime)
+        self._ui.dateTimeEdit_TechMacd_PeriodStr.setDateTime(q_start_datetime)
 
-        self._ui.dateTimeEdit_TechSma_PeriodEnd.setDateTimeRange(q_start_datetime, q_end_datetime)
-        self._ui.dateTimeEdit_TechSma_PeriodEnd.setDateTime(q_end_datetime)
+        self._ui.dateTimeEdit_TechMacd_PeriodEnd.setDateTimeRange(q_start_datetime, q_end_datetime)
+        self._ui.dateTimeEdit_TechMacd_PeriodEnd.setDateTime(q_end_datetime)
 
-        self._ui.dateTimeEdit_TechSma_PeriodStr.blockSignals(wasBlocked1)
-        self._ui.dateTimeEdit_TechSma_PeriodEnd.blockSignals(wasBlocked2)
+        self._ui.dateTimeEdit_TechMacd_PeriodStr.blockSignals(wasBlocked1)
+        self._ui.dateTimeEdit_TechMacd_PeriodEnd.blockSignals(wasBlocked2)
 
         self._enable_period = True
 
@@ -219,30 +219,30 @@ class SimpleMovingAverageUi():
                               .format(inst_param.text, gran_param.text))
             return
 
-        self._ui.pushButton_TechSma_backtest_start.setEnabled(False)
+        self._ui.pushButton_TechMacd_backtest_start.setEnabled(False)
 
         self._sts_bar.set_label_text("Stanby...")
         self._sts_bar.set_bar_range(0, 100)
         self._sts_bar.set_bar_value(0)
 
-        goal_msg = TechSmaBtAct.Goal()
+        goal_msg = TechMacdBtAct.Goal()
         if self._enable_period:
-            goal_msg.start_datetime = self._ui.dateTimeEdit_TechSma_PeriodStr.dateTime().toString(FMT_QT_YMDHMS)
-            goal_msg.end_datetime = self._ui.dateTimeEdit_TechSma_PeriodEnd.dateTime().toString(FMT_QT_YMDHMS)
+            goal_msg.start_datetime = self._ui.dateTimeEdit_TechMacd_PeriodStr.dateTime().toString(FMT_QT_YMDHMS)
+            goal_msg.end_datetime = self._ui.dateTimeEdit_TechMacd_PeriodEnd.dateTime().toString(FMT_QT_YMDHMS)
         else:
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
-        goal_msg.sma_l_span_start = self._ui.spinBox_TechSma_SmaLngSpanStr.value()
-        goal_msg.sma_l_span_end = self._ui.spinBox_TechSma_SmaLngSpanEnd.value()
-        goal_msg.sma_l_span_deci = self._ui.spinBox_TechSma_SmaLngSpanDeci.value()
-        goal_msg.sma_s_span_start = self._ui.spinBox_TechSma_SmaShrSpanStr.value()
-        goal_msg.sma_s_span_end = self._ui.spinBox_TechSma_SmaShrSpanEnd.value()
-        goal_msg.sma_s_span_deci = self._ui.spinBox_TechSma_SmaShrSpanDeci.value()
-        goal_msg.profit_th_start = self._ui.spinBox_TechSma_PlThStr.value()
-        goal_msg.profit_th_end = self._ui.spinBox_TechSma_PlThEnd.value()
-        goal_msg.profit_th_deci = self._ui.spinBox_TechSma_PlThDeci.value()
-        goal_msg.valid_eval_th = self._ui.spinBox_TechSma_EvalTh.value()
-        goal_msg.entry_offset_pips = self._ui.spinBox_TechSma_EntryOfs.value()
+        goal_msg.sma_l_span_start = self._ui.spinBox_TechMacd_SmaLngSpanStr.value()
+        goal_msg.sma_l_span_end = self._ui.spinBox_TechMacd_SmaLngSpanEnd.value()
+        goal_msg.sma_l_span_deci = self._ui.spinBox_TechMacd_SmaLngSpanDeci.value()
+        goal_msg.sma_s_span_start = self._ui.spinBox_TechMacd_SmaShrSpanStr.value()
+        goal_msg.sma_s_span_end = self._ui.spinBox_TechMacd_SmaShrSpanEnd.value()
+        goal_msg.sma_s_span_deci = self._ui.spinBox_TechMacd_SmaShrSpanDeci.value()
+        goal_msg.profit_th_start = self._ui.spinBox_TechMacd_PlThStr.value()
+        goal_msg.profit_th_end = self._ui.spinBox_TechMacd_PlThEnd.value()
+        goal_msg.profit_th_deci = self._ui.spinBox_TechMacd_PlThDeci.value()
+        goal_msg.valid_eval_th = self._ui.spinBox_TechMacd_EvalTh.value()
+        goal_msg.entry_offset_pips = self._ui.spinBox_TechMacd_EntryOfs.value()
 
         callback_fb = self._backtest_feedback_callback
         self._future = self._act_cli_bt.send_goal_async(goal_msg, callback_fb)
@@ -283,7 +283,7 @@ class SimpleMovingAverageUi():
         self._sts_bar.set_bar_value(100)
 
         # ----- set widget enable -----
-        self._ui.pushButton_TechSma_backtest_start.setEnabled(True)
+        self._ui.pushButton_TechMacd_backtest_start.setEnabled(True)
 
         rsp = future.result()
         if rsp.status == GoalStatus.STATUS_SUCCEEDED:
@@ -293,39 +293,39 @@ class SimpleMovingAverageUi():
             return
 
         # ----- set SMA(L) comboBox -----
-        sma_l_span_start = self._ui.spinBox_TechSma_SmaLngSpanStr.value()
-        sma_l_span_end = self._ui.spinBox_TechSma_SmaLngSpanEnd.value()
-        sma_l_span_deci = self._ui.spinBox_TechSma_SmaLngSpanDeci.value()
+        sma_l_span_start = self._ui.spinBox_TechMacd_SmaLngSpanStr.value()
+        sma_l_span_end = self._ui.spinBox_TechMacd_SmaLngSpanEnd.value()
+        sma_l_span_deci = self._ui.spinBox_TechMacd_SmaLngSpanDeci.value()
         sma_l_span_list = list(range(sma_l_span_start, sma_l_span_end + 1, sma_l_span_deci))
 
-        wasBlocked = self._ui.comboBox_TechSma_SmaLngSpan.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechSma_SmaLngSpan)
+        wasBlocked = self._ui.comboBox_TechMacd_SmaLngSpan.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechMacd_SmaLngSpan)
         for sma_th in sma_l_span_list:
-            self._ui.comboBox_TechSma_SmaLngSpan.addItem(str(sma_th))
-        self._ui.comboBox_TechSma_SmaLngSpan.blockSignals(wasBlocked)
+            self._ui.comboBox_TechMacd_SmaLngSpan.addItem(str(sma_th))
+        self._ui.comboBox_TechMacd_SmaLngSpan.blockSignals(wasBlocked)
 
         # ----- set SMA(S) comboBox -----
-        sma_s_span_start = self._ui.spinBox_TechSma_SmaShrSpanStr.value()
-        sma_s_span_end = self._ui.spinBox_TechSma_SmaShrSpanEnd.value()
-        sma_s_span_deci = self._ui.spinBox_TechSma_SmaShrSpanDeci.value()
+        sma_s_span_start = self._ui.spinBox_TechMacd_SmaShrSpanStr.value()
+        sma_s_span_end = self._ui.spinBox_TechMacd_SmaShrSpanEnd.value()
+        sma_s_span_deci = self._ui.spinBox_TechMacd_SmaShrSpanDeci.value()
         sma_s_span_list = list(range(sma_s_span_start, sma_s_span_end + 1, sma_s_span_deci))
 
-        wasBlocked = self._ui.comboBox_TechSma_SmaShrSpan.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechSma_SmaShrSpan)
+        wasBlocked = self._ui.comboBox_TechMacd_SmaShrSpan.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechMacd_SmaShrSpan)
         for std_th in sma_s_span_list:
-            self._ui.comboBox_TechSma_SmaShrSpan.addItem(str(std_th))
-        self._ui.comboBox_TechSma_SmaShrSpan.blockSignals(wasBlocked)
+            self._ui.comboBox_TechMacd_SmaShrSpan.addItem(str(std_th))
+        self._ui.comboBox_TechMacd_SmaShrSpan.blockSignals(wasBlocked)
 
         # ----- set widget enable -----
-        self._ui.comboBox_TechSma_SmaLngSpan.setEnabled(True)
-        self._ui.comboBox_TechSma_SmaShrSpan.setEnabled(True)
-        self._ui.pushButton_TechSma_fetch_treeView.setEnabled(True)
-        self._ui.widget_TreeView_TechSma.setEnabled(True)
+        self._ui.comboBox_TechMacd_SmaLngSpan.setEnabled(True)
+        self._ui.comboBox_TechMacd_SmaShrSpan.setEnabled(True)
+        self._ui.pushButton_TechMacd_fetch_treeView.setEnabled(True)
+        self._ui.widget_TreeView_TechMacd.setEnabled(True)
 
         self._sma_l_span_list = sma_l_span_list
         self._sma_s_span_list = sma_s_span_list
 
-    def _on_pushButton_TechSma_fetch_treeView_clicked(self):
+    def _on_pushButton_TechMacd_fetch_treeView_clicked(self):
 
         inst_param = self._inst_param
         gran_param = self._gran_param
@@ -339,8 +339,8 @@ class SimpleMovingAverageUi():
         self._sts_bar.set_bar_range(0, 100)
         self._sts_bar.set_bar_value(0)
 
-        sma_l_idx = self._ui.comboBox_TechSma_SmaLngSpan.currentIndex()
-        sma_s_idx = self._ui.comboBox_TechSma_SmaShrSpan.currentIndex()
+        sma_l_idx = self._ui.comboBox_TechMacd_SmaLngSpan.currentIndex()
+        sma_s_idx = self._ui.comboBox_TechMacd_SmaShrSpan.currentIndex()
         sma_l_span = self._sma_l_span_list[sma_l_idx]
         sma_s_span = self._sma_s_span_list[sma_s_idx]
 
@@ -348,9 +348,9 @@ class SimpleMovingAverageUi():
             self._sts_bar.set_label_text("Invalid combination of SMA L and S value.")
             return
 
-        self._ui.pushButton_TechSma_fetch_treeView.setEnabled(False)
+        self._ui.pushButton_TechMacd_fetch_treeView.setEnabled(False)
 
-        goal_msg = TechSmaTreeViewAct.Goal()
+        goal_msg = TechMacdTreeViewAct.Goal()
         goal_msg.sma_l_span = sma_l_span
         goal_msg.sma_s_span = sma_s_span
 
@@ -414,11 +414,11 @@ class SimpleMovingAverageUi():
         self._sts_bar.set_label_text("Complete...")
 
         # ----- set widget enable -----
-        self._ui.pushButton_TechSma_fetch_treeView.setEnabled(True)
-        self._ui.comboBox_TechSma_amb.setEnabled(True)
-        self._ui.spinBox_TechSma_barNum.setEnabled(True)
+        self._ui.pushButton_TechMacd_fetch_treeView.setEnabled(True)
+        self._ui.comboBox_TechMacd_amb.setEnabled(True)
+        self._ui.spinBox_TechMacd_barNum.setEnabled(True)
         """
-        self._ui.widget_ChartView_TechSma.setEnabled(True)
+        self._ui.widget_ChartView_TechMacd.setEnabled(True)
         """
 
     def _update_treeview(self, df: pd.DataFrame):
@@ -472,19 +472,19 @@ class SimpleMovingAverageUi():
             return
 
         entry_time = dt.datetime.strptime(entry_time_disp_str, FMT_DISP_YMDHMS)
-        bar_num = self._ui.spinBox_TechSma_barNum.value()
+        bar_num = self._ui.spinBox_TechMacd_barNum.value()
         self._draw_graph(entry_time, bar_num)
         self._selected_entry_time = entry_time
 
         # ----- set widget enable -----
-        self._ui.widget_ChartView_TechSma.setEnabled(True)
+        self._ui.widget_ChartView_TechMacd.setEnabled(True)
 
     def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
 
-        sma_l_idx = self._ui.comboBox_TechSma_SmaLngSpan.currentIndex()
-        sma_s_idx = self._ui.comboBox_TechSma_SmaShrSpan.currentIndex()
+        sma_l_idx = self._ui.comboBox_TechMacd_SmaLngSpan.currentIndex()
+        sma_s_idx = self._ui.comboBox_TechMacd_SmaShrSpan.currentIndex()
 
-        req = TechSmaChartSrv.Request()
+        req = TechMacdChartSrv.Request()
         req.sma_l_span = self._sma_l_span_list[sma_l_idx]
         req.sma_s_span = self._sma_s_span_list[sma_s_idx]
         req.time = entry_time.strftime(FMT_YMDHMS)
@@ -530,7 +530,7 @@ class SimpleMovingAverageUi():
         self._chartview.set_max_y(max_y + margin)
         self._chartview.set_min_y(min_y - margin)
 
-        smb_idx = self._ui.comboBox_TechSma_amb.currentIndex()
+        smb_idx = self._ui.comboBox_TechMacd_amb.currentIndex()
         self._draw_graph_by_candle_type(smb_idx)
 
     def _draw_graph_by_candle_type(self, smb_idx):

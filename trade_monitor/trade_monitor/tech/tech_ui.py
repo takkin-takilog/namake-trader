@@ -5,6 +5,7 @@ from ..widget_base import StatusProgressBar
 from ..parameter import VALID_INST_LIST, VALID_GRAN_LIST
 from .sma.sma_ui import SimpleMovingAverageUi
 from .bb.bb_ui import BollingerBandUi
+from .macd.macd_ui import MacdUi
 
 
 pd.set_option("display.max_columns", 1000)
@@ -42,6 +43,7 @@ class TechUi():
         gran_param = VALID_GRAN_LIST[0]
         self._sma_ui = SimpleMovingAverageUi(ui, inst_param, gran_param, sts_bar)
         self._bb_ui = BollingerBandUi(ui, inst_param, gran_param, sts_bar)
+        self._macd_ui = MacdUi(ui, inst_param, gran_param, sts_bar)
 
         # ---------- set field ----------
         self._ui = ui
@@ -53,8 +55,10 @@ class TechUi():
         self._inst_param = VALID_INST_LIST[index]
         self._sma_ui.update_inst_param(self._inst_param)
         self._bb_ui.update_inst_param(self._inst_param)
+        self._macd_ui.update_inst_param(self._inst_param)
 
     def _on_gran_currentIndexChanged(self, index):
         self._gran_param = VALID_GRAN_LIST[index]
         self._sma_ui.update_gran_param(self._gran_param)
         self._bb_ui.update_gran_param(self._gran_param)
+        self._macd_ui.update_gran_param(self._gran_param)
