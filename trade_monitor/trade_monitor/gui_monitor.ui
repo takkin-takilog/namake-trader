@@ -2079,7 +2079,7 @@
                    <x>0</x>
                    <y>0</y>
                    <width>238</width>
-                   <height>760</height>
+                   <height>900</height>
                   </rect>
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_12">
@@ -2164,7 +2164,7 @@
                      </sizepolicy>
                     </property>
                     <property name="title">
-                     <string>SMA (Long) Config</string>
+                     <string>EMA (Long) Config</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_18">
                      <item row="0" column="0">
@@ -2181,7 +2181,7 @@
                       </widget>
                      </item>
                      <item row="0" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechMacd_SmaLngSpanStr">
+                      <widget class="QSpinBox" name="spinBox_TechMacd_EmaLngSpanStr">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -2195,7 +2195,7 @@
                         <number>999</number>
                        </property>
                        <property name="value">
-                        <number>30</number>
+                        <number>26</number>
                        </property>
                       </widget>
                      </item>
@@ -2213,7 +2213,7 @@
                       </widget>
                      </item>
                      <item row="1" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechMacd_SmaLngSpanEnd">
+                      <widget class="QSpinBox" name="spinBox_TechMacd_EmaLngSpanEnd">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -2227,7 +2227,7 @@
                         <number>999</number>
                        </property>
                        <property name="value">
-                        <number>30</number>
+                        <number>26</number>
                        </property>
                       </widget>
                      </item>
@@ -2245,7 +2245,7 @@
                       </widget>
                      </item>
                      <item row="2" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechMacd_SmaLngSpanDeci">
+                      <widget class="QSpinBox" name="spinBox_TechMacd_EmaLngSpanDeci">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -2272,7 +2272,7 @@
                      </sizepolicy>
                     </property>
                     <property name="title">
-                     <string>SMA (Short) Config</string>
+                     <string>EMA (Short) Config</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_19">
                      <item row="1" column="0">
@@ -2302,7 +2302,7 @@
                       </widget>
                      </item>
                      <item row="2" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechMacd_SmaShrSpanDeci">
+                      <widget class="QSpinBox" name="spinBox_TechMacd_EmaShrSpanDeci">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -2318,7 +2318,7 @@
                       </widget>
                      </item>
                      <item row="0" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechMacd_SmaShrSpanStr">
+                      <widget class="QSpinBox" name="spinBox_TechMacd_EmaShrSpanStr">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -2332,7 +2332,7 @@
                         <number>999</number>
                        </property>
                        <property name="value">
-                        <number>10</number>
+                        <number>12</number>
                        </property>
                       </widget>
                      </item>
@@ -2350,7 +2350,7 @@
                       </widget>
                      </item>
                      <item row="1" column="1">
-                      <widget class="QSpinBox" name="spinBox_TechMacd_SmaShrSpanEnd">
+                      <widget class="QSpinBox" name="spinBox_TechMacd_EmaShrSpanEnd">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                          <horstretch>0</horstretch>
@@ -2364,7 +2364,115 @@
                         <number>999</number>
                        </property>
                        <property name="value">
-                        <number>10</number>
+                        <number>12</number>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QGroupBox" name="groupBox_21">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="title">
+                     <string>Signal Config</string>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_24">
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_51">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string>End:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QLabel" name="label_52">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string>Decimation:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="1">
+                      <widget class="QSpinBox" name="spinBox_TechMacd_SignalSpanDeci">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>999</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QSpinBox" name="spinBox_TechMacd_SignalSpanStr">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>999</number>
+                       </property>
+                       <property name="value">
+                        <number>9</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_53">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string>Start:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="1">
+                      <widget class="QSpinBox" name="spinBox_TechMacd_SignalSpanEnd">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>999</number>
+                       </property>
+                       <property name="value">
+                        <number>9</number>
                        </property>
                       </widget>
                      </item>
@@ -2580,12 +2688,12 @@
                          </sizepolicy>
                         </property>
                         <property name="text">
-                         <string>SMA(L):</string>
+                         <string>EMA(L):</string>
                         </property>
                        </widget>
                       </item>
                       <item>
-                       <widget class="QComboBox" name="comboBox_TechMacd_SmaLngSpan">
+                       <widget class="QComboBox" name="comboBox_TechMacd_EmaLngSpan">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                           <horstretch>0</horstretch>
@@ -2632,12 +2740,12 @@
                          </sizepolicy>
                         </property>
                         <property name="text">
-                         <string>SMA(S):</string>
+                         <string>EMA(S):</string>
                         </property>
                        </widget>
                       </item>
                       <item>
-                       <widget class="QComboBox" name="comboBox_TechMacd_SmaShrSpan">
+                       <widget class="QComboBox" name="comboBox_TechMacd_EmaShrSpan">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                           <horstretch>0</horstretch>

@@ -87,7 +87,7 @@ class MacdUi():
         self._pdtreeview.setSelectionMode(QAbstractItemView.SingleSelection)
 
         header = self._pdtreeview.header()
-        callback = self._on_view_header_sma_sectionClicked
+        callback = self._on_view_header_sectionClicked
         header.sectionClicked.connect(callback)
 
         # ---------- set comboBox Ask,Mid,Bid ----------
@@ -106,8 +106,8 @@ class MacdUi():
         self._chartview = ChartView(ui.widget_ChartView_TechMacd)
 
         # ----- set widget disable -----
-        ui.comboBox_TechMacd_SmaLngSpan.setEnabled(False)
-        ui.comboBox_TechMacd_SmaShrSpan.setEnabled(False)
+        ui.comboBox_TechMacd_EmaLngSpan.setEnabled(False)
+        ui.comboBox_TechMacd_EmaShrSpan.setEnabled(False)
         ui.pushButton_TechMacd_fetch_treeView.setEnabled(False)
         ui.widget_TreeView_TechMacd.setEnabled(False)
         ui.comboBox_TechMacd_amb.setEnabled(False)
@@ -232,12 +232,15 @@ class MacdUi():
         else:
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
-        goal_msg.sma_l_span_start = self._ui.spinBox_TechMacd_SmaLngSpanStr.value()
-        goal_msg.sma_l_span_end = self._ui.spinBox_TechMacd_SmaLngSpanEnd.value()
-        goal_msg.sma_l_span_deci = self._ui.spinBox_TechMacd_SmaLngSpanDeci.value()
-        goal_msg.sma_s_span_start = self._ui.spinBox_TechMacd_SmaShrSpanStr.value()
-        goal_msg.sma_s_span_end = self._ui.spinBox_TechMacd_SmaShrSpanEnd.value()
-        goal_msg.sma_s_span_deci = self._ui.spinBox_TechMacd_SmaShrSpanDeci.value()
+        goal_msg.ema_l_span_start = self._ui.spinBox_TechMacd_EmaLngSpanStr.value()
+        goal_msg.ema_l_span_end = self._ui.spinBox_TechMacd_EmaLngSpanEnd.value()
+        goal_msg.ema_l_span_deci = self._ui.spinBox_TechMacd_EmaLngSpanDeci.value()
+        goal_msg.ema_s_span_start = self._ui.spinBox_TechMacd_EmaShrSpanStr.value()
+        goal_msg.ema_s_span_end = self._ui.spinBox_TechMacd_EmaShrSpanEnd.value()
+        goal_msg.ema_s_span_deci = self._ui.spinBox_TechMacd_EmaShrSpanDeci.value()
+        goal_msg.signal_span_start = self._ui.spinBox_TechMacd_SignalSpanStr.value()
+        goal_msg.signal_span_end = self._ui.spinBox_TechMacd_SignalSpanEnd.value()
+        goal_msg.signal_span_deci = self._ui.spinBox_TechMacd_SignalSpanDeci.value()
         goal_msg.profit_th_start = self._ui.spinBox_TechMacd_PlThStr.value()
         goal_msg.profit_th_end = self._ui.spinBox_TechMacd_PlThEnd.value()
         goal_msg.profit_th_deci = self._ui.spinBox_TechMacd_PlThDeci.value()
@@ -293,37 +296,37 @@ class MacdUi():
             return
 
         # ----- set SMA(L) comboBox -----
-        sma_l_span_start = self._ui.spinBox_TechMacd_SmaLngSpanStr.value()
-        sma_l_span_end = self._ui.spinBox_TechMacd_SmaLngSpanEnd.value()
-        sma_l_span_deci = self._ui.spinBox_TechMacd_SmaLngSpanDeci.value()
-        sma_l_span_list = list(range(sma_l_span_start, sma_l_span_end + 1, sma_l_span_deci))
+        ema_l_span_start = self._ui.spinBox_TechMacd_EmaLngSpanStr.value()
+        ema_l_span_end = self._ui.spinBox_TechMacd_EmaLngSpanEnd.value()
+        ema_l_span_deci = self._ui.spinBox_TechMacd_EmaLngSpanDeci.value()
+        ema_l_span_list = list(range(ema_l_span_start, ema_l_span_end + 1, ema_l_span_deci))
 
-        wasBlocked = self._ui.comboBox_TechMacd_SmaLngSpan.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechMacd_SmaLngSpan)
-        for sma_th in sma_l_span_list:
-            self._ui.comboBox_TechMacd_SmaLngSpan.addItem(str(sma_th))
-        self._ui.comboBox_TechMacd_SmaLngSpan.blockSignals(wasBlocked)
+        wasBlocked = self._ui.comboBox_TechMacd_EmaLngSpan.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechMacd_EmaLngSpan)
+        for ema_th in ema_l_span_list:
+            self._ui.comboBox_TechMacd_EmaLngSpan.addItem(str(ema_th))
+        self._ui.comboBox_TechMacd_EmaLngSpan.blockSignals(wasBlocked)
 
         # ----- set SMA(S) comboBox -----
-        sma_s_span_start = self._ui.spinBox_TechMacd_SmaShrSpanStr.value()
-        sma_s_span_end = self._ui.spinBox_TechMacd_SmaShrSpanEnd.value()
-        sma_s_span_deci = self._ui.spinBox_TechMacd_SmaShrSpanDeci.value()
-        sma_s_span_list = list(range(sma_s_span_start, sma_s_span_end + 1, sma_s_span_deci))
+        ema_s_span_start = self._ui.spinBox_TechMacd_EmaShrSpanStr.value()
+        ema_s_span_end = self._ui.spinBox_TechMacd_EmaShrSpanEnd.value()
+        ema_s_span_deci = self._ui.spinBox_TechMacd_EmaShrSpanDeci.value()
+        ema_s_span_list = list(range(ema_s_span_start, ema_s_span_end + 1, ema_s_span_deci))
 
-        wasBlocked = self._ui.comboBox_TechMacd_SmaShrSpan.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechMacd_SmaShrSpan)
-        for std_th in sma_s_span_list:
-            self._ui.comboBox_TechMacd_SmaShrSpan.addItem(str(std_th))
-        self._ui.comboBox_TechMacd_SmaShrSpan.blockSignals(wasBlocked)
+        wasBlocked = self._ui.comboBox_TechMacd_EmaShrSpan.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechMacd_EmaShrSpan)
+        for std_th in ema_s_span_list:
+            self._ui.comboBox_TechMacd_EmaShrSpan.addItem(str(std_th))
+        self._ui.comboBox_TechMacd_EmaShrSpan.blockSignals(wasBlocked)
 
         # ----- set widget enable -----
-        self._ui.comboBox_TechMacd_SmaLngSpan.setEnabled(True)
-        self._ui.comboBox_TechMacd_SmaShrSpan.setEnabled(True)
+        self._ui.comboBox_TechMacd_EmaLngSpan.setEnabled(True)
+        self._ui.comboBox_TechMacd_EmaShrSpan.setEnabled(True)
         self._ui.pushButton_TechMacd_fetch_treeView.setEnabled(True)
         self._ui.widget_TreeView_TechMacd.setEnabled(True)
 
-        self._sma_l_span_list = sma_l_span_list
-        self._sma_s_span_list = sma_s_span_list
+        self._ema_l_span_list = ema_l_span_list
+        self._ema_s_span_list = ema_s_span_list
 
     def _on_pushButton_TechMacd_fetch_treeView_clicked(self):
 
@@ -339,20 +342,20 @@ class MacdUi():
         self._sts_bar.set_bar_range(0, 100)
         self._sts_bar.set_bar_value(0)
 
-        sma_l_idx = self._ui.comboBox_TechMacd_SmaLngSpan.currentIndex()
-        sma_s_idx = self._ui.comboBox_TechMacd_SmaShrSpan.currentIndex()
-        sma_l_span = self._sma_l_span_list[sma_l_idx]
-        sma_s_span = self._sma_s_span_list[sma_s_idx]
+        ema_l_idx = self._ui.comboBox_TechMacd_EmaLngSpan.currentIndex()
+        ema_s_idx = self._ui.comboBox_TechMacd_EmaShrSpan.currentIndex()
+        ema_l_span = self._ema_l_span_list[ema_l_idx]
+        ema_s_span = self._ema_s_span_list[ema_s_idx]
 
-        if sma_l_span <= sma_s_span:
+        if ema_l_span <= ema_s_span:
             self._sts_bar.set_label_text("Invalid combination of SMA L and S value.")
             return
 
         self._ui.pushButton_TechMacd_fetch_treeView.setEnabled(False)
 
         goal_msg = TechMacdTreeViewAct.Goal()
-        goal_msg.sma_l_span = sma_l_span
-        goal_msg.sma_s_span = sma_s_span
+        goal_msg.ema_l_span = ema_l_span
+        goal_msg.ema_s_span = ema_s_span
 
         callback_fb = self._fetch_treeview_feedback_callback
         self._future = self._act_cli_tv.send_goal_async(goal_msg,
@@ -397,7 +400,7 @@ class MacdUi():
                 dt.datetime.strptime(rec.entry_time, FMT_YMDHMS),
                 self._inst_param.round_pips(rec.entry_price),
                 rec.entry_dir,
-                dt.datetime.strptime(rec.sma_s_cross_time, FMT_YMDHMS),
+                dt.datetime.strptime(rec.ema_s_cross_time, FMT_YMDHMS),
                 rec.eval_value,
                 rec.max_height_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
@@ -481,12 +484,12 @@ class MacdUi():
 
     def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
 
-        sma_l_idx = self._ui.comboBox_TechMacd_SmaLngSpan.currentIndex()
-        sma_s_idx = self._ui.comboBox_TechMacd_SmaShrSpan.currentIndex()
+        ema_l_idx = self._ui.comboBox_TechMacd_EmaLngSpan.currentIndex()
+        ema_s_idx = self._ui.comboBox_TechMacd_EmaShrSpan.currentIndex()
 
         req = TechMacdChartSrv.Request()
-        req.sma_l_span = self._sma_l_span_list[sma_l_idx]
-        req.sma_s_span = self._sma_s_span_list[sma_s_idx]
+        req.ema_l_span = self._ema_l_span_list[ema_l_idx]
+        req.ema_s_span = self._ema_s_span_list[ema_s_idx]
         req.time = entry_time.strftime(FMT_YMDHMS)
         req.number_of_bars = bar_num
 
@@ -561,7 +564,7 @@ class MacdUi():
                                self._gran_param,
                                self._inst_param)
 
-    def _on_view_header_sma_sectionClicked(self, logical_index):
+    def _on_view_header_sectionClicked(self, logical_index):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         self._pdtreeview.show_header_menu(logical_index)
 
