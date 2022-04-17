@@ -586,7 +586,7 @@ class CandlestickChartViewBarCategoryAxis(BaseCandlestickChartView):
         # ---------- Set X Axis on chart ----------
         axis_x = QtCharts.QBarCategoryAxis()
         # axis_x.setTickCount(2)
-        axis_x.setTitleText("Date")
+        # axis_x.setTitleText("Date")
         # axis_x.setFormat("h:mm")
         axis_x.setLabelsAngle(0)
         axis_x.setLabelsVisible(False)

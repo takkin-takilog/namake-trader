@@ -2115,7 +2115,7 @@
                    <property name="geometry">
                     <rect>
                      <x>0</x>
-                     <y>-278</y>
+                     <y>0</y>
                      <width>238</width>
                      <height>825</height>
                     </rect>
@@ -2684,7 +2684,7 @@
                </layout>
               </item>
               <item>
-               <layout class="QVBoxLayout" name="verticalLayout_14">
+               <layout class="QVBoxLayout" name="verticalLayout_14" stretch="1,2">
                 <item>
                  <layout class="QGridLayout" name="gridLayout_22">
                   <item row="0" column="0">
@@ -2884,6 +2884,19 @@
                 </item>
                 <item>
                  <layout class="QGridLayout" name="gridLayout_23">
+                  <item row="0" column="1">
+                   <widget class="QSpinBox" name="spinBox_TechMacd_barNum">
+                    <property name="minimum">
+                     <number>10</number>
+                    </property>
+                    <property name="maximum">
+                     <number>200</number>
+                    </property>
+                    <property name="value">
+                     <number>50</number>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="1" column="0" colspan="3">
                    <widget class="QWidget" name="widget_ChartView_TechMacd" native="true">
                     <property name="sizePolicy">
@@ -2931,16 +2944,16 @@
                     </property>
                    </spacer>
                   </item>
-                  <item row="0" column="1">
-                   <widget class="QSpinBox" name="spinBox_TechMacd_barNum">
-                    <property name="minimum">
-                     <number>10</number>
+                  <item row="2" column="0" colspan="3">
+                   <widget class="QWidget" name="widget_ChartView2_TechMacd" native="true">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
                     </property>
-                    <property name="maximum">
-                     <number>200</number>
-                    </property>
-                    <property name="value">
-                     <number>50</number>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 255, 255);</string>
                     </property>
                    </widget>
                   </item>

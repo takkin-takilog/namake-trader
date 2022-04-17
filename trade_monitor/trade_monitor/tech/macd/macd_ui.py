@@ -19,7 +19,8 @@ from .constant import ColOhlcChart, ColMacdChart
 from ... import utility as utl
 from ... import ros_common as ros_com
 from ...widget_base import PandasTreeView
-from .widget import CandlestickChartView as ChartView
+from .widget import CandlestickChartView as OhlcChartView
+from .widget import MacdChartView as MacdChartView
 from .widget import ChartInfo
 
 
@@ -103,8 +104,9 @@ class MacdUi():
         callback = self._on_spinBox_barNum_valueChanged
         ui.spinBox_TechMacd_barNum.valueChanged.connect(callback)
 
-        # ----- set ChartView widget -----
-        self._chartview = ChartView(ui.widget_ChartView_TechMacd)
+        # ----- set OhlcChartView widget -----
+        self._ohlc_chartview = OhlcChartView(ui.widget_ChartView_TechMacd)
+        self._macd_chartview = MacdChartView(ui.widget_ChartView2_TechMacd)
 
         # ----- set widget disable -----
         ui.comboBox_TechMacd_EmaLngSpan.setEnabled(False)
@@ -115,6 +117,7 @@ class MacdUi():
         ui.comboBox_TechMacd_amb.setEnabled(False)
         ui.spinBox_TechMacd_barNum.setEnabled(False)
         ui.widget_ChartView_TechMacd.setEnabled(False)
+        ui.widget_ChartView2_TechMacd.setEnabled(False)
 
         # ---------- set field ----------
         self._enable_period = False
@@ -504,6 +507,7 @@ class MacdUi():
 
         # ----- set widget enable -----
         self._ui.widget_ChartView_TechMacd.setEnabled(True)
+        self._ui.widget_ChartView2_TechMacd.setEnabled(True)
 
     def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
 
@@ -564,11 +568,19 @@ class MacdUi():
                                      exit_time_loc=exit_time_loc,
                                      exit_price=exit_price)
 
+        # ---------- OHLC ChartView ----------
         max_y = self._chart_info.df_ohlc.max().max()
         min_y = self._chart_info.df_ohlc.min().min()
         margin = (max_y - min_y) * 0.05
-        self._chartview.set_max_y(max_y + margin)
-        self._chartview.set_min_y(min_y - margin)
+        self._ohlc_chartview.set_max_y(max_y + margin)
+        self._ohlc_chartview.set_min_y(min_y - margin)
+
+        # ---------- MACD ChartView ----------
+        max_y = self._chart_info.df_macd.max().max()
+        min_y = self._chart_info.df_macd.min().min()
+        margin = (max_y - min_y) * 0.05
+        self._macd_chartview.set_max_y(max_y + margin)
+        self._macd_chartview.set_min_y(min_y - margin)
 
         smb_idx = self._ui.comboBox_TechMacd_amb.currentIndex()
         self._draw_graph_by_candle_type(smb_idx)
@@ -594,12 +606,17 @@ class MacdUi():
                    ColOhlcChart.BID_C.value] + ema_col
 
         df_ohlc = self._chart_info.df_ohlc[col]
-        df_ohlc.columns = ChartView.CandleLabel.to_list() + ema_col
+        df_ohlc.columns = OhlcChartView.CandleLabel.to_list() + ema_col
 
-        self._chartview.update(df_ohlc,
-                               self._chart_info,
-                               self._gran_param,
-                               self._inst_param)
+        self._ohlc_chartview.update(df_ohlc,
+                                    self._chart_info,
+                                    self._gran_param,
+                                    self._inst_param)
+
+        self._macd_chartview.update(self._chart_info.df_macd,
+                                    self._chart_info,
+                                    self._gran_param,
+                                    self._inst_param)
 
     def _on_view_header_sectionClicked(self, logical_index):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
