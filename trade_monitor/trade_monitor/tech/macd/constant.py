@@ -1,9 +1,10 @@
 from enum import Enum
 
 
-class ColChart(Enum):
+class ColOhlcChart(Enum):
     """
-    Pandas SMA back test result dataframe column name.
+    Pandas MACD backtest result dataframe column name.
+    OHLC data.
     """
     TIME = "time"
     ASK_O = "ask_o"
@@ -18,8 +19,22 @@ class ColChart(Enum):
     BID_H = "bid_h"
     BID_L = "bid_l"
     BID_C = "bid_c"
-    SMA_L = "sma_l"
-    SMA_S = "sma_s"
+    EMA_L = "ema_l"
+    EMA_S = "ema_s"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
+class ColMacdChart(Enum):
+    """
+    Pandas MACD backtest result dataframe column name.
+    MACD data.
+    """
+    TIME = "time"
+    MACD = "macd"
+    SIGNAL = "signal"
 
     @classmethod
     def to_list(cls):

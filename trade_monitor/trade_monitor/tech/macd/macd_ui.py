@@ -15,7 +15,7 @@ from trade_apl_msgs.srv import PeriodSrv
 from trade_apl_msgs.srv import TechMacdChartSrv
 from ...constant import FMT_YMDHMS, FMT_DISP_YMDHMS, FMT_QT_YMDHMS
 from ...constant import SPREAD_MSG_LIST
-from .constant import ColChart
+from .constant import ColOhlcChart, ColMacdChart
 from ... import utility as utl
 from ... import ros_common as ros_com
 from ...widget_base import PandasTreeView
@@ -46,7 +46,8 @@ class ColBtRslt(Enum):
     ENTRY_TIME = "entry_time"
     ENTRY_PRICE = "entry_price"
     ENTRY_DIR = "entry_dir"
-    SMA_S_CROSS_TIME = "sma_s_cross_time"
+    MACD_MAX_HEIGHT = "macd_max_height"
+    MACD_MAX_HEIGHT_IDX = "macd_max_height_idx"
     EVAL_VALUE = "eval_value"
     MAX_HEIGHT_PIPS = "max_height_pips"
     EXIT_TIME = "exit_time"
@@ -108,6 +109,7 @@ class MacdUi():
         # ----- set widget disable -----
         ui.comboBox_TechMacd_EmaLngSpan.setEnabled(False)
         ui.comboBox_TechMacd_EmaShrSpan.setEnabled(False)
+        ui.comboBox_TechMacd_SigSpan.setEnabled(False)
         ui.pushButton_TechMacd_fetch_treeView.setEnabled(False)
         ui.widget_TreeView_TechMacd.setEnabled(False)
         ui.comboBox_TechMacd_amb.setEnabled(False)
@@ -238,9 +240,9 @@ class MacdUi():
         goal_msg.ema_s_span_start = self._ui.spinBox_TechMacd_EmaShrSpanStr.value()
         goal_msg.ema_s_span_end = self._ui.spinBox_TechMacd_EmaShrSpanEnd.value()
         goal_msg.ema_s_span_deci = self._ui.spinBox_TechMacd_EmaShrSpanDeci.value()
-        goal_msg.signal_span_start = self._ui.spinBox_TechMacd_SignalSpanStr.value()
-        goal_msg.signal_span_end = self._ui.spinBox_TechMacd_SignalSpanEnd.value()
-        goal_msg.signal_span_deci = self._ui.spinBox_TechMacd_SignalSpanDeci.value()
+        goal_msg.signal_span_start = self._ui.spinBox_TechMacd_SigSpanStr.value()
+        goal_msg.signal_span_end = self._ui.spinBox_TechMacd_SigSpanEnd.value()
+        goal_msg.signal_span_deci = self._ui.spinBox_TechMacd_SigSpanDeci.value()
         goal_msg.profit_th_start = self._ui.spinBox_TechMacd_PlThStr.value()
         goal_msg.profit_th_end = self._ui.spinBox_TechMacd_PlThEnd.value()
         goal_msg.profit_th_deci = self._ui.spinBox_TechMacd_PlThDeci.value()
@@ -303,8 +305,8 @@ class MacdUi():
 
         wasBlocked = self._ui.comboBox_TechMacd_EmaLngSpan.blockSignals(True)
         utl.remove_all_items_of_comboBox(self._ui.comboBox_TechMacd_EmaLngSpan)
-        for ema_th in ema_l_span_list:
-            self._ui.comboBox_TechMacd_EmaLngSpan.addItem(str(ema_th))
+        for ema_l_span in ema_l_span_list:
+            self._ui.comboBox_TechMacd_EmaLngSpan.addItem(str(ema_l_span))
         self._ui.comboBox_TechMacd_EmaLngSpan.blockSignals(wasBlocked)
 
         # ----- set SMA(S) comboBox -----
@@ -315,18 +317,32 @@ class MacdUi():
 
         wasBlocked = self._ui.comboBox_TechMacd_EmaShrSpan.blockSignals(True)
         utl.remove_all_items_of_comboBox(self._ui.comboBox_TechMacd_EmaShrSpan)
-        for std_th in ema_s_span_list:
-            self._ui.comboBox_TechMacd_EmaShrSpan.addItem(str(std_th))
+        for ema_s_span in ema_s_span_list:
+            self._ui.comboBox_TechMacd_EmaShrSpan.addItem(str(ema_s_span))
         self._ui.comboBox_TechMacd_EmaShrSpan.blockSignals(wasBlocked)
+
+        # ----- set Signal comboBox -----
+        sig_span_start = self._ui.spinBox_TechMacd_SigSpanStr.value()
+        sig_span_end = self._ui.spinBox_TechMacd_SigSpanEnd.value()
+        sig_span_deci = self._ui.spinBox_TechMacd_SigSpanDeci.value()
+        sig_span_list = list(range(sig_span_start, sig_span_end + 1, sig_span_deci))
+
+        wasBlocked = self._ui.comboBox_TechMacd_SigSpan.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechMacd_SigSpan)
+        for sig_span in sig_span_list:
+            self._ui.comboBox_TechMacd_SigSpan.addItem(str(sig_span))
+        self._ui.comboBox_TechMacd_SigSpan.blockSignals(wasBlocked)
 
         # ----- set widget enable -----
         self._ui.comboBox_TechMacd_EmaLngSpan.setEnabled(True)
         self._ui.comboBox_TechMacd_EmaShrSpan.setEnabled(True)
+        self._ui.comboBox_TechMacd_SigSpan.setEnabled(True)
         self._ui.pushButton_TechMacd_fetch_treeView.setEnabled(True)
         self._ui.widget_TreeView_TechMacd.setEnabled(True)
 
         self._ema_l_span_list = ema_l_span_list
         self._ema_s_span_list = ema_s_span_list
+        self._sig_span_list = sig_span_list
 
     def _on_pushButton_TechMacd_fetch_treeView_clicked(self):
 
@@ -344,8 +360,10 @@ class MacdUi():
 
         ema_l_idx = self._ui.comboBox_TechMacd_EmaLngSpan.currentIndex()
         ema_s_idx = self._ui.comboBox_TechMacd_EmaShrSpan.currentIndex()
+        sig_idx = self._ui.comboBox_TechMacd_SigSpan.currentIndex()
         ema_l_span = self._ema_l_span_list[ema_l_idx]
         ema_s_span = self._ema_s_span_list[ema_s_idx]
+        sig_span = self._sig_span_list[sig_idx]
 
         if ema_l_span <= ema_s_span:
             self._sts_bar.set_label_text("Invalid combination of SMA L and S value.")
@@ -356,6 +374,7 @@ class MacdUi():
         goal_msg = TechMacdTreeViewAct.Goal()
         goal_msg.ema_l_span = ema_l_span
         goal_msg.ema_s_span = ema_s_span
+        goal_msg.sig_span = sig_span
 
         callback_fb = self._fetch_treeview_feedback_callback
         self._future = self._act_cli_tv.send_goal_async(goal_msg,
@@ -400,7 +419,9 @@ class MacdUi():
                 dt.datetime.strptime(rec.entry_time, FMT_YMDHMS),
                 self._inst_param.round_pips(rec.entry_price),
                 rec.entry_dir,
-                dt.datetime.strptime(rec.ema_s_cross_time, FMT_YMDHMS),
+                # dt.datetime.strptime(rec.ema_s_cross_time, FMT_YMDHMS),
+                rec.macd_max_height,
+                rec.macd_max_height_idx,
                 rec.eval_value,
                 rec.max_height_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
@@ -435,7 +456,9 @@ class MacdUi():
                 t.Index.strftime(FMT_DISP_YMDHMS),
                 t.entry_price,
                 t.entry_dir,
-                t.sma_s_cross_time.strftime(FMT_DISP_YMDHMS),
+                # t.sma_s_cross_time.strftime(FMT_DISP_YMDHMS),
+                t.macd_max_height,
+                t.macd_max_height_idx,
                 t.eval_value,
                 t.max_height_pips,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
@@ -486,40 +509,54 @@ class MacdUi():
 
         ema_l_idx = self._ui.comboBox_TechMacd_EmaLngSpan.currentIndex()
         ema_s_idx = self._ui.comboBox_TechMacd_EmaShrSpan.currentIndex()
+        sig_idx = self._ui.comboBox_TechMacd_SigSpan.currentIndex()
 
         req = TechMacdChartSrv.Request()
         req.ema_l_span = self._ema_l_span_list[ema_l_idx]
         req.ema_s_span = self._ema_s_span_list[ema_s_idx]
+        req.sig_span = self._sig_span_list[sig_idx]
         req.time = entry_time.strftime(FMT_YMDHMS)
         req.number_of_bars = bar_num
 
         rsp = ros_com.call_servive_sync(self._srv_cli_chart, req)
 
-        tbl = []
+        tbl_ohlc = []
+        tbl_macd = []
         for msg in rsp.tbl:
+            # ---------- OHLC ----------
             rec = [
                 utl.convert_ymdhms_fmt_to_disp(msg.time),
                 msg.ask_o, msg.ask_h, msg.ask_l, msg.ask_c,
                 msg.mid_o, msg.mid_h, msg.mid_l, msg.mid_c,
                 msg.bid_o, msg.bid_h, msg.bid_l, msg.bid_c,
-                msg.sma_l, msg.sma_s
+                msg.ema_l, msg.ema_s
             ]
-            tbl.append(rec)
-        df = pd.DataFrame(tbl, columns=ColChart.to_list())
-        df.set_index(ColChart.TIME.value, inplace=True)
+            tbl_ohlc.append(rec)
+            # ---------- MACD ----------
+            rec = [
+                utl.convert_ymdhms_fmt_to_disp(msg.time),
+                msg.macd, msg.signal
+            ]
+            tbl_macd.append(rec)
+        df_ohlc = pd.DataFrame(tbl_ohlc, columns=ColOhlcChart.to_list())
+        df_ohlc.set_index(ColOhlcChart.TIME.value, inplace=True)
+
+        df_macd = pd.DataFrame(tbl_macd, columns=ColMacdChart.to_list())
+        df_macd.set_index(ColMacdChart.TIME.value, inplace=True)
 
         row = self._df_tv.loc[entry_time]
         entry_time_str = entry_time.strftime(FMT_DISP_YMDHMS)
-        entry_time_loc = df.index.get_loc(entry_time_str)
+        entry_time_loc = df_ohlc.index.get_loc(entry_time_str)
         entry_price = row[ColBtRslt.ENTRY_PRICE.value]
         exit_time_str = row[ColBtRslt.EXIT_TIME.value].strftime(FMT_DISP_YMDHMS)
-        if exit_time_str in df.index:
-            exit_time_loc = df.index.get_loc(exit_time_str)
+        if exit_time_str in df_ohlc.index:
+            exit_time_loc = df_ohlc.index.get_loc(exit_time_str)
         else:
             exit_time_loc = -10000000
         exit_price = row[ColBtRslt.EXIT_PRICE.value]
 
-        self._chart_info = ChartInfo(df=df,
+        self._chart_info = ChartInfo(df_ohlc=df_ohlc,
+                                     df_macd=df_macd,
                                      entry_time_str=entry_time_str,
                                      entry_time_loc=entry_time_loc,
                                      entry_price=entry_price,
@@ -527,8 +564,8 @@ class MacdUi():
                                      exit_time_loc=exit_time_loc,
                                      exit_price=exit_price)
 
-        max_y = self._chart_info.df.max().max()
-        min_y = self._chart_info.df.min().min()
+        max_y = self._chart_info.df_ohlc.max().max()
+        min_y = self._chart_info.df_ohlc.min().min()
         margin = (max_y - min_y) * 0.05
         self._chartview.set_max_y(max_y + margin)
         self._chartview.set_min_y(min_y - margin)
@@ -537,29 +574,29 @@ class MacdUi():
         self._draw_graph_by_candle_type(smb_idx)
 
     def _draw_graph_by_candle_type(self, smb_idx):
-        sma_col = [ColChart.SMA_L.value,
-                   ColChart.SMA_S.value]
+        ema_col = [ColOhlcChart.EMA_L.value,
+                   ColOhlcChart.EMA_S.value]
 
         if smb_idx == 0:    # Mid
-            col = [ColChart.MID_O.value,
-                   ColChart.MID_H.value,
-                   ColChart.MID_L.value,
-                   ColChart.MID_C.value] + sma_col
+            col = [ColOhlcChart.MID_O.value,
+                   ColOhlcChart.MID_H.value,
+                   ColOhlcChart.MID_L.value,
+                   ColOhlcChart.MID_C.value] + ema_col
         elif smb_idx == 1:  # Ask
-            col = [ColChart.ASK_O.value,
-                   ColChart.ASK_H.value,
-                   ColChart.ASK_L.value,
-                   ColChart.ASK_C.value] + sma_col
+            col = [ColOhlcChart.ASK_O.value,
+                   ColOhlcChart.ASK_H.value,
+                   ColOhlcChart.ASK_L.value,
+                   ColOhlcChart.ASK_C.value] + ema_col
         else:               # Bid
-            col = [ColChart.BID_O.value,
-                   ColChart.BID_H.value,
-                   ColChart.BID_L.value,
-                   ColChart.BID_C.value] + sma_col
+            col = [ColOhlcChart.BID_O.value,
+                   ColOhlcChart.BID_H.value,
+                   ColOhlcChart.BID_L.value,
+                   ColOhlcChart.BID_C.value] + ema_col
 
-        df = self._chart_info.df[col]
-        df.columns = ChartView.CandleLabel.to_list() + sma_col
+        df_ohlc = self._chart_info.df_ohlc[col]
+        df_ohlc.columns = ChartView.CandleLabel.to_list() + ema_col
 
-        self._chartview.update(df,
+        self._chartview.update(df_ohlc,
                                self._chart_info,
                                self._gran_param,
                                self._inst_param)

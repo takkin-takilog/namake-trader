@@ -9,7 +9,7 @@ from PySide2.QtCore import Qt, QPointF, QLineF
 from PySide2.QtGui import QColor, QPen
 from PySide2.QtCharts import QtCharts
 from PySide2.QtWidgets import QGraphicsLineItem
-from .constant import ColChart
+from .constant import ColOhlcChart
 from ...parameter import GranParam, InstParam
 from ... import ros_common as ros_com
 from ...widget_base import CandlestickChartViewBarCategoryAxis
@@ -21,7 +21,8 @@ class ChartInfo():
     """
     View chart info.
     """
-    df: pd.DataFrame
+    df_ohlc: pd.DataFrame
+    df_macd: pd.DataFrame
     entry_time_str: str
     entry_time_loc: int
     entry_price: float
@@ -134,19 +135,19 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
 
         # ==================== Bollinger bands ====================
         config_tbl = []
-        # ---------- Add SMA(L) Line on scene ----------
+        # ---------- Add EMA(L) Line on scene ----------
         pen = QPen()
         pen.setColor(Qt.magenta)
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
-        config_tbl.append([ColChart.SMA_L.value, pen, QtCharts.QLineSeries()])
+        config_tbl.append([ColOhlcChart.EMA_L.value, pen, QtCharts.QLineSeries()])
 
-        # ---------- Add SMA(S) Line on scene ----------
+        # ---------- Add EMA(S) Line on scene ----------
         pen = QPen()
         pen.setColor(QColor("#ffa500"))
         pen.setWidth(2)
         pen.setStyle(Qt.SolidLine)
-        config_tbl.append([ColChart.SMA_S.value, pen, QtCharts.QLineSeries()])
+        config_tbl.append([ColOhlcChart.EMA_S.value, pen, QtCharts.QLineSeries()])
 
         df_bb_conf = pd.DataFrame(config_tbl,
                                   columns=ColNameLine.to_list())
