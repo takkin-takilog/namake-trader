@@ -3,6 +3,7 @@ import gc
 from enum import Enum
 import pandas as pd
 import datetime as dt
+from dataclasses import dataclass
 from PySide2.QtCore import QDateTime, Qt
 from PySide2.QtWidgets import QAbstractItemView
 from rclpy.action import ActionClient
@@ -47,6 +48,15 @@ class ColBtRslt(Enum):
     @classmethod
     def to_list(cls):
         return [m.value for m in cls]
+
+
+@dataclass
+class SelectedIndex():
+    """
+    Selected Index.
+    """
+    entry_time: dt.datetime
+    entry_dir: int
 
 
 class BollingerBandUi():
@@ -105,7 +115,6 @@ class BollingerBandUi():
 
         # ---------- set field ----------
         self._enable_period = False
-        self._selected_entry_time = None
         self._chart_info = None
         self._srv_cli_period = None
         self._srv_cli_chart = None
@@ -119,6 +128,7 @@ class BollingerBandUi():
         self._inst_param = inst_param
         self._gran_param = gran_param
         self._sts_bar = sts_bar
+        self._selected_idx = None
 
     def update_inst_param(self, inst_param):
         self._init_ros_service(inst_param, self._gran_param)
@@ -449,7 +459,9 @@ class BollingerBandUi():
             ]
             tbl.append(record)
         df = pd.DataFrame(tbl, columns=ColBtRslt.to_list())
-        df.set_index(ColBtRslt.ENTRY_TIME.value, inplace=True)
+        multi_idx = [ColBtRslt.ENTRY_TIME.value, ColBtRslt.ENTRY_DIR.value]
+        df.set_index(multi_idx, inplace=True)
+        df.sort_index(inplace=True)
 
         self._update_treeview(df)
         self._df_tv = df
@@ -472,9 +484,9 @@ class BollingerBandUi():
         tbl = []
         for t in df.itertuples():
             record = [
-                t.Index.strftime(FMT_DISP_YMDHMS),
+                t.Index[0].strftime(FMT_DISP_YMDHMS),
                 t.entry_price,
-                t.entry_dir,
+                t.Index[1],
                 t.entry_sma_slope_abs,
                 t.gap_std_sma,
                 t.max_height_pips,
@@ -507,7 +519,9 @@ class BollingerBandUi():
         r = model_index.row()
         proxy = self._pdtreeview.proxy
         entry_time_disp_str = proxy.index(r, 0, model_index).data(role=Qt.UserRole)
-        self.logger.debug(" - selected date:{}".format(entry_time_disp_str))
+        entry_dir_disp = proxy.index(r, 2, model_index).data(role=Qt.UserRole)
+        # self.logger.debug(" - selected date:{}".format(entry_time_disp_str))
+        # self.logger.debug(" - selected dir:{}".format(entry_dir_disp))
 
         if not self._srv_cli_chart.service_is_ready():
             self.logger.error("Service server [{}] not ready"
@@ -515,14 +529,14 @@ class BollingerBandUi():
             return
 
         entry_time = dt.datetime.strptime(entry_time_disp_str, FMT_DISP_YMDHMS)
+        self._selected_idx = SelectedIndex(entry_time, entry_dir_disp)
         bar_num = self._ui.spinBox_TechBb_barNum.value()
-        self._draw_graph(entry_time, bar_num)
-        self._selected_entry_time = entry_time
+        self._draw_graph(self._selected_idx, bar_num)
 
         # ----- set widget enable -----
         self._ui.widget_ChartView_TechBb.setEnabled(True)
 
-    def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
+    def _draw_graph(self, selected_idx: SelectedIndex, bar_num: int):
 
         sma_idx = self._ui.comboBox_TechBb_SmaSpan.currentIndex()
         std_idx = self._ui.comboBox_TechBb_StdSpan.currentIndex()
@@ -530,7 +544,7 @@ class BollingerBandUi():
         req = TechBbChartSrv.Request()
         req.sma_span = self._sma_span_list[sma_idx]
         req.std_span = self._std_span_list[std_idx]
-        req.time = entry_time.strftime(FMT_YMDHMS)
+        req.time = selected_idx.entry_time.strftime(FMT_YMDHMS)
         req.number_of_bars = bar_num
 
         rsp = ros_com.call_servive_sync(self._srv_cli_chart, req)
@@ -544,15 +558,17 @@ class BollingerBandUi():
                 msg.mid_o, msg.mid_h, msg.mid_l, msg.mid_c,
                 msg.bid_o, msg.bid_h, msg.bid_l, msg.bid_c,
                 msg.base_sma,
-                msg.base_sma + msg.std,
-                msg.base_sma - msg.std
+                msg.pos_std,
+                msg.neg_std
             ]
             tbl.append(rec)
         df = pd.DataFrame(tbl, columns=ColChart.to_list())
         df.set_index(ColChart.TIME.value, inplace=True)
 
-        row = self._df_tv.loc[entry_time]
-        entry_time_str = entry_time.strftime(FMT_DISP_YMDHMS)
+        row = self._df_tv.loc[selected_idx.entry_time, selected_idx.entry_dir]
+        if isinstance(row, pd.DataFrame):
+            row = row.iloc[0]
+        entry_time_str = selected_idx.entry_time.strftime(FMT_DISP_YMDHMS)
         entry_time_loc = df.index.get_loc(entry_time_str)
         entry_price = row[ColBtRslt.ENTRY_PRICE.value]
         exit_time_str = row[ColBtRslt.EXIT_TIME.value].strftime(FMT_DISP_YMDHMS)
@@ -619,5 +635,5 @@ class BollingerBandUi():
 
     def _on_spinBox_barNum_valueChanged(self, value: int):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        if self._selected_entry_time is not None:
-            self._draw_graph(self._selected_entry_time, value)
+        if self._selected_idx is not None:
+            self._draw_graph(self._selected_idx, value)
