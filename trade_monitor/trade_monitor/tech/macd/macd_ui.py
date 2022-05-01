@@ -48,7 +48,7 @@ class ColBtRslt(Enum):
     ENTRY_PRICE = "entry_price"
     ENTRY_DIR = "entry_dir"
     MACD_MAX_HEIGHT = "macd_max_height"
-    MACD_MAX_HEIGHT_IDX = "macd_max_height_idx"
+    MACD_MAX_HEIGHT_DT = "macd_max_height_dt"
     EVAL_VALUE = "eval_value"
     MAX_HEIGHT_PIPS = "max_height_pips"
     EXIT_TIME = "exit_time"
@@ -423,8 +423,8 @@ class MacdUi():
                 self._inst_param.round_pips(rec.entry_price),
                 rec.entry_dir,
                 # dt.datetime.strptime(rec.ema_s_cross_time, FMT_YMDHMS),
-                rec.macd_max_height,
-                rec.macd_max_height_idx,
+                "{:.5f}".format(rec.macd_max_height),
+                dt.datetime.strptime(rec.macd_max_height_dt, FMT_YMDHMS),
                 rec.eval_value,
                 rec.max_height_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
@@ -461,7 +461,7 @@ class MacdUi():
                 t.entry_dir,
                 # t.sma_s_cross_time.strftime(FMT_DISP_YMDHMS),
                 t.macd_max_height,
-                t.macd_max_height_idx,
+                t.macd_max_height_dt.strftime(FMT_DISP_YMDHMS),
                 t.eval_value,
                 t.max_height_pips,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
