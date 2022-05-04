@@ -13,6 +13,11 @@ class InstParam(Enum):
     USDJPY = (InstApi.INST_USD_JPY, "usdjpy", "USD/JPY", 3)
     EURJPY = (InstApi.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3)
     EURUSD = (InstApi.INST_EUR_USD, "eurusd", "EUR/USD", 5)
+    GBPJPY = (InstApi.INST_GBP_JPY, "gbpjpy", "GBP/JPY", 3)
+    AUDJPY = (InstApi.INST_AUD_JPY, "audjpy", "AUD/JPY", 3)
+    NZDJPY = (InstApi.INST_NZD_JPY, "nzdjpy", "NZD/JPY", 3)
+    CADJPY = (InstApi.INST_CAD_JPY, "cadjpy", "CAD/JPY", 3)
+    CHFJPY = (InstApi.INST_CHF_JPY, "chfjpy", "CHF/JPY", 3)
 
     def __init__(self,
                  msg_id: int,       # ROS message ID
