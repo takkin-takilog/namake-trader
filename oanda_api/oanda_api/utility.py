@@ -15,12 +15,12 @@ def convert_datetime_jst(oanda_dt: str,
     return (dt_ + _JST_OFS).strftime(fmt)
 
 
-def convert_from_utc_to_jst(utc_dt: dt.datetime,
+def convert_from_utc_to_jst(utc_dt: dt.datetime
                             ) -> dt.datetime:
     return utc_dt + _JST_OFS
 
 
-def convert_from_jst_to_utc(jst_dt: dt.datetime,
+def convert_from_jst_to_utc(jst_dt: dt.datetime
                             ) -> dt.datetime:
     return jst_dt - _JST_OFS
 

@@ -850,10 +850,10 @@ class CandlesStore(Node):
                               .format(candles_elem._inst_id, candles_data._gran_id))
             """
 
-    async def _on_recv_candles_by_datetime(self,
-                                           req: SrvTypeRequest,
-                                           rsp: SrvTypeResponse
-                                           ) -> SrvTypeResponse:
+    def _on_recv_candles_by_datetime(self,
+                                     req: SrvTypeRequest,
+                                     rsp: SrvTypeResponse
+                                     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_datetime]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_id:[{}]".format(req.gran_msg.gran_id))
@@ -943,10 +943,10 @@ class CandlesStore(Node):
 
         return rsp
 
-    async def _on_recv_candles_by_length(self,
-                                         req: SrvTypeRequest,
-                                         rsp: SrvTypeResponse
-                                         ) -> SrvTypeResponse:
+    def _on_recv_candles_by_length(self,
+                                   req: SrvTypeRequest,
+                                   rsp: SrvTypeResponse
+                                   ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_length]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_id:[{}]".format(req.gran_msg.gran_id))

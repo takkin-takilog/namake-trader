@@ -129,10 +129,10 @@ class Fetcher(Node):
                                            callback=callback,
                                            callback_group=ReentrantCallbackGroup())
 
-    async def _on_recv_candles_query(self,
-                                     req: SrvTypeRequest,
-                                     rsp: SrvTypeResponse
-                                     ) -> SrvTypeResponse:
+    def _on_recv_candles_query(self,
+                               req: SrvTypeRequest,
+                               rsp: SrvTypeResponse
+                               ) -> SrvTypeResponse:
 
         self.logger.debug("{:=^50}".format(" Service[candles_query]:Start "))
         self.logger.debug("<Request>")
@@ -278,10 +278,10 @@ class Fetcher(Node):
 
         return rsp
 
-    async def _on_recv_account_query(self,
-                                     req: SrvTypeRequest,
-                                     rsp: SrvTypeResponse
-                                     ) -> SrvTypeResponse:
+    def _on_recv_account_query(self,
+                               req: SrvTypeRequest,
+                               rsp: SrvTypeResponse
+                               ) -> SrvTypeResponse:
 
         self.logger.debug("{:=^50}".format(" Service[account_query]:Start "))
         self.logger.debug("<Request>")
