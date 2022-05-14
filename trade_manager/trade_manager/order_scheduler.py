@@ -23,7 +23,8 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
 from api_msgs.msg import OrderState, TradeState
 from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
-from .constant import FMT_YMDHMS, FMT_YMDHMSF
+from .constant import FMT_YMDHMS, FMT_YMDHMSF, FMT_TIME_HMS
+from .constant import WeekDay
 from .constant import Transitions as Tr
 from .constant import INST_DICT
 from .exception import InitializerErrorException
@@ -41,8 +42,16 @@ class _RosParams():
     """
     ROS Parameter.
     """
+    @dataclass
+    class RosParamTime(RosParam):
+        time: dt.datetime.time = None
+
     MAX_LEVERAGE = RosParam("max_leverage")
     MAX_POSITION_COUNT = RosParam("max_position_count")
+    ENABLE_WEEKEND_ORDER_STOP = RosParam("enable_weekend_order_stop")
+    WEEKEND_ORDER_STOP_TIME = RosParamTime("weekend_order_stop_time")
+    ENABLE_WEEKEND_ALL_CLOSE = RosParam("enable_weekend_all_close")
+    WEEKEND_ALL_CLOSE_TIME = RosParamTime("weekend_all_close_time")
 
 
 @dataclass
@@ -327,7 +336,7 @@ class OrderTicket():
         else:
             self._entry_price = req.entry_price
 
-        if ((self._order_type == OrderType.MARKET) or (not req.entry_exp_time)):
+        if (self._order_type == OrderType.MARKET) or (not req.entry_exp_time):
             self._entry_exp_time = None
         else:
             self._entry_exp_time = dt.datetime.strptime(req.entry_exp_time,
@@ -357,6 +366,7 @@ class OrderTicket():
 
         self._is_entry_exp_time_over = False
         self._enable_trade_close = False
+        self._enable_weekend_close = False
 
         self.logger.debug("---------- Create OrderTicket ----------")
         self.logger.debug("  - Create Time:{}".format(dt.datetime.now()))
@@ -398,6 +408,11 @@ class OrderTicket():
     @property
     def register_id(self) -> int:
         return self._register_id
+
+    def enable_weekend_close(self) -> None:
+        self._enable_weekend_close = True
+        self._enable_trade_close = True
+        self.logger.debug("----- << Enable weekend close >> -----")
 
     def enable_trade_close(self) -> bool:
         success = False
@@ -472,9 +487,11 @@ class OrderTicket():
         now = dt.datetime.now()
         if self._is_entry_exp_time_over:
             self._trans_to_Complete()
-        elif ((self._entry_exp_time is not None) and (self._entry_exp_time < now)):
+        elif (self._entry_exp_time is not None) and (self._entry_exp_time < now):
             self._trans_from_EntryWaiting_to_EntryCanceling()
             self._is_entry_exp_time_over = True
+        elif self._enable_weekend_close:
+            self._trans_from_EntryWaiting_to_EntryCanceling()
         elif self._next_pol_time < now:
             self.logger.debug("<<< Timeout >>> in EntryWaiting")
             self._trans_from_EntryWaiting_to_EntryChecking()
@@ -600,8 +617,9 @@ class OrderTicket():
 
     def _on_do_ExitWaiting(self) -> None:
         now = dt.datetime.now()
-        if (self._enable_trade_close
-                or ((self._exit_exp_time is not None) and (self._exit_exp_time < now))):
+        if (self._exit_exp_time is not None) and (self._exit_exp_time < now):
+            self._trans_from_ExitWaiting_to_ExitOrdering()
+        elif self._enable_trade_close:
             self._trans_from_ExitWaiting_to_ExitOrdering()
         elif self._next_pol_time < now:
             self.logger.debug("<<< Timeout >>> in ExitWaiting")
@@ -744,17 +762,41 @@ class OrderScheduler(Node):
         self._rosprm = _RosParams()
         self.declare_parameter(self._rosprm.MAX_LEVERAGE.name)
         self.declare_parameter(self._rosprm.MAX_POSITION_COUNT.name)
+        self.declare_parameter(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.name)
+        self.declare_parameter(self._rosprm.WEEKEND_ORDER_STOP_TIME.name)
+        self.declare_parameter(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.name)
+        self.declare_parameter(self._rosprm.WEEKEND_ALL_CLOSE_TIME.name)
 
         para = self.get_parameter(self._rosprm.MAX_LEVERAGE.name)
         self._rosprm.MAX_LEVERAGE.value = para.value
         para = self.get_parameter(self._rosprm.MAX_POSITION_COUNT.name)
         self._rosprm.MAX_POSITION_COUNT.value = para.value
+        para = self.get_parameter(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.name)
+        self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value = para.value
+        para = self.get_parameter(self._rosprm.WEEKEND_ORDER_STOP_TIME.name)
+        self._rosprm.WEEKEND_ORDER_STOP_TIME.value = para.value
+        datetime_ = dt.datetime.strptime(para.value, FMT_TIME_HMS)
+        self._rosprm.WEEKEND_ORDER_STOP_TIME.time = datetime_.time()
+        para = self.get_parameter(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.name)
+        self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value = para.value
+        para = self.get_parameter(self._rosprm.WEEKEND_ALL_CLOSE_TIME.name)
+        self._rosprm.WEEKEND_ALL_CLOSE_TIME.value = para.value
+        datetime_ = dt.datetime.strptime(para.value, FMT_TIME_HMS)
+        self._rosprm.WEEKEND_ALL_CLOSE_TIME.time = datetime_.time()
 
         self.logger.debug("[Param]")
         self.logger.debug("  - max_leverage:[{}]"
                           .format(self._rosprm.MAX_LEVERAGE.value))
         self.logger.debug("  - max_position_count:[{}]"
                           .format(self._rosprm.MAX_POSITION_COUNT.value))
+        self.logger.debug("  - enable_weekend_order_stop:[{}]"
+                          .format(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value))
+        self.logger.debug("  - weekend_order_stop_time:[{}]"
+                          .format(self._rosprm.WEEKEND_ORDER_STOP_TIME.time))
+        self.logger.debug("  - enable_weekend_all_close:[{}]"
+                          .format(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value))
+        self.logger.debug("  - weekend_all_close_time:[{}]"
+                          .format(self._rosprm.WEEKEND_ALL_CLOSE_TIME.time))
 
         # --------------- Create State Machine ---------------
         states = [
@@ -940,6 +982,15 @@ class OrderScheduler(Node):
         else:
             pass
 
+        # Check weekend close proccess
+        if self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value:
+            now = dt.datetime.now()
+            if ((now.weekday() == WeekDay.SAT.value)
+                    and (now.time() > self._rosprm.WEEKEND_ALL_CLOSE_TIME.time)):
+                for ticket in self._tickets:
+                    ticket.enable_weekend_close()
+
+        # Do ticket cyclic event
         for ticket in self._tickets:
             ticket.do_cyclic_event()
 
@@ -979,21 +1030,36 @@ class OrderScheduler(Node):
         dbg_tm_start = dt.datetime.now()
 
         rsp.register_id = -1
-        if len(self._tickets) < self._rosprm.MAX_POSITION_COUNT.value:
-            if self._validate_msg(req):
-                tick_price = self._tick_price_dict[req.inst_msg.inst_id]
-                try:
-                    ticket = OrderTicket(req, tick_price)
-                except InitializerErrorException as err:
-                    self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
-                    self.logger.error(err)
-                else:
-                    self._tickets.append(ticket)
-                    rsp.register_id = ticket.register_id
-            else:
-                self.logger.error("{:!^50}".format(" Validate msg: NG "))
+
+        if (self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value
+            and (dbg_tm_start.weekday() == WeekDay.SAT.value)
+                and (dbg_tm_start.time() > self._rosprm.WEEKEND_ORDER_STOP_TIME.time)):
+            self.logger.warn("{:!^50}".format(" Reject order create "))
+            self.logger.warn("  - Weekend order stop time has passed ")
+            self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
+            return rsp
+
+        if len(self._tickets) >= self._rosprm.MAX_POSITION_COUNT.value:
+            self.logger.warn("{:!^50}".format(" Reject order create "))
+            self.logger.warn("  - Positon count is full ")
+            self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
+            return rsp
+
+        if not self._validate_msg(req):
+            self.logger.error("{:!^50}".format(" Reject order create "))
+            self.logger.error("  - Validate msg: NG ")
+            self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
+            return rsp
+
+        tick_price = self._tick_price_dict[req.inst_msg.inst_id]
+        try:
+            ticket = OrderTicket(req, tick_price)
+        except InitializerErrorException as err:
+            self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
+            self.logger.error(err)
         else:
-            self.logger.warn("{:!^50}".format(" Positon count is full "))
+            self._tickets.append(ticket)
+            rsp.register_id = ticket.register_id
 
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
