@@ -12,6 +12,8 @@ FMT_TIME_HMS = "%H:%M:%S"
 MIN_TIME = dt.time(0, 0, 0)
 MAX_TIME = dt.time(23, 59, 59)
 
+BUCKUP_DIR = "/trade_backup/"
+
 
 @unique
 class WeekDay(Enum):
