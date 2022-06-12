@@ -1,9 +1,11 @@
 import sys
+import os
 import gc
 from typing import TypeVar
 from dataclasses import dataclass
 from enum import Enum, auto
 import datetime as dt
+import pandas as pd
 from transitions import Machine
 # from transitions.extensions.factory import GraphMachine as Machine
 from transitions.extensions.factory import GraphMachine
@@ -23,17 +25,54 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
 from api_msgs.msg import OrderState, TradeState
 from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
-from .constant import FMT_YMDHMS, FMT_YMDHMSF
+from .constant import FMT_YMDHMS, FMT_YMDHMSF, FMT_TIME_HMS
+from .constant import BUCKUP_DIR
+from .constant import WeekDay
 from .constant import Transitions as Tr
 from .constant import INST_DICT
 from .exception import InitializerErrorException
 from .dataclass import RosParam
 from .wrapper import RosServiceClient
 from .trigger import TimeTrigger
+from . import backup as bk
 
 MsgType = TypeVar("MsgType")
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
+
+
+class ColOrderSchedulerBackup(Enum):
+    """
+    Order scheduler backup dataframe column name.
+    """
+    REGISTER_ID = "register_id"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
+
+
+class ColOrderTicketsBackup(Enum):
+    """
+    Order tickets backup dataframe column name.
+    """
+    REGISTER_ID = "register_id"
+    ORDER_ID = "order_id"
+    TRADE_ID = "trade_id"
+    INST_ID = "inst_id"
+    ORDER_TYPE = "order_type"
+    UNITS = "units"
+    ENTRY_PRICE = "entry_price"
+    ENTRY_EXP_TIME = "entry_exp_time"
+    TAKE_PROFIT_PRICE = "take_profit_price"
+    STOP_LOSS_PRICE = "stop_loss_price"
+    EXIT_EXP_TIME = "exit_exp_time"
+    API_INST_ID = "api_inst_id"
+    API_ORDER_TYPE = "api_order_type"
+
+    @classmethod
+    def to_list(cls):
+        return [m.value for m in cls]
 
 
 @dataclass
@@ -41,8 +80,16 @@ class _RosParams():
     """
     ROS Parameter.
     """
+    @dataclass
+    class RosParamTime(RosParam):
+        time: dt.datetime.time = None
+
     MAX_LEVERAGE = RosParam("max_leverage")
     MAX_POSITION_COUNT = RosParam("max_position_count")
+    ENABLE_WEEKEND_ORDER_STOP = RosParam("enable_weekend_order_stop")
+    WEEKEND_ORDER_STOP_TIME = RosParamTime("weekend_order_stop_time")
+    ENABLE_WEEKEND_ALL_CLOSE = RosParam("enable_weekend_all_close")
+    WEEKEND_ALL_CLOSE_TIME = RosParamTime("weekend_all_close_time")
 
 
 @dataclass
@@ -107,7 +154,19 @@ class OrderTicket():
     def set_balance(cls, balance: int):
         cls._c_balance = balance
 
-    def __init__(self, req: SrvTypeRequest, tick_price: _TickPrice) -> None:
+    @classmethod
+    def get_register_id(cls):
+        return cls._c_register_id
+
+    @classmethod
+    def set_register_id(cls, register_id):
+        cls._c_register_id = register_id
+
+    def __init__(self,
+                 req: SrvTypeRequest,
+                 tick_price: _TickPrice,
+                 use_restore: bool = False
+                 ) -> None:
 
         # --------------- Define Constant value ---------------
         self._POL_INTERVAL = dt.timedelta(minutes=1)
@@ -297,6 +356,12 @@ class OrderTicket():
         self._future = None
         self._trade_id = None
         self._order_id = None
+        self._is_entry_exp_time_over = False
+        self._enable_trade_close = False
+        self._enable_weekend_close = False
+
+        if use_restore:
+            return
 
         self._inst_id = req.inst_msg.inst_id
         self._order_type = req.ordtyp_msg.order_type
@@ -327,7 +392,7 @@ class OrderTicket():
         else:
             self._entry_price = req.entry_price
 
-        if ((self._order_type == OrderType.MARKET) or (not req.entry_exp_time)):
+        if (self._order_type == OrderType.MARKET) or (not req.entry_exp_time):
             self._entry_exp_time = None
         else:
             self._entry_exp_time = dt.datetime.strptime(req.entry_exp_time,
@@ -354,9 +419,6 @@ class OrderTicket():
             self.logger.error("{:!^50}".format(" Unexpected order type "))
             self.logger.error("order_type:[{}]".format(self._order_type))
             raise InitializerErrorException("Unexpected order type.")
-
-        self._is_entry_exp_time_over = False
-        self._enable_trade_close = False
 
         self.logger.debug("---------- Create OrderTicket ----------")
         self.logger.debug("  - Create Time:{}".format(dt.datetime.now()))
@@ -398,6 +460,72 @@ class OrderTicket():
     @property
     def register_id(self) -> int:
         return self._register_id
+
+    def generate_buckup_record(self) -> list:
+        bk_rec_list = [
+            self._register_id,
+            self._order_id,
+            self._trade_id,
+            self._inst_id,
+            self._order_type,
+            self._units,
+            self._entry_price,
+            self._entry_exp_time,
+            self._take_profit_price,
+            self._stop_loss_price,
+            self._exit_exp_time,
+            self._api_inst_id,
+            self._api_order_type,
+        ]
+        return bk_rec_list
+
+    def restore(self, rec: pd.Series):
+        Col = ColOrderTicketsBackup
+
+        entry_exp_time = rec[Col.ENTRY_EXP_TIME.value]
+        if entry_exp_time is not None:
+            entry_exp_time = dt.datetime.strptime(entry_exp_time,
+                                                  FMT_YMDHMS)
+        exit_exp_time = rec[Col.EXIT_EXP_TIME.value]
+        if exit_exp_time is not None:
+            exit_exp_time = dt.datetime.strptime(exit_exp_time,
+                                                 FMT_YMDHMS)
+        self._register_id = rec[Col.REGISTER_ID.value]
+        self._order_id = rec[Col.ORDER_ID.value]
+        self._trade_id = rec[Col.TRADE_ID.value]
+        self._inst_id = rec[Col.INST_ID.value]
+        self._order_type = rec[Col.ORDER_TYPE.value]
+        self._units = rec[Col.UNITS.value]
+        self._entry_price = rec[Col.ENTRY_PRICE.value]
+        self._entry_exp_time = entry_exp_time
+        self._take_profit_price = rec[Col.TAKE_PROFIT_PRICE.value]
+        self._stop_loss_price = rec[Col.STOP_LOSS_PRICE.value]
+        self._exit_exp_time = exit_exp_time
+        self._api_inst_id = rec[Col.API_INST_ID.value]
+        self._api_order_type = rec[Col.API_ORDER_TYPE.value]
+
+        self.logger.info("<<<<<<<<<< Restore:register_id[{}] >>>>>>>>>>"
+                         .format(self._register_id))
+        self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
+        self.logger.debug("  - order_type:[{}]".format(self._order_type))
+        self.logger.debug("  - units:[{}]".format(self._units))
+        self.logger.debug("  - entry_price:[{}]".format(self._entry_price))
+        self.logger.debug("  - entry_exp_time:[{}]".format(self._entry_exp_time))
+        self.logger.debug("  - take_profit_price:[{}]".format(self._take_profit_price))
+        self.logger.debug("  - stop_loss_price:[{}]".format(self._stop_loss_price))
+        self.logger.debug("  - exit_exp_time:[{}]".format(self._exit_exp_time))
+        self.logger.debug("  - api_inst_id:[{}]".format(self._api_inst_id))
+        self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
+
+        if self._trade_id is None:
+            self.to_EntryChecking()
+        else:
+            self.to_ExitChecking()
+
+    def enable_weekend_close(self) -> None:
+        self._enable_weekend_close = True
+        self._enable_trade_close = True
+        self.logger.debug("----- << Enable weekend close >> -----")
 
     def enable_trade_close(self) -> bool:
         success = False
@@ -472,9 +600,11 @@ class OrderTicket():
         now = dt.datetime.now()
         if self._is_entry_exp_time_over:
             self._trans_to_Complete()
-        elif ((self._entry_exp_time is not None) and (self._entry_exp_time < now)):
+        elif (self._entry_exp_time is not None) and (self._entry_exp_time < now):
             self._trans_from_EntryWaiting_to_EntryCanceling()
             self._is_entry_exp_time_over = True
+        elif self._enable_weekend_close:
+            self._trans_from_EntryWaiting_to_EntryCanceling()
         elif self._next_pol_time < now:
             self.logger.debug("<<< Timeout >>> in EntryWaiting")
             self._trans_from_EntryWaiting_to_EntryChecking()
@@ -600,8 +730,9 @@ class OrderTicket():
 
     def _on_do_ExitWaiting(self) -> None:
         now = dt.datetime.now()
-        if (self._enable_trade_close
-                or ((self._exit_exp_time is not None) and (self._exit_exp_time < now))):
+        if (self._exit_exp_time is not None) and (self._exit_exp_time < now):
+            self._trans_from_ExitWaiting_to_ExitOrdering()
+        elif self._enable_trade_close:
             self._trans_from_ExitWaiting_to_ExitOrdering()
         elif self._next_pol_time < now:
             self.logger.debug("<<< Timeout >>> in ExitWaiting")
@@ -740,21 +871,51 @@ class OrderScheduler(Node):
         # --------------- Define constant value ---------------
         self._ACCOUNT_UPDATETIME_SEC = 30
 
+        buckup_dir = os.path.expanduser("~") + BUCKUP_DIR
+        filename_os = "bak_order_scheduler.csv"
+        filename_ot = "bak_order_tickets.csv"
+        self._BUCKUP_FULLPATH_OS = buckup_dir + filename_os
+        self._BUCKUP_FULLPATH_OT = buckup_dir + filename_ot
+
         # --------------- Declare ROS parameter ---------------
         self._rosprm = _RosParams()
         self.declare_parameter(self._rosprm.MAX_LEVERAGE.name)
         self.declare_parameter(self._rosprm.MAX_POSITION_COUNT.name)
+        self.declare_parameter(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.name)
+        self.declare_parameter(self._rosprm.WEEKEND_ORDER_STOP_TIME.name)
+        self.declare_parameter(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.name)
+        self.declare_parameter(self._rosprm.WEEKEND_ALL_CLOSE_TIME.name)
 
         para = self.get_parameter(self._rosprm.MAX_LEVERAGE.name)
         self._rosprm.MAX_LEVERAGE.value = para.value
         para = self.get_parameter(self._rosprm.MAX_POSITION_COUNT.name)
         self._rosprm.MAX_POSITION_COUNT.value = para.value
+        para = self.get_parameter(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.name)
+        self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value = para.value
+        para = self.get_parameter(self._rosprm.WEEKEND_ORDER_STOP_TIME.name)
+        self._rosprm.WEEKEND_ORDER_STOP_TIME.value = para.value
+        datetime_ = dt.datetime.strptime(para.value, FMT_TIME_HMS)
+        self._rosprm.WEEKEND_ORDER_STOP_TIME.time = datetime_.time()
+        para = self.get_parameter(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.name)
+        self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value = para.value
+        para = self.get_parameter(self._rosprm.WEEKEND_ALL_CLOSE_TIME.name)
+        self._rosprm.WEEKEND_ALL_CLOSE_TIME.value = para.value
+        datetime_ = dt.datetime.strptime(para.value, FMT_TIME_HMS)
+        self._rosprm.WEEKEND_ALL_CLOSE_TIME.time = datetime_.time()
 
         self.logger.debug("[Param]")
         self.logger.debug("  - max_leverage:[{}]"
                           .format(self._rosprm.MAX_LEVERAGE.value))
         self.logger.debug("  - max_position_count:[{}]"
                           .format(self._rosprm.MAX_POSITION_COUNT.value))
+        self.logger.debug("  - enable_weekend_order_stop:[{}]"
+                          .format(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value))
+        self.logger.debug("  - weekend_order_stop_time:[{}]"
+                          .format(self._rosprm.WEEKEND_ORDER_STOP_TIME.time))
+        self.logger.debug("  - enable_weekend_all_close:[{}]"
+                          .format(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value))
+        self.logger.debug("  - weekend_all_close_time:[{}]"
+                          .format(self._rosprm.WEEKEND_ALL_CLOSE_TIME.time))
 
         # --------------- Create State Machine ---------------
         states = [
@@ -924,6 +1085,52 @@ class OrderScheduler(Node):
         self._tickets: list[OrderTicket] = []
         self._acc_trig = TimeTrigger(minute=0, second=30)
 
+        # --------------- Restore ---------------
+        # ----- Order scheduler -----
+        try:
+            df = bk.load_df_csv(self._BUCKUP_FULLPATH_OS)
+        except FileNotFoundError:
+            pass
+        else:
+            Col = ColOrderSchedulerBackup
+            sr = df.iloc[0]
+            self.logger.info("========== Restore order scheduler ==========\n{}"
+                             .format(sr))
+            OrderTicket.set_register_id(sr[Col.REGISTER_ID.value])
+
+        # ----- Order tickets -----
+        try:
+            df = bk.load_df_csv(self._BUCKUP_FULLPATH_OT)
+        except FileNotFoundError:
+            pass
+        else:
+            Col = ColOrderTicketsBackup
+            df = df.where(df.notna(), None)
+            self.logger.info("========== Restore order tickes ==========\n{}"
+                             .format(df))
+            for _, row in df.iterrows():
+                req = OrderRegisterSrv.Request()
+                tick_price = _TickPrice("", 0, 0)   # Dummy
+                ticket = OrderTicket(req, tick_price, use_restore=True)
+                ticket.restore(row)
+                self._tickets.append(ticket)
+
+    def finalize(self):
+        # ---------- write csv ----------
+        # ----- Backup order scheduler -----
+        register_id = OrderTicket.get_register_id()
+        bk_tbl = [register_id]
+        df = pd.DataFrame(bk_tbl, columns=ColOrderSchedulerBackup.to_list())
+        bk.save_df_csv(self._BUCKUP_FULLPATH_OS, df, index=False, date_format=FMT_YMDHMS)
+
+        # ----- Backup order tickets -----
+        bk_tbl = []
+        for ticket in self._tickets:
+            rec = ticket.generate_buckup_record()
+            bk_tbl.append(rec)
+        df = pd.DataFrame(bk_tbl, columns=ColOrderTicketsBackup.to_list())
+        bk.save_df_csv(self._BUCKUP_FULLPATH_OT, df, index=False, date_format=FMT_YMDHMS)
+
     def do_cyclic_event(self) -> None:
 
         if self.state == self.States.Idle:
@@ -940,6 +1147,15 @@ class OrderScheduler(Node):
         else:
             pass
 
+        # Check weekend close proccess
+        if self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value:
+            now = dt.datetime.now()
+            if ((now.weekday() == WeekDay.SAT.value)
+                    and (now.time() > self._rosprm.WEEKEND_ALL_CLOSE_TIME.time)):
+                for ticket in self._tickets:
+                    ticket.enable_weekend_close()
+
+        # Do ticket cyclic event
         for ticket in self._tickets:
             ticket.do_cyclic_event()
 
@@ -979,21 +1195,36 @@ class OrderScheduler(Node):
         dbg_tm_start = dt.datetime.now()
 
         rsp.register_id = -1
-        if len(self._tickets) < self._rosprm.MAX_POSITION_COUNT.value:
-            if self._validate_msg(req):
-                tick_price = self._tick_price_dict[req.inst_msg.inst_id]
-                try:
-                    ticket = OrderTicket(req, tick_price)
-                except InitializerErrorException as err:
-                    self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
-                    self.logger.error(err)
-                else:
-                    self._tickets.append(ticket)
-                    rsp.register_id = ticket.register_id
-            else:
-                self.logger.error("{:!^50}".format(" Validate msg: NG "))
+
+        if (self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value
+            and (dbg_tm_start.weekday() == WeekDay.SAT.value)
+                and (dbg_tm_start.time() > self._rosprm.WEEKEND_ORDER_STOP_TIME.time)):
+            self.logger.warn("{:!^50}".format(" Reject order create "))
+            self.logger.warn("  - Weekend order stop time has passed ")
+            self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
+            return rsp
+
+        if len(self._tickets) >= self._rosprm.MAX_POSITION_COUNT.value:
+            self.logger.warn("{:!^50}".format(" Reject order create "))
+            self.logger.warn("  - Positon count is full ")
+            self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
+            return rsp
+
+        if not self._validate_msg(req):
+            self.logger.error("{:!^50}".format(" Reject order create "))
+            self.logger.error("  - Validate msg: NG ")
+            self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
+            return rsp
+
+        tick_price = self._tick_price_dict[req.inst_msg.inst_id]
+        try:
+            ticket = OrderTicket(req, tick_price)
+        except InitializerErrorException as err:
+            self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
+            self.logger.error(err)
         else:
-            self.logger.warn("{:!^50}".format(" Positon count is full "))
+            self._tickets.append(ticket)
+            rsp.register_id = ticket.register_id
 
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
@@ -1111,5 +1342,6 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
 
+    os.finalize()
     os.destroy_node()
     rclpy.shutdown()
