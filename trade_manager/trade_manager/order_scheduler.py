@@ -1166,7 +1166,8 @@ class OrderScheduler(Node):
 
         if len_bfr != len(self._tickets):
             gc.collect()
-            self._trans_from_Idle_to_AccountUpdating()
+            if self.state == self.States.Idle:
+                self._trans_from_Idle_to_AccountUpdating()
 
     def _on_enter_AccountUpdating(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
