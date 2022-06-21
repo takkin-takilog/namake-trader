@@ -159,7 +159,7 @@ class OrderTicket():
         return cls._c_register_id
 
     @classmethod
-    def set_register_id(cls, register_id):
+    def set_register_id(cls, register_id: int):
         cls._c_register_id = register_id
 
     def __init__(self,
@@ -490,19 +490,28 @@ class OrderTicket():
         if exit_exp_time is not None:
             exit_exp_time = dt.datetime.strptime(exit_exp_time,
                                                  FMT_YMDHMS)
-        self._register_id = rec[Col.REGISTER_ID.value]
-        self._order_id = rec[Col.ORDER_ID.value]
-        self._trade_id = rec[Col.TRADE_ID.value]
-        self._inst_id = rec[Col.INST_ID.value]
-        self._order_type = rec[Col.ORDER_TYPE.value]
-        self._units = rec[Col.UNITS.value]
-        self._entry_price = rec[Col.ENTRY_PRICE.value]
+
+        order_id = rec[Col.ORDER_ID.value]
+        if order_id is not None:
+            order_id = int(order_id)
+
+        trade_id = rec[Col.TRADE_ID.value]
+        if trade_id is not None:
+            trade_id = int(trade_id)
+
+        self._register_id = int(rec[Col.REGISTER_ID.value])
+        self._order_id = order_id
+        self._trade_id = trade_id
+        self._inst_id = int(rec[Col.INST_ID.value])
+        self._order_type = int(rec[Col.ORDER_TYPE.value])
+        self._units = int(rec[Col.UNITS.value])
+        self._entry_price = float(rec[Col.ENTRY_PRICE.value])
         self._entry_exp_time = entry_exp_time
-        self._take_profit_price = rec[Col.TAKE_PROFIT_PRICE.value]
-        self._stop_loss_price = rec[Col.STOP_LOSS_PRICE.value]
+        self._take_profit_price = float(rec[Col.TAKE_PROFIT_PRICE.value])
+        self._stop_loss_price = float(rec[Col.STOP_LOSS_PRICE.value])
         self._exit_exp_time = exit_exp_time
-        self._api_inst_id = rec[Col.API_INST_ID.value]
-        self._api_order_type = rec[Col.API_ORDER_TYPE.value]
+        self._api_inst_id = int(rec[Col.API_INST_ID.value])
+        self._api_order_type = int(rec[Col.API_ORDER_TYPE.value])
 
         self.logger.info("<<<<<<<<<< Restore:register_id[{}] >>>>>>>>>>"
                          .format(self._register_id))
@@ -1094,9 +1103,10 @@ class OrderScheduler(Node):
         else:
             Col = ColOrderSchedulerBackup
             sr = df.iloc[0]
-            self.logger.info("========== Restore order scheduler ==========\n{}"
-                             .format(sr))
-            OrderTicket.set_register_id(sr[Col.REGISTER_ID.value])
+            register_id = int(sr[Col.REGISTER_ID.value])
+            self.logger.info("========== Restore order scheduler ==========")
+            self.logger.info("  - register_id:[{}]".format(register_id))
+            OrderTicket.set_register_id(register_id)
 
         # ----- Order tickets -----
         try:
