@@ -100,9 +100,9 @@ class ParabolicUi():
         self._chartview = OhlcChartView(ui.widget_ChartView_TechParabolic)
 
         # ----- set widget disable -----
-        ui.comboBox_TechParabolic_InitValue.setEnabled(False)
-        ui.comboBox_TechParabolic_MaxValue.setEnabled(False)
-        ui.comboBox_TechParabolic_AcclValue.setEnabled(False)
+        ui.comboBox_TechParabolic_AfInit.setEnabled(False)
+        ui.comboBox_TechParabolic_AfMax.setEnabled(False)
+        ui.comboBox_TechParabolic_AfStep.setEnabled(False)
         ui.pushButton_TechParabolic_fetch_treeView.setEnabled(False)
         ui.widget_TreeView_TechParabolic.setEnabled(False)
         ui.comboBox_TechParabolic_amb.setEnabled(False)
@@ -232,15 +232,15 @@ class ParabolicUi():
         else:
             goal_msg.start_datetime = ""
             goal_msg.end_datetime = ""
-        goal_msg.init_value_start = self._ui.spinBox_TechParabolic_InitValueStr.value()
-        goal_msg.init_value_end = self._ui.spinBox_TechParabolic_InitValueEnd.value()
-        goal_msg.init_value_deci = self._ui.spinBox_TechParabolic_InitValueDeci.value()
-        goal_msg.max_value_start = self._ui.spinBox_TechParabolic_MaxValueStr.value()
-        goal_msg.max_value_end = self._ui.spinBox_TechParabolic_MaxValueEnd.value()
-        goal_msg.max_value_deci = self._ui.spinBox_TechParabolic_MaxValueDeci.value()
-        goal_msg.accl_value_start = self._ui.spinBox_TechParabolic_AcclValueStr.value()
-        goal_msg.accl_value_end = self._ui.spinBox_TechParabolic_AcclValueEnd.value()
-        goal_msg.accl_value_deci = self._ui.spinBox_TechParabolic_AcclValueDeci.value()
+        goal_msg.af_init_start = self._ui.spinBox_TechParabolic_AfInitStr.value()
+        goal_msg.af_init_end = self._ui.spinBox_TechParabolic_AfInitEnd.value()
+        goal_msg.af_init_deci = self._ui.spinBox_TechParabolic_AfInitDeci.value()
+        goal_msg.af_max_start = self._ui.spinBox_TechParabolic_AfMaxStr.value()
+        goal_msg.af_max_end = self._ui.spinBox_TechParabolic_AfMaxEnd.value()
+        goal_msg.af_max_deci = self._ui.spinBox_TechParabolic_AfMaxDeci.value()
+        goal_msg.af_step_start = self._ui.spinBox_TechParabolic_AfStepStr.value()
+        goal_msg.af_step_end = self._ui.spinBox_TechParabolic_AfStepEnd.value()
+        goal_msg.af_step_deci = self._ui.spinBox_TechParabolic_AfStepDeci.value()
         goal_msg.profit_th_start = self._ui.spinBox_TechParabolic_PlThStr.value()
         goal_msg.profit_th_end = self._ui.spinBox_TechParabolic_PlThEnd.value()
         goal_msg.profit_th_deci = self._ui.spinBox_TechParabolic_PlThDeci.value()
@@ -296,51 +296,51 @@ class ParabolicUi():
             return
 
         # ----- set Initial value comboBox -----
-        init_value_start = self._ui.spinBox_TechParabolic_InitValueStr.value()
-        init_value_end = self._ui.spinBox_TechParabolic_InitValueEnd.value()
-        init_value_deci = self._ui.spinBox_TechParabolic_InitValueDeci.value()
-        init_value_list = list(range(init_value_start, init_value_end + 1, init_value_deci))
+        af_init_start = self._ui.spinBox_TechParabolic_AfInitStr.value()
+        af_init_end = self._ui.spinBox_TechParabolic_AfInitEnd.value()
+        af_init_deci = self._ui.spinBox_TechParabolic_AfInitDeci.value()
+        af_init_list = list(range(af_init_start, af_init_end + 1, af_init_deci))
 
-        wasBlocked = self._ui.comboBox_TechParabolic_InitValue.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechParabolic_InitValue)
-        for init_value in init_value_list:
-            self._ui.comboBox_TechParabolic_InitValue.addItem(str(init_value))
-        self._ui.comboBox_TechParabolic_InitValue.blockSignals(wasBlocked)
+        wasBlocked = self._ui.comboBox_TechParabolic_AfInit.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechParabolic_AfInit)
+        for af_init in af_init_list:
+            self._ui.comboBox_TechParabolic_AfInit.addItem(str(af_init))
+        self._ui.comboBox_TechParabolic_AfInit.blockSignals(wasBlocked)
 
         # ----- set Max value comboBox -----
-        max_value_start = self._ui.spinBox_TechParabolic_MaxValueStr.value()
-        max_value_end = self._ui.spinBox_TechParabolic_MaxValueEnd.value()
-        max_value_deci = self._ui.spinBox_TechParabolic_MaxValueDeci.value()
-        max_value_list = list(range(max_value_start, max_value_end + 1, max_value_deci))
+        af_max_start = self._ui.spinBox_TechParabolic_AfMaxStr.value()
+        af_max_end = self._ui.spinBox_TechParabolic_AfMaxEnd.value()
+        af_max_deci = self._ui.spinBox_TechParabolic_AfMaxDeci.value()
+        af_max_list = list(range(af_max_start, af_max_end + 1, af_max_deci))
 
-        wasBlocked = self._ui.comboBox_TechParabolic_MaxValue.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechParabolic_MaxValue)
-        for max_value in max_value_list:
-            self._ui.comboBox_TechParabolic_MaxValue.addItem(str(max_value))
-        self._ui.comboBox_TechParabolic_MaxValue.blockSignals(wasBlocked)
+        wasBlocked = self._ui.comboBox_TechParabolic_AfMax.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechParabolic_AfMax)
+        for af_max in af_max_list:
+            self._ui.comboBox_TechParabolic_AfMax.addItem(str(af_max))
+        self._ui.comboBox_TechParabolic_AfMax.blockSignals(wasBlocked)
 
         # ----- set Accelerator value comboBox -----
-        accl_value_start = self._ui.spinBox_TechParabolic_AcclValueStr.value()
-        accl_value_end = self._ui.spinBox_TechParabolic_AcclValueEnd.value()
-        accl_value_deci = self._ui.spinBox_TechParabolic_AcclValueDeci.value()
-        accl_value_list = list(range(accl_value_start, accl_value_end + 1, accl_value_deci))
+        af_step_start = self._ui.spinBox_TechParabolic_AfStepStr.value()
+        af_step_end = self._ui.spinBox_TechParabolic_AfStepEnd.value()
+        af_step_deci = self._ui.spinBox_TechParabolic_AfStepDeci.value()
+        af_step_list = list(range(af_step_start, af_step_end + 1, af_step_deci))
 
-        wasBlocked = self._ui.comboBox_TechParabolic_AcclValue.blockSignals(True)
-        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechParabolic_AcclValue)
-        for accl_value in accl_value_list:
-            self._ui.comboBox_TechParabolic_AcclValue.addItem(str(accl_value))
-        self._ui.comboBox_TechParabolic_AcclValue.blockSignals(wasBlocked)
+        wasBlocked = self._ui.comboBox_TechParabolic_AfStep.blockSignals(True)
+        utl.remove_all_items_of_comboBox(self._ui.comboBox_TechParabolic_AfStep)
+        for af_step in af_step_list:
+            self._ui.comboBox_TechParabolic_AfStep.addItem(str(af_step))
+        self._ui.comboBox_TechParabolic_AfStep.blockSignals(wasBlocked)
 
         # ----- set widget enable -----
-        self._ui.comboBox_TechParabolic_InitValue.setEnabled(True)
-        self._ui.comboBox_TechParabolic_MaxValue.setEnabled(True)
-        self._ui.comboBox_TechParabolic_AcclValue.setEnabled(True)
+        self._ui.comboBox_TechParabolic_AfInit.setEnabled(True)
+        self._ui.comboBox_TechParabolic_AfMax.setEnabled(True)
+        self._ui.comboBox_TechParabolic_AfStep.setEnabled(True)
         self._ui.pushButton_TechParabolic_fetch_treeView.setEnabled(True)
         self._ui.widget_TreeView_TechParabolic.setEnabled(True)
 
-        self._init_value_list = init_value_list
-        self._max_value_list = max_value_list
-        self._accl_value_list = accl_value_list
+        self._af_init_list = af_init_list
+        self._af_max_list = af_max_list
+        self._af_step_list = af_step_list
 
     def _on_pushButton_TechParabolic_fetch_treeView_clicked(self):
 
@@ -356,23 +356,23 @@ class ParabolicUi():
         self._sts_bar.set_bar_range(0, 100)
         self._sts_bar.set_bar_value(0)
 
-        init_value_idx = self._ui.comboBox_TechParabolic_InitValue.currentIndex()
-        max_value_idx = self._ui.comboBox_TechParabolic_MaxValue.currentIndex()
-        accl_value_idx = self._ui.comboBox_TechParabolic_AcclValue.currentIndex()
-        init_value = self._init_value_list[init_value_idx]
-        max_value = self._max_value_list[max_value_idx]
-        accl_value = self._accl_value_list[accl_value_idx]
+        af_init_idx = self._ui.comboBox_TechParabolic_AfInit.currentIndex()
+        af_max_idx = self._ui.comboBox_TechParabolic_AfMax.currentIndex()
+        af_step_idx = self._ui.comboBox_TechParabolic_AfStep.currentIndex()
+        af_init = self._af_init_list[af_init_idx]
+        af_max = self._af_max_list[af_max_idx]
+        af_step = self._af_step_list[af_step_idx]
 
-        if max_value <= init_value:
+        if af_max <= af_init:
             self._sts_bar.set_label_text("Invalid combination of SMA L and S value.")
             return
 
         self._ui.pushButton_TechParabolic_fetch_treeView.setEnabled(False)
 
         goal_msg = TechParabolicTreeViewAct.Goal()
-        goal_msg.init_value = init_value
-        goal_msg.max_value = max_value
-        goal_msg.accl_value = accl_value
+        goal_msg.af_init = af_init
+        goal_msg.af_max = af_max
+        goal_msg.af_step = af_step
 
         callback_fb = self._fetch_treeview_feedback_callback
         self._future = self._act_cli_tv.send_goal_async(goal_msg,
@@ -505,14 +505,14 @@ class ParabolicUi():
 
     def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
 
-        ema_l_idx = self._ui.comboBox_TechParabolic_InitValue.currentIndex()
-        ema_s_idx = self._ui.comboBox_TechParabolic_MaxValue.currentIndex()
-        sig_idx = self._ui.comboBox_TechParabolic_AcclValue.currentIndex()
+        ema_l_idx = self._ui.comboBox_TechParabolic_AfInit.currentIndex()
+        ema_s_idx = self._ui.comboBox_TechParabolic_AfMax.currentIndex()
+        sig_idx = self._ui.comboBox_TechParabolic_AfStep.currentIndex()
 
         req = TechMacdChartSrv.Request()
-        req.ema_l_span = self._init_value_list[ema_l_idx]
-        req.ema_s_span = self._max_value_list[ema_s_idx]
-        req.sig_span = self._accl_value_list[sig_idx]
+        req.ema_l_span = self._af_init_list[ema_l_idx]
+        req.ema_s_span = self._af_max_list[ema_s_idx]
+        req.sig_span = self._af_step_list[sig_idx]
         req.time = entry_time.strftime(FMT_YMDHMS)
         req.number_of_bars = bar_num
 
