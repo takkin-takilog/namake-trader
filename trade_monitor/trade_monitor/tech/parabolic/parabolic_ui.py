@@ -10,7 +10,7 @@ from rclpy.action import ActionClient
 from rclpy.client import Client
 from action_msgs.msg import GoalStatus
 from trade_apl_msgs.action import TechParabolicBtAct
-from trade_apl_msgs.action import TechMacdTreeViewAct
+from trade_apl_msgs.action import TechParabolicTreeViewAct
 from trade_apl_msgs.srv import PeriodSrv
 from trade_apl_msgs.srv import TechMacdChartSrv
 from ...constant import FMT_YMDHMS, FMT_DISP_YMDHMS, FMT_QT_YMDHMS
@@ -46,10 +46,7 @@ class ColBtRslt(Enum):
     ENTRY_TIME = "entry_time"
     ENTRY_PRICE = "entry_price"
     ENTRY_DIR = "entry_dir"
-    MACD_MAX_HEIGHT = "macd_max_height"
-    MACD_MAX_HEIGHT_DT = "macd_max_height_dt"
     EVAL_VALUE = "eval_value"
-    MAX_HEIGHT_PIPS = "max_height_pips"
     EXIT_TIME = "exit_time"
     EXIT_PRICE = "exit_price"
     EXIT_PL_PIPS = "exit_pl_pips"
@@ -169,13 +166,11 @@ class ParabolicUi():
         fullname = ns + act_name
         self._act_cli_bt = ActionClient(node, act_type, fullname)
 
-        """
-        # Create action client "TechMacdTreeView"
-        act_type = TechMacdTreeViewAct
-        act_name = "tech_macd_fetch_treeview"
+        # Create action client "TechParabolicTreeView"
+        act_type = TechParabolicTreeViewAct
+        act_name = "tech_parabolic_fetch_treeview"
         fullname = ns + act_name
         self._act_cli_tv = ActionClient(node, act_type, fullname)
-        """
 
     def _on_pushButton_backtest_start_clicked(self):
         self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
@@ -364,7 +359,7 @@ class ParabolicUi():
         af_step = self._af_step_list[af_step_idx]
 
         if af_max <= af_init:
-            self._sts_bar.set_label_text("Invalid combination of SMA L and S value.")
+            self._sts_bar.set_label_text("Invalid combination of AF-Initialize & AF-Max value.")
             return
 
         self._ui.pushButton_TechParabolic_fetch_treeView.setEnabled(False)
@@ -417,11 +412,7 @@ class ParabolicUi():
                 dt.datetime.strptime(rec.entry_time, FMT_YMDHMS),
                 self._inst_param.round_pips(rec.entry_price),
                 rec.entry_dir,
-                # dt.datetime.strptime(rec.ema_s_cross_time, FMT_YMDHMS),
-                "{:.5f}".format(rec.macd_max_height),
-                dt.datetime.strptime(rec.macd_max_height_dt, FMT_YMDHMS),
                 rec.eval_value,
-                rec.max_height_pips,
                 dt.datetime.strptime(rec.exit_time, FMT_YMDHMS),
                 self._inst_param.round_pips(rec.exit_price),
                 rec.exit_pl_pips,
