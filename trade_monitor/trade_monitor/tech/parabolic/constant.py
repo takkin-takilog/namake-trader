@@ -19,22 +19,8 @@ class ColOhlcChart(Enum):
     BID_H = "bid_h"
     BID_L = "bid_l"
     BID_C = "bid_c"
-    EMA_L = "ema_l"
-    EMA_S = "ema_s"
-
-    @classmethod
-    def to_list(cls):
-        return [m.value for m in cls]
-
-
-class ColMacdChart(Enum):
-    """
-    Pandas MACD backtest result dataframe column name.
-    MACD data.
-    """
-    TIME = "time"
-    MACD = "macd"
-    SIGNAL = "signal"
+    SAR_L = "sar_l"
+    SAR_S = "sar_s"
 
     @classmethod
     def to_list(cls):

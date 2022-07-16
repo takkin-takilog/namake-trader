@@ -9,11 +9,11 @@ from PySide2.QtCore import Qt, QPointF, QLineF
 from PySide2.QtGui import QColor, QPen
 from PySide2.QtCharts import QtCharts
 from PySide2.QtWidgets import QGraphicsLineItem
-from .constant import ColOhlcChart, ColMacdChart
+from ...constant import QtColor
+from .constant import ColOhlcChart
 from ...parameter import GranParam, InstParam
 from ... import ros_common as ros_com
 from ...widget_base import CandlestickChartViewBarCategoryAxis
-from ...widget_base import LineChartViewBarCategoryAxis
 from ...widget_base import CalloutDataTime, CallouPrice
 
 
@@ -23,7 +23,6 @@ class ChartInfo():
     View chart info.
     """
     df_ohlc: pd.DataFrame
-    df_macd: pd.DataFrame
     entry_time_str: str
     entry_time_loc: int
     entry_price: float
@@ -134,45 +133,49 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         self._co_exit_price.setZValue(0)
         self.scene().addItem(self._co_exit_price)
 
-        # ==================== MACD ====================
+        # ==================== Parabolic ====================
         config_tbl = []
-        # ---------- Add EMA(L) Line on scene ----------
+        # ---------- Add SAR(L) Line on scene ----------
         pen = QPen()
         pen.setColor(Qt.magenta)
         pen.setWidth(2)
-        pen.setStyle(Qt.SolidLine)
-        config_tbl.append([ColOhlcChart.EMA_L.value, pen, QtCharts.QLineSeries()])
+        pen.setStyle(Qt.NoPen)
+        series = QtCharts.QLineSeries()
+        series.setPointsVisible(True)
+        config_tbl.append([ColOhlcChart.SAR_L.value, pen, series])
 
-        # ---------- Add EMA(S) Line on scene ----------
+        # ---------- Add SAR(S) Line on scene ----------
         pen = QPen()
-        pen.setColor(QColor("#ffa500"))
+        pen.setColor(QColor(QtColor.ROYALBLUE.value))
         pen.setWidth(2)
-        pen.setStyle(Qt.SolidLine)
-        config_tbl.append([ColOhlcChart.EMA_S.value, pen, QtCharts.QLineSeries()])
+        pen.setStyle(Qt.NoPen)
+        series = QtCharts.QLineSeries()
+        series.setPointsVisible(True)
+        config_tbl.append([ColOhlcChart.SAR_S.value, pen, series])
 
-        df_macd_conf = pd.DataFrame(config_tbl,
-                                    columns=ColNameLine.to_list())
-        df_macd_conf.set_index(ColNameLine.TARGET_LABEL.value, inplace=True)
+        df_conf = pd.DataFrame(config_tbl,
+                               columns=ColNameLine.to_list())
+        df_conf.set_index(ColNameLine.TARGET_LABEL.value, inplace=True)
 
         # ---------- Attach X/Y Axis to series ----------
         axis_x = self.chart().axes(Qt.Horizontal)[0]
         axis_y = self.chart().axes(Qt.Vertical)[0]
 
-        for _, row in df_macd_conf.iterrows():
+        for _, row in df_conf.iterrows():
             series = row[ColNameLine.SERIES.value]
             series.setPen(row[ColNameLine.PEN.value])
             self.chart().addSeries(series)
             series.attachAxis(axis_x)
             series.attachAxis(axis_y)
 
-        self._df_macd_conf = df_macd_conf
+        self._df_conf = df_conf
 
         self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
         self._is_update = False
 
     def clear_line_chart(self):
 
-        for _, row in self._df_macd_conf.iterrows():
+        for _, row in self._df_conf.iterrows():
             series = row[ColNameLine.SERIES.value]
             series.clear()
 
@@ -194,8 +197,8 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         # chart.axisX().setTitleText(dtstr)
         # chart.axisX().setRange(min_x, max_x)
 
-        # ---------- update EMA Line ----------
-        for target_label, row in self._df_macd_conf.iterrows():
+        # ---------- update Parabolic(SAR) Line ----------
+        for target_label, row in self._df_conf.iterrows():
             series = row[ColNameLine.SERIES.value]
             series.clear()
             pdsr = df[target_label]
@@ -286,132 +289,3 @@ class CandlestickChartView(CandlestickChartViewBarCategoryAxis):
         # ---------- drow Callout "ExitPrice" ----------
         self._co_exit_price.updateGeometry(str(self._chart_info.exit_price), m2p)
         self._co_exit_price.show()
-
-
-class MacdChartView(LineChartViewBarCategoryAxis):
-
-    def __init__(self, parent=None):
-
-        self.logger = ros_com.get_logger()
-
-        # ==================== MACD ====================
-        config_tbl = []
-        # ---------- Add MACD Line on scene ----------
-        pen = QPen()
-        pen.setColor(Qt.red)
-        pen.setWidth(2)
-        pen.setStyle(Qt.SolidLine)
-        config_tbl.append([ColMacdChart.MACD.value, pen, "MACD"])
-
-        # ---------- Add Signal Line on scene ----------
-        pen = QPen()
-        pen.setColor(Qt.blue)
-        pen.setWidth(2)
-        pen.setStyle(Qt.SolidLine)
-        config_tbl.append([ColMacdChart.SIGNAL.value, pen, "Signal"])
-
-        df_macd_conf = pd.DataFrame(config_tbl,
-                                    columns=ColNameLine.to_list())
-        df_macd_conf.set_index(ColNameLine.TARGET_LABEL.value, inplace=True)
-
-        super().__init__(config_tbl, parent)
-
-        # ==================== Trade info ====================
-        color_entry = QColor(Qt.blue)
-        color_exit = QColor(Qt.red)
-
-        # ---------- Add VerticalLine "EntryTime" on scene ----------
-        self._vl_entry_time = QGraphicsLineItem()
-        pen = self._vl_entry_time.pen()
-        pen.setColor(color_entry)
-        pen.setWidth(1)
-        pen.setStyle(Qt.DashLine)
-        self._vl_entry_time.setPen(pen)
-        self._vl_entry_time.setZValue(1)
-        self.scene().addItem(self._vl_entry_time)
-
-        # ---------- Add Callout "EntryTime" on scene ----------
-        self._co_entry_time = CalloutDataTime(self.chart())
-        self._co_entry_time.setBackgroundColor(color_entry)
-        self._co_entry_time.setZValue(0)
-        self.scene().addItem(self._co_entry_time)
-
-        # ---------- Add VerticalLine "ExitTime" on scene ----------
-        self._vl_exit_time = QGraphicsLineItem()
-        pen = self._vl_exit_time.pen()
-        pen.setColor(color_exit)
-        pen.setWidth(1)
-        pen.setStyle(Qt.DashLine)
-        self._vl_exit_time.setPen(pen)
-        self._vl_exit_time.setZValue(1)
-        self.scene().addItem(self._vl_exit_time)
-
-        # ---------- Add Callout "ExitTime" on scene ----------
-        self._co_exit_time = CalloutDataTime(self.chart())
-        self._co_exit_time.setBackgroundColor(color_exit)
-        self._co_exit_time.setZValue(0)
-        self.scene().addItem(self._co_exit_time)
-
-        # ---------- initial settings ----------
-        self.chart().setAnimationOptions(QtCharts.QChart.SeriesAnimations)
-        self._is_update = False
-
-    def update(self,
-               df: pd.DataFrame,
-               chart_info: ChartInfo,
-               gran_param: GranParam,
-               inst_param: InstParam):
-        super().update(df, inst_param)
-
-        # ---------- update Callout ----------
-        self._chart_info = chart_info
-        self._update_callout_target_datetime()
-
-        self._is_update = True
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-
-        if self._is_update:
-            self._update_callout_target_datetime()
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-
-        if self._is_update:
-            self._vl_entry_time.show()
-            self._co_entry_time.show()
-            self._vl_exit_time.show()
-            self._co_exit_time.show()
-
-    def _update_callout_target_datetime(self):
-
-        chart = self.chart()
-
-        # ---------- drow VerticalLine "EntryTime" ----------
-        point = QPointF(self._chart_info.entry_time_loc, 0)
-        m2p = chart.mapToPosition(point)
-        plotAreaRect = chart.plotArea()
-        self._vl_entry_time.setLine(QLineF(m2p.x(),
-                                           plotAreaRect.top(),
-                                           m2p.x(),
-                                           plotAreaRect.bottom()))
-        self._vl_entry_time.show()
-
-        # ---------- drow Callout "EntryTime" ----------
-        self._co_entry_time.updateGeometry(self._chart_info.entry_time_str, m2p)
-        self._co_entry_time.show()
-
-        # ---------- drow VerticalLine "ExitTime" ----------
-        point = QPointF(self._chart_info.exit_time_loc, 0)
-        m2p = chart.mapToPosition(point)
-        plotAreaRect = chart.plotArea()
-        self._vl_exit_time.setLine(QLineF(m2p.x(),
-                                          plotAreaRect.top(),
-                                          m2p.x(),
-                                          plotAreaRect.bottom()))
-        self._vl_exit_time.show()
-
-        # ---------- drow Callout "ExitTime" ----------
-        self._co_exit_time.updateGeometry(self._chart_info.exit_time_str, m2p)
-        self._co_exit_time.show()

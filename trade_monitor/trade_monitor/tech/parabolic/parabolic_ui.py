@@ -12,10 +12,10 @@ from action_msgs.msg import GoalStatus
 from trade_apl_msgs.action import TechParabolicBtAct
 from trade_apl_msgs.action import TechParabolicTreeViewAct
 from trade_apl_msgs.srv import PeriodSrv
-from trade_apl_msgs.srv import TechMacdChartSrv
+from trade_apl_msgs.srv import TechParabolicChartSrv
 from ...constant import FMT_YMDHMS, FMT_DISP_YMDHMS, FMT_QT_YMDHMS
 from ...constant import SPREAD_MSG_LIST
-from .constant import ColOhlcChart, ColMacdChart
+from .constant import ColOhlcChart
 from ... import utility as utl
 from ... import ros_common as ros_com
 from ...widget_base import PandasTreeView
@@ -152,13 +152,11 @@ class ParabolicUi():
         fullname = ns + srv_name
         self._srv_cli_period = node.create_client(srv_type, fullname)
 
-        """
-        # Create service client "TechMacdChart"
-        srv_type = TechMacdChartSrv
-        srv_name = "tech_macd_fetch_chart"
+        # Create service client "TechParabolicChart"
+        srv_type = TechParabolicChartSrv
+        srv_name = "tech_parabolic_fetch_chart"
         fullname = ns + srv_name
         self._srv_cli_chart = node.create_client(srv_type, fullname)
-        """
 
         # Create action client "TechParabolicBackTest"
         act_type = TechParabolicBtAct
@@ -445,11 +443,7 @@ class ParabolicUi():
                 t.Index.strftime(FMT_DISP_YMDHMS),
                 t.entry_price,
                 t.entry_dir,
-                # t.sma_s_cross_time.strftime(FMT_DISP_YMDHMS),
-                t.macd_max_height,
-                t.macd_max_height_dt.strftime(FMT_DISP_YMDHMS),
                 t.eval_value,
-                t.max_height_pips,
                 t.exit_time.strftime(FMT_DISP_YMDHMS),
                 t.exit_price,
                 t.exit_pl_pips
@@ -496,21 +490,20 @@ class ParabolicUi():
 
     def _draw_graph(self, entry_time: dt.datetime, bar_num: int):
 
-        ema_l_idx = self._ui.comboBox_TechParabolic_AfInit.currentIndex()
-        ema_s_idx = self._ui.comboBox_TechParabolic_AfMax.currentIndex()
-        sig_idx = self._ui.comboBox_TechParabolic_AfStep.currentIndex()
+        af_init_idx = self._ui.comboBox_TechParabolic_AfInit.currentIndex()
+        af_max_idx = self._ui.comboBox_TechParabolic_AfMax.currentIndex()
+        af_step_idx = self._ui.comboBox_TechParabolic_AfStep.currentIndex()
 
-        req = TechMacdChartSrv.Request()
-        req.ema_l_span = self._af_init_list[ema_l_idx]
-        req.ema_s_span = self._af_max_list[ema_s_idx]
-        req.sig_span = self._af_step_list[sig_idx]
+        req = TechParabolicChartSrv.Request()
+        req.af_init = self._af_init_list[af_init_idx]
+        req.af_max = self._af_max_list[af_max_idx]
+        req.af_step = self._af_step_list[af_step_idx]
         req.time = entry_time.strftime(FMT_YMDHMS)
         req.number_of_bars = bar_num
 
         rsp = ros_com.call_servive_sync(self._srv_cli_chart, req)
 
         tbl_ohlc = []
-        tbl_macd = []
         for msg in rsp.tbl:
             # ---------- OHLC ----------
             rec = [
@@ -518,20 +511,11 @@ class ParabolicUi():
                 msg.ask_o, msg.ask_h, msg.ask_l, msg.ask_c,
                 msg.mid_o, msg.mid_h, msg.mid_l, msg.mid_c,
                 msg.bid_o, msg.bid_h, msg.bid_l, msg.bid_c,
-                msg.ema_l, msg.ema_s
+                msg.sar_l, msg.sar_s
             ]
             tbl_ohlc.append(rec)
-            # ---------- MACD ----------
-            rec = [
-                utl.convert_ymdhms_fmt_to_disp(msg.time),
-                msg.macd, msg.signal
-            ]
-            tbl_macd.append(rec)
         df_ohlc = pd.DataFrame(tbl_ohlc, columns=ColOhlcChart.to_list())
         df_ohlc.set_index(ColOhlcChart.TIME.value, inplace=True)
-
-        df_macd = pd.DataFrame(tbl_macd, columns=ColMacdChart.to_list())
-        df_macd.set_index(ColMacdChart.TIME.value, inplace=True)
 
         row = self._df_tv.loc[entry_time]
         entry_time_str = entry_time.strftime(FMT_DISP_YMDHMS)
@@ -545,7 +529,6 @@ class ParabolicUi():
         exit_price = row[ColBtRslt.EXIT_PRICE.value]
 
         self._chart_info = ChartInfo(df_ohlc=df_ohlc,
-                                     df_macd=df_macd,
                                      entry_time_str=entry_time_str,
                                      entry_time_loc=entry_time_loc,
                                      entry_price=entry_price,
@@ -564,27 +547,27 @@ class ParabolicUi():
         self._draw_graph_by_candle_type(smb_idx)
 
     def _draw_graph_by_candle_type(self, smb_idx):
-        ema_col = [ColOhlcChart.EMA_L.value,
-                   ColOhlcChart.EMA_S.value]
+        sar_col = [ColOhlcChart.SAR_L.value,
+                   ColOhlcChart.SAR_S.value]
 
         if smb_idx == 0:    # Mid
             col = [ColOhlcChart.MID_O.value,
                    ColOhlcChart.MID_H.value,
                    ColOhlcChart.MID_L.value,
-                   ColOhlcChart.MID_C.value] + ema_col
+                   ColOhlcChart.MID_C.value] + sar_col
         elif smb_idx == 1:  # Ask
             col = [ColOhlcChart.ASK_O.value,
                    ColOhlcChart.ASK_H.value,
                    ColOhlcChart.ASK_L.value,
-                   ColOhlcChart.ASK_C.value] + ema_col
+                   ColOhlcChart.ASK_C.value] + sar_col
         else:               # Bid
             col = [ColOhlcChart.BID_O.value,
                    ColOhlcChart.BID_H.value,
                    ColOhlcChart.BID_L.value,
-                   ColOhlcChart.BID_C.value] + ema_col
+                   ColOhlcChart.BID_C.value] + sar_col
 
         df_ohlc = self._chart_info.df_ohlc[col]
-        df_ohlc.columns = OhlcChartView.CandleLabel.to_list() + ema_col
+        df_ohlc.columns = OhlcChartView.CandleLabel.to_list() + sar_col
 
         self._chartview.update(df_ohlc,
                                self._chart_info,
