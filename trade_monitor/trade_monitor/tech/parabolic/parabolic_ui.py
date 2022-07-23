@@ -234,10 +234,6 @@ class ParabolicUi():
         goal_msg.af_step_start = self._ui.spinBox_TechParabolic_AfStepStr.value()
         goal_msg.af_step_end = self._ui.spinBox_TechParabolic_AfStepEnd.value()
         goal_msg.af_step_deci = self._ui.spinBox_TechParabolic_AfStepDeci.value()
-        goal_msg.profit_th_start = self._ui.spinBox_TechParabolic_PlThStr.value()
-        goal_msg.profit_th_end = self._ui.spinBox_TechParabolic_PlThEnd.value()
-        goal_msg.profit_th_deci = self._ui.spinBox_TechParabolic_PlThDeci.value()
-        goal_msg.valid_eval_th = self._ui.spinBox_TechParabolic_EvalTh.value()
         goal_msg.entry_offset_pips = self._ui.spinBox_TechParabolic_EntryOfs.value()
 
         callback_fb = self._backtest_feedback_callback
