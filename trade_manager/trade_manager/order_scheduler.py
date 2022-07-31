@@ -548,7 +548,7 @@ class OrderTicket():
 
     def do_cyclic_event(self) -> None:
 
-        self.logger.debug("state:[{}]".format(self.state))
+        # self.logger.debug("state:[{}]".format(self.state))
 
         if self.state == self.States.EntryOrdering:
             self._on_do_EntryOrdering()
