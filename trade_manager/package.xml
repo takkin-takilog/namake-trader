@@ -3,22 +3,14 @@
 <package format="3">
   <name>trade_manager</name>
   <version>0.1.0</version>
-  <description>
-    Python trade_manager package.
-  </description>
+  <description>The trade_manager package</description>
   <maintainer email="takkin.takilog@gmail.com">takkin</maintainer>
-  <license>Apache License 2.0</license>
-
-  <buildtool_depend>ament_python</buildtool_depend>
-
-  <build_depend>rclpy</build_depend>
-  <build_depend>api_msgs</build_depend>
-  <build_depend>trade_manager_msgs</build_depend>
+  <license>MIT</license>
 
   <exec_depend>rclpy</exec_depend>
-  <exec_depend>api_msgs</exec_depend>
-  <exec_depend>trade_manager_msgs</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>trade_manager_msgs</exec_depend>
+  <exec_depend>api_msgs</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

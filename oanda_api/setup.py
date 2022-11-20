@@ -15,8 +15,8 @@ setup(
     zip_safe=True,
     maintainer="takkin",
     maintainer_email="takkin.takilog@gmail.com",
-    description="TODO: Package description",
-    license="TODO: License declaration",
+    description="The oanda_api package",
+    license="MIT",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
