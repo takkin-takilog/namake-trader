@@ -3,7 +3,7 @@ from enum import Enum
 import datetime as dt
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
-from . import utility as utl
+from . import utils as utl
 
 
 class InstParam(Enum):

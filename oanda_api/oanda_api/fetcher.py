@@ -19,7 +19,7 @@ from .constant import FMT_DTTM_API, FMT_YMDHMS
 from .constant import ADD_CIPHERS
 from .parameter import InstParam, GranParam
 from .dataclass import RosParam
-from . import utility as utl
+from . import utils as utl
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")

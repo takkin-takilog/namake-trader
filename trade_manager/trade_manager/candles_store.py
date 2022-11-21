@@ -29,7 +29,7 @@ from .constant import INST_DICT, GRAN_DICT
 from .exception import InitializerErrorException
 from .dataclass import RosParam
 from .parameter import GranParam, InstParam
-from . import utility as utl
+from . import utils as utl
 from .wrapper import RosServiceClient
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")

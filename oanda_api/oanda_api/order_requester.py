@@ -20,7 +20,7 @@ from api_msgs.msg import FailReasonCode as frc
 from .constant import ADD_CIPHERS
 from .parameter import InstParam
 from .dataclass import RosParam
-from . import utility as utl
+from . import utils as utl
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")

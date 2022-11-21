@@ -11,7 +11,7 @@ from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error, StreamTerminated
 from .constant import ADD_CIPHERS
 from .parameter import InstParam
-from . import utility as utl
+from . import utils as utl
 
 MsgType = TypeVar("MsgType")
 
