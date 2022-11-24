@@ -4,6 +4,7 @@ from requests.exceptions import ConnectionError, ReadTimeout
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
+from rclpy.parameter import Parameter
 from std_msgs.msg import Bool, String
 from api_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
@@ -11,7 +12,9 @@ from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error, StreamTerminated
 from .constant import ADD_CIPHERS
 from .parameter import InstParam
+from .dataclass import RosParam
 from . import utils as utl
+from . import ros_utils as rosutl
 
 MsgType = TypeVar("MsgType")
 
@@ -26,50 +29,58 @@ class PricingStreamPublisher(Node):
         self._logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # --------------- Define Constant value ---------------
-        PRMNM_USE_ENV_LIVE = "use_env_live"
-        ENV_PRAC = "env_practice."
-        PRMNM_PRAC_ACCOUNT_NUMBER = ENV_PRAC + "account_number"
-        PRMNM_PRAC_ACCESS_TOKEN = ENV_PRAC + "access_token"
-        ENV_LIVE = "env_live."
-        PRMNM_LIVE_ACCOUNT_NUMBER = ENV_LIVE + "account_number"
-        PRMNM_LIVE_ACCESS_TOKEN = ENV_LIVE + "access_token"
-        ENA_INST = "enable_instrument."
-        PRMNM_CONN_TIMEOUT = "connection_timeout"
+        USE_INST = "use_instrument."
         TPCNM_HEARTBEAT = "heart_beat"
         TPCNM_ACT_FLG = "activate_flag"
 
         # --------------- Declare ROS parameter ---------------
-        self.declare_parameter(PRMNM_USE_ENV_LIVE)
-        self.declare_parameter(PRMNM_PRAC_ACCOUNT_NUMBER)
-        self.declare_parameter(PRMNM_PRAC_ACCESS_TOKEN)
-        self.declare_parameter(PRMNM_LIVE_ACCOUNT_NUMBER)
-        self.declare_parameter(PRMNM_LIVE_ACCESS_TOKEN)
-        self.declare_parameter(PRMNM_CONN_TIMEOUT)
-        enable_inst_dict = {}
-        for i in InstParam:
-            param_name = ENA_INST + i.param_name
-            self.declare_parameter(param_name)
-            enable_inst = self.get_parameter(param_name).value
-            enable_inst_dict[i.name] = enable_inst
+        self._rosprm_use_env_live = RosParam("use_env_live",
+                                             Parameter.Type.BOOL)
+        self._rosprm_pra_account_number = RosParam("env_practice.account_number",
+                                                   Parameter.Type.STRING)
+        self._rosprm_pra_access_token = RosParam("env_practice.access_token",
+                                                 Parameter.Type.STRING)
+        self._rosprm_liv_account_number = RosParam("env_live.account_number",
+                                                   Parameter.Type.STRING)
+        self._rosprm_liv_access_token = RosParam("env_live.access_token",
+                                                 Parameter.Type.STRING)
+        self._rosprm_connection_timeout = RosParam("connection_timeout",
+                                                   Parameter.Type.INTEGER)
 
-        USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
-        if USE_ENV_LIVE:
-            ACCOUNT_NUMBER = self.get_parameter(PRMNM_LIVE_ACCOUNT_NUMBER).value
-            ACCESS_TOKEN = self.get_parameter(PRMNM_LIVE_ACCESS_TOKEN).value
+        rosutl.set_parameters(self, self._rosprm_use_env_live)
+        rosutl.set_parameters(self, self._rosprm_pra_account_number)
+        rosutl.set_parameters(self, self._rosprm_pra_access_token)
+        rosutl.set_parameters(self, self._rosprm_liv_account_number)
+        rosutl.set_parameters(self, self._rosprm_liv_access_token)
+        rosutl.set_parameters(self, self._rosprm_connection_timeout)
+
+        use_inst_dict = {}
+        for i in InstParam:
+            param_name = USE_INST + i.param_name
+            rosprm_use_inst = RosParam(param_name, Parameter.Type.BOOL)
+            rosutl.set_parameters(self, rosprm_use_inst)
+            use_inst_dict[i.name] = rosprm_use_inst.value
+
+        # --------------- Initialize instance variable ---------------
+        if self._rosprm_use_env_live.value:
+            access_token = self._rosprm_liv_access_token.value
+            account_number = self._rosprm_liv_account_number.value
         else:
-            ACCOUNT_NUMBER = self.get_parameter(PRMNM_PRAC_ACCOUNT_NUMBER).value
-            ACCESS_TOKEN = self.get_parameter(PRMNM_PRAC_ACCESS_TOKEN).value
-        CONN_TIMEOUT = self.get_parameter(PRMNM_CONN_TIMEOUT).value
+            access_token = self._rosprm_pra_access_token.value
+            account_number = self._rosprm_pra_account_number.value
 
-        self._logger.debug("[Param]Use Env Live:[{}]".format(USE_ENV_LIVE))
-        self._logger.debug("[Param]Account Number:[{}]".format(ACCOUNT_NUMBER))
-        self._logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
-        self._logger.debug("[Param]Connection Timeout:[{}]".format(CONN_TIMEOUT))
-        self._logger.debug("[Param]Enable instrument:")
-        for i in InstParam:
-            enable_inst = enable_inst_dict[i.name]
-            self._logger.debug("  - {}:[{}]".format(i.name.replace("_", "/"),
-                                                    enable_inst))
+        self._act_flg = True
+
+        if self._rosprm_connection_timeout.value <= 0:
+            request_params = None
+            self._logger.debug("Not set Timeout")
+        else:
+            request_params = {"timeout": self._rosprm_connection_timeout.value}
+
+        environment = "live" if self._rosprm_use_env_live.value else "practice"
+        self._api = API(access_token=access_token,
+                        environment=environment,
+                        request_params=request_params)
 
         # --------------- Initialize ROS topic ---------------
         qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
@@ -79,8 +90,7 @@ class PricingStreamPublisher(Node):
 
         # Create topic publisher "pricing_*****"
         for i in InstParam:
-            enable_inst = enable_inst_dict[i.name]
-            if enable_inst:
+            if use_inst_dict[i.name]:
                 pub = self.create_publisher(Pricing,
                                             i.topic_name,
                                             qos_profile)
@@ -99,23 +109,10 @@ class PricingStreamPublisher(Node):
                                                  callback,
                                                  qos_profile)
 
-        # --------------- Initialize variable ---------------
-        self._act_flg = True
-
-        if CONN_TIMEOUT <= 0:
-            request_params = None
-            self._logger.debug("Not set Timeout")
-        else:
-            request_params = {"timeout": CONN_TIMEOUT}
-
-        environment = "live" if USE_ENV_LIVE else "practice"
-        self._api = API(access_token=ACCESS_TOKEN,
-                        environment=environment,
-                        request_params=request_params)
-
+        # --------------- Initialize oandapyV20 ---------------
         instruments = ",".join(inst_name_list)
         params = {"instruments": instruments}
-        self._pi = pr.PricingStream(ACCOUNT_NUMBER, params)
+        self._pi = pr.PricingStream(account_number, params)
 
     def background(self) -> None:
 

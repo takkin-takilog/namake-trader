@@ -1,7 +1,6 @@
 import sys
 from typing import List
 from typing import TypeVar
-from dataclasses import dataclass
 from enum import Enum, auto
 import datetime as dt
 import pandas as pd
@@ -13,6 +12,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
+from rclpy.parameter import Parameter
 from api_msgs.srv import CandlesQuerySrv
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
@@ -30,117 +30,11 @@ from .exception import InitializerErrorException
 from .dataclass import RosParam
 from .parameter import GranParam, InstParam
 from . import utils as utl
+from . import ros_utils as rosutl
 from .wrapper import RosServiceClient
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
-
-
-@dataclass
-class _RosParams():
-    """
-    ROS Parameter.
-    """
-    ENA_INST_USDJPY = RosParam("enable_instrument.usdjpy")
-    ENA_INST_EURJPY = RosParam("enable_instrument.eurjpy")
-    ENA_INST_EURUSD = RosParam("enable_instrument.eurusd")
-    ENA_INST_GBPJPY = RosParam("enable_instrument.gbpjpy")
-    ENA_INST_AUDJPY = RosParam("enable_instrument.audjpy")
-    ENA_INST_NZDJPY = RosParam("enable_instrument.nzdjpy")
-    ENA_INST_CADJPY = RosParam("enable_instrument.cadjpy")
-    ENA_INST_CHFJPY = RosParam("enable_instrument.chfjpy")
-    ENA_GRAN_M1 = RosParam("enable_granularity.m1")
-    ENA_GRAN_M2 = RosParam("enable_granularity.m2")
-    ENA_GRAN_M3 = RosParam("enable_granularity.m3")
-    ENA_GRAN_M4 = RosParam("enable_granularity.m4")
-    ENA_GRAN_M5 = RosParam("enable_granularity.m5")
-    ENA_GRAN_M10 = RosParam("enable_granularity.m10")
-    ENA_GRAN_M15 = RosParam("enable_granularity.m15")
-    ENA_GRAN_M30 = RosParam("enable_granularity.m30")
-    ENA_GRAN_H1 = RosParam("enable_granularity.h1")
-    ENA_GRAN_H2 = RosParam("enable_granularity.h2")
-    ENA_GRAN_H3 = RosParam("enable_granularity.h3")
-    ENA_GRAN_H4 = RosParam("enable_granularity.h4")
-    ENA_GRAN_H6 = RosParam("enable_granularity.h6")
-    ENA_GRAN_H8 = RosParam("enable_granularity.h8")
-    ENA_GRAN_H12 = RosParam("enable_granularity.h12")
-    ENA_GRAN_D = RosParam("enable_granularity.d")
-    ENA_GRAN_W = RosParam("enable_granularity.w")
-    LENG_M1 = RosParam("data_length.m1")
-    LENG_M2 = RosParam("data_length.m2")
-    LENG_M3 = RosParam("data_length.m3")
-    LENG_M4 = RosParam("data_length.m4")
-    LENG_M5 = RosParam("data_length.m5")
-    LENG_M10 = RosParam("data_length.m10")
-    LENG_M15 = RosParam("data_length.m15")
-    LENG_M30 = RosParam("data_length.m30")
-    LENG_H1 = RosParam("data_length.h1")
-    LENG_H2 = RosParam("data_length.h2")
-    LENG_H3 = RosParam("data_length.h3")
-    LENG_H4 = RosParam("data_length.h4")
-    LENG_H6 = RosParam("data_length.h6")
-    LENG_H8 = RosParam("data_length.h8")
-    LENG_H12 = RosParam("data_length.h12")
-    LENG_D = RosParam("data_length.d")
-    LENG_W = RosParam("data_length.w")
-
-    def enable_inst_list(self):
-        inst_list = []
-        if self.ENA_INST_USDJPY.value:
-            inst_list.append(InstApi.INST_USD_JPY)
-        if self.ENA_INST_EURJPY.value:
-            inst_list.append(InstApi.INST_EUR_JPY)
-        if self.ENA_INST_EURUSD.value:
-            inst_list.append(InstApi.INST_EUR_USD)
-        if self.ENA_INST_GBPJPY.value:
-            inst_list.append(InstApi.INST_GBP_JPY)
-        if self.ENA_INST_AUDJPY.value:
-            inst_list.append(InstApi.INST_AUD_JPY)
-        if self.ENA_INST_NZDJPY.value:
-            inst_list.append(InstApi.INST_NZD_JPY)
-        if self.ENA_INST_CADJPY.value:
-            inst_list.append(InstApi.INST_CAD_JPY)
-        if self.ENA_INST_CHFJPY.value:
-            inst_list.append(InstApi.INST_CHF_JPY)
-        return inst_list
-
-    def enable_gran_list(self):
-        gran_list = []
-        if self.ENA_GRAN_M1.value:
-            gran_list.append((GranApi.GRAN_M1, self.LENG_M1.value))
-        if self.ENA_GRAN_M2.value:
-            gran_list.append((GranApi.GRAN_M2, self.LENG_M2.value))
-        if self.ENA_GRAN_M3.value:
-            gran_list.append((GranApi.GRAN_M3, self.LENG_M3.value))
-        if self.ENA_GRAN_M4.value:
-            gran_list.append((GranApi.GRAN_M4, self.LENG_M4.value))
-        if self.ENA_GRAN_M5.value:
-            gran_list.append((GranApi.GRAN_M5, self.LENG_M5.value))
-        if self.ENA_GRAN_M10.value:
-            gran_list.append((GranApi.GRAN_M10, self.LENG_M10.value))
-        if self.ENA_GRAN_M15.value:
-            gran_list.append((GranApi.GRAN_M15, self.LENG_M15.value))
-        if self.ENA_GRAN_M30.value:
-            gran_list.append((GranApi.GRAN_M30, self.LENG_M30.value))
-        if self.ENA_GRAN_H1.value:
-            gran_list.append((GranApi.GRAN_H1, self.LENG_H1.value))
-        if self.ENA_GRAN_H2.value:
-            gran_list.append((GranApi.GRAN_H2, self.LENG_H2.value))
-        if self.ENA_GRAN_H3.value:
-            gran_list.append((GranApi.GRAN_H3, self.LENG_H3.value))
-        if self.ENA_GRAN_H4.value:
-            gran_list.append((GranApi.GRAN_H4, self.LENG_H4.value))
-        if self.ENA_GRAN_H6.value:
-            gran_list.append((GranApi.GRAN_H6, self.LENG_H6.value))
-        if self.ENA_GRAN_H8.value:
-            gran_list.append((GranApi.GRAN_H8, self.LENG_H8.value))
-        if self.ENA_GRAN_H12.value:
-            gran_list.append((GranApi.GRAN_H12, self.LENG_H12.value))
-        if self.ENA_GRAN_D.value:
-            gran_list.append((GranApi.GRAN_D, self.LENG_D.value))
-        if self.ENA_GRAN_W.value:
-            gran_list.append((GranApi.GRAN_W, self.LENG_W.value))
-        return gran_list
 
 
 class CandlesElement():
@@ -163,7 +57,7 @@ class CandlesElement():
         cls.logger = logger
 
     def __init__(self,
-                 node: 'Node',
+                 node: Node,
                  inst_id: int,
                  gran_id: int,
                  gran_leng: int
@@ -628,180 +522,133 @@ class CandlesStore(Node):
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # --------------- Declare ROS parameter ---------------
-        self._rosprm = _RosParams()
-        self.declare_parameter(self._rosprm.ENA_INST_USDJPY.name)
-        self.declare_parameter(self._rosprm.ENA_INST_EURJPY.name)
-        self.declare_parameter(self._rosprm.ENA_INST_EURUSD.name)
-        self.declare_parameter(self._rosprm.ENA_INST_GBPJPY.name)
-        self.declare_parameter(self._rosprm.ENA_INST_AUDJPY.name)
-        self.declare_parameter(self._rosprm.ENA_INST_NZDJPY.name)
-        self.declare_parameter(self._rosprm.ENA_INST_CADJPY.name)
-        self.declare_parameter(self._rosprm.ENA_INST_CHFJPY.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_M1.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_M2.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_M3.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_M4.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_M5.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_M10.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_M15.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_M30.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_H1.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_H2.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_H3.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_H4.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_H6.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_H8.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_H12.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_D.name)
-        self.declare_parameter(self._rosprm.ENA_GRAN_W.name)
-        self.declare_parameter(self._rosprm.LENG_M1.name)
-        self.declare_parameter(self._rosprm.LENG_M2.name)
-        self.declare_parameter(self._rosprm.LENG_M3.name)
-        self.declare_parameter(self._rosprm.LENG_M4.name)
-        self.declare_parameter(self._rosprm.LENG_M5.name)
-        self.declare_parameter(self._rosprm.LENG_M10.name)
-        self.declare_parameter(self._rosprm.LENG_M15.name)
-        self.declare_parameter(self._rosprm.LENG_M30.name)
-        self.declare_parameter(self._rosprm.LENG_H1.name)
-        self.declare_parameter(self._rosprm.LENG_H2.name)
-        self.declare_parameter(self._rosprm.LENG_H3.name)
-        self.declare_parameter(self._rosprm.LENG_H4.name)
-        self.declare_parameter(self._rosprm.LENG_H6.name)
-        self.declare_parameter(self._rosprm.LENG_H8.name)
-        self.declare_parameter(self._rosprm.LENG_H12.name)
-        self.declare_parameter(self._rosprm.LENG_D.name)
-        self.declare_parameter(self._rosprm.LENG_W.name)
+        self._rosprm_use_inst_usdjpy = RosParam("use_instrument.usdjpy",
+                                                Parameter.Type.BOOL)
+        self._rosprm_use_inst_eurjpy = RosParam("use_instrument.eurjpy",
+                                                Parameter.Type.BOOL)
+        self._rosprm_use_inst_eurusd = RosParam("use_instrument.eurusd",
+                                                Parameter.Type.BOOL)
+        self._rosprm_use_inst_gbpjpy = RosParam("use_instrument.gbpjpy",
+                                                Parameter.Type.BOOL)
+        self._rosprm_use_inst_audjpy = RosParam("use_instrument.audjpy",
+                                                Parameter.Type.BOOL)
+        self._rosprm_use_inst_nzdjpy = RosParam("use_instrument.nzdjpy",
+                                                Parameter.Type.BOOL)
+        self._rosprm_use_inst_cadjpy = RosParam("use_instrument.cadjpy",
+                                                Parameter.Type.BOOL)
+        self._rosprm_use_inst_chfjpy = RosParam("use_instrument.chfjpy",
+                                                Parameter.Type.BOOL)
+        self._rosprm_use_gran_m1 = RosParam("use_granularity.m1",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_m2 = RosParam("use_granularity.m2",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_m3 = RosParam("use_granularity.m3",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_m4 = RosParam("use_granularity.m4",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_m5 = RosParam("use_granularity.m5",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_m10 = RosParam("use_granularity.m10",
+                                             Parameter.Type.BOOL)
+        self._rosprm_use_gran_m15 = RosParam("use_granularity.m15",
+                                             Parameter.Type.BOOL)
+        self._rosprm_use_gran_m30 = RosParam("use_granularity.m30",
+                                             Parameter.Type.BOOL)
+        self._rosprm_use_gran_h1 = RosParam("use_granularity.h1",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_h2 = RosParam("use_granularity.h2",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_h3 = RosParam("use_granularity.h3",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_h4 = RosParam("use_granularity.h4",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_h6 = RosParam("use_granularity.h6",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_h8 = RosParam("use_granularity.h8",
+                                            Parameter.Type.BOOL)
+        self._rosprm_use_gran_h12 = RosParam("use_granularity.h12",
+                                             Parameter.Type.BOOL)
+        self._rosprm_use_gran_d = RosParam("use_granularity.d",
+                                           Parameter.Type.BOOL)
+        self._rosprm_use_gran_w = RosParam("use_granularity.w",
+                                           Parameter.Type.BOOL)
+        self._rosprm_length_m1 = RosParam("data_length.m1",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_m2 = RosParam("data_length.m2",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_m3 = RosParam("data_length.m3",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_m4 = RosParam("data_length.m4",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_m5 = RosParam("data_length.m5",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_m10 = RosParam("data_length.m10",
+                                           Parameter.Type.INTEGER)
+        self._rosprm_length_m15 = RosParam("data_length.m15",
+                                           Parameter.Type.INTEGER)
+        self._rosprm_length_m30 = RosParam("data_length.m30",
+                                           Parameter.Type.INTEGER)
+        self._rosprm_length_h1 = RosParam("data_length.h1",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_h2 = RosParam("data_length.h2",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_h3 = RosParam("data_length.h3",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_h4 = RosParam("data_length.h4",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_h6 = RosParam("data_length.h6",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_h8 = RosParam("data_length.h8",
+                                          Parameter.Type.INTEGER)
+        self._rosprm_length_h12 = RosParam("data_length.h12",
+                                           Parameter.Type.INTEGER)
+        self._rosprm_length_d = RosParam("data_length.d",
+                                         Parameter.Type.INTEGER)
+        self._rosprm_length_w = RosParam("data_length.w",
+                                         Parameter.Type.INTEGER)
 
-        para = self.get_parameter(self._rosprm.ENA_INST_USDJPY.name)
-        self._rosprm.ENA_INST_USDJPY.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_INST_EURJPY.name)
-        self._rosprm.ENA_INST_EURJPY.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_INST_EURUSD.name)
-        self._rosprm.ENA_INST_EURUSD.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_INST_GBPJPY.name)
-        self._rosprm.ENA_INST_GBPJPY.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_INST_AUDJPY.name)
-        self._rosprm.ENA_INST_AUDJPY.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_INST_NZDJPY.name)
-        self._rosprm.ENA_INST_NZDJPY.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_INST_CADJPY.name)
-        self._rosprm.ENA_INST_CADJPY.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_INST_CHFJPY.name)
-        self._rosprm.ENA_INST_CHFJPY.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_M1.name)
-        self._rosprm.ENA_GRAN_M1.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_M2.name)
-        self._rosprm.ENA_GRAN_M2.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_M3.name)
-        self._rosprm.ENA_GRAN_M3.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_M4.name)
-        self._rosprm.ENA_GRAN_M4.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_M5.name)
-        self._rosprm.ENA_GRAN_M5.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_M10.name)
-        self._rosprm.ENA_GRAN_M10.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_M15.name)
-        self._rosprm.ENA_GRAN_M15.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_M30.name)
-        self._rosprm.ENA_GRAN_M30.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_H1.name)
-        self._rosprm.ENA_GRAN_H1.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_H2.name)
-        self._rosprm.ENA_GRAN_H2.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_H3.name)
-        self._rosprm.ENA_GRAN_H3.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_H4.name)
-        self._rosprm.ENA_GRAN_H4.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_H6.name)
-        self._rosprm.ENA_GRAN_H6.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_H8.name)
-        self._rosprm.ENA_GRAN_H8.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_H12.name)
-        self._rosprm.ENA_GRAN_H12.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_D.name)
-        self._rosprm.ENA_GRAN_D.value = para.value
-        para = self.get_parameter(self._rosprm.ENA_GRAN_W.name)
-        self._rosprm.ENA_GRAN_W.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_M1.name)
-        self._rosprm.LENG_M1.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_M2.name)
-        self._rosprm.LENG_M2.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_M3.name)
-        self._rosprm.LENG_M3.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_M4.name)
-        self._rosprm.LENG_M4.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_M5.name)
-        self._rosprm.LENG_M5.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_M10.name)
-        self._rosprm.LENG_M10.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_M15.name)
-        self._rosprm.LENG_M15.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_M30.name)
-        self._rosprm.LENG_M30.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_H1.name)
-        self._rosprm.LENG_H1.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_H2.name)
-        self._rosprm.LENG_H2.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_H3.name)
-        self._rosprm.LENG_H3.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_H4.name)
-        self._rosprm.LENG_H4.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_H6.name)
-        self._rosprm.LENG_H6.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_H8.name)
-        self._rosprm.LENG_H8.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_H12.name)
-        self._rosprm.LENG_H12.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_D.name)
-        self._rosprm.LENG_D.value = para.value
-        para = self.get_parameter(self._rosprm.LENG_W.name)
-        self._rosprm.LENG_W.value = para.value
-
-        self.logger.debug("[Param]Enable instrument:")
-        self.logger.debug("  - USD/JPY:[{}]".format(self._rosprm.ENA_INST_USDJPY.value))
-        self.logger.debug("  - EUR/JPY:[{}]".format(self._rosprm.ENA_INST_EURJPY.value))
-        self.logger.debug("  - EUR/USD:[{}]".format(self._rosprm.ENA_INST_EURUSD.value))
-        self.logger.debug("  - GBP/JPY:[{}]".format(self._rosprm.ENA_INST_GBPJPY.value))
-        self.logger.debug("  - AUD/JPY:[{}]".format(self._rosprm.ENA_INST_AUDJPY.value))
-        self.logger.debug("  - NZD/JPY:[{}]".format(self._rosprm.ENA_INST_NZDJPY.value))
-        self.logger.debug("  - CAD/JPY:[{}]".format(self._rosprm.ENA_INST_CADJPY.value))
-        self.logger.debug("  - CHF/JPY:[{}]".format(self._rosprm.ENA_INST_CHFJPY.value))
-        self.logger.debug("[Param]Enable granularity:")
-        self.logger.debug("  - M1: [{}]".format(self._rosprm.ENA_GRAN_M1.value))
-        self.logger.debug("  - M2: [{}]".format(self._rosprm.ENA_GRAN_M2.value))
-        self.logger.debug("  - M3: [{}]".format(self._rosprm.ENA_GRAN_M3.value))
-        self.logger.debug("  - M4: [{}]".format(self._rosprm.ENA_GRAN_M4.value))
-        self.logger.debug("  - M5: [{}]".format(self._rosprm.ENA_GRAN_M5.value))
-        self.logger.debug("  - M10:[{}]".format(self._rosprm.ENA_GRAN_M10.value))
-        self.logger.debug("  - M15:[{}]".format(self._rosprm.ENA_GRAN_M15.value))
-        self.logger.debug("  - M30:[{}]".format(self._rosprm.ENA_GRAN_M30.value))
-        self.logger.debug("  - H1: [{}]".format(self._rosprm.ENA_GRAN_H1.value))
-        self.logger.debug("  - H2: [{}]".format(self._rosprm.ENA_GRAN_H2.value))
-        self.logger.debug("  - H3: [{}]".format(self._rosprm.ENA_GRAN_H3.value))
-        self.logger.debug("  - H4: [{}]".format(self._rosprm.ENA_GRAN_H4.value))
-        self.logger.debug("  - H6: [{}]".format(self._rosprm.ENA_GRAN_H6.value))
-        self.logger.debug("  - H8: [{}]".format(self._rosprm.ENA_GRAN_H8.value))
-        self.logger.debug("  - H12:[{}]".format(self._rosprm.ENA_GRAN_H12.value))
-        self.logger.debug("  - D:  [{}]".format(self._rosprm.ENA_GRAN_D.value))
-        self.logger.debug("  - W:  [{}]".format(self._rosprm.ENA_GRAN_W.value))
-        self.logger.debug("[Param]Data length:")
-        self.logger.debug("  - M1: [{}]".format(self._rosprm.LENG_M1.value))
-        self.logger.debug("  - M2: [{}]".format(self._rosprm.LENG_M2.value))
-        self.logger.debug("  - M3: [{}]".format(self._rosprm.LENG_M3.value))
-        self.logger.debug("  - M4: [{}]".format(self._rosprm.LENG_M4.value))
-        self.logger.debug("  - M5: [{}]".format(self._rosprm.LENG_M5.value))
-        self.logger.debug("  - M10:[{}]".format(self._rosprm.LENG_M10.value))
-        self.logger.debug("  - M15:[{}]".format(self._rosprm.LENG_M15.value))
-        self.logger.debug("  - M30:[{}]".format(self._rosprm.LENG_M30.value))
-        self.logger.debug("  - H1: [{}]".format(self._rosprm.LENG_H1.value))
-        self.logger.debug("  - H2: [{}]".format(self._rosprm.LENG_H2.value))
-        self.logger.debug("  - H3: [{}]".format(self._rosprm.LENG_H3.value))
-        self.logger.debug("  - H4: [{}]".format(self._rosprm.LENG_H4.value))
-        self.logger.debug("  - H6: [{}]".format(self._rosprm.LENG_H6.value))
-        self.logger.debug("  - H8: [{}]".format(self._rosprm.LENG_H8.value))
-        self.logger.debug("  - H12:[{}]".format(self._rosprm.LENG_H12.value))
-        self.logger.debug("  - D:  [{}]".format(self._rosprm.LENG_D.value))
-        self.logger.debug("  - W:  [{}]".format(self._rosprm.LENG_W.value))
+        rosutl.set_parameters(self, self._rosprm_use_inst_usdjpy)
+        rosutl.set_parameters(self, self._rosprm_use_inst_eurjpy)
+        rosutl.set_parameters(self, self._rosprm_use_inst_eurusd)
+        rosutl.set_parameters(self, self._rosprm_use_inst_gbpjpy)
+        rosutl.set_parameters(self, self._rosprm_use_inst_audjpy)
+        rosutl.set_parameters(self, self._rosprm_use_inst_nzdjpy)
+        rosutl.set_parameters(self, self._rosprm_use_inst_cadjpy)
+        rosutl.set_parameters(self, self._rosprm_use_inst_chfjpy)
+        rosutl.set_parameters(self, self._rosprm_use_gran_m1)
+        rosutl.set_parameters(self, self._rosprm_use_gran_m2)
+        rosutl.set_parameters(self, self._rosprm_use_gran_m3)
+        rosutl.set_parameters(self, self._rosprm_use_gran_m4)
+        rosutl.set_parameters(self, self._rosprm_use_gran_m5)
+        rosutl.set_parameters(self, self._rosprm_use_gran_m10)
+        rosutl.set_parameters(self, self._rosprm_use_gran_m15)
+        rosutl.set_parameters(self, self._rosprm_use_gran_m30)
+        rosutl.set_parameters(self, self._rosprm_use_gran_h1)
+        rosutl.set_parameters(self, self._rosprm_use_gran_h2)
+        rosutl.set_parameters(self, self._rosprm_use_gran_h3)
+        rosutl.set_parameters(self, self._rosprm_use_gran_h4)
+        rosutl.set_parameters(self, self._rosprm_use_gran_h6)
+        rosutl.set_parameters(self, self._rosprm_use_gran_h8)
+        rosutl.set_parameters(self, self._rosprm_use_gran_h12)
+        rosutl.set_parameters(self, self._rosprm_use_gran_d)
+        rosutl.set_parameters(self, self._rosprm_use_gran_w)
+        rosutl.set_parameters(self, self._rosprm_length_m1)
+        rosutl.set_parameters(self, self._rosprm_length_m2)
+        rosutl.set_parameters(self, self._rosprm_length_m3)
+        rosutl.set_parameters(self, self._rosprm_length_m4)
+        rosutl.set_parameters(self, self._rosprm_length_m5)
+        rosutl.set_parameters(self, self._rosprm_length_m10)
+        rosutl.set_parameters(self, self._rosprm_length_m15)
+        rosutl.set_parameters(self, self._rosprm_length_m30)
+        rosutl.set_parameters(self, self._rosprm_length_h1)
+        rosutl.set_parameters(self, self._rosprm_length_h2)
+        rosutl.set_parameters(self, self._rosprm_length_h3)
+        rosutl.set_parameters(self, self._rosprm_length_h4)
+        rosutl.set_parameters(self, self._rosprm_length_h6)
+        rosutl.set_parameters(self, self._rosprm_length_h8)
+        rosutl.set_parameters(self, self._rosprm_length_h12)
+        rosutl.set_parameters(self, self._rosprm_length_d)
+        rosutl.set_parameters(self, self._rosprm_length_w)
 
         # --------------- Create ROS Communication ---------------
         try:
@@ -815,8 +662,8 @@ class CandlesStore(Node):
 
         CandlesElement.set_class_variable(srvcli, self.logger)
         self._candles_elem_list = []
-        for gran_id, gran_leng in self._rosprm.enable_gran_list():
-            for inst_id in self._rosprm.enable_inst_list():
+        for gran_id, gran_leng in self._use_gran_list():
+            for inst_id in self._use_inst_list():
                 candles_elem = CandlesElement(self, inst_id, gran_id, gran_leng)
                 self._candles_elem_list.append(candles_elem)
 
@@ -998,6 +845,64 @@ class CandlesStore(Node):
         self.logger.debug("{:=^50}".format(" Service[candles_by_length]:End "))
 
         return rsp
+
+    def _use_inst_list(self):
+        inst_list = []
+        if self._rosprm_use_inst_usdjpy.value:
+            inst_list.append(InstApi.INST_USD_JPY)
+        if self._rosprm_use_inst_eurjpy.value:
+            inst_list.append(InstApi.INST_EUR_JPY)
+        if self._rosprm_use_inst_eurusd.value:
+            inst_list.append(InstApi.INST_EUR_USD)
+        if self._rosprm_use_inst_gbpjpy.value:
+            inst_list.append(InstApi.INST_GBP_JPY)
+        if self._rosprm_use_inst_audjpy.value:
+            inst_list.append(InstApi.INST_AUD_JPY)
+        if self._rosprm_use_inst_nzdjpy.value:
+            inst_list.append(InstApi.INST_NZD_JPY)
+        if self._rosprm_use_inst_cadjpy.value:
+            inst_list.append(InstApi.INST_CAD_JPY)
+        if self._rosprm_use_inst_chfjpy.value:
+            inst_list.append(InstApi.INST_CHF_JPY)
+        return inst_list
+
+    def _use_gran_list(self):
+        gran_list = []
+        if self._rosprm_use_gran_m1.value:
+            gran_list.append((GranApi.GRAN_M1, self._rosprm_length_m1.value))
+        if self._rosprm_use_gran_m2.value:
+            gran_list.append((GranApi.GRAN_M2, self._rosprm_length_m2.value))
+        if self._rosprm_use_gran_m3.value:
+            gran_list.append((GranApi.GRAN_M3, self._rosprm_length_m3.value))
+        if self._rosprm_use_gran_m4.value:
+            gran_list.append((GranApi.GRAN_M4, self._rosprm_length_m4.value))
+        if self._rosprm_use_gran_m5.value:
+            gran_list.append((GranApi.GRAN_M5, self._rosprm_length_m5.value))
+        if self._rosprm_use_gran_m10.value:
+            gran_list.append((GranApi.GRAN_M10, self._rosprm_length_m10.value))
+        if self._rosprm_use_gran_m15.value:
+            gran_list.append((GranApi.GRAN_M15, self._rosprm_length_m15.value))
+        if self._rosprm_use_gran_m30.value:
+            gran_list.append((GranApi.GRAN_M30, self._rosprm_length_m30.value))
+        if self._rosprm_use_gran_h1.value:
+            gran_list.append((GranApi.GRAN_H1, self._rosprm_length_h1.value))
+        if self._rosprm_use_gran_h2.value:
+            gran_list.append((GranApi.GRAN_H2, self._rosprm_length_h2.value))
+        if self._rosprm_use_gran_h3.value:
+            gran_list.append((GranApi.GRAN_H3, self._rosprm_length_h3.value))
+        if self._rosprm_use_gran_h4.value:
+            gran_list.append((GranApi.GRAN_H4, self._rosprm_length_h4.value))
+        if self._rosprm_use_gran_h6.value:
+            gran_list.append((GranApi.GRAN_H6, self._rosprm_length_h6.value))
+        if self._rosprm_use_gran_h8.value:
+            gran_list.append((GranApi.GRAN_H8, self._rosprm_length_h8.value))
+        if self._rosprm_use_gran_h12.value:
+            gran_list.append((GranApi.GRAN_H12, self._rosprm_length_h12.value))
+        if self._rosprm_use_gran_d.value:
+            gran_list.append((GranApi.GRAN_D, self._rosprm_length_d.value))
+        if self._rosprm_use_gran_w.value:
+            gran_list.append((GranApi.GRAN_W, self._rosprm_length_w.value))
+        return gran_list
 
 
 def main(args=None):

@@ -12,6 +12,7 @@ from transitions.extensions.factory import GraphMachine
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
+from rclpy.parameter import Parameter
 from std_msgs.msg import Bool
 from api_msgs.msg import Pricing
 from trade_manager_msgs.msg import OrderType, OrderDir
@@ -25,7 +26,7 @@ from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
 from api_msgs.msg import OrderState, TradeState
 from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
-from .constant import FMT_YMDHMS, FMT_YMDHMSF, FMT_TIME_HMS
+from .constant import FMT_YMDHMS, FMT_YMDHMSF
 from .constant import BUCKUP_DIR
 from .constant import WeekDay
 from .constant import Transitions as Tr
@@ -35,6 +36,8 @@ from .dataclass import RosParam
 from .wrapper import RosServiceClient
 from .trigger import TimeTrigger
 from . import backup as bk
+from . import ros_utils as rosutl
+from trade_manager.dataclass import RosParamTime
 
 MsgType = TypeVar("MsgType")
 SrvTypeRequest = TypeVar("SrvTypeRequest")
@@ -73,23 +76,6 @@ class ColOrderTicketsBackup(Enum):
     @classmethod
     def to_list(cls):
         return [m.value for m in cls]
-
-
-@dataclass
-class _RosParams():
-    """
-    ROS Parameter.
-    """
-    @dataclass
-    class RosParamTime(RosParam):
-        time: dt.datetime.time = None
-
-    MAX_LEVERAGE = RosParam("max_leverage")
-    MAX_POSITION_COUNT = RosParam("max_position_count")
-    ENABLE_WEEKEND_ORDER_STOP = RosParam("enable_weekend_order_stop")
-    WEEKEND_ORDER_STOP_TIME = RosParamTime("weekend_order_stop_time")
-    ENABLE_WEEKEND_ALL_CLOSE = RosParam("enable_weekend_all_close")
-    WEEKEND_ALL_CLOSE_TIME = RosParamTime("weekend_all_close_time")
 
 
 @dataclass
@@ -887,44 +873,25 @@ class OrderScheduler(Node):
         self._BUCKUP_FULLPATH_OT = buckup_dir + filename_ot
 
         # --------------- Declare ROS parameter ---------------
-        self._rosprm = _RosParams()
-        self.declare_parameter(self._rosprm.MAX_LEVERAGE.name)
-        self.declare_parameter(self._rosprm.MAX_POSITION_COUNT.name)
-        self.declare_parameter(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.name)
-        self.declare_parameter(self._rosprm.WEEKEND_ORDER_STOP_TIME.name)
-        self.declare_parameter(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.name)
-        self.declare_parameter(self._rosprm.WEEKEND_ALL_CLOSE_TIME.name)
+        self._rosprm_max_leverage = RosParam("max_leverage",
+                                             Parameter.Type.DOUBLE)
+        self._rosprm_max_position_count = RosParam("max_position_count",
+                                                   Parameter.Type.INTEGER)
+        self._rosprm_use_weekend_order_stop = RosParam("use_weekend_order_stop",
+                                                       Parameter.Type.BOOL)
+        self._rosprm_weekend_order_stop_time = RosParamTime("weekend_order_stop_time",
+                                                            Parameter.Type.STRING)
+        self._rosprm_use_weekend_all_close = RosParam("use_weekend_all_close",
+                                                      Parameter.Type.BOOL)
+        self._rosprm_weekend_all_close_time = RosParamTime("weekend_all_close_time",
+                                                           Parameter.Type.STRING)
 
-        para = self.get_parameter(self._rosprm.MAX_LEVERAGE.name)
-        self._rosprm.MAX_LEVERAGE.value = para.value
-        para = self.get_parameter(self._rosprm.MAX_POSITION_COUNT.name)
-        self._rosprm.MAX_POSITION_COUNT.value = para.value
-        para = self.get_parameter(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.name)
-        self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value = para.value
-        para = self.get_parameter(self._rosprm.WEEKEND_ORDER_STOP_TIME.name)
-        self._rosprm.WEEKEND_ORDER_STOP_TIME.value = para.value
-        datetime_ = dt.datetime.strptime(para.value, FMT_TIME_HMS)
-        self._rosprm.WEEKEND_ORDER_STOP_TIME.time = datetime_.time()
-        para = self.get_parameter(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.name)
-        self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value = para.value
-        para = self.get_parameter(self._rosprm.WEEKEND_ALL_CLOSE_TIME.name)
-        self._rosprm.WEEKEND_ALL_CLOSE_TIME.value = para.value
-        datetime_ = dt.datetime.strptime(para.value, FMT_TIME_HMS)
-        self._rosprm.WEEKEND_ALL_CLOSE_TIME.time = datetime_.time()
-
-        self.logger.debug("[Param]")
-        self.logger.debug("  - max_leverage:[{}]"
-                          .format(self._rosprm.MAX_LEVERAGE.value))
-        self.logger.debug("  - max_position_count:[{}]"
-                          .format(self._rosprm.MAX_POSITION_COUNT.value))
-        self.logger.debug("  - enable_weekend_order_stop:[{}]"
-                          .format(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value))
-        self.logger.debug("  - weekend_order_stop_time:[{}]"
-                          .format(self._rosprm.WEEKEND_ORDER_STOP_TIME.time))
-        self.logger.debug("  - enable_weekend_all_close:[{}]"
-                          .format(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value))
-        self.logger.debug("  - weekend_all_close_time:[{}]"
-                          .format(self._rosprm.WEEKEND_ALL_CLOSE_TIME.time))
+        rosutl.set_parameters(self, self._rosprm_max_leverage)
+        rosutl.set_parameters(self, self._rosprm_max_position_count)
+        rosutl.set_parameters(self, self._rosprm_use_weekend_order_stop)
+        rosutl.set_parameters(self, self._rosprm_weekend_order_stop_time)
+        rosutl.set_parameters(self, self._rosprm_use_weekend_all_close)
+        rosutl.set_parameters(self, self._rosprm_weekend_all_close_time)
 
         # --------------- Create State Machine ---------------
         states = [
@@ -1031,8 +998,8 @@ class OrderScheduler(Node):
                                        srvcli_trddet,
                                        srvcli_trdcrc,
                                        srvcli_trdcls,
-                                       self._rosprm.MAX_LEVERAGE.value,
-                                       self._rosprm.MAX_POSITION_COUNT.value,
+                                       self._rosprm_max_leverage.value,
+                                       self._rosprm_max_position_count.value,
                                        self.logger)
 
         req = AccountQuerySrv.Request()
@@ -1158,10 +1125,10 @@ class OrderScheduler(Node):
             pass
 
         # Check weekend close proccess
-        if self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value:
+        if self._rosprm_use_weekend_all_close.value:
             now = dt.datetime.now()
             if ((now.weekday() == WeekDay.SAT.value)
-                    and (now.time() > self._rosprm.WEEKEND_ALL_CLOSE_TIME.time)):
+                    and (now.time() > self._rosprm_weekend_all_close_time.time)):
                 for ticket in self._tickets:
                     ticket.enable_weekend_close()
 
@@ -1207,15 +1174,15 @@ class OrderScheduler(Node):
 
         rsp.register_id = -1
 
-        if (self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value
+        if (self._rosprm_use_weekend_order_stop.value
             and (dbg_tm_start.weekday() == WeekDay.SAT.value)
-                and (dbg_tm_start.time() > self._rosprm.WEEKEND_ORDER_STOP_TIME.time)):
+                and (dbg_tm_start.time() > self._rosprm_weekend_order_stop_time.time)):
             self.logger.warn("{:!^50}".format(" Reject order create "))
             self.logger.warn("  - Weekend order stop time has passed ")
             self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
             return rsp
 
-        if len(self._tickets) >= self._rosprm.MAX_POSITION_COUNT.value:
+        if len(self._tickets) >= self._rosprm_max_position_count.value:
             self.logger.warn("{:!^50}".format(" Reject order create "))
             self.logger.warn("  - Positon count is full ")
             self.logger.debug("{:=^50}".format(" Service[order_register]:End "))

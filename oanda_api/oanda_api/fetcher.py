@@ -1,5 +1,4 @@
 from typing import TypeVar
-from dataclasses import dataclass
 import requests
 import datetime as dt
 from requests.exceptions import ConnectionError, ReadTimeout
@@ -7,6 +6,7 @@ import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from oandapyV20 import API
 import oandapyV20.endpoints.instruments as instruments
 import oandapyV20.endpoints.accounts as accounts
@@ -20,23 +20,11 @@ from .constant import ADD_CIPHERS
 from .parameter import InstParam, GranParam
 from .dataclass import RosParam
 from . import utils as utl
+from . import ros_utils as rosutl
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 ApiRsp = TypeVar("ApiRsp")
-
-
-@dataclass
-class _RosParams():
-    """
-    ROS Parameter.
-    """
-    USE_ENV_LIVE = RosParam("use_env_live")
-    PRA_ACCOUNT_NUMBER = RosParam("env_practice.account_number")
-    PRA_ACCESS_TOKEN = RosParam("env_practice.access_token")
-    LIV_ACCOUNT_NUMBER = RosParam("env_live.account_number")
-    LIV_ACCESS_TOKEN = RosParam("env_live.access_token")
-    CONNECTION_TIMEOUT = RosParam("connection_timeout")
 
 
 class Fetcher(Node):
@@ -54,56 +42,41 @@ class Fetcher(Node):
         # self._MAX_SIZE = 10    # For test
 
         # --------------- Declare ROS parameter ---------------
-        self._rosprm = _RosParams()
-        self.declare_parameter(self._rosprm.USE_ENV_LIVE.name)
-        self.declare_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)
-        self.declare_parameter(self._rosprm.PRA_ACCESS_TOKEN.name)
-        self.declare_parameter(self._rosprm.LIV_ACCOUNT_NUMBER.name)
-        self.declare_parameter(self._rosprm.LIV_ACCESS_TOKEN.name)
-        self.declare_parameter(self._rosprm.CONNECTION_TIMEOUT.name)
+        self._rosprm_use_env_live = RosParam("use_env_live",
+                                             Parameter.Type.BOOL)
+        self._rosprm_pra_account_number = RosParam("env_practice.account_number",
+                                                   Parameter.Type.STRING)
+        self._rosprm_pra_access_token = RosParam("env_practice.access_token",
+                                                 Parameter.Type.STRING)
+        self._rosprm_liv_account_number = RosParam("env_live.account_number",
+                                                   Parameter.Type.STRING)
+        self._rosprm_liv_access_token = RosParam("env_live.access_token",
+                                                 Parameter.Type.STRING)
+        self._rosprm_connection_timeout = RosParam("connection_timeout",
+                                                   Parameter.Type.INTEGER)
 
-        para = self.get_parameter(self._rosprm.USE_ENV_LIVE.name)
-        self._rosprm.USE_ENV_LIVE.value = para.value
-        para = self.get_parameter(self._rosprm.PRA_ACCOUNT_NUMBER.name)
-        self._rosprm.PRA_ACCOUNT_NUMBER.value = para.value
-        para = self.get_parameter(self._rosprm.PRA_ACCESS_TOKEN.name)
-        self._rosprm.PRA_ACCESS_TOKEN.value = para.value
-        para = self.get_parameter(self._rosprm.LIV_ACCOUNT_NUMBER.name)
-        self._rosprm.LIV_ACCOUNT_NUMBER.value = para.value
-        para = self.get_parameter(self._rosprm.LIV_ACCESS_TOKEN.name)
-        self._rosprm.LIV_ACCESS_TOKEN.value = para.value
-        para = self.get_parameter(self._rosprm.CONNECTION_TIMEOUT.name)
-        self._rosprm.CONNECTION_TIMEOUT.value = para.value
+        rosutl.set_parameters(self, self._rosprm_use_env_live)
+        rosutl.set_parameters(self, self._rosprm_pra_account_number)
+        rosutl.set_parameters(self, self._rosprm_pra_access_token)
+        rosutl.set_parameters(self, self._rosprm_liv_account_number)
+        rosutl.set_parameters(self, self._rosprm_liv_access_token)
+        rosutl.set_parameters(self, self._rosprm_connection_timeout)
 
-        self.logger.debug("[Param]Use Env Live:[{}]".
-                          format(self._rosprm.USE_ENV_LIVE.value))
-        self.logger.debug("[Param]Env Practice")
-        self.logger.debug("  - Account_Number:[{}]"
-                          .format(self._rosprm.PRA_ACCOUNT_NUMBER.value))
-        self.logger.debug("  - Access Token:[{}]"
-                          .format(self._rosprm.PRA_ACCESS_TOKEN.value))
-        self.logger.debug("[Param]Env Live")
-        self.logger.debug("  - Account_Number:[{}]"
-                          .format(self._rosprm.LIV_ACCOUNT_NUMBER.value))
-        self.logger.debug("  - Access Token:[{}]"
-                          .format(self._rosprm.LIV_ACCESS_TOKEN.value))
-        self.logger.debug("[Param]Connection Timeout:[{}]"
-                          .format(self._rosprm.CONNECTION_TIMEOUT.value))
-
-        if self._rosprm.USE_ENV_LIVE.value:
+        # --------------- Initialize instance variable ---------------
+        if self._rosprm_use_env_live.value:
             environment = "live"
-            access_token = self._rosprm.LIV_ACCESS_TOKEN.value
-            account_number = self._rosprm.LIV_ACCOUNT_NUMBER.value
+            access_token = self._rosprm_liv_access_token.value
+            account_number = self._rosprm_liv_account_number.value
         else:
             environment = "practice"
-            access_token = self._rosprm.PRA_ACCESS_TOKEN.value
-            account_number = self._rosprm.PRA_ACCOUNT_NUMBER.value
+            access_token = self._rosprm_pra_access_token.value
+            account_number = self._rosprm_pra_account_number.value
 
-        if self._rosprm.CONNECTION_TIMEOUT.value <= 0:
+        if self._rosprm_connection_timeout.value <= 0:
             request_params = None
             self.logger.debug("Not set Timeout")
         else:
-            request_params = {"timeout": self._rosprm.CONNECTION_TIMEOUT.value}
+            request_params = {"timeout": self._rosprm_connection_timeout.value}
 
         self._api = API(access_token=access_token,
                         environment=environment,

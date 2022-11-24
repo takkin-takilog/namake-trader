@@ -1,10 +1,20 @@
 from dataclasses import dataclass
+import datetime as dt
 
 
 @dataclass
 class RosParam():
     """
-    Chart tag.
+    ROS parameter elements.
     """
-    name: str = None
+    name: str
+    type: int
     value = None
+
+
+@dataclass
+class RosParamTime(RosParam):
+    """
+    ROS parameter elements for time.
+    """
+    time: dt.datetime.time = None
