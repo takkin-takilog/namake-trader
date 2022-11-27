@@ -20,6 +20,7 @@ class WeekDay(Enum):
     """
     Weekday.
     """
+
     MON = 0  # Monday
     TUE = 1  # Tuesday
     WED = 2  # Wednesday
@@ -33,6 +34,7 @@ class Transitions(Enum):
     """
     Transitions const string.
     """
+
     NAME = "name"
     CHILDREN = "children"
     ON_ENTER = "on_enter"
@@ -51,6 +53,7 @@ class CandleColumnNames(Enum):
     """
     Candle column names.
     """
+
     DATETIME = "datetime"
     ASK_OP = "ask_op"
     ASK_HI = "ask_hi"
@@ -79,7 +82,7 @@ INST_DICT = {
     InstMng.INST_AUD_JPY: InstApi.INST_AUD_JPY,
     InstMng.INST_NZD_JPY: InstApi.INST_NZD_JPY,
     InstMng.INST_CAD_JPY: InstApi.INST_CAD_JPY,
-    InstMng.INST_CHF_JPY: InstApi.INST_CHF_JPY
+    InstMng.INST_CHF_JPY: InstApi.INST_CHF_JPY,
 }
 
 GRAN_DICT = {
@@ -103,5 +106,5 @@ GRAN_DICT = {
     GranMng.GRAN_H8: GranApi.GRAN_H8,
     GranMng.GRAN_H12: GranApi.GRAN_H12,
     GranMng.GRAN_D: GranApi.GRAN_D,
-    GranMng.GRAN_W: GranApi.GRAN_W
+    GranMng.GRAN_W: GranApi.GRAN_W,
 }

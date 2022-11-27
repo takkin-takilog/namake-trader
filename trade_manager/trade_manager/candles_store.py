@@ -41,7 +41,11 @@ SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
-class CandlesElement:
+class _CandlesElement:
+    """
+    Candles element class.
+
+    """
 
     class States(Enum):
         waiting = auto()
@@ -259,13 +263,14 @@ class CandlesElement:
         return next_update_dt
 
     def do_cyclic_event(self) -> None:
+        # pylint: disable=E1101
         # self.logger.debug("state:[{}]".format(self.state))
 
-        if self.state == self.States.waiting:  # pylint: disable=E1101
+        if self.state == self.States.waiting:
             self._on_do_waiting()
-        elif self.state == self.States.updating:  # pylint: disable=E1101
+        elif self.state == self.States.updating:
             self._on_do_updating()
-        elif self.state == self.States.retrying:  # pylint: disable=E1101
+        elif self.state == self.States.retrying:
             self._on_do_retrying()
         else:
             pass
@@ -342,10 +347,12 @@ class CandlesElement:
         self.logger.debug(" - Next update time:[{}]".format(self._next_updatetime))
 
     def _on_do_waiting(self):
+        # pylint: disable=E1101
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+
         dt_now = dt.datetime.now()
         if self._next_updatetime < dt_now:
-            self._trans_from_wating_to_updating()  # pylint: disable=E1101
+            self._trans_from_wating_to_updating()
 
     def _on_exit_waiting(self):
         self.logger.debug(
@@ -390,6 +397,7 @@ class CandlesElement:
             self.logger.error("{}".format(err))
 
     def _on_do_updating(self):
+        # pylint: disable=E1101
         self.logger.debug(
             "----- Call [{}]".format(
                 sys._getframe().f_code.co_name  # pylint: disable=W0212
@@ -440,14 +448,14 @@ class CandlesElement:
             if self._request_start_dt <= latest_dt:
                 self.logger.debug(" - Update complete!")
                 self._is_update_complete = True
-                self._trans_from_updating_to_waiting()  # pylint: disable=E1101
+                self._trans_from_updating_to_waiting()
             else:
                 self.logger.warn("{:!^50}".format(" Unexpected statement "))
                 if self._SELF_RETRY_COUNT_MAX <= self._self_retry_counter:
                     self._trans_updating_common()
                 else:
                     self._self_retry_counter += 1
-                    self._trans_self_updating()  # pylint: disable=E1101
+                    self._trans_self_updating()
         else:
             self.logger.warn(" - rsp.cndl_msg_list is empty")
             latest_dt = self._get_latest_datetime_in_dataframe()
@@ -460,17 +468,18 @@ class CandlesElement:
                     self._weekend_close_time = close_datetime
                     self._is_update_complete = True
                     self._needs_weekend_update = True
-                    self._trans_from_updating_to_waiting()  # pylint: disable=E1101
+                    self._trans_from_updating_to_waiting()
                 else:
                     self._trans_updating_common()
             else:
                 self._trans_updating_common()
 
     def _trans_updating_common(self):
+        # pylint: disable=E1101
         if self._RETRY_COUNT_MAX <= self._retry_counter:
-            self._trans_from_updating_to_waiting()  # pylint: disable=E1101
+            self._trans_from_updating_to_waiting()
         else:
-            self._trans_from_updating_to_retrying()  # pylint: disable=E1101
+            self._trans_from_updating_to_retrying()
 
     def _on_enter_retrying(self):
         self.logger.debug(
@@ -491,9 +500,10 @@ class CandlesElement:
         self.logger.debug("  - Next update time:[{}]".format(self._next_updatetime))
 
     def _on_do_retrying(self):
+        # pylint: disable=E1101
         dt_now = dt.datetime.now()
         if self._next_updatetime < dt_now:
-            self._trans_from_retrying_to_updatinga()  # pylint: disable=E1101
+            self._trans_from_retrying_to_updatinga()
 
     def _on_exit_retrying(self):
         self.logger.debug(
@@ -561,6 +571,10 @@ class CandlesElement:
 
 
 class CandlesStore(Node):
+    """
+    Candles store class.
+
+    """
 
     def __init__(self) -> None:
         super().__init__("candles_store")
@@ -675,9 +689,7 @@ class CandlesStore(Node):
         # --------------- Create ROS Communication ---------------
         try:
             # Create service client "CandlesQuery"
-            srv_type = CandlesQuerySrv
-            srv_name = "candles_query"
-            srvcli = RosServiceClient(self, srv_type, srv_name)
+            srvcli = RosServiceClient(self, CandlesQuerySrv, "candles_query")
         except Exception as err:
             self.logger.error(err)
             raise InitializerErrorException("create service client failed.") from err
@@ -685,28 +697,24 @@ class CandlesStore(Node):
         self._candles_elem_list = []
         for gran_id, gran_leng in self._use_gran_list():
             for inst_id in self._use_inst_list():
-                candles_elem = CandlesElement(self, srvcli, inst_id, gran_id, gran_leng)
+                candles_elem = _CandlesElement(
+                    self, srvcli, inst_id, gran_id, gran_leng
+                )
                 self._candles_elem_list.append(candles_elem)
 
         # Create service server "CandlesByDatetime"
-        srv_type = CandlesByDatetimeSrv
-        srv_name = "candles_by_datetime"
-        callback = self._on_recv_candles_by_datetime
         self._cbd_srv = self.create_service(
-            srv_type,
-            srv_name,
-            callback=callback,
+            CandlesByDatetimeSrv,
+            "candles_by_datetime",
+            callback=self._on_recv_candles_by_datetime,
             callback_group=ReentrantCallbackGroup(),
         )
 
         # Create service server "CandlesByLength"
-        srv_type = CandlesByLengthSrv
-        srv_name = "candles_by_length"
-        callback = self._on_recv_candles_by_length
         self._cbl_srv = self.create_service(
-            srv_type,
-            srv_name,
-            callback=callback,
+            CandlesByLengthSrv,
+            "candles_by_length",
+            callback=self._on_recv_candles_by_length,
             callback_group=ReentrantCallbackGroup(),
         )
 

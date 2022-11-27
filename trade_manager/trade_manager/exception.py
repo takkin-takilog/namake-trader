@@ -1,5 +1,3 @@
-
-
 class InitializerErrorException(Exception):
     """Raised when an exception occurs during class initialization."""
 
