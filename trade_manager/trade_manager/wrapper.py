@@ -10,17 +10,16 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
 class Future:
-
     def __init__(self, future, end_time: Optional[float] = None) -> None:
         self._future = future
         self._end_time = end_time
 
-    def has_timed_out(self):
+    def has_timed_out(self) -> bool:
         if (self._end_time is not None) and (self._end_time < time.monotonic()):
             return True
         return False
 
-    def done(self):
+    def done(self) -> bool:
         return self._future.done()
 
     def result(self):
@@ -28,7 +27,6 @@ class Future:
 
 
 class RosServiceClient:
-
     def __init__(
         self, node: Node, srv_type, srv_name: str, use_wait_for_service: bool = True
     ) -> None:

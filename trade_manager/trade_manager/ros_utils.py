@@ -4,9 +4,7 @@ from .constant import FMT_TIME_HMS
 from .dataclass import RosParam, RosParamTime
 
 
-def set_parameters(node: Node,
-                   ros_param: RosParam
-                   ) -> None:
+def set_parameters(node: Node, ros_param: RosParam) -> None:
     """
     Set parameters for the RosParam.
 
@@ -21,12 +19,14 @@ def set_parameters(node: Node,
     if isinstance(ros_param, RosParamTime):
         datetime_ = dt.datetime.strptime(para.value, FMT_TIME_HMS)
         ros_param.time = datetime_.time()
-        node.get_logger().debug("[Param]{}:[{}] {}".
-                                format(ros_param.name,
-                                       ros_param.time,
-                                       type(ros_param.time)))
+        node.get_logger().debug(
+            "[Param]{}:[{}] {}".format(
+                ros_param.name, ros_param.time, type(ros_param.time)
+            )
+        )
     else:
-        node.get_logger().debug("[Param]{}:[{}] {}".
-                                format(ros_param.name,
-                                       ros_param.value,
-                                       type(ros_param.value)))
+        node.get_logger().debug(
+            "[Param]{}:[{}] {}".format(
+                ros_param.name, ros_param.value, type(ros_param.value)
+            )
+        )

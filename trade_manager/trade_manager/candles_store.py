@@ -942,14 +942,14 @@ def main(args=None):
 
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()
-    cs = CandlesStore()
+    candles_store = CandlesStore()
 
     try:
         while rclpy.ok():
-            rclpy.spin_once(cs, executor=executor, timeout_sec=1.0)
-            cs.do_cyclic_event()
+            rclpy.spin_once(candles_store, executor=executor, timeout_sec=1.0)
+            candles_store.do_cyclic_event()
     except KeyboardInterrupt:
         pass
 
-    cs.destroy_node()
+    candles_store.destroy_node()
     rclpy.shutdown()

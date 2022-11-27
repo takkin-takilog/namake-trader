@@ -1,13 +1,15 @@
+from typing import Optional
 import datetime as dt
 
 
-class TimeTrigger():
-
-    def __init__(self,
-                 second: int = 0,
-                 minute: int = None,
-                 hour: int = None,
-                 ):
+class TimeTrigger:
+    def __init__(
+        self,
+        second: int = 0,
+        minute: Optional[int] = None,
+        hour: Optional[int] = None,
+    ) -> None:
+        self._enable_trigger = False
 
         self._second = self._check_second_fields(second)
         self._enable_hour = False
@@ -26,31 +28,30 @@ class TimeTrigger():
             else:
                 self._minute = self._check_minute_fields(minute)
             self._add_timedelta = dt.timedelta(days=1)
-            self._th_datetime = now.replace(hour=self._hour,
-                                            minute=self._minute,
-                                            second=self._second)
+            self._th_datetime = now.replace(
+                hour=self._hour, minute=self._minute, second=self._second
+            )
         elif self._enable_minute:
             self._minute = self._check_minute_fields(minute)
             self._add_timedelta = dt.timedelta(hours=1)
-            self._th_datetime = now.replace(minute=self._minute,
-                                            second=self._second)
+            self._th_datetime = now.replace(minute=self._minute, second=self._second)
         else:
             self._add_timedelta = dt.timedelta(minutes=1)
             self._th_datetime = now.replace(second=self._second)
 
         self.start()
 
-    def start(self):
+    def start(self) -> None:
         now_time = dt.datetime.now()
         if self._th_datetime < now_time:
             while self._th_datetime < now_time:
                 self._th_datetime += self._add_timedelta
         self._enable_trigger = True
 
-    def stop(self):
+    def stop(self) -> None:
         self._enable_trigger = False
 
-    def triggered(self, now_time: dt.datetime = None):
+    def triggered(self, now_time: Optional[dt.datetime] = None) -> bool:
         if not self._enable_trigger:
             return False
         if now_time is None:
@@ -62,7 +63,7 @@ class TimeTrigger():
                 self._th_datetime += self._add_timedelta
         return trig
 
-    def next_trigger_time(self):
+    def next_trigger_time(self) -> dt.datetime:
         return self._th_datetime
 
     def _check_hour_fields(self, hour):
@@ -94,8 +95,9 @@ class TimeTrigger():
             pass
         else:
             if not isinstance(value, int):
-                raise TypeError("__index__ returned non-int (type %s)" %
-                                type(value).__name__)
+                raise TypeError(
+                    "__index__ returned non-int (type %s)" % type(value).__name__
+                )
             return value
         orig = value
         try:
@@ -104,13 +106,15 @@ class TimeTrigger():
             pass
         else:
             if not isinstance(value, int):
-                raise TypeError("__int__ returned non-int (type %s)" %
-                                type(value).__name__)
+                raise TypeError(
+                    "__int__ returned non-int (type %s)" % type(value).__name__
+                )
             import warnings
-            warnings.warn("an integer is required (got type %s)" %
-                          type(orig).__name__,
-                          DeprecationWarning,
-                          stacklevel=2)
+
+            warnings.warn(
+                "an integer is required (got type %s)" % type(orig).__name__,
+                DeprecationWarning,
+                stacklevel=2,
+            )
             return value
-        raise TypeError("an integer is required (got type %s)" %
-                        type(value).__name__)
+        raise TypeError("an integer is required (got type %s)" % type(value).__name__)

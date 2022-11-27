@@ -24,8 +24,7 @@ def is_market_close(dt_: dt.datetime) -> bool:
 
 def is_summer_time(dt_: dt.date) -> bool:
 
-    pddt = pd.Timestamp(dt_.isoformat() + " 03:00:00",
-                        tz="America/New_York")
+    pddt = pd.Timestamp(dt_.isoformat() + " 03:00:00", tz="America/New_York")
     if 3600 <= pddt.dst().seconds:
         return True
     else:
