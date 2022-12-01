@@ -10,6 +10,7 @@ class InstParam(Enum):
     """
     Instrument parameter.
     """
+
     USD_JPY = (Inst.INST_USD_JPY, 3, "pricing_usdjpy", "usdjpy")
     EUR_JPY = (Inst.INST_EUR_JPY, 3, "pricing_eurjpy", "eurjpy")
     EUR_USD = (Inst.INST_EUR_USD, 5, "pricing_eurusd", "eurusd")
@@ -19,12 +20,13 @@ class InstParam(Enum):
     CAD_JPY = (Inst.INST_CAD_JPY, 3, "pricing_cadjpy", "cadjpy")
     CHF_JPY = (Inst.INST_CHF_JPY, 3, "pricing_chfjpy", "chfjpy")
 
-    def __init__(self,
-                 msg_id: int,       # ROS message ID
-                 digit: int,        # Number of digits after the decimal point
-                 topic_name: str,   # ROS Topic name
-                 param_name: str    # ROS Parameter name
-                 ) -> None:
+    def __init__(
+        self,
+        msg_id: int,  # ROS message ID
+        digit: int,  # Number of digits after the decimal point
+        topic_name: str,  # ROS Topic name
+        param_name: str,  # ROS Parameter name
+    ) -> None:
         self.msg_id = msg_id
         self.digit = digit
         self.topic_name = topic_name
@@ -85,7 +87,7 @@ class InstParam(Enum):
         """
         round a price value to the digits.
         """
-        p = 10 ** self.digit
+        p = 10**self.digit
         return (physical_value * p * 2 + 1) // 2 / p
 
 
@@ -93,6 +95,7 @@ class GranParam(Enum):
     """
     Granularity parameter.
     """
+
     M1 = (Gran.GRAN_M1, dt.timedelta(minutes=1))
     M2 = (Gran.GRAN_M2, dt.timedelta(minutes=2))
     M3 = (Gran.GRAN_M3, dt.timedelta(minutes=3))
@@ -111,10 +114,9 @@ class GranParam(Enum):
     D = (Gran.GRAN_D, dt.timedelta(days=1))
     W = (Gran.GRAN_W, dt.timedelta(weeks=1))
 
-    def __init__(self,
-                 msg_id: int,               # ROS message ID
-                 timedelta: dt.timedelta    # Time delta
-                 ) -> None:
+    def __init__(
+        self, msg_id: int, timedelta: dt.timedelta  # ROS message ID  # Time delta
+    ) -> None:
         self.msg_id = msg_id
         self.timedelta = timedelta
 

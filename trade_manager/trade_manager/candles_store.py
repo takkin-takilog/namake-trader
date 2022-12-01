@@ -186,7 +186,7 @@ class _CandlesElement:
         req.dt_to = dt_to.strftime(FMT_YMDHMS)
         try:
             rsp = self._srvcli.call(req)
-        except Exception as err:
+        except RosServiceErrorException as err:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (CandlesQuery) ")
             )
@@ -690,7 +690,7 @@ class CandlesStore(Node):
         try:
             # Create service client "CandlesQuery"
             srvcli = RosServiceClient(self, CandlesQuerySrv, "candles_query")
-        except Exception as err:
+        except RosServiceErrorException as err:
             self.logger.error(err)
             raise InitializerErrorException("create service client failed.") from err
 

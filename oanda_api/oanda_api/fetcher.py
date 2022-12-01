@@ -1,7 +1,9 @@
+# mypy: disable-error-code="attr-defined"
+
 from typing import TypeVar
 import requests
+import traceback
 import datetime as dt
-from requests.exceptions import ConnectionError, ReadTimeout
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
@@ -28,6 +30,10 @@ ApiRsp = TypeVar("ApiRsp")
 
 
 class Fetcher(Node):
+    """
+    Fetcher class.
+
+    """
 
     def __init__(self) -> None:
         super().__init__("fetcher")
@@ -39,21 +45,25 @@ class Fetcher(Node):
 
         # --------------- Define Constant value ---------------
         self._MAX_SIZE = 4999
-        # self._MAX_SIZE = 10    # For test
+        # self._MAX_SIZE = 5    # For test
 
         # --------------- Declare ROS parameter ---------------
-        self._rosprm_use_env_live = RosParam("use_env_live",
-                                             Parameter.Type.BOOL)
-        self._rosprm_pra_account_number = RosParam("env_practice.account_number",
-                                                   Parameter.Type.STRING)
-        self._rosprm_pra_access_token = RosParam("env_practice.access_token",
-                                                 Parameter.Type.STRING)
-        self._rosprm_liv_account_number = RosParam("env_live.account_number",
-                                                   Parameter.Type.STRING)
-        self._rosprm_liv_access_token = RosParam("env_live.access_token",
-                                                 Parameter.Type.STRING)
-        self._rosprm_connection_timeout = RosParam("connection_timeout",
-                                                   Parameter.Type.INTEGER)
+        self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
+        self._rosprm_pra_account_number = RosParam(
+            "env_practice.account_number", Parameter.Type.STRING
+        )
+        self._rosprm_pra_access_token = RosParam(
+            "env_practice.access_token", Parameter.Type.STRING
+        )
+        self._rosprm_liv_account_number = RosParam(
+            "env_live.account_number", Parameter.Type.STRING
+        )
+        self._rosprm_liv_access_token = RosParam(
+            "env_live.access_token", Parameter.Type.STRING
+        )
+        self._rosprm_connection_timeout = RosParam(
+            "connection_timeout", Parameter.Type.INTEGER
+        )
 
         rosutl.set_parameters(self, self._rosprm_use_env_live)
         rosutl.set_parameters(self, self._rosprm_pra_account_number)
@@ -72,15 +82,17 @@ class Fetcher(Node):
             access_token = self._rosprm_pra_access_token.value
             account_number = self._rosprm_pra_account_number.value
 
-        if self._rosprm_connection_timeout.value <= 0:
+        if self._rosprm_connection_timeout.value <= 0:  # type: ignore[operator]
             request_params = None
             self.logger.debug("Not set Timeout")
         else:
             request_params = {"timeout": self._rosprm_connection_timeout.value}
 
-        self._api = API(access_token=access_token,
-                        environment=environment,
-                        request_params=request_params)
+        self._api = API(
+            access_token=access_token,
+            environment=environment,
+            request_params=request_params,
+        )
         self._acc = accounts.AccountSummary(account_number)
 
         # --------------- Create ROS Communication ---------------
@@ -88,24 +100,27 @@ class Fetcher(Node):
         srv_type = CandlesQuerySrv
         srv_name = "candles_query"
         callback = self._on_recv_candles_query
-        self._cq_srv = self.create_service(srv_type,
-                                           srv_name,
-                                           callback=callback,
-                                           callback_group=ReentrantCallbackGroup())
+        self._cq_srv = self.create_service(
+            srv_type,
+            srv_name,
+            callback=callback,
+            callback_group=ReentrantCallbackGroup(),
+        )
 
         # Create service server "AccountQuery"
         srv_type = AccountQuerySrv
         srv_name = "account_query"
         callback = self._on_recv_account_query
-        self._aq_srv = self.create_service(srv_type,
-                                           srv_name,
-                                           callback=callback,
-                                           callback_group=ReentrantCallbackGroup())
+        self._aq_srv = self.create_service(
+            srv_type,
+            srv_name,
+            callback=callback,
+            callback_group=ReentrantCallbackGroup(),
+        )
 
-    def _on_recv_candles_query(self,
-                               req: SrvTypeRequest,
-                               rsp: SrvTypeResponse
-                               ) -> SrvTypeResponse:
+    def _on_recv_candles_query(
+        self, req: SrvTypeRequest, rsp: SrvTypeResponse
+    ) -> SrvTypeResponse:
 
         self.logger.debug("{:=^50}".format(" Service[candles_query]:Start "))
         self.logger.debug("<Request>")
@@ -125,10 +140,16 @@ class Fetcher(Node):
             dbg_tm_end = dt.datetime.now()
             self.logger.debug("<Response>")
             self.logger.debug("  - result:[{}]".format(rsp.result))
-            self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
-            self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
+            self.logger.debug(
+                "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
+            )
+            self.logger.debug(
+                "  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list))
+            )
             self.logger.debug("[Performance]")
-            self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
+            self.logger.debug(
+                "  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start)
+            )
             self.logger.debug("{:=^50}".format(" Service[candles_query]:End "))
             return rsp
 
@@ -171,30 +192,38 @@ class Fetcher(Node):
                 "from": utc_from.strftime(FMT_DTTM_API),
                 "to": utc_to.strftime(FMT_DTTM_API),
                 "granularity": gran,
-                "price": "AB"
+                "price": "AB",
             }
 
-            ep = instruments.InstrumentsCandles(instrument=inst,
-                                                params=params)
+            ep = instruments.InstrumentsCandles(instrument=inst, params=params)
             rsp.frc_msg.reason_code = frc.REASON_UNSET
             apirsp = None
             try:
                 apirsp = self._api.request(ep)
             except V20Error as err:
-                self.logger.error("{:!^50}".format(" V20Error "))
+                self.logger.error("{:!^50}".format(" Oanda-V20 Error "))
                 self.logger.error("{}".format(err))
+                traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
-            except ConnectionError as err:
-                self.logger.error("{:!^50}".format(" ConnectionError "))
+            except requests.exceptions.ConnectionError as err:
+                self.logger.error("{:!^50}".format(" HTTP-Connection Error "))
                 self.logger.error("{}".format(err))
+                traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-            except ReadTimeout as err:
-                self.logger.error("{:!^50}".format(" ReadTimeout "))
+            except requests.exceptions.Timeout as err:
+                self.logger.error("{:!^50}".format(" HTTP-Timeout Error "))
                 self.logger.error("{}".format(err))
+                traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-            except Exception as err:
-                self.logger.error("{:!^50}".format(" OthersError "))
+            except requests.exceptions.RequestException as err:
+                self.logger.error("{:!^50}".format(" HTTP-Request Error "))
                 self.logger.error("{}".format(err))
+                traceback.print_exc()
+                rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+            except BaseException as err:  # pylint: disable=W0703
+                self.logger.error("{:!^50}".format(" Unexpected Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
             else:
                 rsp.result = True
@@ -209,8 +238,8 @@ class Fetcher(Node):
                         msg.bid_h = float(raw["bid"]["h"])
                         msg.bid_l = float(raw["bid"]["l"])
                         msg.bid_c = float(raw["bid"]["c"])
-                        dttmp = dt.datetime.strptime(raw["time"], FMT_DTTM_API)
-                        jst_dt = utl.convert_from_utc_to_jst(dttmp)
+                        utc_dt = dt.datetime.strptime(raw["time"], FMT_DTTM_API)
+                        jst_dt = utl.convert_from_utc_to_jst(utc_dt)
                         msg.time = jst_dt.strftime(FMT_YMDHMS)
                         msg.is_complete = raw["complete"]
                         rsp.cndl_msg_list.append(msg)
@@ -243,18 +272,21 @@ class Fetcher(Node):
 
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
-        self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
+        self.logger.debug(
+            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
+        )
+        self.logger.debug(
+            "  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list))
+        )
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[candles_query]:End "))
 
         return rsp
 
-    def _on_recv_account_query(self,
-                               req: SrvTypeRequest,
-                               rsp: SrvTypeResponse
-                               ) -> SrvTypeResponse:
+    def _on_recv_account_query(
+        self, req: SrvTypeRequest, rsp: SrvTypeResponse  # pylint: disable=W0613
+    ) -> SrvTypeResponse:
 
         self.logger.debug("{:=^50}".format(" Service[account_query]:Start "))
         self.logger.debug("<Request>")
@@ -268,20 +300,29 @@ class Fetcher(Node):
         try:
             apirsp = self._api.request(self._acc)
         except V20Error as err:
-            self.logger.error("{:!^50}".format(" V20Error "))
+            self.logger.error("{:!^50}".format(" Oanda-V20 Error "))
             self.logger.error("{}".format(err))
+            traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
-        except ConnectionError as err:
-            self.logger.error("{:!^50}".format(" ConnectionError "))
+        except requests.exceptions.ConnectionError as err:
+            self.logger.error("{:!^50}".format(" HTTP-Connection Error "))
             self.logger.error("{}".format(err))
+            traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except ReadTimeout as err:
-            self.logger.error("{:!^50}".format(" ReadTimeout "))
+        except requests.exceptions.Timeout as err:
+            self.logger.error("{:!^50}".format(" HTTP-Timeout Error "))
             self.logger.error("{}".format(err))
+            traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except Exception as err:
-            self.logger.error("{:!^50}".format(" OthersError "))
+        except requests.exceptions.RequestException as err:
+            self.logger.error("{:!^50}".format(" HTTP-Request Error "))
             self.logger.error("{}".format(err))
+            traceback.print_exc()
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+        except BaseException as err:  # pylint: disable=W0703
+            self.logger.error("{:!^50}".format(" Unexpected Error "))
+            self.logger.error("{}".format(err))
+            traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_OTHERS
         else:
             rsp.result = True
@@ -307,8 +348,12 @@ class Fetcher(Node):
         self.logger.debug("  - margin_rate:[{}]".format(rsp.margin_rate))
         self.logger.debug("  - balance:[{}]".format(rsp.balance))
         self.logger.debug("  - open_trade_count:[{}]".format(rsp.open_trade_count))
-        self.logger.debug("  - open_position_count:[{}]".format(rsp.open_position_count))
-        self.logger.debug("  - pending_order_count:[{}]".format(rsp.pending_order_count))
+        self.logger.debug(
+            "  - open_position_count:[{}]".format(rsp.open_position_count)
+        )
+        self.logger.debug(
+            "  - pending_order_count:[{}]".format(rsp.pending_order_count)
+        )
         self.logger.debug("  - pl:[{}]".format(rsp.pl))
         self.logger.debug("  - resettable_pl:[{}]".format(rsp.resettable_pl))
         self.logger.debug("  - financing:[{}]".format(rsp.financing))
@@ -317,17 +362,18 @@ class Fetcher(Node):
         self.logger.debug("  - margin_used:[{}]".format(rsp.margin_used))
         self.logger.debug("  - margin_available:[{}]".format(rsp.margin_available))
         self.logger.debug("  - position_value:[{}]".format(rsp.position_value))
-        self.logger.debug("  - margin_closeout(%):[{}]".format(rsp.margin_closeout_percent))
+        self.logger.debug(
+            "  - margin_closeout(%):[{}]".format(rsp.margin_closeout_percent)
+        )
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[account_query]:End "))
 
         return rsp
 
-    def _validate_candles_query(self,
-                                req: SrvTypeRequest,
-                                rsp: SrvTypeResponse
-                                ) -> SrvTypeResponse:
+    def _validate_candles_query(
+        self, req: SrvTypeRequest, rsp: SrvTypeResponse
+    ) -> SrvTypeResponse:
 
         dt_from = dt.datetime.strptime(req.dt_from, FMT_YMDHMS)
         dt_to = dt.datetime.strptime(req.dt_to, FMT_YMDHMS)
@@ -344,6 +390,7 @@ class Fetcher(Node):
 
 def main(args=None):
 
+    # pylint: disable=E1101
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)

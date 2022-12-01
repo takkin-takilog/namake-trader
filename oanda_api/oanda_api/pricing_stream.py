@@ -1,6 +1,6 @@
 from typing import TypeVar
 import requests
-from requests.exceptions import ConnectionError, ReadTimeout
+import traceback
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
@@ -20,13 +20,17 @@ MsgType = TypeVar("MsgType")
 
 
 class PricingStreamPublisher(Node):
+    """
+    Pricing stream publisher class.
+
+    """
 
     def __init__(self) -> None:
         super().__init__("pricing_stream")
 
         # --------------- Set logger lebel ---------------
-        self._logger = super().get_logger()
-        self._logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+        self.logger = super().get_logger()
+        self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # --------------- Define Constant value ---------------
         USE_INST = "use_instrument."
@@ -34,18 +38,22 @@ class PricingStreamPublisher(Node):
         TPCNM_ACT_FLG = "activate_flag"
 
         # --------------- Declare ROS parameter ---------------
-        self._rosprm_use_env_live = RosParam("use_env_live",
-                                             Parameter.Type.BOOL)
-        self._rosprm_pra_account_number = RosParam("env_practice.account_number",
-                                                   Parameter.Type.STRING)
-        self._rosprm_pra_access_token = RosParam("env_practice.access_token",
-                                                 Parameter.Type.STRING)
-        self._rosprm_liv_account_number = RosParam("env_live.account_number",
-                                                   Parameter.Type.STRING)
-        self._rosprm_liv_access_token = RosParam("env_live.access_token",
-                                                 Parameter.Type.STRING)
-        self._rosprm_connection_timeout = RosParam("connection_timeout",
-                                                   Parameter.Type.INTEGER)
+        self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
+        self._rosprm_pra_account_number = RosParam(
+            "env_practice.account_number", Parameter.Type.STRING
+        )
+        self._rosprm_pra_access_token = RosParam(
+            "env_practice.access_token", Parameter.Type.STRING
+        )
+        self._rosprm_liv_account_number = RosParam(
+            "env_live.account_number", Parameter.Type.STRING
+        )
+        self._rosprm_liv_access_token = RosParam(
+            "env_live.access_token", Parameter.Type.STRING
+        )
+        self._rosprm_connection_timeout = RosParam(
+            "connection_timeout", Parameter.Type.INTEGER
+        )
 
         rosutl.set_parameters(self, self._rosprm_use_env_live)
         rosutl.set_parameters(self, self._rosprm_pra_account_number)
@@ -71,43 +79,41 @@ class PricingStreamPublisher(Node):
 
         self._act_flg = True
 
-        if self._rosprm_connection_timeout.value <= 0:
+        if self._rosprm_connection_timeout.value <= 0:  # type: ignore[operator]
             request_params = None
-            self._logger.debug("Not set Timeout")
+            self.logger.debug("Not set Timeout")
         else:
             request_params = {"timeout": self._rosprm_connection_timeout.value}
 
         environment = "live" if self._rosprm_use_env_live.value else "practice"
-        self._api = API(access_token=access_token,
-                        environment=environment,
-                        request_params=request_params)
+        self._api = API(
+            access_token=access_token,
+            environment=environment,
+            request_params=request_params,
+        )
 
         # --------------- Initialize ROS topic ---------------
-        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
-                                 reliability=QoSReliabilityPolicy.RELIABLE)
+        qos_profile = QoSProfile(
+            history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
+        )
         inst_name_list = []
         self._pub_dict = {}
 
         # Create topic publisher "pricing_*****"
         for i in InstParam:
             if use_inst_dict[i.name]:
-                pub = self.create_publisher(Pricing,
-                                            i.topic_name,
-                                            qos_profile)
+                pub = self.create_publisher(Pricing, i.topic_name, qos_profile)
                 self._pub_dict[i.name] = pub.publish
                 inst_name_list.append(i.name)
 
         # Create topic publisher "HeartBeat"
-        self._pub_hb = self.create_publisher(String,
-                                             TPCNM_HEARTBEAT,
-                                             qos_profile)
+        self._pub_hb = self.create_publisher(String, TPCNM_HEARTBEAT, qos_profile)
 
         # Create topic subscriber "ActivateFlag"
         callback = self._on_subs_act_flg
-        self._sub_act = self.create_subscription(Bool,
-                                                 TPCNM_ACT_FLG,
-                                                 callback,
-                                                 qos_profile)
+        self._sub_act = self.create_subscription(
+            Bool, TPCNM_ACT_FLG, callback, qos_profile
+        )
 
         # --------------- Initialize oandapyV20 ---------------
         instruments = ",".join(inst_name_list)
@@ -120,22 +126,33 @@ class PricingStreamPublisher(Node):
             try:
                 self._request()
             except StreamTerminated as err:
-                self._logger.debug("Stream Terminated: {}".format(err))
+                self.logger.debug("Stream Terminated: {}".format(err))
             except V20Error as err:
-                self._logger.error("{:!^50}".format(" V20Error "))
-                self._logger.error("{}".format(err))
-            except ConnectionError as err:
-                self._logger.error("{:!^50}".format(" ConnectionError "))
-                self._logger.error("{}".format(err))
-            except ReadTimeout as err:
-                self._logger.error("{:!^50}".format(" ReadTimeout "))
-                self._logger.error("{}".format(err))
-            except Exception as err:
-                self._logger.error("{:!^50}".format(" OthersError "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" Oanda-V20 Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
+            except requests.exceptions.ConnectionError as err:
+                self.logger.error("{:!^50}".format(" HTTP-Connection Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
+            except requests.exceptions.Timeout as err:
+                self.logger.error("{:!^50}".format(" HTTP-Timeout Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
+            except requests.exceptions.RequestException as err:
+                self.logger.error("{:!^50}".format(" HTTP-Request Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
+            except KeyboardInterrupt as err:
+                raise err
+            except BaseException as err:  # pylint: disable=W0703
+                self.logger.error("{:!^50}".format(" Unexpected Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
 
     def _on_subs_act_flg(self, msg: MsgType) -> None:
-        if msg.data:
+
+        if msg.data:  # type: ignore[attr-defined]
             self._act_flg = True
         else:
             self._act_flg = False
@@ -178,6 +195,7 @@ class PricingStreamPublisher(Node):
 
 def main(args=None):
 
+    # pylint: disable=E1101
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)

@@ -1,15 +1,17 @@
+from typing import Optional, Any
 from dataclasses import dataclass
 import datetime as dt
 
 
 @dataclass
-class RosParam():
+class RosParam:
     """
     ROS parameter elements.
     """
+
     name: str
     type: int
-    value = None
+    value: Optional[Any] = None
 
 
 @dataclass
@@ -17,4 +19,5 @@ class RosParamTime(RosParam):
     """
     ROS parameter elements for time.
     """
-    time: dt.datetime.time = None
+
+    time: dt.time = dt.time()

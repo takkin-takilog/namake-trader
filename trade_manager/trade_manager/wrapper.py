@@ -10,6 +10,7 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
 class Future:
+
     def __init__(self, future, end_time: Optional[float] = None) -> None:
         self._future = future
         self._end_time = end_time
@@ -27,6 +28,7 @@ class Future:
 
 
 class RosServiceClient:
+
     def __init__(
         self, node: Node, srv_type, srv_name: str, use_wait_for_service: bool = True
     ) -> None:
@@ -54,7 +56,7 @@ class RosServiceClient:
 
         try:
             future = self._cli.call_async(request)
-        except Exception as err:
+        except BaseException as err:
             self.logger.error("{}".format(err))
             msg = "Call ROS Service [{}] Failed.".format(self._srv_name)
             raise RosServiceErrorException(msg) from err
@@ -89,7 +91,7 @@ class RosServiceClient:
 
         try:
             future = self._cli.call_async(request)
-        except Exception as err:
+        except BaseException as err:
             self.logger.error("{}".format(err))
             msg = "Call ROS Service [{}] Failed.".format(self._srv_name)
             raise RosServiceErrorException(msg) from err

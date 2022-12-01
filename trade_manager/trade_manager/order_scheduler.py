@@ -434,7 +434,7 @@ class OrderTicket:
         self.logger.debug("----- Requesting [Order Create] -----")
         try:
             self._future = self._srvcli_ordcre.call_async(req, timeout_sec=5.0)
-        except Exception as err:
+        except RosServiceErrorException as err:
             self.logger.error("{}".format(err))
             raise InitializerErrorException(
                 "Call ROS Service Error (Order Create)"
