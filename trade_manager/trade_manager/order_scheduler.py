@@ -604,11 +604,8 @@ class OrderTicket:
             self._trans_from_EntryOrdering_to_EntryWaiting()
 
     def _on_enter_EntryWaiting(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        # pylint: disable=W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_EntryWaiting(self) -> None:
@@ -628,22 +625,16 @@ class OrderTicket:
             pass
 
     def _conditions_trans_lock(self) -> Bool:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        # pylint: disable=W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self.logger.debug(
             "--- trans_lock state:[{}]".format(OrderTicket._is_trans_lock)
         )
         return not OrderTicket._is_trans_lock
 
     def _on_enter_EntryChecking(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        # pylint: disable=W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = True
         self.logger.debug("--- Trans Locked")
         self.logger.debug(
@@ -711,20 +702,14 @@ class OrderTicket:
             self._trans_from_EntryChecking_to_EntryWaiting()
 
     def _on_exit_EntryChecking(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        # pylint: disable=W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = False
         self.logger.debug("--- Trans Unlocked")
 
     def _on_enter_EntryCanceling(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        # pylint: disable=W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self.logger.debug(
             "----- Request [Order Cancel] (id:[{}]) -----".format(self._order_id)
         )
@@ -786,11 +771,8 @@ class OrderTicket:
                 self._trans_to_Complete()
 
     def _on_enter_ExitWaiting(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        # pylint: disable=W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_ExitWaiting(self) -> None:
@@ -808,11 +790,8 @@ class OrderTicket:
             pass
 
     def _on_enter_ExitChecking(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        # pylint: disable=W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = True
         self.logger.debug("--- Trans Locked")
         self.logger.debug(
@@ -878,20 +857,14 @@ class OrderTicket:
             self._trans_from_ExitChecking_to_ExitWaiting()
 
     def _on_exit_ExitChecking(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        # pylint: disable=W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = False
         self.logger.debug("--- Trans Unlocked")
 
     def _on_enter_ExitOrdering(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        # pylint: disable=W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self.logger.debug(
             "----- Request [Trade Close] (id:[{}]) -----".format(self._trade_id)
         )
@@ -1251,13 +1224,9 @@ class OrderScheduler(Node):
                 self._trans_from_Idle_to_AccountUpdating()
 
     def _on_enter_AccountUpdating(self):
-        # pylint: disable=E1101
+        # pylint: disable=E1101, W0212
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
 
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
         req = AccountQuerySrv.Request()
         try:
             self._future = self._srvcli_acc.call_async(req, timeout_sec=5.0)

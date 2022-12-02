@@ -10,6 +10,9 @@ SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
 class Future:
+    """
+    Future class.
+    """
 
     def __init__(self, future, end_time: Optional[float] = None) -> None:
         self._future = future
@@ -28,6 +31,9 @@ class Future:
 
 
 class RosServiceClient:
+    """
+    Ros service client class.
+    """
 
     def __init__(
         self, node: Node, srv_type, srv_name: str, use_wait_for_service: bool = True
