@@ -1,6 +1,6 @@
 # mypy: disable-error-code="attr-defined"
 
-from typing import TypeVar
+from typing import TypeVar, List
 import requests
 import traceback
 import datetime as dt
@@ -45,7 +45,7 @@ class Fetcher(Node):
 
         # --------------- Define Constant value ---------------
         self._MAX_SIZE = 4999
-        # self._MAX_SIZE = 5    # For test
+        # self._MAX_SIZE = 5  # For test
 
         # --------------- Declare ROS parameter ---------------
         self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
@@ -97,24 +97,18 @@ class Fetcher(Node):
 
         # --------------- Create ROS Communication ---------------
         # Create service server "CandlesQuery"
-        srv_type = CandlesQuerySrv
-        srv_name = "candles_query"
-        callback = self._on_recv_candles_query
         self._cq_srv = self.create_service(
-            srv_type,
-            srv_name,
-            callback=callback,
+            CandlesQuerySrv,
+            "candles_query",
+            self._on_recv_candles_query,
             callback_group=ReentrantCallbackGroup(),
         )
 
         # Create service server "AccountQuery"
-        srv_type = AccountQuerySrv
-        srv_name = "account_query"
-        callback = self._on_recv_account_query
         self._aq_srv = self.create_service(
-            srv_type,
-            srv_name,
-            callback=callback,
+            AccountQuerySrv,
+            "account_query",
+            self._on_recv_account_query,
             callback_group=ReentrantCallbackGroup(),
         )
 
@@ -126,18 +120,28 @@ class Fetcher(Node):
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
         self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
-        self.logger.debug("  - dt_from:[{}]".format(req.dt_from))
-        self.logger.debug("  - dt_to:[{}]".format(req.dt_to))
+        self.logger.debug("  - dt_start:[{}]".format(req.dt_from))
+        self.logger.debug("  - dt_end:[{}]".format(req.dt_to))
 
         dbg_tm_start = dt.datetime.now()
 
         rsp.result = False
         rsp.frc_msg.reason_code = frc.REASON_UNSET
+        rsp.cndl_msg_list = []
 
-        rsp = self._validate_candles_query(req, rsp)
-        if rsp.frc_msg.reason_code != frc.REASON_UNSET:
-            rsp.result = False
+        dt_start = dt.datetime.strptime(req.dt_from, FMT_YMDHMS)
+        dt_end = dt.datetime.strptime(req.dt_to, FMT_YMDHMS)
+        dt_now = dt.datetime.now()
+
+        # ---------- Validate request argument ----------
+        if (dt_end < dt_start) or (dt_now < dt_start):
+            rsp.frc_msg.reason_code = frc.REASON_ARG_ERR
             dbg_tm_end = dt.datetime.now()
+            self.logger.error("{:!^50}".format(" Argument Error "))
+            self.logger.error("  - dt_end:[{}]".format(dt_end))
+            self.logger.error("  - dt_start:[{}]".format(dt_start))
+            self.logger.error("  - dt_now:[{}]".format(dt_now))
+
             self.logger.debug("<Response>")
             self.logger.debug("  - result:[{}]".format(rsp.result))
             self.logger.debug(
@@ -157,47 +161,37 @@ class Fetcher(Node):
         inst_param = InstParam.get_member_by_msgid(req.inst_msg.inst_id)
 
         minunit = gran_param.timedelta
-        dt_from = dt.datetime.strptime(req.dt_from, FMT_YMDHMS)
-        dt_to = dt.datetime.strptime(req.dt_to, FMT_YMDHMS)
-        dt_to = dt_to + minunit
+        dt_end += minunit
 
-        dtnow = dt.datetime.now()
-        if dtnow < dt_to:
-            dt_to = dtnow
-        if dtnow - minunit < dt_from:
-            dt_from = dtnow - dt.timedelta(seconds=1)
+        if dt_now < dt_end:
+            dt_end = dt_now
+        if dt_now - minunit < dt_start:
+            dt_start = dt_now - dt.timedelta(seconds=1)
 
         gran = gran_param.name
         inst = inst_param.name
-        tmpdt = dt_from
-        from_ = dt_from
-        tmplist = []
-        rsp.cndl_msg_list = []
+        dt_jst_next = dt_start
+        dt_jst_from = dt_start
+        cndl_msg_all_list: List[Candle] = []
 
-        while tmpdt < dt_to:
-            rsp.cndl_msg_list = []
-            tmpdt = tmpdt + (minunit * self._MAX_SIZE)
-
-            if dt_to < tmpdt:
-                tmpdt = dt_to
-            to_ = tmpdt
+        while dt_jst_next < dt_end:
+            dt_jst_next += minunit * self._MAX_SIZE
+            dt_jst_to = dt_end if dt_end < dt_jst_next else dt_jst_next
 
             self.logger.debug("{:-^40}".format(" Service[candles_query]:fetch "))
-            self.logger.debug("  - from:[{}]".format(from_))
-            self.logger.debug("  - to:  [{}]".format(to_))
+            self.logger.debug("  - from:[{}]".format(dt_jst_from))
+            self.logger.debug("  - to:  [{}]".format(dt_jst_to))
 
-            utc_from = utl.convert_from_jst_to_utc(from_)
-            utc_to = utl.convert_from_jst_to_utc(to_)
+            dt_utc_from = utl.convert_from_jst_to_utc(dt_jst_from)
+            dt_utc_to = utl.convert_from_jst_to_utc(dt_jst_to)
             params = {
-                "from": utc_from.strftime(FMT_DTTM_API),
-                "to": utc_to.strftime(FMT_DTTM_API),
+                "from": dt_utc_from.strftime(FMT_DTTM_API),
+                "to": dt_utc_to.strftime(FMT_DTTM_API),
                 "granularity": gran,
                 "price": "AB",
             }
 
             ep = instruments.InstrumentsCandles(instrument=inst, params=params)
-            rsp.frc_msg.reason_code = frc.REASON_UNSET
-            apirsp = None
             try:
                 apirsp = self._api.request(ep)
             except V20Error as err:
@@ -205,71 +199,65 @@ class Fetcher(Node):
                 self.logger.error("{}".format(err))
                 traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
+                break
             except requests.exceptions.ConnectionError as err:
                 self.logger.error("{:!^50}".format(" HTTP-Connection Error "))
                 self.logger.error("{}".format(err))
                 traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+                break
             except requests.exceptions.Timeout as err:
                 self.logger.error("{:!^50}".format(" HTTP-Timeout Error "))
                 self.logger.error("{}".format(err))
                 traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+                break
             except requests.exceptions.RequestException as err:
                 self.logger.error("{:!^50}".format(" HTTP-Request Error "))
                 self.logger.error("{}".format(err))
                 traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+                break
             except BaseException as err:  # pylint: disable=W0703
                 self.logger.error("{:!^50}".format(" Unexpected Error "))
                 self.logger.error("{}".format(err))
                 traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
-            else:
-                rsp.result = True
-                if "candles" in apirsp.keys() and apirsp["candles"]:
-                    for raw in apirsp["candles"]:
-                        msg = Candle()
-                        msg.ask_o = float(raw["ask"]["o"])
-                        msg.ask_h = float(raw["ask"]["h"])
-                        msg.ask_l = float(raw["ask"]["l"])
-                        msg.ask_c = float(raw["ask"]["c"])
-                        msg.bid_o = float(raw["bid"]["o"])
-                        msg.bid_h = float(raw["bid"]["h"])
-                        msg.bid_l = float(raw["bid"]["l"])
-                        msg.bid_c = float(raw["bid"]["c"])
-                        utc_dt = dt.datetime.strptime(raw["time"], FMT_DTTM_API)
-                        jst_dt = utl.convert_from_utc_to_jst(utc_dt)
-                        msg.time = jst_dt.strftime(FMT_YMDHMS)
-                        msg.is_complete = raw["complete"]
-                        rsp.cndl_msg_list.append(msg)
+                break
 
-                if rsp.cndl_msg_list:
-                    tmplist.append(rsp.cndl_msg_list)
+            cndl_msg_one_list = []
+            if "candles" in apirsp.keys() and apirsp["candles"]:
+                for raw in apirsp["candles"]:
+                    msg = Candle()
+                    msg.ask_o = float(raw["ask"]["o"])
+                    msg.ask_h = float(raw["ask"]["h"])
+                    msg.ask_l = float(raw["ask"]["l"])
+                    msg.ask_c = float(raw["ask"]["c"])
+                    msg.bid_o = float(raw["bid"]["o"])
+                    msg.bid_h = float(raw["bid"]["h"])
+                    msg.bid_l = float(raw["bid"]["l"])
+                    msg.bid_c = float(raw["bid"]["c"])
+                    utc_dt = dt.datetime.strptime(raw["time"], FMT_DTTM_API)
+                    jst_dt = utl.convert_from_utc_to_jst(utc_dt)
+                    msg.time = jst_dt.strftime(FMT_YMDHMS)
+                    msg.is_complete = raw["complete"]
+                    cndl_msg_one_list.append(msg)
 
-                from_ = to_
+            if cndl_msg_all_list and cndl_msg_one_list:
+                if cndl_msg_all_list[-1].time == cndl_msg_one_list[0].time:
+                    del cndl_msg_one_list[0]
+            cndl_msg_all_list.extend(cndl_msg_one_list)
+
+            dt_jst_from = dt_jst_to
 
         if rsp.frc_msg.reason_code == frc.REASON_UNSET:
-            if not tmplist:
-                rsp.result = True
-                rsp.frc_msg.reason_code = frc.REASON_DATA_ZERO
+            rsp.result = True
+            if cndl_msg_all_list:
+                rsp.cndl_msg_list = cndl_msg_all_list
             else:
-                rsp.result = True
-                tmplist2 = []
-                for tmp in tmplist:
-                    if not tmplist2:
-                        tmplist2.extend(tmp)
-                    else:
-                        if tmplist2[-1].time == tmp[0].time:
-                            tmplist2.extend(tmp[1:])
-                        else:
-                            tmplist2.extend(tmp)
-                rsp.cndl_msg_list = tmplist2
-        else:
-            rsp.result = False
+                rsp.frc_msg.reason_code = frc.REASON_DATA_ZERO
 
         dbg_tm_end = dt.datetime.now()
-
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
         self.logger.debug(
@@ -369,22 +357,6 @@ class Fetcher(Node):
         self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[account_query]:End "))
 
-        return rsp
-
-    def _validate_candles_query(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
-
-        dt_from = dt.datetime.strptime(req.dt_from, FMT_YMDHMS)
-        dt_to = dt.datetime.strptime(req.dt_to, FMT_YMDHMS)
-        dt_now = dt.datetime.now()
-
-        if (dt_to < dt_from) or (dt_now < dt_from):
-            rsp.frc_msg.reason_code = frc.REASON_ARG_ERR
-            self.logger.error("{:!^50}".format(" Argument Error "))
-            self.logger.error("  - dt_to:[{}]".format(dt_to))
-            self.logger.error("  - dt_from:[{}]".format(dt_from))
-            self.logger.error("  - dt_now:[{}]".format(dt_now))
         return rsp
 
 

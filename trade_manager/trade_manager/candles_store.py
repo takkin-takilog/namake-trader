@@ -706,7 +706,7 @@ class CandlesStore(Node):
         self._cbd_srv = self.create_service(
             CandlesByDatetimeSrv,
             "candles_by_datetime",
-            callback=self._on_recv_candles_by_datetime,
+            self._on_recv_candles_by_datetime,
             callback_group=ReentrantCallbackGroup(),
         )
 
@@ -714,7 +714,7 @@ class CandlesStore(Node):
         self._cbl_srv = self.create_service(
             CandlesByLengthSrv,
             "candles_by_length",
-            callback=self._on_recv_candles_by_length,
+            self._on_recv_candles_by_length,
             callback_group=ReentrantCallbackGroup(),
         )
 

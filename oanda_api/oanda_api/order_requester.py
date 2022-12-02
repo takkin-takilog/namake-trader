@@ -121,35 +121,29 @@ class OrderRequester(Node):
 
         # --------------- Create ROS Communication ---------------
         # Create service server "OrderCreate"
-        srv_type = OrderCreateSrv
-        srv_name = "order_create"
-        callback = self._on_recv_order_create
-        self.order_create_srv = self.create_service(srv_type, srv_name, callback)
+        self.order_create_srv = self.create_service(
+            OrderCreateSrv, "order_create", self._on_recv_order_create
+        )
         # Create service server "TradeDetails"
-        srv_type = TradeDetailsSrv
-        srv_name = "trade_details"
-        callback = self._on_recv_trade_details
-        self.trade_details_srv = self.create_service(srv_type, srv_name, callback)
+        self.trade_details_srv = self.create_service(
+            TradeDetailsSrv, "trade_details", self._on_recv_trade_details
+        )
         # Create service server "TradeCRCDO"
-        srv_type = TradeCRCDOSrv
-        srv_name = "trade_crcdo"
-        callback = self._on_recv_trade_crcdo
-        self.trade_crcdo_srv = self.create_service(srv_type, srv_name, callback)
+        self.trade_crcdo_srv = self.create_service(
+            TradeCRCDOSrv, "trade_crcdo", self._on_recv_trade_crcdo
+        )
         # Create service server "TradeClose"
-        srv_type = TradeCloseSrv
-        srv_name = "trade_close"
-        callback = self._on_recv_trade_close
-        self.trade_close_srv = self.create_service(srv_type, srv_name, callback)
+        self.trade_close_srv = self.create_service(
+            TradeCloseSrv, "trade_close", self._on_recv_trade_close
+        )
         # Create service server "OrderDetails"
-        srv_type = OrderDetailsSrv
-        srv_name = "order_details"
-        callback = self._on_recv_order_details
-        self.order_details_srv = self.create_service(srv_type, srv_name, callback)
+        self.order_details_srv = self.create_service(
+            OrderDetailsSrv, "order_details", self._on_recv_order_details
+        )
         # Create service server "OrderCancel"
-        srv_type = OrderCancelSrv
-        srv_name = "order_cancel"
-        callback = self._on_recv_order_cancel
-        self.order_cancel_srv = self.create_service(srv_type, srv_name, callback)
+        self.order_cancel_srv = self.create_service(
+            OrderCancelSrv, "order_cancel", self._on_recv_order_cancel
+        )
 
     def _on_recv_order_create(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse

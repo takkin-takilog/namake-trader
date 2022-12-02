@@ -106,9 +106,8 @@ class PricingPublisher(Node):
                 inst_name_list.append(i.name)
 
         # Create topic subscriber "ActivateFlag"
-        callback = self._on_subs_act_flg
         self._sub_act = self.create_subscription(
-            Bool, TPCNM_ACT_FLG, callback, qos_profile
+            Bool, TPCNM_ACT_FLG, self._on_subs_act_flg, qos_profile
         )
 
         # --------------- Initialize oandapyV20 ---------------

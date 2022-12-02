@@ -1053,14 +1053,14 @@ class OrderScheduler(Node):
         # --------------- Create ROS Communication ---------------
         # Create service server "OrderRegister"
         self._ordreq_srv = self.create_service(
-            OrderRegisterSrv, "order_register", callback=self._on_order_register
+            OrderRegisterSrv, "order_register", self._on_order_register
         )
 
         # Create service server "TradeCloseRequest"
         self._trdclsreq_srv = self.create_service(
             TradeCloseRequestSrv,
             "trade_close_request",
-            callback=self._on_requested_close,
+            self._on_requested_close,
         )
         try:
             # Create service client "OrderCreate"
