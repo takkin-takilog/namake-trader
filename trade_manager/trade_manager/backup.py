@@ -1,13 +1,12 @@
 import pandas as pd
 from pathlib import Path
-from typing import Optional
 
 
 def save_df_csv(
     filepath: str,
     df: pd.DataFrame,
     index: bool = True,
-    date_format: Optional[str] = None,
+    date_format: str | None = None,
 ) -> None:
     p = Path(filepath)
     p.parent.mkdir(parents=True, exist_ok=True)

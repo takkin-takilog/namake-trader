@@ -1,6 +1,6 @@
 # mypy: disable-error-code="attr-defined"
 
-from typing import TypeVar, List
+from typing import TypeVar
 import requests
 import traceback
 import datetime as dt
@@ -172,7 +172,7 @@ class Fetcher(Node):
         inst = inst_param.name
         dt_jst_next = dt_start
         dt_jst_from = dt_start
-        cndl_msg_all_list: List[Candle] = []
+        cndl_msg_all_list: list[Candle] = []
 
         while dt_jst_next < dt_end:
             dt_jst_next += minunit * self._MAX_SIZE

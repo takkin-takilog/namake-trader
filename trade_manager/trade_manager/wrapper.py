@@ -1,10 +1,9 @@
-from typing import TypeVar, Optional
+from typing import TypeVar
 import time
 import rclpy
 from rclpy.node import Node
 from .exception import RosServiceErrorException
 
-MsgType = TypeVar("MsgType")
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
@@ -14,7 +13,7 @@ class Future:
     Future class.
     """
 
-    def __init__(self, future, end_time: Optional[float] = None) -> None:
+    def __init__(self, future, end_time: float | None = None) -> None:
         self._future = future
         self._end_time = end_time
 
@@ -53,7 +52,7 @@ class RosServiceClient:
         self._srv_name = srv_name
 
     def call(
-        self, request: SrvTypeRequest, timeout_sec: Optional[float] = None
+        self, request: SrvTypeRequest, timeout_sec: float | None = None
     ) -> SrvTypeResponse:  # type: ignore[type-var]
 
         if not self._cli.service_is_ready():
@@ -88,7 +87,7 @@ class RosServiceClient:
         return result
 
     def call_async(
-        self, request: SrvTypeRequest, timeout_sec: Optional[float] = None
+        self, request: SrvTypeRequest, timeout_sec: float | None = None
     ) -> Future:
 
         if not self._cli.service_is_ready():

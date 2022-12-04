@@ -1,4 +1,3 @@
-from typing import Optional
 import datetime as dt
 
 
@@ -6,8 +5,8 @@ class TimeTrigger:
     def __init__(
         self,
         second: int = 0,
-        minute: Optional[int] = None,
-        hour: Optional[int] = None,
+        minute: int | None = None,
+        hour: int | None = None,
     ) -> None:
         self._enable_trigger = False
 
@@ -51,7 +50,7 @@ class TimeTrigger:
     def stop(self) -> None:
         self._enable_trigger = False
 
-    def triggered(self, now_time: Optional[dt.datetime] = None) -> bool:
+    def triggered(self, now_time: dt.datetime | None = None) -> bool:
         if not self._enable_trigger:
             return False
         if now_time is None:

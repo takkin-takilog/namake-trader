@@ -2,7 +2,6 @@
 # mypy: disable-error-code="var-annotated,attr-defined"
 
 import sys
-from typing import List
 from typing import TypeVar
 from enum import Enum, auto
 import datetime as dt
@@ -516,7 +515,7 @@ class _CandlesElement:
         self._retry_counter += 1
         self._self_retry_counter = 0
 
-    def _update_dataframe(self, cndl_msg_list: List[Candle]) -> None:
+    def _update_dataframe(self, cndl_msg_list: list[Candle]) -> None:
 
         data = []
         for cndl_msg in cndl_msg_list:

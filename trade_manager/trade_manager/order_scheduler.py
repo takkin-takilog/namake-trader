@@ -3,7 +3,7 @@
 import sys
 import os
 import gc
-from typing import TypeVar, Optional
+from typing import TypeVar
 from dataclasses import dataclass
 from enum import Enum, auto
 import datetime as dt
@@ -47,7 +47,6 @@ from . import backup as bk
 from . import ros_utils as rosutl
 from trade_manager.dataclass import RosParamTime
 
-MsgType = TypeVar("MsgType")
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
@@ -340,7 +339,7 @@ class OrderTicket:
             self._sm.get_graph().view()
 
         # --------------- Initialize instance variable ---------------
-        self._future: Optional[Future] = None
+        self._future: Future | None = None
         self._trade_id = None
         self._order_id = None
         self._is_entry_exp_time_over = False
