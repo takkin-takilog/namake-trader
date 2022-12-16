@@ -36,6 +36,7 @@ from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
 from .constant import FMT_YMDHMS, FMT_YMDHMSF
 from .constant import BUCKUP_DIR
+from .constant import ConstGroupMetaclass
 from .constant import WeekDay
 from .constant import Transitions as Tr
 from .constant import INST_DICT
@@ -51,19 +52,15 @@ SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
-class ColOrderSchedulerBackup(Enum):
+class ColOrderSchedulerBackup(metaclass=ConstGroupMetaclass):
     """
     Order scheduler backup dataframe column name.
     """
 
     REGISTER_ID = "register_id"
 
-    @classmethod
-    def to_list(cls):
-        return [m.value for m in cls]
 
-
-class ColOrderTicketsBackup(Enum):
+class ColOrderTicketsBackup(metaclass=ConstGroupMetaclass):
     """
     Order tickets backup dataframe column name.
     """
@@ -81,10 +78,6 @@ class ColOrderTicketsBackup(Enum):
     EXIT_EXP_TIME = "exit_exp_time"
     API_INST_ID = "api_inst_id"
     API_ORDER_TYPE = "api_order_type"
-
-    @classmethod
-    def to_list(cls):
-        return [m.value for m in cls]
 
 
 @dataclass
@@ -158,173 +151,173 @@ class OrderTicket:
         # --------------- Create State Machine ---------------
         states = [
             {
-                Tr.NAME.value: self.States.EntryOrdering,
-                Tr.ON_ENTER.value: None,
-                Tr.ON_EXIT.value: None,
+                Tr.NAME: self.States.EntryOrdering,
+                Tr.ON_ENTER: None,
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.EntryWaiting,
-                Tr.ON_ENTER.value: "_on_enter_EntryWaiting",
-                Tr.ON_EXIT.value: None,
+                Tr.NAME: self.States.EntryWaiting,
+                Tr.ON_ENTER: "_on_enter_EntryWaiting",
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.EntryChecking,
-                Tr.ON_ENTER.value: "_on_enter_EntryChecking",
-                Tr.ON_EXIT.value: "_on_exit_EntryChecking",
+                Tr.NAME: self.States.EntryChecking,
+                Tr.ON_ENTER: "_on_enter_EntryChecking",
+                Tr.ON_EXIT: "_on_exit_EntryChecking",
             },
             {
-                Tr.NAME.value: self.States.EntryCanceling,
-                Tr.ON_ENTER.value: "_on_enter_EntryCanceling",
-                Tr.ON_EXIT.value: None,
+                Tr.NAME: self.States.EntryCanceling,
+                Tr.ON_ENTER: "_on_enter_EntryCanceling",
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.ExitWaiting,
-                Tr.ON_ENTER.value: "_on_enter_ExitWaiting",
-                Tr.ON_EXIT.value: None,
+                Tr.NAME: self.States.ExitWaiting,
+                Tr.ON_ENTER: "_on_enter_ExitWaiting",
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.ExitChecking,
-                Tr.ON_ENTER.value: "_on_enter_ExitChecking",
-                Tr.ON_EXIT.value: "_on_exit_ExitChecking",
+                Tr.NAME: self.States.ExitChecking,
+                Tr.ON_ENTER: "_on_enter_ExitChecking",
+                Tr.ON_EXIT: "_on_exit_ExitChecking",
             },
             {
-                Tr.NAME.value: self.States.ExitOrdering,
-                Tr.ON_ENTER.value: "_on_enter_ExitOrdering",
-                Tr.ON_EXIT.value: None,
+                Tr.NAME: self.States.ExitOrdering,
+                Tr.ON_ENTER: "_on_enter_ExitOrdering",
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.Complete,
-                Tr.ON_ENTER.value: None,
-                Tr.ON_EXIT.value: None,
+                Tr.NAME: self.States.Complete,
+                Tr.ON_ENTER: None,
+                Tr.ON_EXIT: None,
             },
         ]
 
         transitions = [
             {
-                Tr.TRIGGER.value: "_trans_from_EntryOrdering_to_ExitWaiting",
-                Tr.SOURCE.value: self.States.EntryOrdering,
-                Tr.DEST.value: self.States.ExitWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_EntryOrdering_to_ExitWaiting",
+                Tr.SOURCE: self.States.EntryOrdering,
+                Tr.DEST: self.States.ExitWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryOrdering_to_EntryWaiting",
-                Tr.SOURCE.value: self.States.EntryOrdering,
-                Tr.DEST.value: self.States.EntryWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_EntryOrdering_to_EntryWaiting",
+                Tr.SOURCE: self.States.EntryOrdering,
+                Tr.DEST: self.States.EntryWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryWaiting_to_EntryChecking",
-                Tr.SOURCE.value: self.States.EntryWaiting,
-                Tr.DEST.value: self.States.EntryChecking,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: "_conditions_trans_lock",
+                Tr.TRIGGER: "_trans_from_EntryWaiting_to_EntryChecking",
+                Tr.SOURCE: self.States.EntryWaiting,
+                Tr.DEST: self.States.EntryChecking,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: "_conditions_trans_lock",
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryChecking_to_EntryWaiting",
-                Tr.SOURCE.value: self.States.EntryChecking,
-                Tr.DEST.value: self.States.EntryWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_EntryChecking_to_EntryWaiting",
+                Tr.SOURCE: self.States.EntryChecking,
+                Tr.DEST: self.States.EntryWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryWaiting_to_EntryCanceling",
-                Tr.SOURCE.value: self.States.EntryWaiting,
-                Tr.DEST.value: self.States.EntryCanceling,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_EntryWaiting_to_EntryCanceling",
+                Tr.SOURCE: self.States.EntryWaiting,
+                Tr.DEST: self.States.EntryCanceling,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryCanceling_to_Complete",
-                Tr.SOURCE.value: self.States.EntryCanceling,
-                Tr.DEST.value: self.States.Complete,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_EntryCanceling_to_Complete",
+                Tr.SOURCE: self.States.EntryCanceling,
+                Tr.DEST: self.States.Complete,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryCanceling_to_EntryChecking",
-                Tr.SOURCE.value: self.States.EntryCanceling,
-                Tr.DEST.value: self.States.EntryChecking,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: "_conditions_trans_lock",
+                Tr.TRIGGER: "_trans_from_EntryCanceling_to_EntryChecking",
+                Tr.SOURCE: self.States.EntryCanceling,
+                Tr.DEST: self.States.EntryChecking,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: "_conditions_trans_lock",
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryChecking_to_ExitWaiting",
-                Tr.SOURCE.value: self.States.EntryChecking,
-                Tr.DEST.value: self.States.ExitWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_EntryChecking_to_ExitWaiting",
+                Tr.SOURCE: self.States.EntryChecking,
+                Tr.DEST: self.States.ExitWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitWaiting_to_ExitChecking",
-                Tr.SOURCE.value: self.States.ExitWaiting,
-                Tr.DEST.value: self.States.ExitChecking,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: "_conditions_trans_lock",
+                Tr.TRIGGER: "_trans_from_ExitWaiting_to_ExitChecking",
+                Tr.SOURCE: self.States.ExitWaiting,
+                Tr.DEST: self.States.ExitChecking,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: "_conditions_trans_lock",
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitChecking_to_ExitWaiting",
-                Tr.SOURCE.value: self.States.ExitChecking,
-                Tr.DEST.value: self.States.ExitWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_ExitChecking_to_ExitWaiting",
+                Tr.SOURCE: self.States.ExitChecking,
+                Tr.DEST: self.States.ExitWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitChecking_to_Complete",
-                Tr.SOURCE.value: self.States.ExitChecking,
-                Tr.DEST.value: self.States.Complete,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_ExitChecking_to_Complete",
+                Tr.SOURCE: self.States.ExitChecking,
+                Tr.DEST: self.States.Complete,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitWaiting_to_ExitOrdering",
-                Tr.SOURCE.value: self.States.ExitWaiting,
-                Tr.DEST.value: self.States.ExitOrdering,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_ExitWaiting_to_ExitOrdering",
+                Tr.SOURCE: self.States.ExitWaiting,
+                Tr.DEST: self.States.ExitOrdering,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitOrdering_to_Complete",
-                Tr.SOURCE.value: self.States.ExitOrdering,
-                Tr.DEST.value: self.States.Complete,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_ExitOrdering_to_Complete",
+                Tr.SOURCE: self.States.ExitOrdering,
+                Tr.DEST: self.States.Complete,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_to_Complete",
-                Tr.SOURCE.value: "*",
-                Tr.DEST.value: self.States.Complete,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_to_Complete",
+                Tr.SOURCE: "*",
+                Tr.DEST: self.States.Complete,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
         ]
 
@@ -469,34 +462,34 @@ class OrderTicket:
     def restore(self, rec: pd.Series):
         Col = ColOrderTicketsBackup
 
-        entry_exp_time = rec[Col.ENTRY_EXP_TIME.value]
+        entry_exp_time = rec[Col.ENTRY_EXP_TIME]
         if entry_exp_time is not None:
             entry_exp_time = dt.datetime.strptime(entry_exp_time, FMT_YMDHMS)
-        exit_exp_time = rec[Col.EXIT_EXP_TIME.value]
+        exit_exp_time = rec[Col.EXIT_EXP_TIME]
         if exit_exp_time is not None:
             exit_exp_time = dt.datetime.strptime(exit_exp_time, FMT_YMDHMS)
 
-        order_id = rec[Col.ORDER_ID.value]
+        order_id = rec[Col.ORDER_ID]
         if order_id is not None:
             order_id = int(order_id)
 
-        trade_id = rec[Col.TRADE_ID.value]
+        trade_id = rec[Col.TRADE_ID]
         if trade_id is not None:
             trade_id = int(trade_id)
 
-        self._register_id = int(rec[Col.REGISTER_ID.value])
+        self._register_id = int(rec[Col.REGISTER_ID])
         self._order_id = order_id
         self._trade_id = trade_id
-        self._inst_id = int(rec[Col.INST_ID.value])
-        self._order_type = int(rec[Col.ORDER_TYPE.value])
-        self._units = int(rec[Col.UNITS.value])
-        self._entry_price = float(rec[Col.ENTRY_PRICE.value])
+        self._inst_id = int(rec[Col.INST_ID])
+        self._order_type = int(rec[Col.ORDER_TYPE])
+        self._units = int(rec[Col.UNITS])
+        self._entry_price = float(rec[Col.ENTRY_PRICE])
         self._entry_exp_time = entry_exp_time
-        self._take_profit_price = float(rec[Col.TAKE_PROFIT_PRICE.value])
-        self._stop_loss_price = float(rec[Col.STOP_LOSS_PRICE.value])
+        self._take_profit_price = float(rec[Col.TAKE_PROFIT_PRICE])
+        self._stop_loss_price = float(rec[Col.STOP_LOSS_PRICE])
         self._exit_exp_time = exit_exp_time
-        self._api_inst_id = int(rec[Col.API_INST_ID.value])
-        self._api_order_type = int(rec[Col.API_ORDER_TYPE.value])
+        self._api_inst_id = int(rec[Col.API_INST_ID])
+        self._api_order_type = int(rec[Col.API_ORDER_TYPE])
 
         self.logger.info(
             "<<<<<<<<<< Restore:register_id[{}] >>>>>>>>>>".format(self._register_id)
@@ -983,35 +976,35 @@ class OrderScheduler(Node):
         # --------------- Create State Machine ---------------
         states = [
             {
-                Tr.NAME.value: self.States.Idle,
-                Tr.ON_ENTER.value: None,
-                Tr.ON_EXIT.value: None,
+                Tr.NAME: self.States.Idle,
+                Tr.ON_ENTER: None,
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.AccountUpdating,
-                Tr.ON_ENTER.value: "_on_enter_AccountUpdating",
-                Tr.ON_EXIT.value: None,
+                Tr.NAME: self.States.AccountUpdating,
+                Tr.ON_ENTER: "_on_enter_AccountUpdating",
+                Tr.ON_EXIT: None,
             },
         ]
 
         transitions = [
             {
-                Tr.TRIGGER.value: "_trans_from_Idle_to_AccountUpdating",
-                Tr.SOURCE.value: self.States.Idle,
-                Tr.DEST.value: self.States.AccountUpdating,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_Idle_to_AccountUpdating",
+                Tr.SOURCE: self.States.Idle,
+                Tr.DEST: self.States.AccountUpdating,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_AccountUpdating_to_Idle",
-                Tr.SOURCE.value: self.States.AccountUpdating,
-                Tr.DEST.value: self.States.Idle,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_AccountUpdating_to_Idle",
+                Tr.SOURCE: self.States.AccountUpdating,
+                Tr.DEST: self.States.Idle,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
         ]
 
@@ -1121,7 +1114,7 @@ class OrderScheduler(Node):
             pass
         else:
             sr = df.iloc[0]
-            register_id = int(sr[ColOrderSchedulerBackup.REGISTER_ID.value])
+            register_id = int(sr[ColOrderSchedulerBackup.REGISTER_ID])
             self.logger.info("========== Restore order scheduler ==========")
             self.logger.info("  - register_id:[{}]".format(register_id))
             OrderTicket.set_register_id(register_id)
@@ -1162,7 +1155,7 @@ class OrderScheduler(Node):
         # ----- Backup order scheduler -----
         register_id = OrderTicket.get_register_id()
         bk_tbl = [register_id]
-        df = pd.DataFrame(bk_tbl, columns=ColOrderSchedulerBackup.to_list())
+        df = pd.DataFrame(bk_tbl, columns=list(ColOrderSchedulerBackup))
         bk.save_df_csv(
             self._BUCKUP_FULLPATH_OS, df, index=False, date_format=FMT_YMDHMS
         )
@@ -1172,7 +1165,7 @@ class OrderScheduler(Node):
         for ticket in self._tickets:
             rec = ticket.generate_buckup_record()
             bk_tbl.append(rec)
-        df = pd.DataFrame(bk_tbl, columns=ColOrderTicketsBackup.to_list())
+        df = pd.DataFrame(bk_tbl, columns=list(ColOrderTicketsBackup))
         bk.save_df_csv(
             self._BUCKUP_FULLPATH_OT, df, index=False, date_format=FMT_YMDHMS
         )
@@ -1199,7 +1192,7 @@ class OrderScheduler(Node):
         # Check weekend close proccess
         if self._rosprm_use_weekend_all_close.value:
             now = dt.datetime.now()
-            if (now.weekday() == WeekDay.SAT.value) and (
+            if (now.weekday() == WeekDay.SAT) and (
                 now.time() > self._rosprm_weekend_all_close_time.time
             ):
                 for ticket in self._tickets:
@@ -1253,7 +1246,7 @@ class OrderScheduler(Node):
 
         if (
             self._rosprm_use_weekend_order_stop.value
-            and (dbg_tm_start.weekday() == WeekDay.SAT.value)
+            and (dbg_tm_start.weekday() == WeekDay.SAT)
             and (dbg_tm_start.time() > self._rosprm_weekend_order_stop_time.time)
         ):
             self.logger.warn("{:!^50}".format(" Reject order create "))

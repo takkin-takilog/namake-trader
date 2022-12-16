@@ -1,5 +1,4 @@
 import datetime as dt
-from enum import Enum, unique
 from trade_manager_msgs.msg import Instrument as InstMng
 from trade_manager_msgs.msg import Granularity as GranMng
 from api_msgs.msg import Instrument as InstApi
@@ -15,8 +14,23 @@ MAX_TIME = dt.time(23, 59, 59)
 BUCKUP_DIR = "/trade_backup/"
 
 
-@unique
-class WeekDay(Enum):
+class ConstGroupMetaclass(type):
+    """
+    Constants group metaclass.
+    """
+
+    def __new__(cls, name, bases, dct):
+        cls.members = [
+            v for k, v in dct.items() if not k.startswith("__") and not callable(v)
+        ]
+        return super().__new__(cls, name, bases, dct)
+
+    @classmethod
+    def __iter__(cls):
+        yield from cls.members
+
+
+class WeekDay(metaclass=ConstGroupMetaclass):
     """
     Weekday.
     """
@@ -30,7 +44,7 @@ class WeekDay(Enum):
     SUN = 6  # Sunday
 
 
-class Transitions(Enum):
+class Transitions(metaclass=ConstGroupMetaclass):
     """
     Transitions const string.
     """
@@ -49,7 +63,7 @@ class Transitions(Enum):
     UNLESS = "unless"
 
 
-class CandleColumnNames(Enum):
+class CandleColumnNames(metaclass=ConstGroupMetaclass):
     """
     Candle column names.
     """
@@ -68,10 +82,6 @@ class CandleColumnNames(Enum):
     MID_LO = "mid_lo"
     MID_CL = "mid_cl"
     COMP = "comp"
-
-    @classmethod
-    def to_list(cls):
-        return [m.value for m in cls]
 
 
 INST_DICT = {

@@ -27,7 +27,7 @@ from .constant import FMT_YMDHMS, FMT_TIME_HMS
 from .constant import MIN_TIME, MAX_TIME
 from .constant import Transitions as Tr
 from .constant import WeekDay
-from .constant import CandleColumnNames as ColName
+from .constant import CandleColumnNames as ColNames
 from .constant import INST_DICT, GRAN_DICT
 from .exception import InitializerErrorException, RosServiceErrorException
 from .dataclass import RosParam
@@ -75,67 +75,67 @@ class _CandlesElement:
         # --------------- Create State Machine ---------------
         states = [
             {
-                Tr.NAME.value: self.States.waiting,
-                Tr.ON_ENTER.value: "_on_enter_waiting",
-                Tr.ON_EXIT.value: "_on_exit_waiting",
+                Tr.NAME: self.States.waiting,
+                Tr.ON_ENTER: "_on_enter_waiting",
+                Tr.ON_EXIT: "_on_exit_waiting",
             },
             {
-                Tr.NAME.value: self.States.updating,
-                Tr.ON_ENTER.value: "_on_enter_updating",
-                Tr.ON_EXIT.value: None,
+                Tr.NAME: self.States.updating,
+                Tr.ON_ENTER: "_on_enter_updating",
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.retrying,
-                Tr.ON_ENTER.value: "_on_enter_retrying",
-                Tr.ON_EXIT.value: "_on_exit_retrying",
+                Tr.NAME: self.States.retrying,
+                Tr.ON_ENTER: "_on_enter_retrying",
+                Tr.ON_EXIT: "_on_exit_retrying",
             },
         ]
 
         transitions = [
             {
-                Tr.TRIGGER.value: "_trans_from_wating_to_updating",
-                Tr.SOURCE.value: self.States.waiting,
-                Tr.DEST.value: self.States.updating,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_wating_to_updating",
+                Tr.SOURCE: self.States.waiting,
+                Tr.DEST: self.States.updating,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_updating_to_retrying",
-                Tr.SOURCE.value: self.States.updating,
-                Tr.DEST.value: self.States.retrying,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_updating_to_retrying",
+                Tr.SOURCE: self.States.updating,
+                Tr.DEST: self.States.retrying,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_retrying_to_updating",
-                Tr.SOURCE.value: self.States.retrying,
-                Tr.DEST.value: self.States.updating,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_retrying_to_updating",
+                Tr.SOURCE: self.States.retrying,
+                Tr.DEST: self.States.updating,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_updating_to_waiting",
-                Tr.SOURCE.value: self.States.updating,
-                Tr.DEST.value: self.States.waiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_from_updating_to_waiting",
+                Tr.SOURCE: self.States.updating,
+                Tr.DEST: self.States.waiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_self_updating",
-                Tr.SOURCE.value: self.States.updating,
-                Tr.DEST.value: "=",
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None,
+                Tr.TRIGGER: "_trans_self_updating",
+                Tr.SOURCE: self.States.updating,
+                Tr.DEST: "=",
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
         ]
 
@@ -249,7 +249,7 @@ class _CandlesElement:
 
         next_update_dt = latest_datetime + self._GRAN_INTERVAL
 
-        if next_update_dt.weekday() == WeekDay.SAT.value:
+        if next_update_dt.weekday() == WeekDay.SAT:
             close_time = utl.get_market_close_time(next_update_dt.date())
             if close_time <= next_update_dt.time():
                 self.logger.debug(" - Weekly Data Complete!")
@@ -293,9 +293,9 @@ class _CandlesElement:
                     self._weekend_close_time
                 )
                 latest_sr = self._df_comp.iloc[-1]
-                latest_close_ask = latest_sr[ColName.ASK_CL.value]
-                latest_close_bid = latest_sr[ColName.BID_CL.value]
-                latest_close_mid = latest_sr[ColName.MID_CL.value]
+                latest_close_ask = latest_sr[ColNames.ASK_CL]
+                latest_close_bid = latest_sr[ColNames.BID_CL]
+                latest_close_mid = latest_sr[ColNames.MID_CL]
                 time = self._weekend_close_time - self._GRAN_INTERVAL
                 msg.candle.ask_o = latest_close_ask
                 msg.candle.ask_h = latest_close_ask
@@ -317,18 +317,18 @@ class _CandlesElement:
                 latest_dt = self._get_latest_datetime_in_dataframe()
                 next_updatetime = self._get_next_update_datetime(latest_dt)
                 latest_sr = self._df_comp.iloc[-1]
-                msg.candle.ask_o = latest_sr[ColName.ASK_OP.value]
-                msg.candle.ask_h = latest_sr[ColName.ASK_HI.value]
-                msg.candle.ask_l = latest_sr[ColName.ASK_LO.value]
-                msg.candle.ask_c = latest_sr[ColName.ASK_CL.value]
-                msg.candle.bid_o = latest_sr[ColName.BID_OP.value]
-                msg.candle.bid_h = latest_sr[ColName.BID_HI.value]
-                msg.candle.bid_l = latest_sr[ColName.BID_LO.value]
-                msg.candle.bid_c = latest_sr[ColName.BID_CL.value]
-                msg.candle.mid_o = latest_sr[ColName.MID_OP.value]
-                msg.candle.mid_h = latest_sr[ColName.MID_HI.value]
-                msg.candle.mid_l = latest_sr[ColName.MID_LO.value]
-                msg.candle.mid_c = latest_sr[ColName.MID_CL.value]
+                msg.candle.ask_o = latest_sr[ColNames.ASK_OP]
+                msg.candle.ask_h = latest_sr[ColNames.ASK_HI]
+                msg.candle.ask_l = latest_sr[ColNames.ASK_LO]
+                msg.candle.ask_c = latest_sr[ColNames.ASK_CL]
+                msg.candle.bid_o = latest_sr[ColNames.BID_OP]
+                msg.candle.bid_h = latest_sr[ColNames.BID_HI]
+                msg.candle.bid_l = latest_sr[ColNames.BID_LO]
+                msg.candle.bid_c = latest_sr[ColNames.BID_CL]
+                msg.candle.mid_o = latest_sr[ColNames.MID_OP]
+                msg.candle.mid_h = latest_sr[ColNames.MID_HI]
+                msg.candle.mid_l = latest_sr[ColNames.MID_LO]
+                msg.candle.mid_c = latest_sr[ColNames.MID_CL]
                 msg.candle.time = latest_dt.strftime(FMT_YMDHMS)
                 msg.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
 
@@ -459,7 +459,7 @@ class _CandlesElement:
             self.logger.warn(" - rsp.cndl_msg_list is empty")
             latest_dt = self._get_latest_datetime_in_dataframe()
             close_time = utl.get_market_close_time(latest_dt.date())
-            if latest_dt.weekday() == WeekDay.SAT.value:
+            if latest_dt.weekday() == WeekDay.SAT:
                 close_datetime = dt.datetime.combine(latest_dt.date(), close_time)
                 self.logger.debug(" - close datetime:[{}]".format(close_datetime))
                 if close_datetime < self._request_end_dt:
@@ -543,14 +543,14 @@ class _CandlesElement:
                 ]
             )
 
-        df = pd.DataFrame(data, columns=ColName.to_list())
-        df.set_index([ColName.DATETIME.value], inplace=True)
+        df = pd.DataFrame(data, columns=list(ColNames))
+        df.set_index([ColNames.DATETIME], inplace=True)
 
-        df_comp = df[(df[ColName.COMP.value])].copy()
-        df_prov = df[~(df[ColName.COMP.value])].copy()
+        df_comp = df[(df[ColNames.COMP])].copy()
+        df_prov = df[~(df[ColNames.COMP])].copy()
 
         if not df_comp.empty:
-            df_comp.drop(ColName.COMP.value, axis=1, inplace=True)
+            df_comp.drop(ColNames.COMP, axis=1, inplace=True)
             if self._df_comp.empty:
                 self._df_comp = df_comp
             else:
@@ -565,7 +565,7 @@ class _CandlesElement:
         if df_prov.empty:
             self._df_prov = pd.DataFrame()
         else:
-            df_prov.drop(ColName.COMP.value, axis=1, inplace=True)
+            df_prov.drop(ColNames.COMP, axis=1, inplace=True)
             self._df_prov = df_prov
 
 
