@@ -36,7 +36,7 @@ from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
 from .constant import FMT_YMDHMS, FMT_YMDHMSF
 from .constant import BUCKUP_DIR
-from .constant import ConstGroupMetaclass
+from .constant import ConstantGroup
 from .constant import WeekDay
 from .constant import Transitions as Tr
 from .constant import INST_DICT
@@ -52,7 +52,7 @@ SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
-class ColOrderSchedulerBackup(metaclass=ConstGroupMetaclass):
+class ColOrderSchedulerBackup(ConstantGroup):
     """
     Order scheduler backup dataframe column name.
     """
@@ -60,7 +60,7 @@ class ColOrderSchedulerBackup(metaclass=ConstGroupMetaclass):
     REGISTER_ID = "register_id"
 
 
-class ColOrderTicketsBackup(metaclass=ConstGroupMetaclass):
+class ColOrderTicketsBackup(ConstantGroup):
     """
     Order tickets backup dataframe column name.
     """
@@ -1155,7 +1155,7 @@ class OrderScheduler(Node):
         # ----- Backup order scheduler -----
         register_id = OrderTicket.get_register_id()
         bk_tbl = [register_id]
-        df = pd.DataFrame(bk_tbl, columns=list(ColOrderSchedulerBackup))
+        df = pd.DataFrame(bk_tbl, columns=ColOrderSchedulerBackup.to_list())
         bk.save_df_csv(
             self._BUCKUP_FULLPATH_OS, df, index=False, date_format=FMT_YMDHMS
         )
@@ -1165,7 +1165,7 @@ class OrderScheduler(Node):
         for ticket in self._tickets:
             rec = ticket.generate_buckup_record()
             bk_tbl.append(rec)
-        df = pd.DataFrame(bk_tbl, columns=list(ColOrderTicketsBackup))
+        df = pd.DataFrame(bk_tbl, columns=ColOrderTicketsBackup.to_list())
         bk.save_df_csv(
             self._BUCKUP_FULLPATH_OT, df, index=False, date_format=FMT_YMDHMS
         )

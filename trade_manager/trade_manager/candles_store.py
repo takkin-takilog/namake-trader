@@ -543,7 +543,7 @@ class _CandlesElement:
                 ]
             )
 
-        df = pd.DataFrame(data, columns=list(ColNames))
+        df = pd.DataFrame(data, columns=ColNames.to_list())
         df.set_index([ColNames.DATETIME], inplace=True)
 
         df_comp = df[(df[ColNames.COMP])].copy()

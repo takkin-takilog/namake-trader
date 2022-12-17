@@ -14,23 +14,25 @@ MAX_TIME = dt.time(23, 59, 59)
 BUCKUP_DIR = "/trade_backup/"
 
 
-class ConstGroupMetaclass(type):
+class ConstantGroup:
     """
-    Constants group metaclass.
+    Container class for grouped constants.
     """
-
-    def __new__(cls, name, bases, dct):
-        cls.members = [
-            v for k, v in dct.items() if not k.startswith("__") and not callable(v)
-        ]
-        return super().__new__(cls, name, bases, dct)
 
     @classmethod
-    def __iter__(cls):
-        yield from cls.members
+    def to_list(cls):
+        """
+        Returns all constant values in class with the attribute requirements.
+
+        """
+        member = []
+        for k, v in cls.__dict__.items():
+            if not k.startswith("__") and not callable(v):
+                member.append(v)
+        return member
 
 
-class WeekDay(metaclass=ConstGroupMetaclass):
+class WeekDay(ConstantGroup):
     """
     Weekday.
     """
@@ -44,7 +46,7 @@ class WeekDay(metaclass=ConstGroupMetaclass):
     SUN = 6  # Sunday
 
 
-class Transitions(metaclass=ConstGroupMetaclass):
+class Transitions(ConstantGroup):
     """
     Transitions const string.
     """
@@ -63,7 +65,7 @@ class Transitions(metaclass=ConstGroupMetaclass):
     UNLESS = "unless"
 
 
-class CandleColumnNames(metaclass=ConstGroupMetaclass):
+class CandleColumnNames(ConstantGroup):
     """
     Candle column names.
     """
