@@ -698,9 +698,10 @@ class OrderRequester(Node):
 
         return data
 
-    def _fit_unit(self, value: float, one_pip_str: str):
-        tmp = Decimal(str(value)).quantize(Decimal(one_pip_str), rounding=ROUND_HALF_UP)
-        return str(tmp)
+    def _fit_unit(self, value: float, one_pip_str: str) -> str:
+        return str(
+            Decimal(str(value)).quantize(Decimal(one_pip_str), rounding=ROUND_HALF_UP)
+        )
 
 
 def main(args=None):
