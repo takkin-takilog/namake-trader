@@ -1,10 +1,6 @@
 from dataclasses import dataclass
 import datetime as dt
 
-RosParamType = (
-    bool | int | float | str | list[bool] | list[int] | list[float] | list[str] | None
-)
-
 
 @dataclass
 class RosParam:
@@ -14,7 +10,7 @@ class RosParam:
 
     name: str
     type: int
-    value: RosParamType = None
+    value = None
 
 
 @dataclass

@@ -1,6 +1,4 @@
-# pylint: disable=W0105
-# mypy: disable-error-code="var-annotated,attr-defined"
-
+# mypy: disable-error-code="attr-defined"
 import sys
 from typing import TypeVar
 from enum import Enum, auto
@@ -163,7 +161,10 @@ class _CandlesElement:
         self._future = None
         self._request_start_dt = None
         self._request_end_dt = None
-        self._next_updatetime = None
+        dt_now = dt.datetime.now()
+        self._next_updatetime = (
+            dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
+        )
 
         self.logger.debug("{:-^40}".format(" Create CandlesDataFrame:Start "))
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
@@ -171,7 +172,6 @@ class _CandlesElement:
         self.logger.debug("  - gran_leng:[{}]".format(gran_leng))
 
         # --------------- Create Candles(OHLC) DataFrame ---------------
-        dt_now = dt.datetime.now()
         dt_from = dt_now - self._GRAN_INTERVAL * gran_leng
         dt_to = dt_now
 
@@ -227,19 +227,19 @@ class _CandlesElement:
         self._on_enter_waiting()
 
     @property
-    def inst_id(self):
+    def inst_id(self) -> int:
         return self._inst_id
 
     @property
-    def gran_id(self):
+    def gran_id(self) -> int:
         return self._gran_id
 
     @property
-    def df_comp(self):
+    def df_comp(self) -> pd.DataFrame:
         return self._df_comp
 
     @property
-    def next_updatetime(self):
+    def next_updatetime(self) -> dt.datetime:
         return self._next_updatetime
 
     def _get_latest_datetime_in_dataframe(self) -> dt.datetime:
@@ -348,7 +348,6 @@ class _CandlesElement:
     def _on_do_waiting(self):
         # pylint: disable=E1101
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-
         dt_now = dt.datetime.now()
         if self._next_updatetime < dt_now:
             self._trans_from_wating_to_updating()
@@ -373,7 +372,6 @@ class _CandlesElement:
                 sys._getframe().f_code.co_name,  # pylint: disable=W0212
             )
         )
-
         dt_from = self._get_latest_datetime_in_dataframe() + self._GRAN_INTERVAL
         dt_to = dt.datetime.now()
         self.logger.debug("  - time_from:[{}]".format(dt_from))
@@ -718,14 +716,11 @@ class CandlesStore(Node):
         )
 
     def do_cyclic_event(self) -> None:
-        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
         for candles_elem in self._candles_elem_list:
             candles_elem.do_cyclic_event()
-            """
-            self.logger.debug("inst_id:{}, gran_id:{}"
-                              .format(candles_elem._inst_id, candles_data._gran_id))
-            """
+            # self.logger.debug("inst_id:{}, gran_id:{}"
+            #                   .format(candles_elem._inst_id, candles_data._gran_id))
 
     def _on_recv_candles_by_datetime(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse

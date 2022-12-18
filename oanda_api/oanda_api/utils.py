@@ -1,5 +1,4 @@
 import datetime as dt
-from typing import Dict
 from oanda_api.constant import FMT_YMDHMSF
 
 _JST_OFS = dt.timedelta(hours=9)
@@ -21,7 +20,7 @@ def convert_from_jst_to_utc(jst_dt: dt.datetime) -> dt.datetime:
     return jst_dt - _JST_OFS
 
 
-def inverse_dict(d: Dict[int, str]) -> Dict[str, int]:
+def inverse_dict(d: dict[int, str]) -> dict[str, int]:
     return {v: k for k, v in d.items()}
 
 

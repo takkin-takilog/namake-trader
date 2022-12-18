@@ -20,7 +20,7 @@ class ConstantGroup:
     """
 
     @classmethod
-    def to_list(cls):
+    def to_list(cls) -> list:
         """
         Returns all constant values in class with the attribute requirements.
 

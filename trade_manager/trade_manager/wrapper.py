@@ -51,9 +51,7 @@ class RosServiceClient:
         self._cli = cli
         self._srv_name = srv_name
 
-    def call(
-        self, request: SrvTypeRequest, timeout_sec: float | None = None
-    ) -> SrvTypeResponse:  # type: ignore[type-var]
+    def call(self, request: SrvTypeRequest, timeout_sec: float | None = None):
 
         if not self._cli.service_is_ready():
             msg = "Server [{}] Not Ready.".format(self._srv_name)

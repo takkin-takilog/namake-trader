@@ -1,6 +1,5 @@
 # mypy: disable-error-code="attr-defined"
-
-from typing import TypeVar, Dict
+from typing import TypeVar
 import requests
 import traceback
 import datetime as dt
@@ -101,11 +100,12 @@ class OrderRequester(Node):
         if self._rosprm_use_env_live.value:
             environment = "live"
             access_token = self._rosprm_liv_access_token.value
-            self._ACCOUNT_NUMBER = self._rosprm_liv_account_number.value
+            account_number = self._rosprm_liv_account_number.value
         else:
             environment = "practice"
             access_token = self._rosprm_pra_access_token.value
-            self._ACCOUNT_NUMBER = self._rosprm_pra_account_number.value
+            account_number = self._rosprm_pra_account_number.value
+        self._ACCOUNT_NUMBER = account_number
 
         if self._rosprm_connection_timeout.value <= 0:  # type: ignore[operator]
             request_params = None
@@ -638,7 +638,7 @@ class OrderRequester(Node):
     def _generate_order_create_data(
         self,
         req: SrvTypeRequest,
-    ) -> Dict[str, Dict[str, str]]:
+    ) -> dict[str, dict[str, str]]:
         data = {
             "order": {
                 "type": _ORDER_TYP_DICT[req.ordertype_msg.type],
@@ -664,11 +664,11 @@ class OrderRequester(Node):
             "instrument": inst_param.name,
             "units": req.units,
             "positionFill": "DEFAULT",
-            "takeProfitOnFill": {
+            "takeProfitOnFill": {  # type: ignore[dict-item]
                 "timeInForce": "GTC",
                 "price": self._fit_unit(req.take_profit_price, one_pip_str),
             },
-            "stopLossOnFill": {
+            "stopLossOnFill": {  # type: ignore[dict-item]
                 "timeInForce": "GTC",
                 "price": self._fit_unit(req.stop_loss_price, one_pip_str),
             },
@@ -680,7 +680,7 @@ class OrderRequester(Node):
     def _generate_trade_crcdo_data(
         self,
         req: SrvTypeRequest,
-    ) -> Dict[str, Dict[str, str]]:
+    ) -> dict[str, dict[str, str]]:
 
         inst_param = InstParam.get_member_by_msgid(req.inst_msg.inst_id)
         one_pip_str = inst_param.one_pip_str

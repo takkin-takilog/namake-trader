@@ -62,12 +62,12 @@ class PricingStreamPublisher(Node):
         rosutl.set_parameters(self, self._rosprm_liv_access_token)
         rosutl.set_parameters(self, self._rosprm_connection_timeout)
 
-        use_inst_dict = {}
+        use_inst_dict: dict[str, int] = {}
         for i in InstParam:
             param_name = USE_INST + i.param_name
             rosprm_use_inst = RosParam(param_name, Parameter.Type.BOOL)
             rosutl.set_parameters(self, rosprm_use_inst)
-            use_inst_dict[i.name] = rosprm_use_inst.value
+            use_inst_dict[i.name] = rosprm_use_inst.value  # type: ignore[assignment]
 
         # --------------- Initialize instance variable ---------------
         if self._rosprm_use_env_live.value:
@@ -182,13 +182,13 @@ class PricingStreamPublisher(Node):
                     msg.closeout_bid = float(rsp["closeoutBid"])
                     msg.closeout_ask = float(rsp["closeoutAsk"])
                     msg.tradeable = rsp["tradeable"]
-                    # Publish topics
+                    # ---------- Publish topics ----------
                     self._pub_dict[rsp["instrument"]](msg)
 
                 elif typ == "HEARTBEAT":
                     msg = String()
                     msg.data = utl.convert_datetime_jst(rsp["time"])
-                    # Publish topics
+                    # ---------- Publish topics ----------
                     self._pub_hb.publish(msg)
 
 

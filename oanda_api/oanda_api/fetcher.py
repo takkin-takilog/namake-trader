@@ -1,5 +1,4 @@
 # mypy: disable-error-code="attr-defined"
-
 from typing import TypeVar
 import requests
 import traceback

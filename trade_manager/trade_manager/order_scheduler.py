@@ -1,5 +1,4 @@
-# mypy: disable-error-code="var-annotated,attr-defined"
-
+# mypy: disable-error-code="attr-defined"
 import sys
 import os
 import gc
@@ -111,7 +110,7 @@ class OrderTicket:
     _next_register_id = 1
 
     @classmethod
-    def get_register_id(cls):
+    def get_register_id(cls) -> int:
         return cls._next_register_id
 
     @classmethod
@@ -323,7 +322,7 @@ class OrderTicket:
 
         self._sm = Machine(
             model=self,
-            states=states,
+            states=states,  # type: ignore[arg-type]
             initial=self.States.EntryOrdering,
             transitions=transitions,
         )
@@ -763,8 +762,11 @@ class OrderTicket:
                 self._trans_to_Complete()
 
     def _on_enter_ExitWaiting(self) -> None:
-        # pylint: disable=W0212
-        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        self.logger.debug(
+            "----- Call [{}]".format(
+                sys._getframe().f_code.co_name  # pylint: disable=W0212
+            )
+        )
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_ExitWaiting(self) -> None:
@@ -782,8 +784,11 @@ class OrderTicket:
             pass
 
     def _on_enter_ExitChecking(self) -> None:
-        # pylint: disable=W0212
-        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        self.logger.debug(
+            "----- Call [{}]".format(
+                sys._getframe().f_code.co_name  # pylint: disable=W0212
+            )
+        )
         OrderTicket._is_trans_lock = True
         self.logger.debug("--- Trans Locked")
         self.logger.debug(
@@ -849,14 +854,20 @@ class OrderTicket:
             self._trans_from_ExitChecking_to_ExitWaiting()
 
     def _on_exit_ExitChecking(self) -> None:
-        # pylint: disable=W0212
-        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        self.logger.debug(
+            "----- Call [{}]".format(
+                sys._getframe().f_code.co_name  # pylint: disable=W0212
+            )
+        )
         OrderTicket._is_trans_lock = False
         self.logger.debug("--- Trans Unlocked")
 
     def _on_enter_ExitOrdering(self) -> None:
-        # pylint: disable=W0212
-        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        self.logger.debug(
+            "----- Call [{}]".format(
+                sys._getframe().f_code.co_name  # pylint: disable=W0212
+            )
+        )
         self.logger.debug(
             "----- Request [Trade Close] (id:[{}]) -----".format(self._trade_id)
         )
@@ -1009,7 +1020,10 @@ class OrderScheduler(Node):
         ]
 
         self._sm = Machine(
-            model=self, states=states, initial=self.States.Idle, transitions=transitions
+            model=self,
+            states=states,  # type: ignore[arg-type]
+            initial=self.States.Idle,
+            transitions=transitions,
         )
 
         if isinstance(self._sm, GraphMachine):
@@ -1101,7 +1115,7 @@ class OrderScheduler(Node):
         )
 
         # --------------- Initialize variable ---------------
-        self._tick_price_dict = {}
+        self._tick_price_dict: dict[int, _TickPrice] = {}
         self._tickets: list[OrderTicket] = []
         self._acc_trig = TimeTrigger(minute=0, second=30)
         self._future = None
@@ -1172,7 +1186,6 @@ class OrderScheduler(Node):
 
     def do_cyclic_event(self) -> None:
         # pylint: disable=E1101
-
         if self.state == self.States.Idle:
             if self._acc_trig.triggered():
                 self._trans_from_Idle_to_AccountUpdating()
@@ -1216,8 +1229,12 @@ class OrderScheduler(Node):
                 self._trans_from_Idle_to_AccountUpdating()
 
     def _on_enter_AccountUpdating(self):
-        # pylint: disable=E1101, W0212
-        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        # pylint: disable=E1101
+        self.logger.debug(
+            "----- Call [{}]".format(
+                sys._getframe().f_code.co_name  # pylint: disable=W0212
+            )
+        )
 
         req = AccountQuerySrv.Request()
         try:

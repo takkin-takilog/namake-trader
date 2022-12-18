@@ -2,6 +2,10 @@ import datetime as dt
 
 
 class TimeTrigger:
+    """
+    Time trigger class.
+    """
+
     def __init__(
         self,
         second: int = 0,
