@@ -2,6 +2,7 @@
 import sys
 from typing import TypeVar
 from enum import Enum, auto
+import threading
 import datetime as dt
 import pandas as pd
 from transitions import Machine
@@ -9,9 +10,10 @@ from transitions import Machine
 # from transitions.extensions.factory import GraphMachine as Machine
 from transitions.extensions.factory import GraphMachine
 import rclpy
+from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.node import Node
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.parameter import Parameter
 from api_msgs.srv import CandlesQuerySrv
@@ -165,6 +167,7 @@ class _CandlesElement:
         self._next_updatetime = (
             dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
         )
+        self._lock = threading.Lock()
 
         self.logger.debug("{:-^40}".format(" Create CandlesDataFrame:Start "))
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
@@ -236,7 +239,9 @@ class _CandlesElement:
 
     @property
     def df_comp(self) -> pd.DataFrame:
-        return self._df_comp
+        with self._lock:
+            df_comp = self._df_comp
+        return df_comp
 
     @property
     def next_updatetime(self) -> dt.datetime:
@@ -547,24 +552,25 @@ class _CandlesElement:
         df_comp = df[(df[ColNames.COMP])].copy()
         df_prov = df[~(df[ColNames.COMP])].copy()
 
-        if not df_comp.empty:
-            df_comp.drop(ColNames.COMP, axis=1, inplace=True)
-            if self._df_comp.empty:
-                self._df_comp = df_comp
-            else:
-                latest_idx = self._df_comp.index[-1]
-                if latest_idx in df_comp.index:
-                    start_pos = df_comp.index.get_loc(latest_idx) + 1
-                    df_comp = df_comp[start_pos:]
-                self._df_comp = self._df_comp.append(df_comp)
-                droplist = self._df_comp.index[range(0, len(df_comp))]
-                self._df_comp.drop(index=droplist, inplace=True)
+        with self._lock:
+            if not df_comp.empty:
+                df_comp.drop(ColNames.COMP, axis=1, inplace=True)
+                if self._df_comp.empty:
+                    self._df_comp = df_comp
+                else:
+                    latest_idx = self._df_comp.index[-1]
+                    if latest_idx in df_comp.index:
+                        start_pos = df_comp.index.get_loc(latest_idx) + 1
+                        df_comp = df_comp[start_pos:]
+                    self._df_comp = self._df_comp.append(df_comp)
+                    droplist = self._df_comp.index[range(0, len(df_comp))]
+                    self._df_comp.drop(index=droplist, inplace=True)
 
-        if df_prov.empty:
-            self._df_prov = pd.DataFrame()
-        else:
-            df_prov.drop(ColNames.COMP, axis=1, inplace=True)
-            self._df_prov = df_prov
+            if df_prov.empty:
+                self._df_prov = pd.DataFrame()
+            else:
+                df_prov.drop(ColNames.COMP, axis=1, inplace=True)
+                self._df_prov = df_prov
 
 
 class CandlesStore(Node):
@@ -683,10 +689,20 @@ class CandlesStore(Node):
         rosutl.set_parameters(self, self._rosprm_length_d)
         rosutl.set_parameters(self, self._rosprm_length_w)
 
+        # --------------- Initialize ROS callback group ---------------
+        self._cb_grp_reent = ReentrantCallbackGroup()
+        self._cb_grp_mutua_cndque = MutuallyExclusiveCallbackGroup()
+        self._cb_grp_mutua_timer = MutuallyExclusiveCallbackGroup()
+
         # --------------- Create ROS Communication ---------------
         try:
             # Create service client "CandlesQuery"
-            srvcli = RosServiceClient(self, CandlesQuerySrv, "candles_query")
+            srvcli = RosServiceClient(
+                self,
+                CandlesQuerySrv,
+                "candles_query",
+                callback_group=self._cb_grp_mutua_cndque,
+            )
         except RosServiceErrorException as err:
             self.logger.error(err)
             raise InitializerErrorException("create service client failed.") from err
@@ -704,7 +720,7 @@ class CandlesStore(Node):
             CandlesByDatetimeSrv,
             "candles_by_datetime",
             self._on_recv_candles_by_datetime,
-            callback_group=ReentrantCallbackGroup(),
+            callback_group=self._cb_grp_reent,
         )
 
         # Create service server "CandlesByLength"
@@ -712,10 +728,15 @@ class CandlesStore(Node):
             CandlesByLengthSrv,
             "candles_by_length",
             self._on_recv_candles_by_length,
-            callback_group=ReentrantCallbackGroup(),
+            callback_group=self._cb_grp_reent,
         )
 
-    def do_cyclic_event(self) -> None:
+        # --------------- Create ROS Timer ---------------
+        self._timer = self.create_timer(
+            1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer
+        )
+
+    def _do_cyclic_event(self) -> None:
 
         for candles_elem in self._candles_elem_list:
             candles_elem.do_cyclic_event()
@@ -939,9 +960,7 @@ def main(args=None):
     candles_store = CandlesStore()
 
     try:
-        while rclpy.ok():
-            rclpy.spin_once(candles_store, executor=executor, timeout_sec=1.0)
-            candles_store.do_cyclic_event()
+        rclpy.spin(candles_store, executor)
     except KeyboardInterrupt:
         pass
 

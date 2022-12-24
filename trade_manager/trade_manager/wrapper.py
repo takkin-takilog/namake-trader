@@ -2,6 +2,9 @@ from typing import TypeVar
 import time
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_services_default
+from rclpy.qos import QoSProfile
+from rclpy.callback_groups import CallbackGroup
 from .exception import RosServiceErrorException
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
@@ -35,12 +38,21 @@ class RosServiceClient:
     """
 
     def __init__(
-        self, node: Node, srv_type, srv_name: str, use_wait_for_service: bool = True
+        self,
+        node: Node,
+        srv_type,
+        srv_name: str,
+        *,
+        qos_profile: QoSProfile = qos_profile_services_default,
+        callback_group: CallbackGroup = None,
+        use_wait_for_service: bool = True
     ) -> None:
 
         self._node = node
         self.logger = self._node.get_logger()
-        cli = self._node.create_client(srv_type, srv_name)
+        cli = self._node.create_client(
+            srv_type, srv_name, qos_profile=qos_profile, callback_group=callback_group
+        )
         if use_wait_for_service:
             while not cli.wait_for_service(timeout_sec=1.0):
                 if not rclpy.ok():

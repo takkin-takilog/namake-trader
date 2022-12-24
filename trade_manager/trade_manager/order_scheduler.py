@@ -13,6 +13,9 @@ from transitions import Machine
 from transitions.extensions.factory import GraphMachine
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.parameter import Parameter
 from std_msgs.msg import Bool
@@ -1029,10 +1032,19 @@ class OrderScheduler(Node):
         if isinstance(self._sm, GraphMachine):
             self._sm.get_graph().view()
 
+        # --------------- Initialize ROS callback group ---------------
+        self._cb_grp_reent = ReentrantCallbackGroup()
+        self._cb_grp_mutua_timer = MutuallyExclusiveCallbackGroup()
+        self._cb_grp_mutua_ordcli = MutuallyExclusiveCallbackGroup()
+        self._cb_grp_mutua_accque = MutuallyExclusiveCallbackGroup()
+
         # --------------- Create ROS Communication ---------------
         # Create service server "OrderRegister"
         self._ordreq_srv = self.create_service(
-            OrderRegisterSrv, "order_register", self._on_order_register
+            OrderRegisterSrv,
+            "order_register",
+            self._on_order_register,
+            callback_group=self._cb_grp_reent,
         )
 
         # Create service server "TradeCloseRequest"
@@ -1040,32 +1052,64 @@ class OrderScheduler(Node):
             TradeCloseRequestSrv,
             "trade_close_request",
             self._on_requested_close,
+            callback_group=self._cb_grp_reent,
         )
         try:
             # Create service client "OrderCreate"
-            self._srvcli_ordcre = RosServiceClient(self, OrderCreateSrv, "order_create")
+            self._srvcli_ordcre = RosServiceClient(
+                self,
+                OrderCreateSrv,
+                "order_create",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "OrderDetails"
             self._srvcli_orddet = RosServiceClient(
-                self, OrderDetailsSrv, "order_details"
+                self,
+                OrderDetailsSrv,
+                "order_details",
+                callback_group=self._cb_grp_mutua_ordcli,
             )
 
             # Create service client "OrderCancel"
-            self._srvcli_ordcnc = RosServiceClient(self, OrderCancelSrv, "order_cancel")
+            self._srvcli_ordcnc = RosServiceClient(
+                self,
+                OrderCancelSrv,
+                "order_cancel",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "TradeDetails"
             self._srvcli_trddet = RosServiceClient(
-                self, TradeDetailsSrv, "trade_details"
+                self,
+                TradeDetailsSrv,
+                "trade_details",
+                callback_group=self._cb_grp_mutua_ordcli,
             )
 
             # Create service client "TradeCRCDO"
-            self._srvcli_trdcrc = RosServiceClient(self, TradeCRCDOSrv, "trade_crcdo")
+            self._srvcli_trdcrc = RosServiceClient(
+                self,
+                TradeCRCDOSrv,
+                "trade_crcdo",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "TradeClose"
-            self._srvcli_trdcls = RosServiceClient(self, TradeCloseSrv, "trade_close")
+            self._srvcli_trdcls = RosServiceClient(
+                self,
+                TradeCloseSrv,
+                "trade_close",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "AccountQuery"
-            self._srvcli_acc = RosServiceClient(self, AccountQuerySrv, "account_query")
+            self._srvcli_accque = RosServiceClient(
+                self,
+                AccountQuerySrv,
+                "account_query",
+                callback_group=self._cb_grp_mutua_accque,
+            )
 
         except RosServiceErrorException as err:
             self.logger.error(err)
@@ -1073,7 +1117,7 @@ class OrderScheduler(Node):
 
         req = AccountQuerySrv.Request()
         try:
-            rsp = self._srvcli_acc.call(req, timeout_sec=10.0)
+            rsp = self._srvcli_accque.call(req, timeout_sec=10.0)
         except RosServiceErrorException as err:
             self.logger.error("{}".format(err))
             raise InitializerErrorException(
@@ -1087,31 +1131,59 @@ class OrderScheduler(Node):
             history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
         )
         self._sub_pri_usdjpy = self.create_subscription(
-            Pricing, "pricing_usdjpy", self._on_sub_pricing_usdjpy, qos_profile
+            Pricing,
+            "pricing_usdjpy",
+            self._on_sub_pricing_usdjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
         )
 
         self._sub_pri_eurjpy = self.create_subscription(
-            Pricing, "pricing_eurjpy", self._on_sub_pricing_eurjpy, qos_profile
+            Pricing,
+            "pricing_eurjpy",
+            self._on_sub_pricing_eurjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
         )
 
         self._sub_pri_gbpjpy = self.create_subscription(
-            Pricing, "pricing_gbpjpy", self._on_sub_pricing_gbpjpy, qos_profile
+            Pricing,
+            "pricing_gbpjpy",
+            self._on_sub_pricing_gbpjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
         )
 
         self._sub_pri_audjpy = self.create_subscription(
-            Pricing, "pricing_audjpy", self._on_sub_pricing_audjpy, qos_profile
+            Pricing,
+            "pricing_audjpy",
+            self._on_sub_pricing_audjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
         )
 
         self._sub_pri_nzdjpy = self.create_subscription(
-            Pricing, "pricing_nzdjpy", self._on_sub_pricing_nzdjpy, qos_profile
+            Pricing,
+            "pricing_nzdjpy",
+            self._on_sub_pricing_nzdjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
         )
 
         self._sub_pri_cadjpy = self.create_subscription(
-            Pricing, "pricing_cadjpy", self._on_sub_pricing_cadjpy, qos_profile
+            Pricing,
+            "pricing_cadjpy",
+            self._on_sub_pricing_cadjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
         )
 
         self._sub_pri_chfjpy = self.create_subscription(
-            Pricing, "pricing_chfjpy", self._on_sub_pricing_chfjpy, qos_profile
+            Pricing,
+            "pricing_chfjpy",
+            self._on_sub_pricing_chfjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
         )
 
         # --------------- Initialize variable ---------------
@@ -1164,6 +1236,11 @@ class OrderScheduler(Node):
                 ticket.restore(row)
                 self._tickets.append(ticket)
 
+        # --------------- Create ROS Timer ---------------
+        self._timer = self.create_timer(
+            1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer
+        )
+
     def finalize(self):
         # ---------- write csv ----------
         # ----- Backup order scheduler -----
@@ -1184,7 +1261,7 @@ class OrderScheduler(Node):
             self._BUCKUP_FULLPATH_OT, df, index=False, date_format=FMT_YMDHMS
         )
 
-    def do_cyclic_event(self) -> None:
+    def _do_cyclic_event(self) -> None:
         # pylint: disable=E1101
         if self.state == self.States.Idle:
             if self._acc_trig.triggered():
@@ -1238,7 +1315,7 @@ class OrderScheduler(Node):
 
         req = AccountQuerySrv.Request()
         try:
-            self._future = self._srvcli_acc.call_async(req, timeout_sec=5.0)
+            self._future = self._srvcli_accque.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
             self.logger.error("{:!^50}".format(err))
             self._trans_from_AccountUpdating_to_Idle()
@@ -1413,12 +1490,11 @@ class OrderScheduler(Node):
 def main(args=None):
 
     rclpy.init(args=args)
+    executor = MultiThreadedExecutor()
     order_scheduler = OrderScheduler()
 
     try:
-        while rclpy.ok():
-            rclpy.spin_once(order_scheduler, timeout_sec=1.0)
-            order_scheduler.do_cyclic_event()
+        rclpy.spin(order_scheduler, executor)
     except KeyboardInterrupt:
         pass
 
