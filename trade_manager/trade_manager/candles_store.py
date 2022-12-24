@@ -586,7 +586,7 @@ class CandlesStore(Node):
         self.logger = super().get_logger()
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
-        # --------------- Declare ROS parameter ---------------
+        # --------------- Initialize ROS parameter ---------------
         self._rosprm_use_inst_usdjpy = RosParam(
             "use_instrument.usdjpy", Parameter.Type.BOOL
         )

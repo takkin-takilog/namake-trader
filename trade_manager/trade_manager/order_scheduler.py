@@ -962,7 +962,7 @@ class OrderScheduler(Node):
         self._BUCKUP_FULLPATH_OS = buckup_dir + filename_os
         self._BUCKUP_FULLPATH_OT = buckup_dir + filename_ot
 
-        # --------------- Declare ROS parameter ---------------
+        # --------------- Initialize ROS parameter ---------------
         self._rosprm_max_leverage = RosParam("max_leverage", Parameter.Type.DOUBLE)
         self._rosprm_max_position_count = RosParam(
             "max_position_count", Parameter.Type.INTEGER

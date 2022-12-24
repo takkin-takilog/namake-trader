@@ -71,7 +71,7 @@ class OrderRequester(Node):
         logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
         self.logger = logger
 
-        # --------------- Declare ROS parameter ---------------
+        # --------------- Initialize ROS parameter ---------------
         self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
         self._rosprm_pra_account_number = RosParam(
             "env_practice.account_number", Parameter.Type.STRING
@@ -96,7 +96,7 @@ class OrderRequester(Node):
         rosutl.set_parameters(self, self._rosprm_liv_access_token)
         rosutl.set_parameters(self, self._rosprm_connection_timeout)
 
-        # --------------- Initialize instance variable ---------------
+        # --------------- Create oandapyV20 api  ---------------
         if self._rosprm_use_env_live.value:
             environment = "live"
             access_token = self._rosprm_liv_access_token.value

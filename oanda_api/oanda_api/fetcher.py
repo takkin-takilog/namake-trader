@@ -46,7 +46,7 @@ class Fetcher(Node):
         self._MAX_SIZE = 4999
         # self._MAX_SIZE = 5  # For test
 
-        # --------------- Declare ROS parameter ---------------
+        # --------------- Initialize ROS parameter ---------------
         self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
         self._rosprm_pra_account_number = RosParam(
             "env_practice.account_number", Parameter.Type.STRING
@@ -71,7 +71,7 @@ class Fetcher(Node):
         rosutl.set_parameters(self, self._rosprm_liv_access_token)
         rosutl.set_parameters(self, self._rosprm_connection_timeout)
 
-        # --------------- Initialize instance variable ---------------
+        # --------------- Create oandapyV20 api  ---------------
         if self._rosprm_use_env_live.value:
             environment = "live"
             access_token = self._rosprm_liv_access_token.value
@@ -92,7 +92,7 @@ class Fetcher(Node):
             environment=environment,
             request_params=request_params,
         )
-        self._acc = accounts.AccountSummary(account_number)
+        self._accsum = accounts.AccountSummary(account_number)
 
         # --------------- Create ROS Communication ---------------
         # Create service server "CandlesQuery"
@@ -285,7 +285,7 @@ class Fetcher(Node):
         rsp.frc_msg.reason_code = frc.REASON_UNSET
         apirsp = None
         try:
-            apirsp = self._api.request(self._acc)
+            apirsp = self._api.request(self._accsum)
         except V20Error as err:
             self.logger.error("{:!^50}".format(" Oanda-V20 Error "))
             self.logger.error("{}".format(err))

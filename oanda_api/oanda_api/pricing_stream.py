@@ -37,7 +37,7 @@ class PricingStreamPublisher(Node):
         TPCNM_HEARTBEAT = "heart_beat"
         TPCNM_ACT_FLG = "activate_flag"
 
-        # --------------- Declare ROS parameter ---------------
+        # --------------- Initialize ROS parameter ---------------
         self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
         self._rosprm_pra_account_number = RosParam(
             "env_practice.account_number", Parameter.Type.STRING
@@ -70,6 +70,10 @@ class PricingStreamPublisher(Node):
             use_inst_dict[i.name] = rosprm_use_inst.value  # type: ignore[assignment]
 
         # --------------- Initialize instance variable ---------------
+        self._pub_dict = {}
+        self._act_flg = True
+
+        # --------------- Create oandapyV20 api  ---------------
         if self._rosprm_use_env_live.value:
             access_token = self._rosprm_liv_access_token.value
             account_number = self._rosprm_liv_account_number.value
@@ -77,7 +81,7 @@ class PricingStreamPublisher(Node):
             access_token = self._rosprm_pra_access_token.value
             account_number = self._rosprm_pra_account_number.value
 
-        self._act_flg = True
+        environment = "live" if self._rosprm_use_env_live.value else "practice"
 
         if self._rosprm_connection_timeout.value <= 0:  # type: ignore[operator]
             request_params = None
@@ -85,21 +89,19 @@ class PricingStreamPublisher(Node):
         else:
             request_params = {"timeout": self._rosprm_connection_timeout.value}
 
-        environment = "live" if self._rosprm_use_env_live.value else "practice"
         self._api = API(
             access_token=access_token,
             environment=environment,
             request_params=request_params,
         )
 
-        # --------------- Initialize ROS topic ---------------
+        # --------------- Create ROS Communication ---------------
         qos_profile = QoSProfile(
             history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
         )
-        inst_name_list = []
-        self._pub_dict = {}
 
         # Create topic publisher "pricing_*****"
+        inst_name_list = []
         for i in InstParam:
             if use_inst_dict[i.name]:
                 pub = self.create_publisher(Pricing, i.topic_name, qos_profile)
