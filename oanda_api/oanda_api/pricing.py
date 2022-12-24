@@ -72,7 +72,7 @@ class PricingPublisher(Node):
         self._pub_dict = {}
         self._act_flg = True
 
-        # --------------- Create oandapyV20 api  ---------------
+        # --------------- Create oandapyV20 api ---------------
         if self._rosprm_use_env_live.value:
             access_token = self._rosprm_liv_access_token.value
             account_number = self._rosprm_liv_account_number.value
