@@ -45,6 +45,7 @@ set(srv_files
   "srv/OrderCancelSrv.srv"
   "srv/OrderCreateSrv.srv"
   "srv/OrderDetailsSrv.srv"
+  "srv/PricingQuerySrv.srv"
   "srv/TradeCloseSrv.srv"
   "srv/TradeCRCDOSrv.srv"
   "srv/TradeDetailsSrv.srv"

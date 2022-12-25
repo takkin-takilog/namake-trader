@@ -14,10 +14,11 @@ from rclpy.parameter import Parameter
 from oandapyV20 import API
 import oandapyV20.endpoints.instruments as instruments
 import oandapyV20.endpoints.accounts as accounts
+from oandapyV20.endpoints.pricing import PricingInfo
 from oandapyV20.endpoints.orders import OrderCreate, OrderDetails, OrderCancel
 from oandapyV20.endpoints.trades import TradeDetails, TradeCRCDO, TradeClose
 from oandapyV20.exceptions import V20Error
-from api_msgs.msg import Candle, OrderType, OrderState, TradeState
+from api_msgs.msg import Candle, OrderType, OrderState, TradeState, PriceBucket
 from api_msgs.msg import FailReasonCode as frc
 from api_msgs.srv import (
     OrderCreateSrv,
@@ -28,6 +29,7 @@ from api_msgs.srv import (
     OrderCancelSrv,
     CandlesQuerySrv,
     AccountQuerySrv,
+    PricingQuerySrv,
 )
 from .constant import FMT_DTTM_API, FMT_YMDHMS, ADD_CIPHERS
 from .parameter import InstParam, GranParam
@@ -192,6 +194,14 @@ class ApiService(Node):
             AccountQuerySrv,
             "account_query",
             self._on_recv_account_query,
+            callback_group=self._cb_grp_reent,
+        )
+
+        # Create service server "PricingQuery"
+        self._aq_srv = self.create_service(
+            PricingQuerySrv,
+            "pricing_query",
+            self._on_recv_pricing_query,
             callback_group=self._cb_grp_reent,
         )
 
@@ -918,6 +928,10 @@ class ApiService(Node):
         dbg_tm_end = dt.datetime.now()
 
         self.logger.debug("<Response>")
+        self.logger.debug("  - result:[{}]".format(rsp.result))
+        self.logger.debug(
+            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
+        )
         self.logger.debug("  - margin_rate:[{}]".format(rsp.margin_rate))
         self.logger.debug("  - balance:[{}]".format(rsp.balance))
         self.logger.debug("  - open_trade_count:[{}]".format(rsp.open_trade_count))
@@ -941,6 +955,93 @@ class ApiService(Node):
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[account_query]:End "))
+
+        return rsp
+
+    def _on_recv_pricing_query(
+        self, req: SrvTypeRequest, rsp: SrvTypeResponse  # pylint: disable=W0613
+    ) -> SrvTypeResponse:
+
+        self.logger.debug("{:=^50}".format(" Service[pricing_query]:Start "))
+        self.logger.debug("<Request>")
+        self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
+
+        dbg_tm_start = dt.datetime.now()
+
+        inst_param = InstParam.get_member_by_msgid(req.inst_msg.inst_id)
+        params = {"instruments": inst_param.name}
+        pricing_info = PricingInfo(self._ACCOUNT_NUMBER, params)
+
+        rsp.result = False
+        rsp.frc_msg.reason_code = frc.REASON_UNSET
+        apirsp = None
+        try:
+            apirsp = self._api.request(pricing_info)
+        except V20Error as err:
+            self.logger.error("{:!^50}".format(" Oanda-V20 Error "))
+            self.logger.error("{}".format(err))
+            traceback.print_exc()
+            rsp.frc_msg.reason_code = frc.REASON_OANDA_V20_ERROR
+        except requests.exceptions.ConnectionError as err:
+            self.logger.error("{:!^50}".format(" HTTP-Connection Error "))
+            self.logger.error("{}".format(err))
+            traceback.print_exc()
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+        except requests.exceptions.Timeout as err:
+            self.logger.error("{:!^50}".format(" HTTP-Timeout Error "))
+            self.logger.error("{}".format(err))
+            traceback.print_exc()
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+        except requests.exceptions.RequestException as err:
+            self.logger.error("{:!^50}".format(" HTTP-Request Error "))
+            self.logger.error("{}".format(err))
+            traceback.print_exc()
+            rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
+        except BaseException as err:  # pylint: disable=W0703
+            self.logger.error("{:!^50}".format(" Unexpected Error "))
+            self.logger.error("{}".format(err))
+            traceback.print_exc()
+            rsp.frc_msg.reason_code = frc.REASON_OTHERS
+        else:
+            rsp.result = True
+            price = apirsp["prices"][0]
+            rsp.time = utl.convert_datetime_jst(price["time"])
+            for bid in price["bids"]:
+                pb = PriceBucket()
+                pb.price = float(bid["price"])
+                pb.liquidity = bid["liquidity"]
+                rsp.bids.append(pb)
+            for ask in price["asks"]:
+                pb = PriceBucket()
+                pb.price = float(ask["price"])
+                pb.liquidity = ask["liquidity"]
+                rsp.asks.append(pb)
+            rsp.closeout_bid = float(price["closeoutBid"])
+            rsp.closeout_ask = float(price["closeoutAsk"])
+            rsp.tradeable = price["tradeable"]
+
+        dbg_tm_end = dt.datetime.now()
+
+        self.logger.debug("<Response>")
+        self.logger.debug("  - result:[{}]".format(rsp.result))
+        self.logger.debug(
+            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
+        )
+        self.logger.debug("  - time:[{}]".format(rsp.time))
+        for i, bid in enumerate(rsp.bids):
+            self.logger.debug("  - bids[{}]:".format(i))
+            self.logger.debug("    - price:[{}]".format(bid.price))
+            self.logger.debug("    - liquidity:[{}]".format(bid.liquidity))
+        for i, ask in enumerate(rsp.asks):
+            self.logger.debug("  - asks[{}]:".format(i))
+            self.logger.debug("    - price:[{}]".format(ask.price))
+            self.logger.debug("    - liquidity:[{}]".format(ask.liquidity))
+        self.logger.debug("  - closeout_bid:[{}]".format(rsp.closeout_bid))
+        self.logger.debug("  - closeout_ask:[{}]".format(rsp.closeout_ask))
+        self.logger.debug("  - tradeable:[{}]".format(rsp.tradeable))
+        self.logger.debug("[Performance]")
+        self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
+        self.logger.debug("{:=^50}".format(" Service[pricing_query]:End "))
 
         return rsp
 
