@@ -182,7 +182,7 @@ class ApiService(Node):
         )
 
         # Create service server "CandlesQuery"
-        self._cq_srv = self.create_service(
+        self._cdlque_srv = self.create_service(
             CandlesQuerySrv,
             "candles_query",
             self._on_recv_candles_query,
@@ -190,7 +190,7 @@ class ApiService(Node):
         )
 
         # Create service server "AccountQuery"
-        self._aq_srv = self.create_service(
+        self._accque_srv = self.create_service(
             AccountQuerySrv,
             "account_query",
             self._on_recv_account_query,
@@ -198,7 +198,7 @@ class ApiService(Node):
         )
 
         # Create service server "PricingQuery"
-        self._aq_srv = self.create_service(
+        self._prcque_srv = self.create_service(
             PricingQuerySrv,
             "pricing_query",
             self._on_recv_pricing_query,
