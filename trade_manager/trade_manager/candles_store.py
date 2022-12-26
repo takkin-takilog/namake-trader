@@ -505,7 +505,7 @@ class _CandlesElement:
         # pylint: disable=E1101
         dt_now = dt.datetime.now()
         if self._next_updatetime < dt_now:
-            self._trans_from_retrying_to_updatinga()
+            self._trans_from_retrying_to_updating()
 
     def _on_exit_retrying(self):
         self.logger.debug(
