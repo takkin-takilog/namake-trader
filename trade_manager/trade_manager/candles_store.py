@@ -562,7 +562,7 @@ class _CandlesElement:
                     if latest_idx in df_comp.index:
                         start_pos = df_comp.index.get_loc(latest_idx) + 1
                         df_comp = df_comp[start_pos:]
-                    self._df_comp = self._df_comp.append(df_comp)
+                    self._df_comp = pd.concat([self._df_comp, df_comp])
                     droplist = self._df_comp.index[range(0, len(df_comp))]
                     self._df_comp.drop(index=droplist, inplace=True)
 
