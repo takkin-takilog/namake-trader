@@ -771,15 +771,24 @@ class CandlesStore(Node):
         else:
             end_time = dt.datetime.strptime(req.time_to, FMT_TIME_HMS).time()
 
+        rsp.cndl_msg_list = []
+        rsp.next_update_time = ""
         df_comp = None
         for candles_elem in self._candles_elem_list:
             if (inst_id == candles_elem.inst_id) and (gran_id == candles_elem.gran_id):
                 df_comp = candles_elem.df_comp
-                next_updatetime = candles_elem.next_updatetime
+                rsp.next_update_time = candles_elem.next_updatetime.strftime(FMT_YMDHMS)
                 break
 
         rsp.cndl_msg_list = []
-        if df_comp is not None:
+        if df_comp is None:
+            self.logger.error("{:!^50}".format(" ROS Service Error "))
+            self.logger.error(
+                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in candles_elem.".format(
+                    inst_id, gran_id
+                )
+            )
+        else:
             if not req.datetime_start == "":
                 start_dt = dt.datetime.strptime(req.datetime_start, FMT_YMDHMS)
                 if gran_id == GranApi.GRAN_D:
@@ -823,8 +832,6 @@ class CandlesStore(Node):
                     msg.time = t.Index.strftime(FMT_YMDHMS)
                     rsp.cndl_msg_list.append(msg)
 
-        rsp.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
-
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
         self.logger.debug(
@@ -851,15 +858,28 @@ class CandlesStore(Node):
 
         dbg_tm_start = dt.datetime.now()
 
+        rsp.cndl_msg_list = []
+        rsp.next_update_time = ""
         df_comp = None
         for candles_elem in self._candles_elem_list:
             if (inst_id == candles_elem.inst_id) and (gran_id == candles_elem.gran_id):
                 df_comp = candles_elem.df_comp
-                next_updatetime = candles_elem.next_updatetime
+                rsp.next_update_time = candles_elem.next_updatetime.strftime(FMT_YMDHMS)
                 break
 
-        rsp.cndl_msg_list = []
-        if (df_comp is not None) and (0 < req.length):
+        if df_comp is None:
+            self.logger.error("{:!^50}".format(" ROS Service Error "))
+            self.logger.error(
+                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in candles_elem.".format(
+                    inst_id, gran_id
+                )
+            )
+        elif req.length < 1:
+            self.logger.error("{:!^50}".format(" ROS Service Error "))
+            self.logger.error(
+                "  Requested length:[{}] is incorrect.".format(req.length)
+            )
+        else:
             df_comp = df_comp.tail(req.length)
 
             if not df_comp.empty:
@@ -879,8 +899,6 @@ class CandlesStore(Node):
                     msg.bid_c = t.bid_cl
                     msg.time = t.Index.strftime(FMT_YMDHMS)
                     rsp.cndl_msg_list.append(msg)
-
-        rsp.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
 
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
