@@ -149,8 +149,6 @@ class _CandlesElement:
             self._sm.get_graph().view()
 
         # --------------- Declare instance variable ---------------
-        self._df_comp: pd.DataFrame
-        self._df_prov: pd.DataFrame
         self._weekend_close_time: dt.datetime
         self._request_start_dt: dt.datetime
         self._request_end_dt: dt.datetime
@@ -159,6 +157,8 @@ class _CandlesElement:
         self._srvcli = srvcli
         self._inst_id = inst_id
         self._gran_id = gran_id
+        self._df_comp: pd.DataFrame = pd.DataFrame()
+        self._df_prov: pd.DataFrame = pd.DataFrame()
         self._retry_counter = 0
         self._is_update_complete = True
         self._self_retry_counter = 0
