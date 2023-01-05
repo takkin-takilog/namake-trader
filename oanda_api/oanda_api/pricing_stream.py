@@ -67,7 +67,7 @@ class PricingStreamPublisher(Node):
             param_name = USE_INST + i.param_name
             rosprm_use_inst = RosParam(param_name, Parameter.Type.BOOL)
             rosutl.set_parameters(self, rosprm_use_inst)
-            use_inst_dict[i.name] = rosprm_use_inst.value  # type: ignore[assignment]
+            use_inst_dict[i.name] = rosprm_use_inst.value
 
         # --------------- Initialize instance variable ---------------
         self._pub_dict = {}
@@ -83,7 +83,7 @@ class PricingStreamPublisher(Node):
 
         environment = "live" if self._rosprm_use_env_live.value else "practice"
 
-        if self._rosprm_connection_timeout.value <= 0:  # type: ignore[operator]
+        if self._rosprm_connection_timeout.value <= 0:
             request_params = None
             self.logger.debug("Not set Timeout")
         else:
@@ -146,14 +146,14 @@ class PricingStreamPublisher(Node):
                 traceback.print_exc()
             except KeyboardInterrupt as err:
                 raise err
-            except BaseException as err:  # pylint: disable=W0703
+            except BaseException as err:
                 self.logger.error("{:!^50}".format(" Unexpected Error "))
                 self.logger.error("{}".format(err))
                 traceback.print_exc()
 
     def _on_subs_act_flg(self, msg: MsgType) -> None:
 
-        if msg.data:  # type: ignore[attr-defined]
+        if msg.data:
             self._act_flg = True
         else:
             self._act_flg = False
@@ -194,9 +194,8 @@ class PricingStreamPublisher(Node):
                     self._pub_hb.publish(msg)
 
 
-def main(args=None):
+def main(args: list[str] | None = None) -> None:
 
-    # pylint: disable=E1101
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)

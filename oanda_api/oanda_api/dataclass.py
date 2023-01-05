@@ -1,3 +1,4 @@
+from typing import Any
 from dataclasses import dataclass
 import datetime as dt
 
@@ -10,7 +11,7 @@ class RosParam:
 
     name: str
     type: int
-    value = None
+    value: Any = None
 
 
 @dataclass

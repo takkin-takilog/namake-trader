@@ -1,4 +1,3 @@
-# mypy: disable-error-code="attr-defined"
 from typing import TypeVar
 import requests
 import traceback
@@ -116,7 +115,7 @@ class ApiService(Node):
             account_number = self._rosprm_pra_account_number.value
         self._ACCOUNT_NUMBER = account_number
 
-        if self._rosprm_connection_timeout.value <= 0:  # type: ignore[operator]
+        if self._rosprm_connection_timeout.value <= 0:
             request_params = None
             self.logger.debug("Not set Timeout")
         else:
@@ -245,7 +244,7 @@ class ApiService(Node):
             self.logger.error("{}".format(err))
             traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except BaseException as err:  # pylint: disable=W0703
+        except BaseException as err:
             self.logger.error("{:!^50}".format(" Unexpected Error "))
             self.logger.error("{}".format(err))
             traceback.print_exc()
@@ -319,7 +318,7 @@ class ApiService(Node):
             self.logger.error("{}".format(err))
             traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except BaseException as err:  # pylint: disable=W0703
+        except BaseException as err:
             self.logger.error("{:!^50}".format(" Unexpected Error "))
             self.logger.error("{}".format(err))
             traceback.print_exc()
@@ -425,7 +424,7 @@ class ApiService(Node):
             self.logger.error("{}".format(err))
             traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except BaseException as err:  # pylint: disable=W0703
+        except BaseException as err:
             self.logger.error("{:!^50}".format(" Unexpected Error "))
             self.logger.error("{}".format(err))
             traceback.print_exc()
@@ -505,7 +504,7 @@ class ApiService(Node):
             self.logger.error("{}".format(err))
             traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except BaseException as err:  # pylint: disable=W0703
+        except BaseException as err:
             self.logger.error("{:!^50}".format(" Unexpected Error "))
             self.logger.error("{}".format(err))
             traceback.print_exc()
@@ -580,7 +579,7 @@ class ApiService(Node):
             self.logger.error("{}".format(err))
             traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except BaseException as err:  # pylint: disable=W0703
+        except BaseException as err:
             self.logger.error("{:!^50}".format(" Unexpected Error "))
             self.logger.error("{}".format(err))
             traceback.print_exc()
@@ -681,7 +680,7 @@ class ApiService(Node):
             self.logger.error("{}".format(err))
             traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except BaseException as err:  # pylint: disable=W0703
+        except BaseException as err:
             self.logger.error("{:!^50}".format(" Unexpected Error "))
             self.logger.error("{}".format(err))
             traceback.print_exc()
@@ -813,7 +812,7 @@ class ApiService(Node):
                 traceback.print_exc()
                 rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
                 break
-            except BaseException as err:  # pylint: disable=W0703
+            except BaseException as err:
                 self.logger.error("{:!^50}".format(" Unexpected Error "))
                 self.logger.error("{}".format(err))
                 traceback.print_exc()
@@ -902,7 +901,7 @@ class ApiService(Node):
             self.logger.error("{}".format(err))
             traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except BaseException as err:  # pylint: disable=W0703
+        except BaseException as err:
             self.logger.error("{:!^50}".format(" Unexpected Error "))
             self.logger.error("{}".format(err))
             traceback.print_exc()
@@ -959,7 +958,7 @@ class ApiService(Node):
         return rsp
 
     def _on_recv_pricing_query(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse  # pylint: disable=W0613
+        self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
 
         self.logger.debug("{:=^50}".format(" Service[pricing_query]:Start "))
@@ -997,7 +996,7 @@ class ApiService(Node):
             self.logger.error("{}".format(err))
             traceback.print_exc()
             rsp.frc_msg.reason_code = frc.REASON_CONNECTION_ERROR
-        except BaseException as err:  # pylint: disable=W0703
+        except BaseException as err:
             self.logger.error("{:!^50}".format(" Unexpected Error "))
             self.logger.error("{}".format(err))
             traceback.print_exc()
@@ -1074,11 +1073,11 @@ class ApiService(Node):
             "instrument": inst_param.name,
             "units": req.units,
             "positionFill": "DEFAULT",
-            "takeProfitOnFill": {  # type: ignore[dict-item]
+            "takeProfitOnFill": {
                 "timeInForce": "GTC",
                 "price": self._fit_unit(req.take_profit_price, one_pip_str),
             },
-            "stopLossOnFill": {  # type: ignore[dict-item]
+            "stopLossOnFill": {
                 "timeInForce": "GTC",
                 "price": self._fit_unit(req.stop_loss_price, one_pip_str),
             },
@@ -1114,9 +1113,8 @@ class ApiService(Node):
         )
 
 
-def main(args=None):
+def main(args: list[str] | None = None) -> None:
 
-    # pylint: disable=E1101
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)

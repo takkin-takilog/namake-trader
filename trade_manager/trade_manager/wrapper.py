@@ -2,21 +2,24 @@ from typing import TypeVar
 import time
 import rclpy
 from rclpy.node import Node
+from rclpy.task import Future
 from rclpy.qos import qos_profile_services_default
 from rclpy.qos import QoSProfile
 from rclpy.callback_groups import CallbackGroup
 from .exception import RosServiceErrorException
 
+# Used for documentation purposes only
+SrvType = TypeVar("SrvType")
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
-class Future:
+class FutureWrapper:
     """
-    Future class.
+    FutureWrapper class.
     """
 
-    def __init__(self, future, end_time: float | None = None) -> None:
+    def __init__(self, future: Future, end_time: float | None = None) -> None:
         self._future = future
         self._end_time = end_time
 
@@ -28,7 +31,7 @@ class Future:
     def done(self) -> bool:
         return self._future.done()
 
-    def result(self):
+    def result(self) -> SrvTypeResponse:
         return self._future.result()
 
 
@@ -40,7 +43,7 @@ class RosServiceClient:
     def __init__(
         self,
         node: Node,
-        srv_type,
+        srv_type: SrvType,
         srv_name: str,
         *,
         qos_profile: QoSProfile = qos_profile_services_default,
@@ -63,7 +66,9 @@ class RosServiceClient:
         self._cli = cli
         self._srv_name = srv_name
 
-    def call(self, request: SrvTypeRequest, timeout_sec: float | None = None):
+    def call(
+        self, request: SrvTypeRequest, timeout_sec: float | None = None
+    ) -> SrvTypeResponse:
 
         if not self._cli.service_is_ready():
             msg = "Server [{}] Not Ready.".format(self._srv_name)
@@ -98,7 +103,7 @@ class RosServiceClient:
 
     def call_async(
         self, request: SrvTypeRequest, timeout_sec: float | None = None
-    ) -> Future:
+    ) -> FutureWrapper:
 
         if not self._cli.service_is_ready():
             msg = "Server [{}] Not Ready.".format(self._srv_name)
@@ -116,4 +121,4 @@ class RosServiceClient:
         else:
             end_time = None
 
-        return Future(future, end_time)
+        return FutureWrapper(future, end_time)

@@ -1,7 +1,5 @@
-# mypy: disable-error-code="attr-defined"
 import sys
 import os
-import gc
 from typing import TypeVar
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -44,7 +42,7 @@ from .constant import Transitions as Tr
 from .constant import INST_DICT
 from .exception import InitializerErrorException, RosServiceErrorException
 from .dataclass import RosParam
-from .wrapper import RosServiceClient, Future
+from .wrapper import RosServiceClient, FutureWrapper
 from .trigger import TimeTrigger
 from . import backup as bk
 from . import ros_utils as rosutl
@@ -117,12 +115,12 @@ class OrderTicket:
         return cls._next_register_id
 
     @classmethod
-    def set_register_id(cls, register_id: int):
+    def set_register_id(cls, register_id: int) -> None:
         cls._next_register_id = register_id
 
     def __init__(
         self,
-        logger,
+        logger: rclpy.impl.rcutils_logger.RcutilsLogger,
         srvcli_ordcre: RosServiceClient,
         srvcli_orddet: RosServiceClient,
         srvcli_ordcnc: RosServiceClient,
@@ -334,9 +332,9 @@ class OrderTicket:
             self._sm.get_graph().view()
 
         # --------------- Initialize instance variable ---------------
-        self._future: Future | None = None
-        self._trade_id = None
-        self._order_id = None
+        self._trade_id = -1
+        self._order_id = -1
+        self._future: FutureWrapper | None = None
         self._is_entry_exp_time_over = False
         self._enable_trade_close = False
         self._enable_weekend_close = False
@@ -461,7 +459,7 @@ class OrderTicket:
         ]
         return bk_rec_list
 
-    def restore(self, rec: pd.Series):
+    def restore(self, rec: pd.Series) -> None:
         Col = ColOrderTicketsBackup
 
         entry_exp_time = rec[Col.ENTRY_EXP_TIME]
@@ -471,17 +469,9 @@ class OrderTicket:
         if exit_exp_time is not None:
             exit_exp_time = dt.datetime.strptime(exit_exp_time, FMT_YMDHMS)
 
-        order_id = rec[Col.ORDER_ID]
-        if order_id is not None:
-            order_id = int(order_id)
-
-        trade_id = rec[Col.TRADE_ID]
-        if trade_id is not None:
-            trade_id = int(trade_id)
-
         self._register_id = int(rec[Col.REGISTER_ID])
-        self._order_id = order_id
-        self._trade_id = trade_id
+        self._order_id = int(rec[Col.ORDER_ID])
+        self._trade_id = int(rec[Col.TRADE_ID])
         self._inst_id = int(rec[Col.INST_ID])
         self._order_type = int(rec[Col.ORDER_TYPE])
         self._units = int(rec[Col.UNITS])
@@ -507,10 +497,10 @@ class OrderTicket:
         self.logger.debug("  - api_inst_id:[{}]".format(self._api_inst_id))
         self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
 
-        if self._trade_id is None:
-            self.to_EntryChecking()  # pylint: disable=E1101
+        if self._trade_id < 0:
+            self.to_EntryChecking()
         else:
-            self.to_ExitChecking()  # pylint: disable=E1101
+            self.to_ExitChecking()
 
     def enable_weekend_close(self) -> None:
         self._enable_weekend_close = True
@@ -518,8 +508,6 @@ class OrderTicket:
         self.logger.debug("----- << Enable weekend close >> -----")
 
     def enable_trade_close(self) -> bool:
-        # pylint: disable=E1101
-
         success = False
         if (
             self.state == self.States.ExitWaiting
@@ -532,8 +520,6 @@ class OrderTicket:
         return success
 
     def do_cyclic_event(self) -> None:
-        # pylint: disable=E1101
-
         # self.logger.debug("state:[{}]".format(self.state))
 
         if self.state == self.States.EntryOrdering:
@@ -556,7 +542,6 @@ class OrderTicket:
             pass
 
     def _on_do_EntryOrdering(self) -> None:
-        # pylint: disable=E1101
 
         if self._future is None:
             return
@@ -572,7 +557,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.")
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Order Create) ")
@@ -598,12 +583,10 @@ class OrderTicket:
             self._trans_from_EntryOrdering_to_EntryWaiting()
 
     def _on_enter_EntryWaiting(self) -> None:
-        # pylint: disable=W0212
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_EntryWaiting(self) -> None:
-        # pylint: disable=E1101
         now = dt.datetime.now()
         if self._is_entry_exp_time_over:
             self._trans_to_Complete()
@@ -619,7 +602,6 @@ class OrderTicket:
             pass
 
     def _conditions_trans_lock(self) -> Bool:
-        # pylint: disable=W0212
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self.logger.debug(
             "--- trans_lock state:[{}]".format(OrderTicket._is_trans_lock)
@@ -627,7 +609,6 @@ class OrderTicket:
         return not OrderTicket._is_trans_lock
 
     def _on_enter_EntryChecking(self) -> None:
-        # pylint: disable=W0212
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = True
         self.logger.debug("--- Trans Locked")
@@ -646,7 +627,6 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_EntryChecking(self) -> None:
-        # pylint: disable=E1101
 
         if self._future is None:
             self._trans_from_EntryChecking_to_EntryWaiting()
@@ -663,7 +643,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Order Details) ")
@@ -696,13 +676,11 @@ class OrderTicket:
             self._trans_from_EntryChecking_to_EntryWaiting()
 
     def _on_exit_EntryChecking(self) -> None:
-        # pylint: disable=W0212
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = False
         self.logger.debug("--- Trans Unlocked")
 
     def _on_enter_EntryCanceling(self) -> None:
-        # pylint: disable=W0212
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self.logger.debug(
             "----- Request [Order Cancel] (id:[{}]) -----".format(self._order_id)
@@ -719,7 +697,6 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_EntryCanceling(self) -> None:
-        # pylint: disable=E1101
 
         if self._future is None:
             self._trans_to_Complete()
@@ -736,7 +713,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
@@ -765,15 +742,10 @@ class OrderTicket:
                 self._trans_to_Complete()
 
     def _on_enter_ExitWaiting(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_ExitWaiting(self) -> None:
-        # pylint: disable=E1101
 
         now = dt.datetime.now()
         if (self._exit_exp_time is not None) and (self._exit_exp_time < now):
@@ -787,11 +759,7 @@ class OrderTicket:
             pass
 
     def _on_enter_ExitChecking(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = True
         self.logger.debug("--- Trans Locked")
         self.logger.debug(
@@ -809,7 +777,6 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_ExitChecking(self) -> None:
-        # pylint: disable=E1101
 
         if self._future is None:
             self._trans_from_ExitChecking_to_ExitWaiting()
@@ -826,7 +793,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
@@ -857,20 +824,12 @@ class OrderTicket:
             self._trans_from_ExitChecking_to_ExitWaiting()
 
     def _on_exit_ExitChecking(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = False
         self.logger.debug("--- Trans Unlocked")
 
     def _on_enter_ExitOrdering(self) -> None:
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self.logger.debug(
             "----- Request [Trade Close] (id:[{}]) -----".format(self._trade_id)
         )
@@ -887,7 +846,6 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_ExitOrdering(self) -> None:
-        # pylint: disable=E1101
 
         if self._future is None:
             self._trans_to_Complete()
@@ -904,7 +862,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
@@ -1117,7 +1075,7 @@ class OrderScheduler(Node):
 
         req = AccountQuerySrv.Request()
         try:
-            rsp = self._srvcli_accque.call(req, timeout_sec=10.0)
+            rsp = self._srvcli_accque.call(req, timeout_sec=10.0)  # type: ignore[var-annotated]
         except RosServiceErrorException as err:
             self.logger.error("{}".format(err))
             raise InitializerErrorException(
@@ -1190,7 +1148,7 @@ class OrderScheduler(Node):
         self._tick_price_dict: dict[int, _TickPrice] = {}
         self._tickets: list[OrderTicket] = []
         self._acc_trig = TimeTrigger(minute=0, second=30)
-        self._future = None
+        self._future: FutureWrapper | None = None
 
         # --------------- Restore ---------------
         # ----- Order scheduler -----
@@ -1226,8 +1184,8 @@ class OrderScheduler(Node):
                     self._srvcli_trddet,
                     self._srvcli_trdcrc,
                     self._srvcli_trdcls,
-                    self._rosprm_max_leverage.value,  # type: ignore[arg-type]
-                    self._rosprm_max_position_count.value,  # type: ignore[arg-type]
+                    self._rosprm_max_leverage.value,
+                    self._rosprm_max_position_count.value,
                     self._balance,
                     req,
                     tick_price,
@@ -1241,43 +1199,50 @@ class OrderScheduler(Node):
             1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer
         )
 
-    def finalize(self):
+    def finalize(self) -> None:
         # ---------- write csv ----------
         # ----- Backup order scheduler -----
         register_id = OrderTicket.get_register_id()
-        bk_tbl = [register_id]
-        df = pd.DataFrame(bk_tbl, columns=ColOrderSchedulerBackup.to_list())
+        osbk_tbl = [register_id]
+        df = pd.DataFrame(osbk_tbl, columns=ColOrderSchedulerBackup.to_list())
         bk.save_df_csv(
             self._BUCKUP_FULLPATH_OS, df, index=False, date_format=FMT_YMDHMS
         )
 
         # ----- Backup order tickets -----
-        bk_tbl = []
+        otbk_tbl = []
         for ticket in self._tickets:
             rec = ticket.generate_buckup_record()
-            bk_tbl.append(rec)
-        df = pd.DataFrame(bk_tbl, columns=ColOrderTicketsBackup.to_list())
+            otbk_tbl.append(rec)
+        df = pd.DataFrame(otbk_tbl, columns=ColOrderTicketsBackup.to_list())
         bk.save_df_csv(
             self._BUCKUP_FULLPATH_OT, df, index=False, date_format=FMT_YMDHMS
         )
 
     def _do_cyclic_event(self) -> None:
-        # pylint: disable=E1101
         if self.state == self.States.Idle:
             if self._acc_trig.triggered():
                 self._trans_from_Idle_to_AccountUpdating()
         elif self.state == self.States.AccountUpdating:
-            if self._future.done():
-                rsp = self._future.result()
-                self._balance = rsp.balance
-                self._trans_from_AccountUpdating_to_Idle()
+            if self._future is None:
+                self.logger.error(
+                    "{:!^50}".format(" ROS Service [AccountQuerySrv] Error. ")
+                )
+                self.logger.error("  future is None.")
             elif self._future.has_timed_out():
                 self.logger.error(
-                    "{:!^50}".format(" ROS Service [AccountQuerySrv] Timeout. ")
+                    "{:!^50}".format(" ROS Service [AccountQuerySrv] Error. ")
                 )
-                self._trans_from_AccountUpdating_to_Idle()
+                self.logger.error("  service call timeout.")
+            elif self._future.done():
+                rsp = self._future.result()  # type: ignore[var-annotated]
+                self._balance = rsp.balance
+            else:
+                self.logger.warn("{:!^50}".format(" Unexpected statement "))
+
+            self._trans_from_AccountUpdating_to_Idle()
         else:
-            pass
+            self.logger.warn("{:!^50}".format(" Unexpected statement "))
 
         # Check weekend close proccess
         if self._rosprm_use_weekend_all_close.value:
@@ -1301,17 +1266,11 @@ class OrderScheduler(Node):
         ]
 
         if len_bfr != len(self._tickets):
-            gc.collect()
             if self.state == self.States.Idle:
                 self._trans_from_Idle_to_AccountUpdating()
 
-    def _on_enter_AccountUpdating(self):
-        # pylint: disable=E1101
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+    def _on_enter_AccountUpdating(self) -> None:
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
 
         req = AccountQuerySrv.Request()
         try:
@@ -1348,7 +1307,7 @@ class OrderScheduler(Node):
             self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
             return rsp
 
-        if len(self._tickets) >= self._rosprm_max_position_count.value:  # type: ignore[operator]
+        if len(self._tickets) >= self._rosprm_max_position_count.value:
             self.logger.warn("{:!^50}".format(" Reject order create "))
             self.logger.warn("  - Positon count is full ")
             self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
@@ -1370,8 +1329,8 @@ class OrderScheduler(Node):
                 self._srvcli_trddet,
                 self._srvcli_trdcrc,
                 self._srvcli_trdcls,
-                self._rosprm_max_leverage.value,  # type: ignore[arg-type]
-                self._rosprm_max_position_count.value,  # type: ignore[arg-type]
+                self._rosprm_max_leverage.value,
+                self._rosprm_max_position_count.value,
                 self._balance,
                 req,
                 tick_price,
@@ -1487,7 +1446,7 @@ class OrderScheduler(Node):
             self._tick_price_dict[InstMng.INST_CHF_JPY] = tick_price
 
 
-def main(args=None):
+def main(args: list[str] | None = None) -> None:
 
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()

@@ -30,4 +30,4 @@ def roundi(val: float) -> int:
 
 def roundf(val: float, digit: int = 0) -> float:
     p = 10**digit
-    return (val * p * 2 + 1) // 2 / p
+    return float((val * p * 2 + 1) // 2 / p)

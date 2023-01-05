@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup  # type: ignore[import]
 
 package_name = "oanda_api"
 

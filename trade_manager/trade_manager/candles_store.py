@@ -1,4 +1,3 @@
-# mypy: disable-error-code="attr-defined"
 import sys
 from typing import TypeVar
 from enum import Enum, auto
@@ -34,7 +33,7 @@ from .dataclass import RosParam
 from .parameter import GranParam, InstParam
 from . import utils as utl
 from . import ros_utils as rosutl
-from .wrapper import RosServiceClient
+from .wrapper import RosServiceClient, FutureWrapper
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -149,20 +148,22 @@ class _CandlesElement:
         if isinstance(self._sm, GraphMachine):
             self._sm.get_graph().view()
 
+        # --------------- Declare instance variable ---------------
+        self._df_comp: pd.DataFrame
+        self._df_prov: pd.DataFrame
+        self._weekend_close_time: dt.datetime
+        self._request_start_dt: dt.datetime
+        self._request_end_dt: dt.datetime
+
         # --------------- Initialize instance variable ---------------
         self._srvcli = srvcli
         self._inst_id = inst_id
         self._gran_id = gran_id
-        self._df_comp = pd.DataFrame()
-        self._df_prov = pd.DataFrame()
         self._retry_counter = 0
         self._is_update_complete = True
         self._self_retry_counter = 0
         self._needs_weekend_update = False
-        self._weekend_close_time = None
-        self._future = None
-        self._request_start_dt = None
-        self._request_end_dt = None
+        self._future: FutureWrapper | None = None
         dt_now = dt.datetime.now()
         self._next_updatetime = (
             dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
@@ -187,7 +188,7 @@ class _CandlesElement:
         req.dt_from = dt_from.strftime(FMT_YMDHMS)
         req.dt_to = dt_to.strftime(FMT_YMDHMS)
         try:
-            rsp = self._srvcli.call(req)
+            rsp = self._srvcli.call(req)  # type: ignore[var-annotated]
         except RosServiceErrorException as err:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (CandlesQuery) ")
@@ -248,11 +249,11 @@ class _CandlesElement:
         return self._next_updatetime
 
     def _get_latest_datetime_in_dataframe(self) -> dt.datetime:
-        return self._df_comp.index[-1].to_pydatetime()
+        return self._df_comp.index[-1].to_pydatetime()  # type: ignore[no-any-return]
 
     def _get_next_update_datetime(self, latest_datetime: dt.datetime) -> dt.datetime:
 
-        next_update_dt = latest_datetime + self._GRAN_INTERVAL
+        next_update_dt: dt.datetime = latest_datetime + self._GRAN_INTERVAL
 
         if next_update_dt.weekday() == WeekDay.SAT:
             close_time = utl.get_market_close_time(next_update_dt.date())
@@ -267,7 +268,6 @@ class _CandlesElement:
         return next_update_dt
 
     def do_cyclic_event(self) -> None:
-        # pylint: disable=E1101
         # self.logger.debug("state:[{}]".format(self.state))
 
         if self.state == self.States.waiting:
@@ -279,12 +279,12 @@ class _CandlesElement:
         else:
             pass
 
-    def _on_enter_waiting(self):
+    def _on_enter_waiting(self) -> None:
         self.logger.debug(
             "--- <inst_id:[{}], gran_id:[{}]> Call [{}]".format(
                 self.inst_id,
                 self.gran_id,
-                sys._getframe().f_code.co_name,  # pylint: disable=W0212
+                sys._getframe().f_code.co_name,
             )
         )
 
@@ -316,7 +316,6 @@ class _CandlesElement:
                 msg.candle.mid_c = latest_close_mid
                 msg.candle.time = time.strftime(FMT_YMDHMS)
                 msg.next_update_time = next_updatetime.strftime(FMT_YMDHMS)
-                self._weekend_close_time = None
                 self._needs_weekend_update = False
             else:
                 latest_dt = self._get_latest_datetime_in_dataframe()
@@ -350,31 +349,30 @@ class _CandlesElement:
         self.logger.debug(" - Now time:        [{}]".format(dt_now))
         self.logger.debug(" - Next update time:[{}]".format(self._next_updatetime))
 
-    def _on_do_waiting(self):
-        # pylint: disable=E1101
+    def _on_do_waiting(self) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         dt_now = dt.datetime.now()
         if self._next_updatetime < dt_now:
             self._trans_from_wating_to_updating()
 
-    def _on_exit_waiting(self):
+    def _on_exit_waiting(self) -> None:
         self.logger.debug(
             "--- <inst_id:[{}], gran_id:[{}]> Call [{}]".format(
                 self.inst_id,
                 self.gran_id,
-                sys._getframe().f_code.co_name,  # pylint: disable=W0212
+                sys._getframe().f_code.co_name,
             )
         )
         self._retry_counter = 0
         self._is_update_complete = False
         self._self_retry_counter = 0
 
-    def _on_enter_updating(self):
+    def _on_enter_updating(self) -> None:
         self.logger.debug(
             "--- <inst_id:[{}], gran_id:[{}]> Call [{}]".format(
                 self.inst_id,
                 self.gran_id,
-                sys._getframe().f_code.co_name,  # pylint: disable=W0212
+                sys._getframe().f_code.co_name,
             )
         )
         dt_from = self._get_latest_datetime_in_dataframe() + self._GRAN_INTERVAL
@@ -398,13 +396,8 @@ class _CandlesElement:
             )
             self.logger.error("{}".format(err))
 
-    def _on_do_updating(self):
-        # pylint: disable=E1101
-        self.logger.debug(
-            "----- Call [{}]".format(
-                sys._getframe().f_code.co_name  # pylint: disable=W0212
-            )
-        )
+    def _on_do_updating(self) -> None:
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self.logger.debug(" - self_retry_counter:[{}]".format(self._self_retry_counter))
         self.logger.debug(" - retry_counter:[{}]".format(self._retry_counter))
 
@@ -417,7 +410,7 @@ class _CandlesElement:
             return
 
         self.logger.debug("  Request done.")
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Updating) "))
             self.logger.error("  future.result() is None.")
@@ -476,19 +469,18 @@ class _CandlesElement:
             else:
                 self._trans_updating_common()
 
-    def _trans_updating_common(self):
-        # pylint: disable=E1101
+    def _trans_updating_common(self) -> None:
         if self._RETRY_COUNT_MAX <= self._retry_counter:
             self._trans_from_updating_to_waiting()
         else:
             self._trans_from_updating_to_retrying()
 
-    def _on_enter_retrying(self):
+    def _on_enter_retrying(self) -> None:
         self.logger.debug(
             "--- <inst_id:[{}], gran_id:[{}]> Call [{}]".format(
                 self.inst_id,
                 self.gran_id,
-                sys._getframe().f_code.co_name,  # pylint: disable=W0212
+                sys._getframe().f_code.co_name,
             )
         )
         dt_now = dt.datetime.now()
@@ -501,18 +493,17 @@ class _CandlesElement:
         self.logger.debug("  - Now time:        [{}]".format(dt_now))
         self.logger.debug("  - Next update time:[{}]".format(self._next_updatetime))
 
-    def _on_do_retrying(self):
-        # pylint: disable=E1101
+    def _on_do_retrying(self) -> None:
         dt_now = dt.datetime.now()
         if self._next_updatetime < dt_now:
             self._trans_from_retrying_to_updating()
 
-    def _on_exit_retrying(self):
+    def _on_exit_retrying(self) -> None:
         self.logger.debug(
             "--- <inst_id:[{}], gran_id:[{}]> Call [{}]".format(
                 self.inst_id,
                 self.gran_id,
-                sys._getframe().f_code.co_name,  # pylint: disable=W0212
+                sys._getframe().f_code.co_name,
             )
         )
         self._retry_counter += 1
@@ -793,13 +784,13 @@ class CandlesStore(Node):
                 start_dt = dt.datetime.strptime(req.datetime_start, FMT_YMDHMS)
                 if gran_id == GranApi.GRAN_D:
                     start_dt = dt.datetime.combine(start_dt.date(), dt.time(6, 0))
-                df_comp = df_comp.loc[start_dt:]  # type: ignore
+                df_comp = df_comp.loc[start_dt:]  # type: ignore[misc]
 
             if not req.datetime_end == "":
                 end_dt = dt.datetime.strptime(req.datetime_end, FMT_YMDHMS)
                 if gran_id == GranApi.GRAN_D:
                     end_dt = dt.datetime.combine(end_dt.date(), dt.time(7, 0))
-                df_comp = df_comp.loc[:end_dt]  # type: ignore
+                df_comp = df_comp.loc[:end_dt]  # type: ignore[misc]
 
             if req.dayofweeks:
                 cond = [i in req.dayofweeks for i in df_comp.index.dayofweek]
@@ -912,8 +903,8 @@ class CandlesStore(Node):
 
         return rsp
 
-    def _use_inst_list(self):
-        inst_list = []
+    def _use_inst_list(self) -> list:
+        inst_list: list[int] = []
         if self._rosprm_use_inst_usdjpy.value:
             inst_list.append(InstApi.INST_USD_JPY)
         if self._rosprm_use_inst_eurjpy.value:
@@ -932,8 +923,8 @@ class CandlesStore(Node):
             inst_list.append(InstApi.INST_CHF_JPY)
         return inst_list
 
-    def _use_gran_list(self):
-        gran_list = []
+    def _use_gran_list(self) -> list:
+        gran_list: list[tuple] = []
         if self._rosprm_use_gran_m1.value:
             gran_list.append((GranApi.GRAN_M1, self._rosprm_length_m1.value))
         if self._rosprm_use_gran_m2.value:
@@ -971,7 +962,7 @@ class CandlesStore(Node):
         return gran_list
 
 
-def main(args=None):
+def main(args: list[str] | None = None) -> None:
 
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()

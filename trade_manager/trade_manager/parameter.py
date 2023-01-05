@@ -36,11 +36,11 @@ class InstParam(Enum):
         self._one_pip_str = format(self._one_pip, "." + str(digit) + "f")
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int):
+    def get_member_by_msgid(cls, msg_id: int) -> InstParam:  # @UndefinedVariable
         for m in cls:
             if msg_id == m.msg_id:
                 return m
-        return None
+        raise ValueError("msg_id:[{}] is not found in InstParam".format(msg_id))
 
     @property
     def one_pip(self) -> float:
@@ -81,7 +81,7 @@ class InstParam(Enum):
         round a price value to the digits.
         """
         p = 10**self.digit
-        return (physical_value * p * 2 + 1) // 2 / p
+        return float((physical_value * p * 2 + 1) // 2 / p)
 
 
 class GranParam(Enum):
@@ -122,8 +122,8 @@ class GranParam(Enum):
         self.timedelta = timedelta
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int):
+    def get_member_by_msgid(cls, msg_id: int) -> GranParam:  # @UndefinedVariable
         for m in cls:
             if msg_id == m.msg_id:
                 return m
-        return None
+        raise ValueError("msg_id:[{}] is not found in GranParam".format(msg_id))

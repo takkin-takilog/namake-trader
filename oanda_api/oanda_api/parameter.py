@@ -36,18 +36,18 @@ class InstParam(Enum):
         self._one_pip_str = format(self._one_pip, "." + str(digit) + "f")
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int):
+    def get_member_by_msgid(cls, msg_id: int) -> InstParam:  # @UndefinedVariable
         for m in cls:
             if msg_id == m.msg_id:
                 return m
-        return None
+        raise ValueError("msg_id:[{}] is not found in InstParam".format(msg_id))
 
     @classmethod
-    def get_member_by_name(cls, name: str):
+    def get_member_by_name(cls, name: str) -> InstParam:  # @UndefinedVariable
         for m in cls:
             if name == m.name:
                 return m
-        return None
+        raise ValueError("name:[{}] is not found in InstParam".format(name))
 
     @property
     def one_pip(self) -> float:
@@ -88,7 +88,7 @@ class InstParam(Enum):
         round a price value to the digits.
         """
         p = 10**self.digit
-        return (physical_value * p * 2 + 1) // 2 / p
+        return float((physical_value * p * 2 + 1) // 2 / p)
 
 
 class GranParam(Enum):
@@ -114,15 +114,13 @@ class GranParam(Enum):
     D = (Gran.GRAN_D, dt.timedelta(days=1))
     W = (Gran.GRAN_W, dt.timedelta(weeks=1))
 
-    def __init__(
-        self, msg_id: int, timedelta: dt.timedelta  # ROS message ID  # Time delta
-    ) -> None:
+    def __init__(self, msg_id: int, timedelta: dt.timedelta) -> None:
         self.msg_id = msg_id
         self.timedelta = timedelta
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int):
+    def get_member_by_msgid(cls, msg_id: int) -> GranParam:  # @UndefinedVariable
         for m in cls:
             if msg_id == m.msg_id:
                 return m
-        return None
+        raise ValueError("msg_id:[{}] is not found in GranParam".format(msg_id))

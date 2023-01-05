@@ -51,7 +51,7 @@ def get_market_close_time(dt_: dt.date) -> dt.time:
     return close_time
 
 
-def limit(val, min_val, max_val):
+def limit(val: int | float, min_val: int | float, max_val: int | float) -> int | float:
 
     if val < min_val:
         ret_val = min_val
