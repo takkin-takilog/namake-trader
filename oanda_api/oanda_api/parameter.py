@@ -3,13 +3,14 @@ from enum import Enum
 import datetime as dt
 from api_msgs.msg import Instrument as Inst
 from api_msgs.msg import Granularity as Gran
-from . import utility as utl
+from . import utils as utl
 
 
 class InstParam(Enum):
     """
     Instrument parameter.
     """
+
     USD_JPY = (Inst.INST_USD_JPY, 3, "pricing_usdjpy", "usdjpy")
     EUR_JPY = (Inst.INST_EUR_JPY, 3, "pricing_eurjpy", "eurjpy")
     EUR_USD = (Inst.INST_EUR_USD, 5, "pricing_eurusd", "eurusd")
@@ -19,12 +20,13 @@ class InstParam(Enum):
     CAD_JPY = (Inst.INST_CAD_JPY, 3, "pricing_cadjpy", "cadjpy")
     CHF_JPY = (Inst.INST_CHF_JPY, 3, "pricing_chfjpy", "chfjpy")
 
-    def __init__(self,
-                 msg_id: int,       # ROS message ID
-                 digit: int,        # Number of digits after the decimal point
-                 topic_name: str,   # ROS Topic name
-                 param_name: str    # ROS Parameter name
-                 ) -> None:
+    def __init__(
+        self,
+        msg_id: int,  # ROS message ID
+        digit: int,  # Number of digits after the decimal point
+        topic_name: str,  # ROS Topic name
+        param_name: str,  # ROS Parameter name
+    ) -> None:
         self.msg_id = msg_id
         self.digit = digit
         self.topic_name = topic_name
@@ -34,18 +36,18 @@ class InstParam(Enum):
         self._one_pip_str = format(self._one_pip, "." + str(digit) + "f")
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int):
+    def get_member_by_msgid(cls, msg_id: int) -> object:
         for m in cls:
             if msg_id == m.msg_id:
                 return m
-        return None
+        raise ValueError("msg_id:[{}] is not found in InstParam".format(msg_id))
 
     @classmethod
-    def get_member_by_name(cls, name: str):
+    def get_member_by_name(cls, name: str) -> object:
         for m in cls:
             if name == m.name:
                 return m
-        return None
+        raise ValueError("name:[{}] is not found in InstParam".format(name))
 
     @property
     def one_pip(self) -> float:
@@ -85,14 +87,15 @@ class InstParam(Enum):
         """
         round a price value to the digits.
         """
-        p = 10 ** self.digit
-        return (physical_value * p * 2 + 1) // 2 / p
+        p = 10**self.digit
+        return float((physical_value * p * 2 + 1) // 2 / p)
 
 
 class GranParam(Enum):
     """
     Granularity parameter.
     """
+
     M1 = (Gran.GRAN_M1, dt.timedelta(minutes=1))
     M2 = (Gran.GRAN_M2, dt.timedelta(minutes=2))
     M3 = (Gran.GRAN_M3, dt.timedelta(minutes=3))
@@ -111,16 +114,13 @@ class GranParam(Enum):
     D = (Gran.GRAN_D, dt.timedelta(days=1))
     W = (Gran.GRAN_W, dt.timedelta(weeks=1))
 
-    def __init__(self,
-                 msg_id: int,               # ROS message ID
-                 timedelta: dt.timedelta    # Time delta
-                 ) -> None:
+    def __init__(self, msg_id: int, timedelta: dt.timedelta) -> None:
         self.msg_id = msg_id
         self.timedelta = timedelta
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int):
+    def get_member_by_msgid(cls, msg_id: int) -> object:
         for m in cls:
             if msg_id == m.msg_id:
                 return m
-        return None
+        raise ValueError("msg_id:[{}] is not found in GranParam".format(msg_id))

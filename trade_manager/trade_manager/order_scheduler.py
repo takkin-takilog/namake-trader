@@ -1,17 +1,21 @@
 import sys
 import os
-import gc
 from typing import TypeVar
 from dataclasses import dataclass
 from enum import Enum, auto
 import datetime as dt
 import pandas as pd
 from transitions import Machine
+
 # from transitions.extensions.factory import GraphMachine as Machine
 from transitions.extensions.factory import GraphMachine
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
+from rclpy.parameter import Parameter
 from std_msgs.msg import Bool
 from api_msgs.msg import Pricing
 from trade_manager_msgs.msg import OrderType, OrderDir
@@ -19,43 +23,48 @@ from trade_manager_msgs.srv import OrderRegisterSrv
 from trade_manager_msgs.srv import TradeCloseRequestSrv
 from trade_manager_msgs.msg import Instrument as InstMng
 from api_msgs.srv import AccountQuerySrv
-from api_msgs.srv import (OrderCreateSrv, TradeDetailsSrv,
-                          TradeCRCDOSrv, TradeCloseSrv,
-                          OrderDetailsSrv, OrderCancelSrv)
+from api_msgs.srv import (
+    OrderCreateSrv,
+    TradeDetailsSrv,
+    TradeCRCDOSrv,
+    TradeCloseSrv,
+    OrderDetailsSrv,
+    OrderCancelSrv,
+)
 from api_msgs.msg import OrderState, TradeState
 from api_msgs.msg import OrderType as ApiOrderType
 from api_msgs.msg import FailReasonCode as frc
-from .constant import FMT_YMDHMS, FMT_YMDHMSF, FMT_TIME_HMS
+from .constant import FMT_YMDHMS, FMT_YMDHMSF
 from .constant import BUCKUP_DIR
+from .constant import ConstantGroup
 from .constant import WeekDay
 from .constant import Transitions as Tr
 from .constant import INST_DICT
-from .exception import InitializerErrorException
+from .exception import InitializerErrorException, RosServiceErrorException
 from .dataclass import RosParam
-from .wrapper import RosServiceClient
+from .wrapper import RosServiceClient, FutureWrapper
 from .trigger import TimeTrigger
 from . import backup as bk
+from . import ros_utils as rosutl
+from trade_manager.dataclass import RosParamTime
 
-MsgType = TypeVar("MsgType")
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
-class ColOrderSchedulerBackup(Enum):
+class ColOrderSchedulerBackup(ConstantGroup):
     """
     Order scheduler backup dataframe column name.
     """
+
     REGISTER_ID = "register_id"
 
-    @classmethod
-    def to_list(cls):
-        return [m.value for m in cls]
 
-
-class ColOrderTicketsBackup(Enum):
+class ColOrderTicketsBackup(ConstantGroup):
     """
     Order tickets backup dataframe column name.
     """
+
     REGISTER_ID = "register_id"
     ORDER_ID = "order_id"
     TRADE_ID = "trade_id"
@@ -70,39 +79,22 @@ class ColOrderTicketsBackup(Enum):
     API_INST_ID = "api_inst_id"
     API_ORDER_TYPE = "api_order_type"
 
-    @classmethod
-    def to_list(cls):
-        return [m.value for m in cls]
-
 
 @dataclass
-class _RosParams():
-    """
-    ROS Parameter.
-    """
-    @dataclass
-    class RosParamTime(RosParam):
-        time: dt.datetime.time = None
-
-    MAX_LEVERAGE = RosParam("max_leverage")
-    MAX_POSITION_COUNT = RosParam("max_position_count")
-    ENABLE_WEEKEND_ORDER_STOP = RosParam("enable_weekend_order_stop")
-    WEEKEND_ORDER_STOP_TIME = RosParamTime("weekend_order_stop_time")
-    ENABLE_WEEKEND_ALL_CLOSE = RosParam("enable_weekend_all_close")
-    WEEKEND_ALL_CLOSE_TIME = RosParamTime("weekend_all_close_time")
-
-
-@dataclass
-class _TickPrice():
+class _TickPrice:
     """
     Tick price.
     """
+
     time: str
     tick_ask: float
     tick_bid: float
 
 
-class OrderTicket():
+class OrderTicket:
+    """
+    Order ticket class.
+    """
 
     class States(Enum):
         EntryOrdering = auto()
@@ -115,250 +107,238 @@ class OrderTicket():
         Complete = auto()
 
     # --------------- Define class variable ---------------
-    _C_CI_CONST = 0
-
-    # --------------- Define class variable ---------------
-    _c_srvcli_ordcre = None
-    _c_srvcli_orddet = None
-    _c_srvcli_ordcnc = None
-    _c_srvcli_trddet = None
-    _c_srvcli_trdcrc = None
-    _c_srvcli_trdcls = None
-    _c_is_trans_lock = False
-    _c_register_id = 1
-    _c_balance = 0
-    logger = None
+    _is_trans_lock = False
+    _next_register_id = 1
 
     @classmethod
-    def set_class_variable(cls,
-                           srvcli_ordcre: RosServiceClient,
-                           srvcli_orddet: RosServiceClient,
-                           srvcli_ordcnc: RosServiceClient,
-                           srvcli_trddet: RosServiceClient,
-                           srvcli_trdcrc: RosServiceClient,
-                           srvcli_trdcls: RosServiceClient,
-                           max_leverage: float,
-                           max_position_count: int,
-                           logger
-                           ) -> None:
-        cls._c_srvcli_ordcre = srvcli_ordcre
-        cls._c_srvcli_orddet = srvcli_orddet
-        cls._c_srvcli_ordcnc = srvcli_ordcnc
-        cls._c_srvcli_trddet = srvcli_trddet
-        cls._c_srvcli_trdcrc = srvcli_trdcrc
-        cls._c_srvcli_trdcls = srvcli_trdcls
-        cls._C_CI_CONST = max_leverage / max_position_count
-        cls.logger = logger
+    def get_register_id(cls) -> int:
+        return cls._next_register_id
 
     @classmethod
-    def set_balance(cls, balance: int):
-        cls._c_balance = balance
+    def set_register_id(cls, register_id: int) -> None:
+        cls._next_register_id = register_id
 
-    @classmethod
-    def get_register_id(cls):
-        return cls._c_register_id
-
-    @classmethod
-    def set_register_id(cls, register_id: int):
-        cls._c_register_id = register_id
-
-    def __init__(self,
-                 req: SrvTypeRequest,
-                 tick_price: _TickPrice,
-                 use_restore: bool = False
-                 ) -> None:
+    def __init__(
+        self,
+        logger: rclpy.impl.rcutils_logger.RcutilsLogger,
+        srvcli_ordcre: RosServiceClient,
+        srvcli_orddet: RosServiceClient,
+        srvcli_ordcnc: RosServiceClient,
+        srvcli_trddet: RosServiceClient,
+        srvcli_trdcrc: RosServiceClient,
+        srvcli_trdcls: RosServiceClient,
+        max_leverage: float,
+        max_position_count: int,
+        balance: int,
+        req: SrvTypeRequest,
+        tick_price: _TickPrice,
+        use_restore: bool = False,
+    ) -> None:
+        # --------------- Set logger lebel ---------------
+        self.logger = logger
 
         # --------------- Define Constant value ---------------
         self._POL_INTERVAL = dt.timedelta(minutes=1)
 
+        # --------------- Set instance ---------------
+        self._srvcli_ordcre = srvcli_ordcre
+        self._srvcli_orddet = srvcli_orddet
+        self._srvcli_ordcnc = srvcli_ordcnc
+        self._srvcli_trddet = srvcli_trddet
+        self._srvcli_trdcrc = srvcli_trdcrc
+        self._srvcli_trdcls = srvcli_trdcls
+
         # --------------- Create State Machine ---------------
         states = [
             {
-                Tr.NAME.value: self.States.EntryOrdering,
-                Tr.ON_ENTER.value: None,
-                Tr.ON_EXIT.value: None
+                Tr.NAME: self.States.EntryOrdering,
+                Tr.ON_ENTER: None,
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.EntryWaiting,
-                Tr.ON_ENTER.value: "_on_enter_EntryWaiting",
-                Tr.ON_EXIT.value: None
+                Tr.NAME: self.States.EntryWaiting,
+                Tr.ON_ENTER: "_on_enter_EntryWaiting",
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.EntryChecking,
-                Tr.ON_ENTER.value: "_on_enter_EntryChecking",
-                Tr.ON_EXIT.value: "_on_exit_EntryChecking"
+                Tr.NAME: self.States.EntryChecking,
+                Tr.ON_ENTER: "_on_enter_EntryChecking",
+                Tr.ON_EXIT: "_on_exit_EntryChecking",
             },
             {
-                Tr.NAME.value: self.States.EntryCanceling,
-                Tr.ON_ENTER.value: "_on_enter_EntryCanceling",
-                Tr.ON_EXIT.value: None
+                Tr.NAME: self.States.EntryCanceling,
+                Tr.ON_ENTER: "_on_enter_EntryCanceling",
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.ExitWaiting,
-                Tr.ON_ENTER.value: "_on_enter_ExitWaiting",
-                Tr.ON_EXIT.value: None
+                Tr.NAME: self.States.ExitWaiting,
+                Tr.ON_ENTER: "_on_enter_ExitWaiting",
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.ExitChecking,
-                Tr.ON_ENTER.value: "_on_enter_ExitChecking",
-                Tr.ON_EXIT.value: "_on_exit_ExitChecking"
+                Tr.NAME: self.States.ExitChecking,
+                Tr.ON_ENTER: "_on_enter_ExitChecking",
+                Tr.ON_EXIT: "_on_exit_ExitChecking",
             },
             {
-                Tr.NAME.value: self.States.ExitOrdering,
-                Tr.ON_ENTER.value: "_on_enter_ExitOrdering",
-                Tr.ON_EXIT.value: None
+                Tr.NAME: self.States.ExitOrdering,
+                Tr.ON_ENTER: "_on_enter_ExitOrdering",
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.Complete,
-                Tr.ON_ENTER.value: None,
-                Tr.ON_EXIT.value: None
+                Tr.NAME: self.States.Complete,
+                Tr.ON_ENTER: None,
+                Tr.ON_EXIT: None,
             },
         ]
 
         transitions = [
             {
-                Tr.TRIGGER.value: "_trans_from_EntryOrdering_to_ExitWaiting",
-                Tr.SOURCE.value: self.States.EntryOrdering,
-                Tr.DEST.value: self.States.ExitWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_EntryOrdering_to_ExitWaiting",
+                Tr.SOURCE: self.States.EntryOrdering,
+                Tr.DEST: self.States.ExitWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryOrdering_to_EntryWaiting",
-                Tr.SOURCE.value: self.States.EntryOrdering,
-                Tr.DEST.value: self.States.EntryWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_EntryOrdering_to_EntryWaiting",
+                Tr.SOURCE: self.States.EntryOrdering,
+                Tr.DEST: self.States.EntryWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryWaiting_to_EntryChecking",
-                Tr.SOURCE.value: self.States.EntryWaiting,
-                Tr.DEST.value: self.States.EntryChecking,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: "_conditions_trans_lock"
+                Tr.TRIGGER: "_trans_from_EntryWaiting_to_EntryChecking",
+                Tr.SOURCE: self.States.EntryWaiting,
+                Tr.DEST: self.States.EntryChecking,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: "_conditions_trans_lock",
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryChecking_to_EntryWaiting",
-                Tr.SOURCE.value: self.States.EntryChecking,
-                Tr.DEST.value: self.States.EntryWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_EntryChecking_to_EntryWaiting",
+                Tr.SOURCE: self.States.EntryChecking,
+                Tr.DEST: self.States.EntryWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryWaiting_to_EntryCanceling",
-                Tr.SOURCE.value: self.States.EntryWaiting,
-                Tr.DEST.value: self.States.EntryCanceling,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_EntryWaiting_to_EntryCanceling",
+                Tr.SOURCE: self.States.EntryWaiting,
+                Tr.DEST: self.States.EntryCanceling,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryCanceling_to_Complete",
-                Tr.SOURCE.value: self.States.EntryCanceling,
-                Tr.DEST.value: self.States.Complete,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_EntryCanceling_to_Complete",
+                Tr.SOURCE: self.States.EntryCanceling,
+                Tr.DEST: self.States.Complete,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryCanceling_to_EntryChecking",
-                Tr.SOURCE.value: self.States.EntryCanceling,
-                Tr.DEST.value: self.States.EntryChecking,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: "_conditions_trans_lock"
+                Tr.TRIGGER: "_trans_from_EntryCanceling_to_EntryChecking",
+                Tr.SOURCE: self.States.EntryCanceling,
+                Tr.DEST: self.States.EntryChecking,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: "_conditions_trans_lock",
             },
             {
-                Tr.TRIGGER.value: "_trans_from_EntryChecking_to_ExitWaiting",
-                Tr.SOURCE.value: self.States.EntryChecking,
-                Tr.DEST.value: self.States.ExitWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_EntryChecking_to_ExitWaiting",
+                Tr.SOURCE: self.States.EntryChecking,
+                Tr.DEST: self.States.ExitWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitWaiting_to_ExitChecking",
-                Tr.SOURCE.value: self.States.ExitWaiting,
-                Tr.DEST.value: self.States.ExitChecking,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: "_conditions_trans_lock"
+                Tr.TRIGGER: "_trans_from_ExitWaiting_to_ExitChecking",
+                Tr.SOURCE: self.States.ExitWaiting,
+                Tr.DEST: self.States.ExitChecking,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: "_conditions_trans_lock",
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitChecking_to_ExitWaiting",
-                Tr.SOURCE.value: self.States.ExitChecking,
-                Tr.DEST.value: self.States.ExitWaiting,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_ExitChecking_to_ExitWaiting",
+                Tr.SOURCE: self.States.ExitChecking,
+                Tr.DEST: self.States.ExitWaiting,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitChecking_to_Complete",
-                Tr.SOURCE.value: self.States.ExitChecking,
-                Tr.DEST.value: self.States.Complete,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_ExitChecking_to_Complete",
+                Tr.SOURCE: self.States.ExitChecking,
+                Tr.DEST: self.States.Complete,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitWaiting_to_ExitOrdering",
-                Tr.SOURCE.value: self.States.ExitWaiting,
-                Tr.DEST.value: self.States.ExitOrdering,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_ExitWaiting_to_ExitOrdering",
+                Tr.SOURCE: self.States.ExitWaiting,
+                Tr.DEST: self.States.ExitOrdering,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_ExitOrdering_to_Complete",
-                Tr.SOURCE.value: self.States.ExitOrdering,
-                Tr.DEST.value: self.States.Complete,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_ExitOrdering_to_Complete",
+                Tr.SOURCE: self.States.ExitOrdering,
+                Tr.DEST: self.States.Complete,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_to_Complete",
-                Tr.SOURCE.value: "*",
-                Tr.DEST.value: self.States.Complete,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
-            }
+                Tr.TRIGGER: "_trans_to_Complete",
+                Tr.SOURCE: "*",
+                Tr.DEST: self.States.Complete,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
+            },
         ]
 
-        self._sm = Machine(model=self,
-                           states=states,
-                           initial=self.States.EntryOrdering,
-                           transitions=transitions)
+        self._sm = Machine(
+            model=self,
+            states=states,  # type: ignore[arg-type]
+            initial=self.States.EntryOrdering,
+            transitions=transitions,
+        )
 
         if isinstance(self._sm, GraphMachine):
             self._sm.get_graph().view()
 
         # --------------- Initialize instance variable ---------------
-        self._future = None
-        self._trade_id = None
-        self._order_id = None
+        self._trade_id = -1
+        self._order_id = -1
+        self._future: FutureWrapper | None = None
         self._is_entry_exp_time_over = False
         self._enable_trade_close = False
         self._enable_weekend_close = False
+        self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
         if use_restore:
             return
@@ -375,7 +355,7 @@ class OrderTicket():
             else:
                 price = req.entry_price
 
-            units = int(self._C_CI_CONST * self._c_balance / price)
+            units = int((max_leverage / max_position_count) * balance / price)
 
             if req.orddir_msg.order_dir == OrderDir.LONG:
                 self._units = units
@@ -395,8 +375,7 @@ class OrderTicket():
         if (self._order_type == OrderType.MARKET) or (not req.entry_exp_time):
             self._entry_exp_time = None
         else:
-            self._entry_exp_time = dt.datetime.strptime(req.entry_exp_time,
-                                                        FMT_YMDHMS)
+            self._entry_exp_time = dt.datetime.strptime(req.entry_exp_time, FMT_YMDHMS)
 
         self._take_profit_price = req.take_profit_price
         self._stop_loss_price = req.stop_loss_price
@@ -404,8 +383,7 @@ class OrderTicket():
         if not req.exit_exp_time:
             self._exit_exp_time = None
         else:
-            self._exit_exp_time = dt.datetime.strptime(req.exit_exp_time,
-                                                       FMT_YMDHMS)
+            self._exit_exp_time = dt.datetime.strptime(req.exit_exp_time, FMT_YMDHMS)
 
         self._api_inst_id = INST_DICT[req.inst_msg.inst_id]
 
@@ -434,8 +412,8 @@ class OrderTicket():
         self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
 
         # --------------- Update requested id ---------------
-        self._register_id = OrderTicket._c_register_id
-        OrderTicket._c_register_id += 1
+        self._register_id = OrderTicket._next_register_id
+        OrderTicket._next_register_id += 1
 
         # --------------- Entry order ---------------
         req = OrderCreateSrv.Request()
@@ -445,12 +423,14 @@ class OrderTicket():
         req.inst_msg.inst_id = self._api_inst_id
         req.take_profit_price = self._take_profit_price
         req.stop_loss_price = self._stop_loss_price
-        self.logger.debug("----- Requesting \"Order Create\" -----")
+        self.logger.debug("----- Requesting [Order Create] -----")
         try:
-            self._future = self._c_srvcli_ordcre.call_async(req, timeout_sec=5.0)
-        except Exception as err:
+            self._future = self._srvcli_ordcre.call_async(req, timeout_sec=5.0)
+        except RosServiceErrorException as err:
             self.logger.error("{}".format(err))
-            raise InitializerErrorException("Call ROS Service Error (Order Create)")
+            raise InitializerErrorException(
+                "Call ROS Service Error (Order Create)"
+            ) from err
 
     def __del__(self) -> None:
         self.logger.debug("---------- Delete OrderTicket ----------")
@@ -479,42 +459,33 @@ class OrderTicket():
         ]
         return bk_rec_list
 
-    def restore(self, rec: pd.Series):
+    def restore(self, rec: pd.Series) -> None:
         Col = ColOrderTicketsBackup
 
-        entry_exp_time = rec[Col.ENTRY_EXP_TIME.value]
+        entry_exp_time = rec[Col.ENTRY_EXP_TIME]
         if entry_exp_time is not None:
-            entry_exp_time = dt.datetime.strptime(entry_exp_time,
-                                                  FMT_YMDHMS)
-        exit_exp_time = rec[Col.EXIT_EXP_TIME.value]
+            entry_exp_time = dt.datetime.strptime(entry_exp_time, FMT_YMDHMS)
+        exit_exp_time = rec[Col.EXIT_EXP_TIME]
         if exit_exp_time is not None:
-            exit_exp_time = dt.datetime.strptime(exit_exp_time,
-                                                 FMT_YMDHMS)
+            exit_exp_time = dt.datetime.strptime(exit_exp_time, FMT_YMDHMS)
 
-        order_id = rec[Col.ORDER_ID.value]
-        if order_id is not None:
-            order_id = int(order_id)
-
-        trade_id = rec[Col.TRADE_ID.value]
-        if trade_id is not None:
-            trade_id = int(trade_id)
-
-        self._register_id = int(rec[Col.REGISTER_ID.value])
-        self._order_id = order_id
-        self._trade_id = trade_id
-        self._inst_id = int(rec[Col.INST_ID.value])
-        self._order_type = int(rec[Col.ORDER_TYPE.value])
-        self._units = int(rec[Col.UNITS.value])
-        self._entry_price = float(rec[Col.ENTRY_PRICE.value])
+        self._register_id = int(rec[Col.REGISTER_ID])
+        self._order_id = int(rec[Col.ORDER_ID])
+        self._trade_id = int(rec[Col.TRADE_ID])
+        self._inst_id = int(rec[Col.INST_ID])
+        self._order_type = int(rec[Col.ORDER_TYPE])
+        self._units = int(rec[Col.UNITS])
+        self._entry_price = float(rec[Col.ENTRY_PRICE])
         self._entry_exp_time = entry_exp_time
-        self._take_profit_price = float(rec[Col.TAKE_PROFIT_PRICE.value])
-        self._stop_loss_price = float(rec[Col.STOP_LOSS_PRICE.value])
+        self._take_profit_price = float(rec[Col.TAKE_PROFIT_PRICE])
+        self._stop_loss_price = float(rec[Col.STOP_LOSS_PRICE])
         self._exit_exp_time = exit_exp_time
-        self._api_inst_id = int(rec[Col.API_INST_ID.value])
-        self._api_order_type = int(rec[Col.API_ORDER_TYPE.value])
+        self._api_inst_id = int(rec[Col.API_INST_ID])
+        self._api_order_type = int(rec[Col.API_ORDER_TYPE])
 
-        self.logger.info("<<<<<<<<<< Restore:register_id[{}] >>>>>>>>>>"
-                         .format(self._register_id))
+        self.logger.info(
+            "<<<<<<<<<< Restore:register_id[{}] >>>>>>>>>>".format(self._register_id)
+        )
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
         self.logger.debug("  - order_type:[{}]".format(self._order_type))
         self.logger.debug("  - units:[{}]".format(self._units))
@@ -526,7 +497,7 @@ class OrderTicket():
         self.logger.debug("  - api_inst_id:[{}]".format(self._api_inst_id))
         self.logger.debug("  - api_order_type:[{}]".format(self._api_order_type))
 
-        if self._trade_id is None:
+        if self._trade_id < 0:
             self.to_EntryChecking()
         else:
             self.to_ExitChecking()
@@ -538,16 +509,17 @@ class OrderTicket():
 
     def enable_trade_close(self) -> bool:
         success = False
-        if (self.state == self.States.ExitWaiting
+        if (
+            self.state == self.States.ExitWaiting
             or self.state == self.States.ExitChecking
             or self.state == self.States.ExitOrdering
-                or self.state == self.States.Complete):
+            or self.state == self.States.Complete
+        ):
             self._enable_trade_close = True
             success = True
         return success
 
     def do_cyclic_event(self) -> None:
-
         # self.logger.debug("state:[{}]".format(self.state))
 
         if self.state == self.States.EntryOrdering:
@@ -571,24 +543,33 @@ class OrderTicket():
 
     def _on_do_EntryOrdering(self) -> None:
 
+        if self._future is None:
+            return
+
         if not self._future.done():
             self.logger.debug("  Requesting now...")
             if self._future.has_timed_out():
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
+                self.logger.error(
+                    "{:!^50}".format(" Call ROS Service Error (Order Create) ")
+                )
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_to_Complete()
             return
 
         self.logger.debug("  Request done.")
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
-            self.logger.error("  future.result() is \"None\".")
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Error (Order Create) ")
+            )
+            self.logger.error("  future.result() is None.")
             self._trans_to_Complete()
             return
 
         if not rsp.result:
-            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Create) "))
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Fail (Order Create) ")
+            )
             self._trans_to_Complete()
             return
 
@@ -602,7 +583,7 @@ class OrderTicket():
             self._trans_from_EntryOrdering_to_EntryWaiting()
 
     def _on_enter_EntryWaiting(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_EntryWaiting(self) -> None:
@@ -620,24 +601,29 @@ class OrderTicket():
         else:
             pass
 
-    def _conditions_trans_lock(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self.logger.debug("--- trans_lock state:[{}]".format(self._c_is_trans_lock))
-        return not self._c_is_trans_lock
+    def _conditions_trans_lock(self) -> Bool:
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        self.logger.debug(
+            "--- trans_lock state:[{}]".format(OrderTicket._is_trans_lock)
+        )
+        return not OrderTicket._is_trans_lock
 
     def _on_enter_EntryChecking(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._c_is_trans_lock = True
-        self.logger.debug("--- Trans \"Locked\"")
-        self.logger.debug("----- Request \"Order Details\" (id:[{}]) -----"
-                          .format(self._order_id))
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        OrderTicket._is_trans_lock = True
+        self.logger.debug("--- Trans Locked")
+        self.logger.debug(
+            "----- Request [Order Details] (id:[{}]) -----".format(self._order_id)
+        )
         req = OrderDetailsSrv.Request()
         req.order_id = self._order_id
         self._future = None
         try:
-            self._future = self._c_srvcli_orddet.call_async(req, timeout_sec=5.0)
-        except Exception as err:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
+            self._future = self._srvcli_orddet.call_async(req, timeout_sec=5.0)
+        except RosServiceErrorException as err:
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Error (Order Details) ")
+            )
             self.logger.error("{}".format(err))
 
     def _on_do_EntryChecking(self) -> None:
@@ -649,21 +635,27 @@ class OrderTicket():
         if not self._future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
             if self._future.has_timed_out():
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
+                self.logger.error(
+                    "{:!^50}".format(" Call ROS Service Error (Order Details) ")
+                )
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_from_EntryChecking_to_EntryWaiting()
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
-            self.logger.error("  future.result() is \"None\".")
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Error (Order Details) ")
+            )
+            self.logger.error("  future.result() is None.")
             self._trans_from_EntryChecking_to_EntryWaiting()
             return
 
         if not rsp.result:
-            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Details) "))
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Fail (Order Details) ")
+            )
             self._trans_from_EntryChecking_to_EntryWaiting()
             return
 
@@ -676,26 +668,32 @@ class OrderTicket():
             self.logger.debug("  - trade_id:[{}] is Opened.".format(self._trade_id))
             self._trans_from_EntryChecking_to_ExitWaiting()
         else:
-            self.logger.warn("  - order id:[{}] is Unexpected State! (State No:<{}>)"
-                             .format(self._order_id, rsp.order_state_msg.state))
+            self.logger.warn(
+                "  - order id:[{}] is Unexpected State! (State No:<{}>)".format(
+                    self._order_id, rsp.order_state_msg.state
+                )
+            )
             self._trans_from_EntryChecking_to_EntryWaiting()
 
     def _on_exit_EntryChecking(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._c_is_trans_lock = False
-        self.logger.debug("--- Trans \"Unlocked\"")
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        OrderTicket._is_trans_lock = False
+        self.logger.debug("--- Trans Unlocked")
 
     def _on_enter_EntryCanceling(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self.logger.debug("----- Request \"Order Cancel\" (id:[{}]) -----"
-                          .format(self._order_id))
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        self.logger.debug(
+            "----- Request [Order Cancel] (id:[{}]) -----".format(self._order_id)
+        )
         req = OrderCancelSrv.Request()
         req.order_id = self._order_id
         self._future = None
         try:
-            self._future = self._c_srvcli_ordcnc.call_async(req, timeout_sec=5.0)
-        except Exception as err:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
+            self._future = self._srvcli_ordcnc.call_async(req, timeout_sec=5.0)
+        except RosServiceErrorException as err:
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
+            )
             self.logger.error("{}".format(err))
 
     def _on_do_EntryCanceling(self) -> None:
@@ -707,37 +705,48 @@ class OrderTicket():
         if not self._future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
             if self._future.has_timed_out():
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
+                self.logger.error(
+                    "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
+                )
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_to_Complete()
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
-            self.logger.error("  future.result() is \"None\".")
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
+            )
+            self.logger.error("  future.result() is None.")
             self._trans_to_Complete()
             return
 
         if rsp.result:
-            self.logger.debug("  EntryCanceling complete.(id:[{}])".format(self._order_id))
+            self.logger.debug(
+                "  EntryCanceling complete.(id:[{}])".format(self._order_id)
+            )
             self._trans_from_EntryCanceling_to_Complete()
         else:
             if rsp.frc_msg.reason_code == frc.REASON_ORDER_DOESNT_EXIST:
-                self.logger.warn("  EntryCanceling fail.(id:[{}])".format(self._order_id))
+                self.logger.warn(
+                    "  EntryCanceling fail.(id:[{}])".format(self._order_id)
+                )
                 self.logger.warn("   Order doesnt exist!")
                 self.logger.warn("   Possibility that order have been contracted.")
                 self._trans_from_EntryCanceling_to_EntryChecking()
             else:
-                self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Cancel) "))
+                self.logger.error(
+                    "{:!^50}".format(" Call ROS Service Fail (Order Cancel) ")
+                )
                 self._trans_to_Complete()
 
     def _on_enter_ExitWaiting(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_ExitWaiting(self) -> None:
+
         now = dt.datetime.now()
         if (self._exit_exp_time is not None) and (self._exit_exp_time < now):
             self._trans_from_ExitWaiting_to_ExitOrdering()
@@ -750,18 +759,21 @@ class OrderTicket():
             pass
 
     def _on_enter_ExitChecking(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._c_is_trans_lock = True
-        self.logger.debug("--- Trans \"Locked\"")
-        self.logger.debug("----- Request \"Trade Details\" (id:[{}]) -----"
-                          .format(self._trade_id))
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        OrderTicket._is_trans_lock = True
+        self.logger.debug("--- Trans Locked")
+        self.logger.debug(
+            "----- Request [Trade Details] (id:[{}]) -----".format(self._trade_id)
+        )
         req = TradeDetailsSrv.Request()
         req.trade_id = self._trade_id
         self._future = None
         try:
-            self._future = self._c_srvcli_trddet.call_async(req, timeout_sec=5.0)
-        except Exception as err:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
+            self._future = self._srvcli_trddet.call_async(req, timeout_sec=5.0)
+        except RosServiceErrorException as err:
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
+            )
             self.logger.error("{}".format(err))
 
     def _on_do_ExitChecking(self) -> None:
@@ -773,21 +785,27 @@ class OrderTicket():
         if not self._future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
             if self._future.has_timed_out():
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
+                self.logger.error(
+                    "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
+                )
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_from_ExitChecking_to_ExitWaiting()
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
-            self.logger.error("  future.result() is \"None\".")
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
+            )
+            self.logger.error("  future.result() is None.")
             self._trans_from_ExitChecking_to_ExitWaiting()
             return
 
         if not rsp.result:
-            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Trade Details) "))
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Fail (Trade Details) ")
+            )
             self._trans_from_ExitChecking_to_ExitWaiting()
             return
 
@@ -798,27 +816,33 @@ class OrderTicket():
             self.logger.debug("  - trade id:[{}] is Closed.".format(self._trade_id))
             self._trans_from_ExitChecking_to_Complete()
         else:
-            self.logger.warn("  - trade id:[{}] is Unexpected State! (State No:<{}>)"
-                             .format(self._trade_id, rsp.trade_state_msg.state))
+            self.logger.warn(
+                "  - trade id:[{}] is Unexpected State! (State No:<{}>)".format(
+                    self._trade_id, rsp.trade_state_msg.state
+                )
+            )
             self._trans_from_ExitChecking_to_ExitWaiting()
 
     def _on_exit_ExitChecking(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self._c_is_trans_lock = False
-        self.logger.debug("--- Trans \"Unlocked\"")
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        OrderTicket._is_trans_lock = False
+        self.logger.debug("--- Trans Unlocked")
 
     def _on_enter_ExitOrdering(self) -> None:
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
-        self.logger.debug("----- Request \"Trade Close\" (id:[{}]) -----"
-                          .format(self._trade_id))
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+        self.logger.debug(
+            "----- Request [Trade Close] (id:[{}]) -----".format(self._trade_id)
+        )
 
         req = TradeCloseSrv.Request()
         req.trade_id = self._trade_id
         self._future = None
         try:
-            self._future = self._c_srvcli_trdcls.call_async(req, timeout_sec=5.0)
-        except Exception as err:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
+            self._future = self._srvcli_trdcls.call_async(req, timeout_sec=5.0)
+        except RosServiceErrorException as err:
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
+            )
             self.logger.error("{}".format(err))
 
     def _on_do_ExitOrdering(self) -> None:
@@ -830,16 +854,20 @@ class OrderTicket():
         if not self._future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
             if self._future.has_timed_out():
-                self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
+                self.logger.error(
+                    "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
+                )
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_to_Complete()
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
-        rsp = self._future.result()
+        rsp = self._future.result()  # type: ignore[var-annotated]
         if rsp is None:
-            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
-            self.logger.error("  future.result() is \"None\".")
+            self.logger.error(
+                "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
+            )
+            self.logger.error("  future.result() is None.")
             self._trans_to_Complete()
             return
 
@@ -852,7 +880,9 @@ class OrderTicket():
                 self.logger.warn("   Possibility that trade have been contracted.")
                 self._trans_from_ExitOrdering_to_Complete()
             else:
-                self.logger.error("{:!^50}".format(" Call ROS Service Fail (Trade Close) "))
+                self.logger.error(
+                    "{:!^50}".format(" Call ROS Service Fail (Trade Close) ")
+                )
                 self._trans_to_Complete()
 
     def _on_do_Complete(self) -> None:
@@ -865,6 +895,10 @@ class OrderTicket():
 
 
 class OrderScheduler(Node):
+    """
+    Order scheduler class.
+
+    """
 
     class States(Enum):
         Idle = auto()
@@ -886,213 +920,235 @@ class OrderScheduler(Node):
         self._BUCKUP_FULLPATH_OS = buckup_dir + filename_os
         self._BUCKUP_FULLPATH_OT = buckup_dir + filename_ot
 
-        # --------------- Declare ROS parameter ---------------
-        self._rosprm = _RosParams()
-        self.declare_parameter(self._rosprm.MAX_LEVERAGE.name)
-        self.declare_parameter(self._rosprm.MAX_POSITION_COUNT.name)
-        self.declare_parameter(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.name)
-        self.declare_parameter(self._rosprm.WEEKEND_ORDER_STOP_TIME.name)
-        self.declare_parameter(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.name)
-        self.declare_parameter(self._rosprm.WEEKEND_ALL_CLOSE_TIME.name)
+        # --------------- Initialize ROS parameter ---------------
+        self._rosprm_max_leverage = RosParam("max_leverage", Parameter.Type.DOUBLE)
+        self._rosprm_max_position_count = RosParam(
+            "max_position_count", Parameter.Type.INTEGER
+        )
+        self._rosprm_use_weekend_order_stop = RosParam(
+            "use_weekend_order_stop", Parameter.Type.BOOL
+        )
+        self._rosprm_weekend_order_stop_time = RosParamTime(
+            "weekend_order_stop_time", Parameter.Type.STRING
+        )
+        self._rosprm_use_weekend_all_close = RosParam(
+            "use_weekend_all_close", Parameter.Type.BOOL
+        )
+        self._rosprm_weekend_all_close_time = RosParamTime(
+            "weekend_all_close_time", Parameter.Type.STRING
+        )
 
-        para = self.get_parameter(self._rosprm.MAX_LEVERAGE.name)
-        self._rosprm.MAX_LEVERAGE.value = para.value
-        para = self.get_parameter(self._rosprm.MAX_POSITION_COUNT.name)
-        self._rosprm.MAX_POSITION_COUNT.value = para.value
-        para = self.get_parameter(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.name)
-        self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value = para.value
-        para = self.get_parameter(self._rosprm.WEEKEND_ORDER_STOP_TIME.name)
-        self._rosprm.WEEKEND_ORDER_STOP_TIME.value = para.value
-        datetime_ = dt.datetime.strptime(para.value, FMT_TIME_HMS)
-        self._rosprm.WEEKEND_ORDER_STOP_TIME.time = datetime_.time()
-        para = self.get_parameter(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.name)
-        self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value = para.value
-        para = self.get_parameter(self._rosprm.WEEKEND_ALL_CLOSE_TIME.name)
-        self._rosprm.WEEKEND_ALL_CLOSE_TIME.value = para.value
-        datetime_ = dt.datetime.strptime(para.value, FMT_TIME_HMS)
-        self._rosprm.WEEKEND_ALL_CLOSE_TIME.time = datetime_.time()
-
-        self.logger.debug("[Param]")
-        self.logger.debug("  - max_leverage:[{}]"
-                          .format(self._rosprm.MAX_LEVERAGE.value))
-        self.logger.debug("  - max_position_count:[{}]"
-                          .format(self._rosprm.MAX_POSITION_COUNT.value))
-        self.logger.debug("  - enable_weekend_order_stop:[{}]"
-                          .format(self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value))
-        self.logger.debug("  - weekend_order_stop_time:[{}]"
-                          .format(self._rosprm.WEEKEND_ORDER_STOP_TIME.time))
-        self.logger.debug("  - enable_weekend_all_close:[{}]"
-                          .format(self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value))
-        self.logger.debug("  - weekend_all_close_time:[{}]"
-                          .format(self._rosprm.WEEKEND_ALL_CLOSE_TIME.time))
+        rosutl.set_parameters(self, self._rosprm_max_leverage)
+        rosutl.set_parameters(self, self._rosprm_max_position_count)
+        rosutl.set_parameters(self, self._rosprm_use_weekend_order_stop)
+        rosutl.set_parameters(self, self._rosprm_weekend_order_stop_time)
+        rosutl.set_parameters(self, self._rosprm_use_weekend_all_close)
+        rosutl.set_parameters(self, self._rosprm_weekend_all_close_time)
 
         # --------------- Create State Machine ---------------
         states = [
             {
-                Tr.NAME.value: self.States.Idle,
-                Tr.ON_ENTER.value: None,
-                Tr.ON_EXIT.value: None
+                Tr.NAME: self.States.Idle,
+                Tr.ON_ENTER: None,
+                Tr.ON_EXIT: None,
             },
             {
-                Tr.NAME.value: self.States.AccountUpdating,
-                Tr.ON_ENTER.value: "_on_enter_AccountUpdating",
-                Tr.ON_EXIT.value: None
-            }
+                Tr.NAME: self.States.AccountUpdating,
+                Tr.ON_ENTER: "_on_enter_AccountUpdating",
+                Tr.ON_EXIT: None,
+            },
         ]
 
         transitions = [
             {
-                Tr.TRIGGER.value: "_trans_from_Idle_to_AccountUpdating",
-                Tr.SOURCE.value: self.States.Idle,
-                Tr.DEST.value: self.States.AccountUpdating,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
+                Tr.TRIGGER: "_trans_from_Idle_to_AccountUpdating",
+                Tr.SOURCE: self.States.Idle,
+                Tr.DEST: self.States.AccountUpdating,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
             },
             {
-                Tr.TRIGGER.value: "_trans_from_AccountUpdating_to_Idle",
-                Tr.SOURCE.value: self.States.AccountUpdating,
-                Tr.DEST.value: self.States.Idle,
-                Tr.PREPARE.value: None,
-                Tr.BEFORE.value: None,
-                Tr.AFTER.value: None,
-                Tr.CONDITIONS.value: None
-            }
+                Tr.TRIGGER: "_trans_from_AccountUpdating_to_Idle",
+                Tr.SOURCE: self.States.AccountUpdating,
+                Tr.DEST: self.States.Idle,
+                Tr.PREPARE: None,
+                Tr.BEFORE: None,
+                Tr.AFTER: None,
+                Tr.CONDITIONS: None,
+            },
         ]
 
-        self._sm = Machine(model=self,
-                           states=states,
-                           initial=self.States.Idle,
-                           transitions=transitions)
+        self._sm = Machine(
+            model=self,
+            states=states,  # type: ignore[arg-type]
+            initial=self.States.Idle,
+            transitions=transitions,
+        )
 
         if isinstance(self._sm, GraphMachine):
             self._sm.get_graph().view()
 
+        # --------------- Initialize ROS callback group ---------------
+        self._cb_grp_reent = ReentrantCallbackGroup()
+        self._cb_grp_mutua_timer = MutuallyExclusiveCallbackGroup()
+        self._cb_grp_mutua_ordcli = MutuallyExclusiveCallbackGroup()
+        self._cb_grp_mutua_accque = MutuallyExclusiveCallbackGroup()
+
         # --------------- Create ROS Communication ---------------
         # Create service server "OrderRegister"
-        srv_type = OrderRegisterSrv
-        srv_name = "order_register"
-        callback = self._on_order_register
-        self._ordreq_srv = self.create_service(srv_type,
-                                               srv_name,
-                                               callback=callback)
+        self._ordreq_srv = self.create_service(
+            OrderRegisterSrv,
+            "order_register",
+            self._on_order_register,
+            callback_group=self._cb_grp_reent,
+        )
 
         # Create service server "TradeCloseRequest"
-        srv_type = TradeCloseRequestSrv
-        srv_name = "trade_close_request"
-        callback = self._on_requested_close
-        self._trdclsreq_srv = self.create_service(srv_type,
-                                                  srv_name,
-                                                  callback=callback)
+        self._trdclsreq_srv = self.create_service(
+            TradeCloseRequestSrv,
+            "trade_close_request",
+            self._on_requested_close,
+            callback_group=self._cb_grp_reent,
+        )
         try:
             # Create service client "OrderCreate"
-            srv_type = OrderCreateSrv
-            srv_name = "order_create"
-            srvcli_ordcre = RosServiceClient(self, srv_type, srv_name)
+            self._srvcli_ordcre = RosServiceClient(
+                self,
+                OrderCreateSrv,
+                "order_create",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "OrderDetails"
-            srv_type = OrderDetailsSrv
-            srv_name = "order_details"
-            srvcli_orddet = RosServiceClient(self, srv_type, srv_name)
+            self._srvcli_orddet = RosServiceClient(
+                self,
+                OrderDetailsSrv,
+                "order_details",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "OrderCancel"
-            srv_type = OrderCancelSrv
-            srv_name = "order_cancel"
-            srvcli_ordcnc = RosServiceClient(self, srv_type, srv_name)
+            self._srvcli_ordcnc = RosServiceClient(
+                self,
+                OrderCancelSrv,
+                "order_cancel",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "TradeDetails"
-            srv_type = TradeDetailsSrv
-            srv_name = "trade_details"
-            srvcli_trddet = RosServiceClient(self, srv_type, srv_name)
+            self._srvcli_trddet = RosServiceClient(
+                self,
+                TradeDetailsSrv,
+                "trade_details",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "TradeCRCDO"
-            srv_type = TradeCRCDOSrv
-            srv_name = "trade_crcdo"
-            srvcli_trdcrc = RosServiceClient(self, srv_type, srv_name)
+            self._srvcli_trdcrc = RosServiceClient(
+                self,
+                TradeCRCDOSrv,
+                "trade_crcdo",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "TradeClose"
-            srv_type = TradeCloseSrv
-            srv_name = "trade_close"
-            srvcli_trdcls = RosServiceClient(self, srv_type, srv_name)
+            self._srvcli_trdcls = RosServiceClient(
+                self,
+                TradeCloseSrv,
+                "trade_close",
+                callback_group=self._cb_grp_mutua_ordcli,
+            )
 
             # Create service client "AccountQuery"
-            srv_type = AccountQuerySrv
-            srv_name = "account_query"
-            self._srvcli_acc = RosServiceClient(self, srv_type, srv_name)
+            self._srvcli_accque = RosServiceClient(
+                self,
+                AccountQuerySrv,
+                "account_query",
+                callback_group=self._cb_grp_mutua_accque,
+            )
 
-        except Exception as err:
+        except RosServiceErrorException as err:
             self.logger.error(err)
-            raise InitializerErrorException("create service client failed.")
-
-        OrderTicket.set_class_variable(srvcli_ordcre,
-                                       srvcli_orddet,
-                                       srvcli_ordcnc,
-                                       srvcli_trddet,
-                                       srvcli_trdcrc,
-                                       srvcli_trdcls,
-                                       self._rosprm.MAX_LEVERAGE.value,
-                                       self._rosprm.MAX_POSITION_COUNT.value,
-                                       self.logger)
+            raise InitializerErrorException("create service client failed.") from err
 
         req = AccountQuerySrv.Request()
         try:
-            rsp = self._srvcli_acc.call(req, timeout_sec=10.0)
-        except Exception as err:
+            rsp = self._srvcli_accque.call(req, timeout_sec=10.0)  # type: ignore[var-annotated]
+        except RosServiceErrorException as err:
             self.logger.error("{}".format(err))
-            raise InitializerErrorException("Call ROS Service Error (AccountQuerySrv)")
+            raise InitializerErrorException(
+                "Call ROS Service Error (AccountQuerySrv)"
+            ) from err
 
-        OrderTicket.set_balance(rsp.balance)
+        self._balance = rsp.balance
 
         # --------------- Create topic subscriber "Pricing" ---------------
-        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
-                                 reliability=QoSReliabilityPolicy.RELIABLE)
-        callback = self._on_sub_pricing_usdjpy
-        self._sub_pri_usdjpy = self.create_subscription(Pricing,
-                                                        "pricing_usdjpy",
-                                                        callback,
-                                                        qos_profile)
+        qos_profile = QoSProfile(
+            history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
+        )
+        self._sub_pri_usdjpy = self.create_subscription(
+            Pricing,
+            "pricing_usdjpy",
+            self._on_sub_pricing_usdjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
+        )
 
-        callback = self._on_sub_pricing_eurjpy
-        self._sub_pri_eurjpy = self.create_subscription(Pricing,
-                                                        "pricing_eurjpy",
-                                                        callback,
-                                                        qos_profile)
+        self._sub_pri_eurjpy = self.create_subscription(
+            Pricing,
+            "pricing_eurjpy",
+            self._on_sub_pricing_eurjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
+        )
 
-        callback = self._on_sub_pricing_gbpjpy
-        self._sub_pri_gbpjpy = self.create_subscription(Pricing,
-                                                        "pricing_gbpjpy",
-                                                        callback,
-                                                        qos_profile)
+        self._sub_pri_gbpjpy = self.create_subscription(
+            Pricing,
+            "pricing_gbpjpy",
+            self._on_sub_pricing_gbpjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
+        )
 
-        callback = self._on_sub_pricing_audjpy
-        self._sub_pri_audjpy = self.create_subscription(Pricing,
-                                                        "pricing_audjpy",
-                                                        callback,
-                                                        qos_profile)
+        self._sub_pri_audjpy = self.create_subscription(
+            Pricing,
+            "pricing_audjpy",
+            self._on_sub_pricing_audjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
+        )
 
-        callback = self._on_sub_pricing_nzdjpy
-        self._sub_pri_nzdjpy = self.create_subscription(Pricing,
-                                                        "pricing_nzdjpy",
-                                                        callback,
-                                                        qos_profile)
+        self._sub_pri_nzdjpy = self.create_subscription(
+            Pricing,
+            "pricing_nzdjpy",
+            self._on_sub_pricing_nzdjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
+        )
 
-        callback = self._on_sub_pricing_cadjpy
-        self._sub_pri_cadjpy = self.create_subscription(Pricing,
-                                                        "pricing_cadjpy",
-                                                        callback,
-                                                        qos_profile)
+        self._sub_pri_cadjpy = self.create_subscription(
+            Pricing,
+            "pricing_cadjpy",
+            self._on_sub_pricing_cadjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
+        )
 
-        callback = self._on_sub_pricing_chfjpy
-        self._sub_pri_chfjpy = self.create_subscription(Pricing,
-                                                        "pricing_chfjpy",
-                                                        callback,
-                                                        qos_profile)
+        self._sub_pri_chfjpy = self.create_subscription(
+            Pricing,
+            "pricing_chfjpy",
+            self._on_sub_pricing_chfjpy,
+            qos_profile,
+            callback_group=self._cb_grp_reent,
+        )
 
         # --------------- Initialize variable ---------------
-        self._tick_price_dict = {}
+        self._tick_price_dict: dict[int, _TickPrice] = {}
         self._tickets: list[OrderTicket] = []
         self._acc_trig = TimeTrigger(minute=0, second=30)
+        self._future: FutureWrapper | None = None
 
         # --------------- Restore ---------------
         # ----- Order scheduler -----
@@ -1101,9 +1157,8 @@ class OrderScheduler(Node):
         except FileNotFoundError:
             pass
         else:
-            Col = ColOrderSchedulerBackup
             sr = df.iloc[0]
-            register_id = int(sr[Col.REGISTER_ID.value])
+            register_id = int(sr[ColOrderSchedulerBackup.REGISTER_ID])
             self.logger.info("========== Restore order scheduler ==========")
             self.logger.info("  - register_id:[{}]".format(register_id))
             OrderTicket.set_register_id(register_id)
@@ -1114,54 +1169,87 @@ class OrderScheduler(Node):
         except FileNotFoundError:
             pass
         else:
-            Col = ColOrderTicketsBackup
             df = df.where(df.notna(), None)
-            self.logger.info("========== Restore order tickes ==========\n{}"
-                             .format(df))
+            self.logger.info(
+                "========== Restore order tickes ==========\n{}".format(df)
+            )
             for _, row in df.iterrows():
                 req = OrderRegisterSrv.Request()
-                tick_price = _TickPrice("", 0, 0)   # Dummy
-                ticket = OrderTicket(req, tick_price, use_restore=True)
+                tick_price = _TickPrice("", 0, 0)  # Dummy
+                ticket = OrderTicket(
+                    self.logger,
+                    self._srvcli_ordcre,
+                    self._srvcli_orddet,
+                    self._srvcli_ordcnc,
+                    self._srvcli_trddet,
+                    self._srvcli_trdcrc,
+                    self._srvcli_trdcls,
+                    self._rosprm_max_leverage.value,
+                    self._rosprm_max_position_count.value,
+                    self._balance,
+                    req,
+                    tick_price,
+                    use_restore=True,
+                )
                 ticket.restore(row)
                 self._tickets.append(ticket)
 
-    def finalize(self):
+        # --------------- Create ROS Timer ---------------
+        self._timer = self.create_timer(
+            1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer
+        )
+
+    def finalize(self) -> None:
         # ---------- write csv ----------
         # ----- Backup order scheduler -----
         register_id = OrderTicket.get_register_id()
-        bk_tbl = [register_id]
-        df = pd.DataFrame(bk_tbl, columns=ColOrderSchedulerBackup.to_list())
-        bk.save_df_csv(self._BUCKUP_FULLPATH_OS, df, index=False, date_format=FMT_YMDHMS)
+        osbk_tbl = [register_id]
+        df = pd.DataFrame(osbk_tbl, columns=ColOrderSchedulerBackup.to_list())
+        bk.save_df_csv(
+            self._BUCKUP_FULLPATH_OS, df, index=False, date_format=FMT_YMDHMS
+        )
 
         # ----- Backup order tickets -----
-        bk_tbl = []
+        otbk_tbl = []
         for ticket in self._tickets:
             rec = ticket.generate_buckup_record()
-            bk_tbl.append(rec)
-        df = pd.DataFrame(bk_tbl, columns=ColOrderTicketsBackup.to_list())
-        bk.save_df_csv(self._BUCKUP_FULLPATH_OT, df, index=False, date_format=FMT_YMDHMS)
+            otbk_tbl.append(rec)
+        df = pd.DataFrame(otbk_tbl, columns=ColOrderTicketsBackup.to_list())
+        bk.save_df_csv(
+            self._BUCKUP_FULLPATH_OT, df, index=False, date_format=FMT_YMDHMS
+        )
 
-    def do_cyclic_event(self) -> None:
-
+    def _do_cyclic_event(self) -> None:
         if self.state == self.States.Idle:
             if self._acc_trig.triggered():
                 self._trans_from_Idle_to_AccountUpdating()
         elif self.state == self.States.AccountUpdating:
-            if self._future.done():
-                rsp = self._future.result()
-                OrderTicket.set_balance(rsp.balance)
-                self._trans_from_AccountUpdating_to_Idle()
+            if self._future is None:
+                self.logger.error(
+                    "{:!^50}".format(" ROS Service [AccountQuerySrv] Error. ")
+                )
+                self.logger.error("  future is None.")
             elif self._future.has_timed_out():
-                self.logger.error("{:!^50}".format(" ROS Service [AccountQuerySrv] Timeout. "))
-                self._trans_from_AccountUpdating_to_Idle()
+                self.logger.error(
+                    "{:!^50}".format(" ROS Service [AccountQuerySrv] Error. ")
+                )
+                self.logger.error("  service call timeout.")
+            elif self._future.done():
+                rsp = self._future.result()  # type: ignore[var-annotated]
+                self._balance = rsp.balance
+            else:
+                self.logger.warn("{:!^50}".format(" Unexpected statement "))
+
+            self._trans_from_AccountUpdating_to_Idle()
         else:
-            pass
+            self.logger.warn("{:!^50}".format(" Unexpected statement "))
 
         # Check weekend close proccess
-        if self._rosprm.ENABLE_WEEKEND_ALL_CLOSE.value:
+        if self._rosprm_use_weekend_all_close.value:
             now = dt.datetime.now()
-            if ((now.weekday() == WeekDay.SAT.value)
-                    and (now.time() > self._rosprm.WEEKEND_ALL_CLOSE_TIME.time)):
+            if (now.weekday() == WeekDay.SAT) and (
+                now.time() > self._rosprm_weekend_all_close_time.time
+            ):
                 for ticket in self._tickets:
                     ticket.enable_weekend_close()
 
@@ -1171,27 +1259,29 @@ class OrderScheduler(Node):
 
         # remove "Complete" States element
         len_bfr = len(self._tickets)
-        self._tickets = [ticket for ticket in self._tickets
-                         if ticket.state != OrderTicket.States.Complete]
+        self._tickets = [
+            ticket
+            for ticket in self._tickets
+            if ticket.state != OrderTicket.States.Complete
+        ]
 
         if len_bfr != len(self._tickets):
-            gc.collect()
             if self.state == self.States.Idle:
                 self._trans_from_Idle_to_AccountUpdating()
 
-    def _on_enter_AccountUpdating(self):
-        self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
+    def _on_enter_AccountUpdating(self) -> None:
+        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+
         req = AccountQuerySrv.Request()
         try:
-            self._future = self._srvcli_acc.call_async(req, timeout_sec=5.0)
-        except Exception as err:
+            self._future = self._srvcli_accque.call_async(req, timeout_sec=5.0)
+        except RosServiceErrorException as err:
             self.logger.error("{:!^50}".format(err))
             self._trans_from_AccountUpdating_to_Idle()
 
-    def _on_order_register(self,
-                           req: SrvTypeRequest,
-                           rsp: SrvTypeResponse
-                           ) -> SrvTypeResponse:
+    def _on_order_register(
+        self, req: SrvTypeRequest, rsp: SrvTypeResponse
+    ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_register]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - inst_id:[{}]".format(req.inst_msg.inst_id))
@@ -1207,15 +1297,17 @@ class OrderScheduler(Node):
 
         rsp.register_id = -1
 
-        if (self._rosprm.ENABLE_WEEKEND_ORDER_STOP.value
-            and (dbg_tm_start.weekday() == WeekDay.SAT.value)
-                and (dbg_tm_start.time() > self._rosprm.WEEKEND_ORDER_STOP_TIME.time)):
+        if (
+            self._rosprm_use_weekend_order_stop.value
+            and (dbg_tm_start.weekday() == WeekDay.SAT)
+            and (dbg_tm_start.time() > self._rosprm_weekend_order_stop_time.time)
+        ):
             self.logger.warn("{:!^50}".format(" Reject order create "))
             self.logger.warn("  - Weekend order stop time has passed ")
             self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
             return rsp
 
-        if len(self._tickets) >= self._rosprm.MAX_POSITION_COUNT.value:
+        if len(self._tickets) >= self._rosprm_max_position_count.value:
             self.logger.warn("{:!^50}".format(" Reject order create "))
             self.logger.warn("  - Positon count is full ")
             self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
@@ -1229,7 +1321,20 @@ class OrderScheduler(Node):
 
         tick_price = self._tick_price_dict[req.inst_msg.inst_id]
         try:
-            ticket = OrderTicket(req, tick_price)
+            ticket = OrderTicket(
+                self.logger,
+                self._srvcli_ordcre,
+                self._srvcli_orddet,
+                self._srvcli_ordcnc,
+                self._srvcli_trddet,
+                self._srvcli_trdcrc,
+                self._srvcli_trdcls,
+                self._rosprm_max_leverage.value,
+                self._rosprm_max_position_count.value,
+                self._balance,
+                req,
+                tick_price,
+            )
         except InitializerErrorException as err:
             self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
             self.logger.error(err)
@@ -1257,8 +1362,9 @@ class OrderScheduler(Node):
             try:
                 tick_price = self._tick_price_dict[req.inst_msg.inst_id]
             except KeyError:
-                self.logger.warn("Key[{}] is not found in a dictionary"
-                                 .format(req.inst_msg.inst_id))
+                self.logger.warn(
+                    "Key[{}] is not found in a dictionary".format(req.inst_msg.inst_id)
+                )
                 return False
 
             if req.ordtyp_msg.order_type == OrderType.MARKET:
@@ -1271,10 +1377,9 @@ class OrderScheduler(Node):
                     return False
         return True
 
-    def _on_requested_close(self,
-                            req: SrvTypeRequest,
-                            rsp: SrvTypeResponse
-                            ) -> SrvTypeResponse:
+    def _on_requested_close(
+        self, req: SrvTypeRequest, rsp: SrvTypeResponse
+    ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_close_request]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - register_id:[{}]".format(req.register_id))
@@ -1297,62 +1402,61 @@ class OrderScheduler(Node):
 
         return rsp
 
-    def _on_sub_pricing_usdjpy(self, msg: Pricing):
+    def _on_sub_pricing_usdjpy(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_USD_JPY] = tick_price
 
-    def _on_sub_pricing_eurjpy(self, msg: Pricing):
+    def _on_sub_pricing_eurjpy(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_EUR_JPY] = tick_price
             self._tick_price_dict[InstMng.INST_EUR_USD] = tick_price
 
-    def _on_sub_pricing_gbpjpy(self, msg: Pricing):
+    def _on_sub_pricing_gbpjpy(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_GBP_JPY] = tick_price
 
-    def _on_sub_pricing_audjpy(self, msg: Pricing):
+    def _on_sub_pricing_audjpy(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_AUD_JPY] = tick_price
 
-    def _on_sub_pricing_nzdjpy(self, msg: Pricing):
+    def _on_sub_pricing_nzdjpy(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_NZD_JPY] = tick_price
 
-    def _on_sub_pricing_cadjpy(self, msg: Pricing):
+    def _on_sub_pricing_cadjpy(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_CAD_JPY] = tick_price
 
-    def _on_sub_pricing_chfjpy(self, msg: Pricing):
+    def _on_sub_pricing_chfjpy(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_CHF_JPY] = tick_price
 
 
-def main(args=None):
+def main(args: list[str] | None = None) -> None:
 
     rclpy.init(args=args)
-    os = OrderScheduler()
+    executor = MultiThreadedExecutor()
+    order_scheduler = OrderScheduler()
 
     try:
-        while rclpy.ok():
-            rclpy.spin_once(os, timeout_sec=1.0)
-            os.do_cyclic_event()
+        rclpy.spin(order_scheduler, executor)
     except KeyboardInterrupt:
         pass
 
-    os.finalize()
-    os.destroy_node()
+    order_scheduler.finalize()
+    order_scheduler.destroy_node()
     rclpy.shutdown()

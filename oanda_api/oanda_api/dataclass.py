@@ -1,10 +1,23 @@
+from typing import Any
 from dataclasses import dataclass
+import datetime as dt
 
 
 @dataclass
-class RosParam():
+class RosParam:
     """
-    Chart tag.
+    ROS parameter elements.
     """
-    name: str = None
-    value = None
+
+    name: str
+    type: int
+    value: Any = None
+
+
+@dataclass
+class RosParamTime(RosParam):
+    """
+    ROS parameter elements for time.
+    """
+
+    time: dt.time = dt.time()

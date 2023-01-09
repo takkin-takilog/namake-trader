@@ -3,13 +3,14 @@ from enum import Enum
 import datetime as dt
 from api_msgs.msg import Instrument as InstApi
 from api_msgs.msg import Granularity as GranApi
-from . import utility as utl
+from . import utils as utl
 
 
 class InstParam(Enum):
     """
     Instrument parameter.
     """
+
     USDJPY = (InstApi.INST_USD_JPY, "usdjpy", "USD/JPY", 3)
     EURJPY = (InstApi.INST_EUR_JPY, "eurjpy", "EUR/JPY", 3)
     EURUSD = (InstApi.INST_EUR_USD, "eurusd", "EUR/USD", 5)
@@ -19,12 +20,13 @@ class InstParam(Enum):
     CADJPY = (InstApi.INST_CAD_JPY, "cadjpy", "CAD/JPY", 3)
     CHFJPY = (InstApi.INST_CHF_JPY, "chfjpy", "CHF/JPY", 3)
 
-    def __init__(self,
-                 msg_id: int,       # ROS message ID
-                 namespace: str,    # ROS message namespace
-                 text: str,         # For text shown on the widget
-                 digit: int,        # Number of digits after the decimal point
-                 ) -> None:
+    def __init__(
+        self,
+        msg_id: int,  # ROS message ID
+        namespace: str,  # ROS message namespace
+        text: str,  # For text shown on the widget
+        digit: int,  # Number of digits after the decimal point
+    ) -> None:
         self.msg_id = msg_id
         self.namespace = namespace
         self.text = text
@@ -34,11 +36,11 @@ class InstParam(Enum):
         self._one_pip_str = format(self._one_pip, "." + str(digit) + "f")
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int):
+    def get_member_by_msgid(cls, msg_id: int) -> object:
         for m in cls:
             if msg_id == m.msg_id:
                 return m
-        return None
+        raise ValueError("msg_id:[{}] is not found in InstParam".format(msg_id))
 
     @property
     def one_pip(self) -> float:
@@ -78,14 +80,15 @@ class InstParam(Enum):
         """
         round a price value to the digits.
         """
-        p = 10 ** self.digit
-        return (physical_value * p * 2 + 1) // 2 / p
+        p = 10**self.digit
+        return float((physical_value * p * 2 + 1) // 2 / p)
 
 
 class GranParam(Enum):
     """
     Granularity parameter.
     """
+
     M1 = (GranApi.GRAN_M1, "m1", "1分足", "1min", dt.timedelta(minutes=1))
     M2 = (GranApi.GRAN_M2, "m2", "2分足", "2min", dt.timedelta(minutes=2))
     M3 = (GranApi.GRAN_M3, "m3", "3分足", "3min", dt.timedelta(minutes=3))
@@ -104,13 +107,14 @@ class GranParam(Enum):
     D = (GranApi.GRAN_D, "d", "日足", "D", dt.timedelta(days=1))
     W = (GranApi.GRAN_W, "w", "週足", "W", dt.timedelta(weeks=1))
 
-    def __init__(self,
-                 msg_id: int,               # ROS message ID
-                 namespace: str,            # ROS message namespace
-                 text: str,                 # For text shown on the widget
-                 freq: str,                 # Frequency
-                 timedelta: dt.timedelta    # Time delta
-                 ) -> None:
+    def __init__(
+        self,
+        msg_id: int,  # ROS message ID
+        namespace: str,  # ROS message namespace
+        text: str,  # For text shown on the widget
+        freq: str,  # Frequency
+        timedelta: dt.timedelta,  # Time delta
+    ) -> None:
         self.msg_id = msg_id
         self.namespace = namespace
         self.text = text
@@ -118,8 +122,8 @@ class GranParam(Enum):
         self.timedelta = timedelta
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int):
+    def get_member_by_msgid(cls, msg_id: int) -> object:
         for m in cls:
             if msg_id == m.msg_id:
                 return m
-        return None
+        raise ValueError("msg_id:[{}] is not found in GranParam".format(msg_id))

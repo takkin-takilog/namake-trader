@@ -1,9 +1,10 @@
 from typing import TypeVar
 import requests
-from requests.exceptions import ConnectionError, ReadTimeout
+import traceback
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
+from rclpy.parameter import Parameter
 from std_msgs.msg import Bool
 from api_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
@@ -11,105 +12,110 @@ from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error
 from .constant import ADD_CIPHERS
 from .parameter import InstParam
-from . import utility as utl
+from .dataclass import RosParam
+from . import utils as utl
+from . import ros_utils as rosutl
 
 MsgType = TypeVar("MsgType")
 
 
 class PricingPublisher(Node):
+    """
+    Pricing publisher class.
+
+    """
 
     def __init__(self) -> None:
         super().__init__("pricing")
 
         # --------------- Set logger lebel ---------------
-        self._logger = super().get_logger()
-        self._logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
+        self.logger = super().get_logger()
+        self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # --------------- Define Constant value ---------------
-        PRMNM_USE_ENV_LIVE = "use_env_live"
-        ENV_PRAC = "env_practice."
-        PRMNM_PRAC_ACCOUNT_NUMBER = ENV_PRAC + "account_number"
-        PRMNM_PRAC_ACCESS_TOKEN = ENV_PRAC + "access_token"
-        ENV_LIVE = "env_live."
-        PRMNM_LIVE_ACCOUNT_NUMBER = ENV_LIVE + "account_number"
-        PRMNM_LIVE_ACCESS_TOKEN = ENV_LIVE + "access_token"
-        ENA_INST = "enable_instrument."
-        PRMNM_CONN_TIMEOUT = "connection_timeout"
+        USE_INST = "use_instrument."
         TPCNM_ACT_FLG = "activate_flag"
 
-        # --------------- Declare ROS parameter ---------------
-        self.declare_parameter(PRMNM_USE_ENV_LIVE)
-        self.declare_parameter(PRMNM_PRAC_ACCOUNT_NUMBER)
-        self.declare_parameter(PRMNM_PRAC_ACCESS_TOKEN)
-        self.declare_parameter(PRMNM_LIVE_ACCOUNT_NUMBER)
-        self.declare_parameter(PRMNM_LIVE_ACCESS_TOKEN)
-        self.declare_parameter(PRMNM_CONN_TIMEOUT)
-        enable_inst_dict = {}
+        # --------------- Initialize ROS parameter ---------------
+        self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
+        self._rosprm_pra_account_number = RosParam(
+            "env_practice.account_number", Parameter.Type.STRING
+        )
+        self._rosprm_pra_access_token = RosParam(
+            "env_practice.access_token", Parameter.Type.STRING
+        )
+        self._rosprm_liv_account_number = RosParam(
+            "env_live.account_number", Parameter.Type.STRING
+        )
+        self._rosprm_liv_access_token = RosParam(
+            "env_live.access_token", Parameter.Type.STRING
+        )
+        self._rosprm_connection_timeout = RosParam(
+            "connection_timeout", Parameter.Type.INTEGER
+        )
+
+        rosutl.set_parameters(self, self._rosprm_use_env_live)
+        rosutl.set_parameters(self, self._rosprm_pra_account_number)
+        rosutl.set_parameters(self, self._rosprm_pra_access_token)
+        rosutl.set_parameters(self, self._rosprm_liv_account_number)
+        rosutl.set_parameters(self, self._rosprm_liv_access_token)
+        rosutl.set_parameters(self, self._rosprm_connection_timeout)
+
+        use_inst_dict: dict[str, int] = {}
         for i in InstParam:
-            param_name = ENA_INST + i.param_name
-            self.declare_parameter(param_name)
-            enable_inst = self.get_parameter(param_name).value
-            enable_inst_dict[i.name] = enable_inst
+            param_name = USE_INST + i.param_name
+            rosprm_use_inst = RosParam(param_name, Parameter.Type.BOOL)
+            rosutl.set_parameters(self, rosprm_use_inst)
+            use_inst_dict[i.name] = rosprm_use_inst.value
 
-        USE_ENV_LIVE = self.get_parameter(PRMNM_USE_ENV_LIVE).value
-        if USE_ENV_LIVE:
-            ACCOUNT_NUMBER = self.get_parameter(PRMNM_LIVE_ACCOUNT_NUMBER).value
-            ACCESS_TOKEN = self.get_parameter(PRMNM_LIVE_ACCESS_TOKEN).value
-        else:
-            ACCOUNT_NUMBER = self.get_parameter(PRMNM_PRAC_ACCOUNT_NUMBER).value
-            ACCESS_TOKEN = self.get_parameter(PRMNM_PRAC_ACCESS_TOKEN).value
-        CONN_TIMEOUT = self.get_parameter(PRMNM_CONN_TIMEOUT).value
-
-        self._logger.debug("[Param]Use Env Live:[{}]".format(USE_ENV_LIVE))
-        self._logger.debug("[Param]Account Number:[{}]".format(ACCOUNT_NUMBER))
-        self._logger.debug("[Param]Access Token:[{}]".format(ACCESS_TOKEN))
-        self._logger.debug("[Param]Connection Timeout:[{}]".format(CONN_TIMEOUT))
-        self._logger.debug("[Param]Enable instrument:")
-        for i in InstParam:
-            enable_inst = enable_inst_dict[i.name]
-            self._logger.debug("  - {}:[{}]".format(i.name.replace("_", "/"),
-                                                    enable_inst))
-
-        # --------------- Initialize ROS topic ---------------
-        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL,
-                                 reliability=QoSReliabilityPolicy.RELIABLE)
-        inst_name_list = []
+        # --------------- Initialize instance variable ---------------
         self._pub_dict = {}
+        self._act_flg = True
+
+        # --------------- Create oandapyV20 api ---------------
+        if self._rosprm_use_env_live.value:
+            access_token = self._rosprm_liv_access_token.value
+            account_number = self._rosprm_liv_account_number.value
+        else:
+            access_token = self._rosprm_pra_access_token.value
+            account_number = self._rosprm_pra_account_number.value
+
+        environment = "live" if self._rosprm_use_env_live.value else "practice"
+
+        if self._rosprm_connection_timeout.value <= 0:
+            request_params = None
+            self.logger.debug("Not set Timeout")
+        else:
+            request_params = {"timeout": self._rosprm_connection_timeout.value}
+
+        self._api = API(
+            access_token=access_token,
+            environment=environment,
+            request_params=request_params,
+        )
+
+        # --------------- Create ROS Communication ---------------
+        qos_profile = QoSProfile(
+            history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
+        )
 
         # Create topic publisher "pricing_*****"
+        inst_name_list = []
         for i in InstParam:
-            enable_inst = enable_inst_dict[i.name]
-            if enable_inst:
-                pub = self.create_publisher(Pricing,
-                                            i.topic_name,
-                                            qos_profile)
+            if use_inst_dict[i.name]:
+                pub = self.create_publisher(Pricing, i.topic_name, qos_profile)
                 self._pub_dict[i.name] = pub.publish
                 inst_name_list.append(i.name)
 
         # Create topic subscriber "ActivateFlag"
-        callback = self._on_subs_act_flg
-        self.__sub_act = self.create_subscription(Bool,
-                                                  TPCNM_ACT_FLG,
-                                                  callback,
-                                                  qos_profile)
+        self._sub_act = self.create_subscription(
+            Bool, TPCNM_ACT_FLG, self._on_subs_act_flg, qos_profile
+        )
 
-        # --------------- Initialize variable ---------------
-        self._act_flg = False
-
-        if CONN_TIMEOUT <= 0:
-            request_params = None
-            self._logger.debug("Not set Timeout")
-        else:
-            request_params = {"timeout": CONN_TIMEOUT}
-
-        environment = "live" if USE_ENV_LIVE else "practice"
-        self._api = API(access_token=ACCESS_TOKEN,
-                        environment=environment,
-                        request_params=request_params)
-
+        # --------------- Initialize oandapyV20 ---------------
         instruments = ",".join(inst_name_list)
         params = {"instruments": instruments}
-        self._pi = pr.PricingInfo(ACCOUNT_NUMBER, params)
+        self._pi = pr.PricingInfo(account_number, params)
 
     def background(self) -> None:
 
@@ -117,21 +123,32 @@ class PricingPublisher(Node):
             try:
                 self._request()
             except V20Error as err:
-                self._logger.error("{:!^50}".format(" V20Error "))
-                self._logger.error("{}".format(err))
-            except ConnectionError as err:
-                self._logger.error("{:!^50}".format(" ConnectionError "))
-                self._logger.error("{}".format(err))
-            except ReadTimeout as err:
-                self._logger.error("{:!^50}".format(" ReadTimeout "))
-                self._logger.error("{}".format(err))
-            except Exception as err:
-                self._logger.error("{:!^50}".format(" OthersError "))
-                self._logger.error("{}".format(err))
+                self.logger.error("{:!^50}".format(" Oanda-V20 Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
+            except requests.exceptions.ConnectionError as err:
+                self.logger.error("{:!^50}".format(" HTTP-Connection Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
+            except requests.exceptions.Timeout as err:
+                self.logger.error("{:!^50}".format(" HTTP-Timeout Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
+            except requests.exceptions.RequestException as err:
+                self.logger.error("{:!^50}".format(" HTTP-Request Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
+            except KeyboardInterrupt as err:
+                raise err
+            except BaseException as err:
+                self.logger.error("{:!^50}".format(" Unexpected Error "))
+                self.logger.error("{}".format(err))
+                traceback.print_exc()
 
             rclpy.spin_once(self, timeout_sec=0)
 
     def _on_subs_act_flg(self, msg: MsgType) -> None:
+
         if msg.data:
             self._act_flg = True
         else:
@@ -158,11 +175,11 @@ class PricingPublisher(Node):
                 msg.closeout_bid = float(price["closeoutBid"])
                 msg.closeout_ask = float(price["closeoutAsk"])
                 msg.tradeable = price["tradeable"]
-                # Publish topics
+                # ---------- Publish topics ----------
                 self._pub_dict[price["instrument"]](msg)
 
 
-def main(args=None):
+def main(args: list[str] | None = None) -> None:
 
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 

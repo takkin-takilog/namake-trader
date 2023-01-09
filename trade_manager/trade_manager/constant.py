@@ -1,5 +1,4 @@
 import datetime as dt
-from enum import Enum, unique
 from trade_manager_msgs.msg import Instrument as InstMng
 from trade_manager_msgs.msg import Granularity as GranMng
 from api_msgs.msg import Instrument as InstApi
@@ -15,11 +14,29 @@ MAX_TIME = dt.time(23, 59, 59)
 BUCKUP_DIR = "/trade_backup/"
 
 
-@unique
-class WeekDay(Enum):
+class ConstantGroup:
+    """
+    Container class for grouped constants.
+    """
+
+    @classmethod
+    def to_list(cls) -> list:
+        """
+        Returns all constant values in class with the attribute requirements.
+
+        """
+        member = []
+        for k, v in cls.__dict__.items():
+            if not k.startswith("__") and not callable(v):
+                member.append(v)
+        return member
+
+
+class WeekDay(ConstantGroup):
     """
     Weekday.
     """
+
     MON = 0  # Monday
     TUE = 1  # Tuesday
     WED = 2  # Wednesday
@@ -29,10 +46,11 @@ class WeekDay(Enum):
     SUN = 6  # Sunday
 
 
-class Transitions(Enum):
+class Transitions(ConstantGroup):
     """
     Transitions const string.
     """
+
     NAME = "name"
     CHILDREN = "children"
     ON_ENTER = "on_enter"
@@ -47,10 +65,11 @@ class Transitions(Enum):
     UNLESS = "unless"
 
 
-class CandleColumnNames(Enum):
+class CandleColumnNames(ConstantGroup):
     """
     Candle column names.
     """
+
     DATETIME = "datetime"
     ASK_OP = "ask_op"
     ASK_HI = "ask_hi"
@@ -66,10 +85,6 @@ class CandleColumnNames(Enum):
     MID_CL = "mid_cl"
     COMP = "comp"
 
-    @classmethod
-    def to_list(cls):
-        return [m.value for m in cls]
-
 
 INST_DICT = {
     InstMng.INST_USD_JPY: InstApi.INST_USD_JPY,
@@ -79,7 +94,7 @@ INST_DICT = {
     InstMng.INST_AUD_JPY: InstApi.INST_AUD_JPY,
     InstMng.INST_NZD_JPY: InstApi.INST_NZD_JPY,
     InstMng.INST_CAD_JPY: InstApi.INST_CAD_JPY,
-    InstMng.INST_CHF_JPY: InstApi.INST_CHF_JPY
+    InstMng.INST_CHF_JPY: InstApi.INST_CHF_JPY,
 }
 
 GRAN_DICT = {
@@ -103,5 +118,5 @@ GRAN_DICT = {
     GranMng.GRAN_H8: GranApi.GRAN_H8,
     GranMng.GRAN_H12: GranApi.GRAN_H12,
     GranMng.GRAN_D: GranApi.GRAN_D,
-    GranMng.GRAN_W: GranApi.GRAN_W
+    GranMng.GRAN_W: GranApi.GRAN_W,
 }
