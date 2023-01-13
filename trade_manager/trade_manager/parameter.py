@@ -36,7 +36,7 @@ class InstParam(Enum):
         self._one_pip_str = format(self._one_pip, "." + str(digit) + "f")
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int) -> object:
+    def get_member_by_msgid(cls, msg_id: int) -> "InstParam":
         for m in cls:
             if msg_id == m.msg_id:
                 return m
@@ -116,13 +116,13 @@ class GranParam(Enum):
         timedelta: dt.timedelta,  # Time delta
     ) -> None:
         self.msg_id = msg_id
-        self.namespace = namespace
+        self.nameGranParamspace = namespace
         self.text = text
         self.freq = freq
         self.timedelta = timedelta
 
     @classmethod
-    def get_member_by_msgid(cls, msg_id: int) -> object:
+    def get_member_by_msgid(cls, msg_id: int) -> "GranParam":
         for m in cls:
             if msg_id == m.msg_id:
                 return m
