@@ -116,7 +116,7 @@ class GranParam(Enum):
         timedelta: dt.timedelta,  # Time delta
     ) -> None:
         self.msg_id = msg_id
-        self.nameGranParamspace = namespace
+        self.namespace = namespace
         self.text = text
         self.freq = freq
         self.timedelta = timedelta
