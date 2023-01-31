@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 import datetime as dt
 import pandas as pd
+import numpy as np
 from transitions import Machine
 
 # from transitions.extensions.factory import GraphMachine as Machine
@@ -463,11 +464,16 @@ class OrderTicket:
         Col = ColOrderTicketsBackup
 
         entry_exp_time = rec[Col.ENTRY_EXP_TIME]
-        if entry_exp_time is not None:
+        if (entry_exp_time is not None) and (not np.isnan(entry_exp_time)):
             entry_exp_time = dt.datetime.strptime(entry_exp_time, FMT_YMDHMS)
+        else:
+            entry_exp_time = None
+
         exit_exp_time = rec[Col.EXIT_EXP_TIME]
-        if exit_exp_time is not None:
+        if (exit_exp_time is not None) and (not np.isnan(exit_exp_time)):
             exit_exp_time = dt.datetime.strptime(exit_exp_time, FMT_YMDHMS)
+        else:
+            exit_exp_time = None
 
         self._register_id = int(rec[Col.REGISTER_ID])
         self._order_id = int(rec[Col.ORDER_ID])
