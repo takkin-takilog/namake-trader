@@ -545,7 +545,7 @@ class _CandlesElement:
 
         with self._lock:
             if not df_comp.empty:
-                df_comp.drop(ColNames.COMP, axis=1, inplace=True)
+                df_comp.drop(columns=ColNames.COMP, inplace=True)
                 if self._df_comp.empty:
                     self._df_comp = df_comp
                 else:
@@ -560,7 +560,7 @@ class _CandlesElement:
             if df_prov.empty:
                 self._df_prov = pd.DataFrame()
             else:
-                df_prov.drop(ColNames.COMP, axis=1, inplace=True)
+                df_prov.drop(columns=ColNames.COMP, inplace=True)
                 self._df_prov = df_prov
 
 
