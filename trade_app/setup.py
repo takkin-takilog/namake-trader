@@ -1,6 +1,6 @@
 from setuptools import setup  # type: ignore[import]
 
-package_name = "trade_manager"
+package_name = "trade_app"
 
 setup(
     name=package_name,
@@ -14,13 +14,10 @@ setup(
     zip_safe=True,
     maintainer="takkin",
     maintainer_email="takkin.takilog@gmail.com",
-    description="The trade_manager package",
+    description="The trade_app package",
     license="MIT",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": [
-            "order_scheduler = " + package_name + ".order_scheduler:main",
-            "candles_store = " + package_name + ".candles_store:main",
-        ],
+        "console_scripts": ["ex_sma = trade_app.app_sma:main"],
     },
 )

@@ -1,8 +1,8 @@
 import math
 from enum import Enum
 import datetime as dt
-from api_msgs.msg import Instrument as InstApi
-from api_msgs.msg import Granularity as GranApi
+from api_server_msgs.msg import Instrument as InstApi
+from api_server_msgs.msg import Granularity as GranApi
 from . import utils as utl
 
 

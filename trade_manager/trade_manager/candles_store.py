@@ -15,9 +15,9 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.parameter import Parameter
-from api_msgs.srv import CandlesQuerySrv
-from api_msgs.msg import Instrument as InstApi
-from api_msgs.msg import Granularity as GranApi
+from api_server_msgs.srv import CandlesQuerySrv
+from api_server_msgs.msg import Instrument as InstApi
+from api_server_msgs.msg import Granularity as GranApi
 from trade_manager_msgs.srv import CandlesByDatetimeSrv
 from trade_manager_msgs.srv import CandlesByLengthSrv
 from trade_manager_msgs.msg import Candle
