@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 import pandas as pd
 import datetime as dt
@@ -278,9 +277,7 @@ class OhlcStore:
 
         # --------------- Initialize ROS service ---------------
         # Create service client "CandlesByLength"
-        srv_type = CandlesByLengthSrv
-        srv_name = "candles_by_length"
-        self._srvcli = RosServiceClient(node, srv_type, srv_name)
+        self._srvcli = RosServiceClient(node, CandlesByLengthSrv, "candles_by_length")
 
         # --------------- Initialize OHLC DataFrame ---------------
         req = CandlesByLengthSrv.Request()
@@ -423,7 +420,6 @@ class OhlcStore:
     def update_incomp_ohlc(
         self, time: dt.datetime, tick_price_ask: float, tick_price_bid: float
     ) -> None:
-        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
         self._tfc.set_price(time, tick_price_ask, tick_price_bid)
         ohlc_series = self._tfc.df_ohlc.iloc[-1]
@@ -440,7 +436,6 @@ class OhlcStore:
         self._latest_tick_price_bid = tick_price_bid
 
     def _on_do_idle(self) -> None:
-        # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
 
         # ---------- Verify "next_update_time" ----------
         now = dt.datetime.now()
@@ -464,7 +459,7 @@ class OhlcStore:
                 self.logger.debug("  - target time:[{}])".format(latest_time))
 
     def _on_enter_updating(self) -> None:
-        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
+
         self._future = None
 
         req = CandlesByLengthSrv.Request()
@@ -478,7 +473,6 @@ class OhlcStore:
             self.logger.error("[{}]".format(err))
 
     def _on_do_updating(self) -> None:
-        self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
 
         if self._future is None:
             self._trans_self_updating()
@@ -539,7 +533,6 @@ class OhlcStore:
         self._trans_from_updating_to_idle()
 
     def _on_exit_updating(self) -> None:
-        # self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         pass
 
     def _delete_overflowing_record(self, df_ohlc: pd.DataFrame) -> pd.DataFrame:

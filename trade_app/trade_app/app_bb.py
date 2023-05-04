@@ -360,7 +360,7 @@ class TradeItem:
                 self._future = self._request_order(is_long_order=True)
             except RosServiceErrorException as err:
                 self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
-                self.logger.error([{}].format(err))
+                self.logger.error("{}".format(err))
                 self._is_valid_trade = False
 
     def _on_after_action_from_long_to_standby(self) -> None:
@@ -373,7 +373,7 @@ class TradeItem:
                     self.logger.error(
                         "{:!^50}".format(" Call Async ROS Service Error ")
                     )
-                    self.logger.error([{}].format(err))
+                    self.logger.error("{}".format(err))
             else:
                 self.logger.warn("{:!^50}".format(" Unexpected statement "))
 
@@ -426,7 +426,7 @@ class TradeItem:
                 self._future = self._request_order(is_long_order=False)
             except RosServiceErrorException as err:
                 self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
-                self.logger.error([{}].format(err))
+                self.logger.error("{}".format(err))
                 self._is_valid_trade = False
 
     def _on_after_action_from_short_to_standby(self) -> None:
