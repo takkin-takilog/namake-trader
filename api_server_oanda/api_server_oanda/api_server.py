@@ -7,6 +7,7 @@ import datetime as dt
 from decimal import Decimal, ROUND_HALF_UP
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from rclpy.parameter import Parameter
@@ -1123,8 +1124,9 @@ def main(args: list[str] | None = None) -> None:
 
     try:
         rclpy.spin(api_server, executor)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
-
-    api_server.destroy_node()
-    rclpy.shutdown()
+    else:
+        rclpy.shutdown()
+    finally:
+        api_server.destroy_node()

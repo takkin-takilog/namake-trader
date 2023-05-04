@@ -1,0 +1,31 @@
+pricing_publisher:
+  ros__parameters:
+    use_env_live: false
+    env_practice:
+      account_number: "***-***-*******-***"	# Replace your account_number (Demo account)
+      access_token: "********************************-********************************"	# Replace your access_token (Demo account)
+    env_live:
+      account_number: "***-***-*******-***"	# Replace your account_number (Live account)
+      access_token: "********************************-********************************"	# Replace your access_token (Live account)
+    use_instrument:
+      usdjpy: true
+      eurjpy: true
+      eurusd: true
+      gbpjpy: false
+      audjpy: false
+      nzdjpy: false
+      cadjpy: false
+      chfjpy: false
+    connection_timeout: 10  # [sec]
+
+api_server:
+  ros__parameters:
+    use_env_live: false
+    env_practice:
+      account_number: "***-***-*******-***"	# Replace your account_number (Demo account)
+      access_token: "********************************-********************************"	# Replace your access_token (Demo account)
+    env_live:
+      account_number: "***-***-*******-***"	# Replace your account_number (Live account)
+      access_token: "********************************-********************************"	# Replace your access_token (Live account)
+    connection_timeout: 10  # [sec]
+

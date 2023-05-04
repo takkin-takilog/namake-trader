@@ -1,0 +1,18 @@
+usdjpy/m1/app_bb:
+  ros__parameters:
+    instrument: "usdjpy"
+    granularity: "m1"
+    units: 0
+    sma_span_list: [20]
+    std_coef_list: [2.0]
+    take_profit_pips_list: [50]
+
+eurusd/h1/app_bb:
+  ros__parameters:
+    instrument: "eurusd"
+    granularity: "h1"
+    units: 0
+    sma_span_list: [25, 75]
+    std_coef_list: [2.5, 3.0]
+    take_profit_pips_list: [200, 300]
+

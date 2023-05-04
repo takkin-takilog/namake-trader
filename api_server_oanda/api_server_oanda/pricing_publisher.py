@@ -2,6 +2,7 @@ from typing import TypeVar
 import requests
 import traceback
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.parameter import Parameter
@@ -205,8 +206,9 @@ def main(args: list[str] | None = None) -> None:
         while rclpy.ok():
             rclpy.spin_once(pricing_publisher, timeout_sec=1.0)
             pricing_publisher.background()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
-
-    pricing_publisher.destroy_node()
-    rclpy.shutdown()
+    else:
+        rclpy.shutdown()
+    finally:
+        pricing_publisher.destroy_node()

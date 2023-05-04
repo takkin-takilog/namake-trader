@@ -11,6 +11,7 @@ from transitions.extensions.factory import GraphMachine
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
@@ -970,8 +971,9 @@ def main(args: list[str] | None = None) -> None:
 
     try:
         rclpy.spin(candles_store, executor)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
-
-    candles_store.destroy_node()
-    rclpy.shutdown()
+    else:
+        rclpy.shutdown()
+    finally:
+        candles_store.destroy_node()

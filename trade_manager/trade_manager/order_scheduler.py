@@ -13,6 +13,7 @@ from transitions.extensions.factory import GraphMachine
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
@@ -1460,9 +1461,10 @@ def main(args: list[str] | None = None) -> None:
 
     try:
         rclpy.spin(order_scheduler, executor)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
-
-    order_scheduler.finalize()
-    order_scheduler.destroy_node()
-    rclpy.shutdown()
+    else:
+        rclpy.shutdown()
+    finally:
+        order_scheduler.finalize()
+        order_scheduler.destroy_node()

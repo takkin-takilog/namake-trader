@@ -18,6 +18,8 @@ setup(
     license="MIT",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": ["ex_sma = trade_app.app_sma:main"],
+        "console_scripts": [
+            "app_bb = trade_app.app_bb:main",
+        ],
     },
 )
