@@ -48,8 +48,8 @@ candles_store:
     next_updatetime_ofs_sec: 6	# sec
     retry_interval_min: 1 # min
     fail_interval_min: 10 # min
-	retry_count_max: 30
-	self_retry_count_max: 2
+    retry_count_max: 30
+    self_retry_count_max: 2
 
 order_scheduler:
   ros__parameters:
