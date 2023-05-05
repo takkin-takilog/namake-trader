@@ -659,9 +659,9 @@ class AppBollingerBand(Node):
         # Create topic subscriber "LatestCandle"
         inst_name = self._inst_param.namespace
         gran_name = self._gran_param.namespace
-        TPCNM_LATEST_CANDLE = inst_name + "_" + gran_name + "_latest_candle"
+        topic = inst_name + "_" + gran_name + "_latest_candle"
         self._sub_lc = self.create_subscription(
-            LatestCandle, TPCNM_LATEST_CANDLE, self._on_sub_latest_candle, qos_profile
+            LatestCandle, topic, self._on_sub_latest_candle, qos_profile
         )
 
         # --------------- Instantiated OhlcStore ---------------
