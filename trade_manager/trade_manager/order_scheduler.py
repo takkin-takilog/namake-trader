@@ -920,8 +920,6 @@ class OrderScheduler(Node):
         self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # --------------- Define constant value ---------------
-        self._ACCOUNT_UPDATETIME_SEC = 30
-
         buckup_dir = os.path.expanduser("~") + BUCKUP_DIR
         filename_os = "bak_order_scheduler.csv"
         filename_ot = "bak_order_tickets.csv"
