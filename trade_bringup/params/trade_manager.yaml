@@ -45,6 +45,11 @@ candles_store:
       h12: 180     # 3 Months (2 * 30 * 3)
       d: 365       # 1 Year (365 * 1)
       w: 48        # 1 Year (4 * 12 * 1)
+    next_updatetime_ofs_sec: 6	# sec
+    retry_interval_min: 1 # min
+    fail_interval_min: 10 # min
+	retry_count_max: 30
+	self_retry_count_max: 2
 
 order_scheduler:
   ros__parameters:

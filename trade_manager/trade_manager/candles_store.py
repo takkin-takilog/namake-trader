@@ -58,6 +58,11 @@ class _CandlesElement:
         inst_id: int,
         gran_id: int,
         gran_leng: int,
+        next_updatetime_ofs_sec: int,
+        retry_interval_min: int,
+        fail_interval_min: int,
+        retry_count_max: int,
+        self_retry_count_max: int,
     ) -> None:
 
         # --------------- Set logger lebel ---------------
@@ -66,11 +71,11 @@ class _CandlesElement:
         # --------------- Define Constant value ---------------
         gran_param = GranParam.get_member_by_msgid(gran_id)
         self._GRAN_INTERVAL = gran_param.timedelta
-        self._NEXT_UPDATETIME_OFS_SEC = dt.timedelta(seconds=5)
-        self._RETRY_INTERVAL = dt.timedelta(minutes=1)
-        self._FAIL_INTERVAL = dt.timedelta(minutes=10)
-        self._RETRY_COUNT_MAX = 30
-        self._SELF_RETRY_COUNT_MAX = 2
+        self._NEXT_UPDATETIME_OFS_SEC = dt.timedelta(seconds=next_updatetime_ofs_sec)
+        self._RETRY_INTERVAL = dt.timedelta(minutes=retry_interval_min)
+        self._FAIL_INTERVAL = dt.timedelta(minutes=fail_interval_min)
+        self._RETRY_COUNT_MAX = retry_count_max
+        self._SELF_RETRY_COUNT_MAX = self_retry_count_max
 
         # --------------- Create State Machine ---------------
         states = [
@@ -637,6 +642,21 @@ class CandlesStore(Node):
         self._rosprm_length_h12 = RosParam("data_length.h12", Parameter.Type.INTEGER)
         self._rosprm_length_d = RosParam("data_length.d", Parameter.Type.INTEGER)
         self._rosprm_length_w = RosParam("data_length.w", Parameter.Type.INTEGER)
+        self._rosprm_next_updatetime_ofs_sec = RosParam(
+            "next_updatetime_ofs_sec", Parameter.Type.INTEGER
+        )
+        self._rosprm_retry_interval_min = RosParam(
+            "retry_interval_min", Parameter.Type.INTEGER
+        )
+        self._rosprm_fail_interval_min = RosParam(
+            "fail_interval_min", Parameter.Type.INTEGER
+        )
+        self._rosprm_retry_count_max = RosParam(
+            "retry_count_max", Parameter.Type.INTEGER
+        )
+        self._rosprm_self_retry_count_max = RosParam(
+            "self_retry_count_max", Parameter.Type.INTEGER
+        )
 
         rosutl.set_parameters(self, self._rosprm_use_inst_usdjpy)
         rosutl.set_parameters(self, self._rosprm_use_inst_eurjpy)
@@ -680,6 +700,11 @@ class CandlesStore(Node):
         rosutl.set_parameters(self, self._rosprm_length_h12)
         rosutl.set_parameters(self, self._rosprm_length_d)
         rosutl.set_parameters(self, self._rosprm_length_w)
+        rosutl.set_parameters(self, self._rosprm_next_updatetime_ofs_sec)
+        rosutl.set_parameters(self, self._rosprm_retry_interval_min)
+        rosutl.set_parameters(self, self._rosprm_fail_interval_min)
+        rosutl.set_parameters(self, self._rosprm_retry_count_max)
+        rosutl.set_parameters(self, self._rosprm_self_retry_count_max)
 
         # --------------- Initialize ROS callback group ---------------
         self._cb_grp_reent = ReentrantCallbackGroup()
@@ -703,7 +728,16 @@ class CandlesStore(Node):
         for gran_id, gran_leng in self._use_gran_list():
             for inst_id in self._use_inst_list():
                 candles_elem = _CandlesElement(
-                    self, srvcli, inst_id, gran_id, gran_leng
+                    self,
+                    srvcli,
+                    inst_id,
+                    gran_id,
+                    gran_leng,
+                    self._rosprm_next_updatetime_ofs_sec.value,
+                    self._rosprm_retry_interval_min.value,
+                    self._rosprm_fail_interval_min.value,
+                    self._rosprm_retry_count_max.value,
+                    self._rosprm_self_retry_count_max.value,
                 )
                 self._candles_elem_list.append(candles_elem)
 
