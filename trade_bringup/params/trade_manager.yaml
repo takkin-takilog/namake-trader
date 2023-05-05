@@ -59,4 +59,5 @@ order_scheduler:
     weekend_order_stop_time: 0:00:00  # "%H:%M:%S"
     use_weekend_all_close: false
     weekend_all_close_time: 0:00:00  # "%H:%M:%S"
-
+    account_updatetime_sec: 30	# sec
+    poll_interval_min: 1	# min

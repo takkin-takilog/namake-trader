@@ -131,6 +131,7 @@ class OrderTicket:
         srvcli_trdcls: RosServiceClient,
         max_leverage: float,
         max_position_count: int,
+        poll_interval_min: int,
         balance: int,
         req: SrvTypeRequest,
         tick_price: _TickPrice,
@@ -140,7 +141,7 @@ class OrderTicket:
         self.logger = logger
 
         # --------------- Define Constant value ---------------
-        self._POL_INTERVAL = dt.timedelta(minutes=1)
+        self._POL_INTERVAL = dt.timedelta(minutes=poll_interval_min)
 
         # --------------- Set instance ---------------
         self._srvcli_ordcre = srvcli_ordcre
@@ -944,6 +945,12 @@ class OrderScheduler(Node):
         self._rosprm_weekend_all_close_time = RosParamTime(
             "weekend_all_close_time", Parameter.Type.STRING
         )
+        self._rosprm_account_updatetime_sec = RosParam(
+            "account_updatetime_sec", Parameter.Type.INTEGER
+        )
+        self._rosprm_poll_interval_min = RosParam(
+            "poll_interval_min", Parameter.Type.INTEGER
+        )
 
         rosutl.set_parameters(self, self._rosprm_max_leverage)
         rosutl.set_parameters(self, self._rosprm_max_position_count)
@@ -951,6 +958,8 @@ class OrderScheduler(Node):
         rosutl.set_parameters(self, self._rosprm_weekend_order_stop_time)
         rosutl.set_parameters(self, self._rosprm_use_weekend_all_close)
         rosutl.set_parameters(self, self._rosprm_weekend_all_close_time)
+        rosutl.set_parameters(self, self._rosprm_account_updatetime_sec)
+        rosutl.set_parameters(self, self._rosprm_poll_interval_min)
 
         # --------------- Create State Machine ---------------
         states = [
@@ -1154,7 +1163,9 @@ class OrderScheduler(Node):
         # --------------- Initialize variable ---------------
         self._tick_price_dict: dict[int, _TickPrice] = {}
         self._tickets: list[OrderTicket] = []
-        self._acc_trig = TimeTrigger(minute=0, second=30)
+        self._acc_trig = TimeTrigger(
+            minute=0, second=self._rosprm_account_updatetime_sec.value
+        )
         self._future: FutureWrapper | None = None
 
         # --------------- Restore ---------------
@@ -1193,6 +1204,7 @@ class OrderScheduler(Node):
                     self._srvcli_trdcls,
                     self._rosprm_max_leverage.value,
                     self._rosprm_max_position_count.value,
+                    self._rosprm_poll_interval_min.value,
                     self._balance,
                     req,
                     tick_price,
@@ -1338,6 +1350,7 @@ class OrderScheduler(Node):
                 self._srvcli_trdcls,
                 self._rosprm_max_leverage.value,
                 self._rosprm_max_position_count.value,
+                self._rosprm_poll_interval_min.value,
                 self._balance,
                 req,
                 tick_price,
