@@ -46,7 +46,7 @@ def generate_launch_description() -> LaunchDescription:
     # Declare the launch options
     ld.add_action(declare_use_sim_time_cmd)
 
-    # Add the actions to launch all of the navigation nodes
+    # Add the actions to launch all of nodes
     ld.add_action(bringup_cmd_group)
 
     return ld
