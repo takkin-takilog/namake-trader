@@ -917,7 +917,6 @@ class OrderScheduler(Node):
 
         # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
-        self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # --------------- Define constant value ---------------
         buckup_dir = os.path.expanduser("~") + BUCKUP_DIR

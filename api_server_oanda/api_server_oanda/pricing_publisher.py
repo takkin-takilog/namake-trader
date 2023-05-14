@@ -31,7 +31,6 @@ class PricingPublisher(Node):
 
         # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
-        self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # --------------- Define Constant value ---------------
         USE_INST = "use_instrument."

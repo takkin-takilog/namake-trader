@@ -525,9 +525,7 @@ class AppBollingerBand(Node):
         super().__init__("app_bb")
 
         # --------------- Set logger lebel ---------------
-        logger = super().get_logger()
-        logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
-        self.logger = logger
+        self.logger = super().get_logger()
 
         # --------------- Define constant value ---------------
         self._SUBS_TIMEOUT_SEC = 10.0

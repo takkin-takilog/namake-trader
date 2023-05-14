@@ -52,7 +52,6 @@ class ApiServer(Node):
 
         # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
-        self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # --------------- Define Constant value ---------------
         self._MAX_SIZE = 4999
