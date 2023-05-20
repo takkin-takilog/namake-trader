@@ -1,0 +1,14 @@
+[flake8]
+max-line-length = 88
+extend-ignore =
+	# Whitespace before ':'
+	E203,
+	# Line too long
+	E501,
+	# Line break occurred before a binary operator
+	W503,
+	# Line break occurred after a binary operator
+	W504,
+exclude =
+	./test,
+	setup.py,

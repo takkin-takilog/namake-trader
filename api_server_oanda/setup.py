@@ -1,6 +1,6 @@
 from setuptools import setup  # type: ignore[import]
 
-package_name = "trade_manager"
+package_name = "api_server_oanda"
 
 setup(
     name=package_name,
@@ -14,13 +14,13 @@ setup(
     zip_safe=True,
     maintainer="takkin",
     maintainer_email="takkin.takilog@gmail.com",
-    description="The trade_manager package",
+    description="The api_server_oanda package",
     license="MIT",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "order_scheduler = " + package_name + ".order_scheduler:main",
-            "candles_store = " + package_name + ".candles_store:main",
+            "pricing_publisher = " + package_name + ".pricing_publisher:main",
+            "api_server = " + package_name + ".api_server:main",
         ],
     },
 )

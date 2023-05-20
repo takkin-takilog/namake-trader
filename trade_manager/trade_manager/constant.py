@@ -1,8 +1,8 @@
 import datetime as dt
 from trade_manager_msgs.msg import Instrument as InstMng
 from trade_manager_msgs.msg import Granularity as GranMng
-from api_msgs.msg import Instrument as InstApi
-from api_msgs.msg import Granularity as GranApi
+from api_server_msgs.msg import Instrument as InstApi
+from api_server_msgs.msg import Granularity as GranApi
 
 FMT_YMDHMSF = "%Y-%m-%dT%H:%M:%S.%f"
 FMT_YMDHMS = "%Y-%m-%dT%H:%M:%S"

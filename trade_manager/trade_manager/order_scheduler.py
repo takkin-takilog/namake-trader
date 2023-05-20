@@ -13,18 +13,19 @@ from transitions.extensions.factory import GraphMachine
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.parameter import Parameter
 from std_msgs.msg import Bool
-from api_msgs.msg import Pricing
+from api_server_msgs.msg import Pricing
 from trade_manager_msgs.msg import OrderType, OrderDir
 from trade_manager_msgs.srv import OrderRegisterSrv
 from trade_manager_msgs.srv import TradeCloseRequestSrv
 from trade_manager_msgs.msg import Instrument as InstMng
-from api_msgs.srv import AccountQuerySrv
-from api_msgs.srv import (
+from api_server_msgs.srv import AccountQuerySrv
+from api_server_msgs.srv import (
     OrderCreateSrv,
     TradeDetailsSrv,
     TradeCRCDOSrv,
@@ -32,9 +33,9 @@ from api_msgs.srv import (
     OrderDetailsSrv,
     OrderCancelSrv,
 )
-from api_msgs.msg import OrderState, TradeState
-from api_msgs.msg import OrderType as ApiOrderType
-from api_msgs.msg import FailReasonCode as frc
+from api_server_msgs.msg import OrderState, TradeState
+from api_server_msgs.msg import OrderType as ApiOrderType
+from api_server_msgs.msg import FailReasonCode as frc
 from .constant import FMT_YMDHMS, FMT_YMDHMSF
 from .constant import BUCKUP_DIR
 from .constant import ConstantGroup
@@ -130,6 +131,7 @@ class OrderTicket:
         srvcli_trdcls: RosServiceClient,
         max_leverage: float,
         max_position_count: int,
+        poll_interval_min: int,
         balance: int,
         req: SrvTypeRequest,
         tick_price: _TickPrice,
@@ -139,7 +141,7 @@ class OrderTicket:
         self.logger = logger
 
         # --------------- Define Constant value ---------------
-        self._POL_INTERVAL = dt.timedelta(minutes=1)
+        self._POL_INTERVAL = dt.timedelta(minutes=poll_interval_min)
 
         # --------------- Set instance ---------------
         self._srvcli_ordcre = srvcli_ordcre
@@ -915,11 +917,8 @@ class OrderScheduler(Node):
 
         # --------------- Set logger lebel ---------------
         self.logger = super().get_logger()
-        self.logger.set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # --------------- Define constant value ---------------
-        self._ACCOUNT_UPDATETIME_SEC = 30
-
         buckup_dir = os.path.expanduser("~") + BUCKUP_DIR
         filename_os = "bak_order_scheduler.csv"
         filename_ot = "bak_order_tickets.csv"
@@ -943,6 +942,12 @@ class OrderScheduler(Node):
         self._rosprm_weekend_all_close_time = RosParamTime(
             "weekend_all_close_time", Parameter.Type.STRING
         )
+        self._rosprm_account_updatetime_sec = RosParam(
+            "account_updatetime_sec", Parameter.Type.INTEGER
+        )
+        self._rosprm_poll_interval_min = RosParam(
+            "poll_interval_min", Parameter.Type.INTEGER
+        )
 
         rosutl.set_parameters(self, self._rosprm_max_leverage)
         rosutl.set_parameters(self, self._rosprm_max_position_count)
@@ -950,6 +955,8 @@ class OrderScheduler(Node):
         rosutl.set_parameters(self, self._rosprm_weekend_order_stop_time)
         rosutl.set_parameters(self, self._rosprm_use_weekend_all_close)
         rosutl.set_parameters(self, self._rosprm_weekend_all_close_time)
+        rosutl.set_parameters(self, self._rosprm_account_updatetime_sec)
+        rosutl.set_parameters(self, self._rosprm_poll_interval_min)
 
         # --------------- Create State Machine ---------------
         states = [
@@ -1153,7 +1160,9 @@ class OrderScheduler(Node):
         # --------------- Initialize variable ---------------
         self._tick_price_dict: dict[int, _TickPrice] = {}
         self._tickets: list[OrderTicket] = []
-        self._acc_trig = TimeTrigger(minute=0, second=30)
+        self._acc_trig = TimeTrigger(
+            minute=0, second=self._rosprm_account_updatetime_sec.value
+        )
         self._future: FutureWrapper | None = None
 
         # --------------- Restore ---------------
@@ -1192,6 +1201,7 @@ class OrderScheduler(Node):
                     self._srvcli_trdcls,
                     self._rosprm_max_leverage.value,
                     self._rosprm_max_position_count.value,
+                    self._rosprm_poll_interval_min.value,
                     self._balance,
                     req,
                     tick_price,
@@ -1337,6 +1347,7 @@ class OrderScheduler(Node):
                 self._srvcli_trdcls,
                 self._rosprm_max_leverage.value,
                 self._rosprm_max_position_count.value,
+                self._rosprm_poll_interval_min.value,
                 self._balance,
                 req,
                 tick_price,
@@ -1460,9 +1471,10 @@ def main(args: list[str] | None = None) -> None:
 
     try:
         rclpy.spin(order_scheduler, executor)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
-
-    order_scheduler.finalize()
-    order_scheduler.destroy_node()
-    rclpy.shutdown()
+    else:
+        rclpy.shutdown()
+    finally:
+        order_scheduler.finalize()
+        order_scheduler.destroy_node()

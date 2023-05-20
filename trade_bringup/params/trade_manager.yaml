@@ -1,0 +1,63 @@
+candles_store:
+  ros__parameters:
+    use_instrument:
+      usdjpy: true
+      eurjpy: true
+      eurusd: true
+      gbpjpy: false
+      audjpy: false
+      nzdjpy: false
+      cadjpy: false
+      chfjpy: false
+    use_granularity:
+      m1: true
+      m2: false
+      m3: false
+      m4: false
+      m5: false
+      m10: false
+      m15: false
+      m30: false
+      h1: true
+      h2: false
+      h3: false
+      h4: false
+      h6: false
+      h8: false
+      h12: false
+      d: false
+      w: false
+    data_length:
+      m1: 14400    # 10 Days (60 * 24 * 10)
+      m2: 7200     # 10 Days (30 * 24 * 10)
+      m3: 4800     # 10 Days (20 * 24 * 10)
+      m4: 3600     # 10 Days (15 * 24 * 10)
+      m5: 2880     # 10 Days (12 * 24 * 10)
+      m10: 14400   # 100 Days (6 * 24 * 100)
+      m15: 9600    # 10 Days (4 * 24 * 100)
+      m30: 4800    # 10 Days (2 * 24 * 100)
+      h1: 720      # 1 Months (24 * 30 * 1)
+      h2: 360      # 1 Months (12 * 30 * 1)
+      h3: 240      # 1 Months (8 * 30 * 1)
+      h4: 180      # 1 Months (6 * 30 * 1)
+      h6: 120      # 1 Months (4 * 30 * 1)
+      h8: 270      # 3 Months (3 * 30 * 3)
+      h12: 180     # 3 Months (2 * 30 * 3)
+      d: 365       # 1 Year (365 * 1)
+      w: 48        # 1 Year (4 * 12 * 1)
+    next_updatetime_ofs_sec: 6	# sec
+    retry_interval_min: 1 # min
+    fail_interval_min: 10 # min
+    retry_count_max: 30
+    self_retry_count_max: 2
+
+order_scheduler:
+  ros__parameters:
+    max_leverage: 20.0
+    max_position_count: 8
+    use_weekend_order_stop: false
+    weekend_order_stop_time: 0:00:00  # "%H:%M:%S"
+    use_weekend_all_close: false
+    weekend_all_close_time: 0:00:00  # "%H:%M:%S"
+    account_updatetime_sec: 30	# sec
+    poll_interval_min: 1	# min

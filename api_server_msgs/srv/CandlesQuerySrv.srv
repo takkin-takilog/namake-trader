@@ -1,0 +1,32 @@
+# oandapyV20.endpoints.instruments.InstrumentsCandles
+# Reference:
+#    https://oanda-api-v20.readthedocs.io/en/latest/endpoints/instruments/instrumentlist.html
+
+# ========================= Request =========================
+# Granularity.
+api_server_msgs/Granularity gran_msg
+
+# Instrument.
+api_server_msgs/Instrument inst_msg
+
+# Start of the time range to fetch candlesticks for.
+# String format is "%Y-%m-%dT%H:%M:00.000000000Z"
+string dt_from
+
+# End of the time range to fetch candlesticks for.
+# String format is "%Y-%m-%dT%H:%M:00.000000000Z"
+string dt_to
+
+---
+# ========================= Response =========================
+
+# Result of this service process.
+#   True:success
+#   False:fail
+bool result
+
+# Fail reason code.
+api_server_msgs/FailReasonCode frc_msg
+
+# List of candle message.
+api_server_msgs/Candle[] cndl_msg_list

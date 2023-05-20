@@ -1,0 +1,12 @@
+pricing_publisher:
+  ros__parameters:
+    use_instrument:
+      usdjpy: true
+      eurjpy: true
+      eurusd: true
+      gbpjpy: false
+      audjpy: false
+      nzdjpy: false
+      cadjpy: false
+      chfjpy: false
+
