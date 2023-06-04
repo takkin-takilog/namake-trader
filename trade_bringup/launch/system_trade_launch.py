@@ -13,7 +13,6 @@ def create_node_app_bb(
     param_yaml: LaunchConfiguration,
     log_level: LaunchConfiguration,
 ) -> Node:
-
     namespace = inst + "/" + gran
     pricing = "pricing_" + inst
     latest_candle = inst + "_" + gran + "_latest_candle"
@@ -41,7 +40,6 @@ def create_node_app_bb(
 
 
 def generate_launch_description() -> LaunchDescription:
-
     # Directory
     PARAM_DIR = "params"
     # YAML file

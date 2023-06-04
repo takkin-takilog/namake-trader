@@ -214,7 +214,6 @@ class TradeItem:
             pass
 
     def do_cyclic_event(self) -> None:
-
         if self.state == self.States.preparing:
             self._on_do_preparing()
         elif self.state == self.States.standby:
@@ -235,7 +234,6 @@ class TradeItem:
     def _on_subscribe_price_in_preparing(
         self, bb_rec: pd.Series, tick_price_ask: float, tick_price_bid: float
     ) -> None:
-
         if bb_rec[self._COL_PSTD] < tick_price_ask:
             self.logger.debug("----- trans_from_preparing_to_long -----")
             self._trans_from_preparing_to_long()
@@ -329,7 +327,6 @@ class TradeItem:
             pass
 
     def _on_do_long(self) -> None:
-
         if (not self._is_valid_trade) or self._has_done_order_register:
             return
 
@@ -364,7 +361,6 @@ class TradeItem:
                 self._is_valid_trade = False
 
     def _on_after_action_from_long_to_standby(self) -> None:
-
         if self._is_valid_trade:
             if self._has_done_order_register:
                 try:
@@ -380,7 +376,6 @@ class TradeItem:
     def _on_subscribe_price_in_long(
         self, bb_rec: pd.Series, tick_price_bid: float
     ) -> None:
-
         if tick_price_bid < bb_rec[self._COL_SMA]:
             self._trans_from_long_to_standby()
             # ----- Long exit log -----
@@ -395,7 +390,6 @@ class TradeItem:
                 self.logger.debug("  - tick_price_bid:[{}]".format(tick_price_bid))
 
     def _on_do_short(self) -> None:
-
         if (not self._is_valid_trade) or self._has_done_order_register:
             return
 
@@ -430,7 +424,6 @@ class TradeItem:
                 self._is_valid_trade = False
 
     def _on_after_action_from_short_to_standby(self) -> None:
-
         if self._is_valid_trade:
             if self._has_done_order_register:
                 try:
@@ -450,7 +443,6 @@ class TradeItem:
     def _on_subscribe_price_in_short(
         self, bb_rec: pd.Series, tick_price_ask: float
     ) -> None:
-
         if tick_price_ask > bb_rec[self._COL_SMA]:
             self._trans_from_short_to_standby()
             if self._is_valid_trade:
@@ -617,7 +609,7 @@ class AppBollingerBand(Node):
 
         self._sm = HierarchicalMachine(
             model=self,
-            states=states,
+            states=states,  # type: ignore[arg-type]
             initial=self.States.initializing,
             transitions=transitions,
         )
@@ -680,7 +672,6 @@ class AppBollingerBand(Node):
         self.logger.debug("{:=^50}".format(" Initialize Finish! "))
 
     def _do_cyclic_event(self) -> None:
-
         if self.is_normal():
             # "Do" process in Normal State.
             self._on_do_normal()
@@ -693,7 +684,6 @@ class AppBollingerBand(Node):
             pass
 
     def _on_do_initializing(self) -> None:
-
         if self._store.is_filled_df():
             self._trans_from_initializing_to_normal()
 
@@ -731,7 +721,6 @@ class AppBollingerBand(Node):
         self._clear_timer()
 
     def _on_do_normal(self) -> None:
-
         if self._watch_timeout():
             self.logger.debug("----- Change State Normal to Abormal")
             self._trans_from_normal_to_abnormal()
@@ -758,13 +747,11 @@ class AppBollingerBand(Node):
         self._timer_start = time.monotonic()
 
     def _on_sub_heartbeat(self, msg: String) -> None:  # pylint: disable=W0613
-
         if self.state == self.States.abnormal:
             self._trans_from_abnormal_to_normal()
         self._clear_timer()
 
     def _on_sub_pricing(self, msg: Pricing) -> None:
-
         if self.state == self.States.abnormal:
             self._trans_from_abnormal_to_normal()
 

@@ -8,7 +8,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
 def generate_launch_description() -> LaunchDescription:
-
     # Use Live account environment if true
     # Use Demo account environment if false
     use_env_live = False
