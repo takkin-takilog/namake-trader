@@ -50,7 +50,6 @@ class RosServiceClient:
         callback_group: CallbackGroup = None,
         use_wait_for_service: bool = True
     ) -> None:
-
         self._node = node
         self.logger = self._node.get_logger()
         cli = self._node.create_client(
@@ -69,7 +68,6 @@ class RosServiceClient:
     def call(
         self, request: SrvTypeRequest, timeout_sec: float | None = None
     ) -> SrvTypeResponse:
-
         if not self._cli.service_is_ready():
             msg = "Server [{}] Not Ready.".format(self._srv_name)
             raise RosServiceErrorException(msg)
@@ -104,7 +102,6 @@ class RosServiceClient:
     def call_async(
         self, request: SrvTypeRequest, timeout_sec: float | None = None
     ) -> FutureWrapper:
-
         if not self._cli.service_is_ready():
             msg = "Server [{}] Not Ready.".format(self._srv_name)
             raise RosServiceErrorException(msg)

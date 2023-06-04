@@ -5,7 +5,6 @@ _JST_OFS = dt.timedelta(hours=9)
 
 
 def convert_datetime_jst(oanda_dt: str, fmt: str = FMT_YMDHMSF) -> str:
-
     time_list = oanda_dt.split(".")
     dt_str = time_list[0] + "." + time_list[1][:6]
     dt_ = dt.datetime.strptime(dt_str, FMT_YMDHMSF)

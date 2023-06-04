@@ -550,7 +550,6 @@ class OrderTicket:
             pass
 
     def _on_do_EntryOrdering(self) -> None:
-
         if self._future is None:
             return
 
@@ -635,7 +634,6 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_EntryChecking(self) -> None:
-
         if self._future is None:
             self._trans_from_EntryChecking_to_EntryWaiting()
             return
@@ -705,7 +703,6 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_EntryCanceling(self) -> None:
-
         if self._future is None:
             self._trans_to_Complete()
             return
@@ -754,7 +751,6 @@ class OrderTicket:
         self._next_pol_time = self._update_next_pollingtime(dt.datetime.now())
 
     def _on_do_ExitWaiting(self) -> None:
-
         now = dt.datetime.now()
         if (self._exit_exp_time is not None) and (self._exit_exp_time < now):
             self._trans_from_ExitWaiting_to_ExitOrdering()
@@ -785,7 +781,6 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_ExitChecking(self) -> None:
-
         if self._future is None:
             self._trans_from_ExitChecking_to_ExitWaiting()
             return
@@ -854,7 +849,6 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_ExitOrdering(self) -> None:
-
         if self._future is None:
             self._trans_to_Complete()
             return
@@ -1370,7 +1364,6 @@ class OrderScheduler(Node):
         return rsp
 
     def _validate_msg(self, req: SrvTypeRequest) -> Bool:
-
         if req.units < 0:
             self.logger.warn("units value[{}] < 0".format(req.units))
             return False
@@ -1464,7 +1457,6 @@ class OrderScheduler(Node):
 
 
 def main(args: list[str] | None = None) -> None:
-
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()
     order_scheduler = OrderScheduler()

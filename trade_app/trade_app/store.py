@@ -20,7 +20,6 @@ class TimeFrameConverter:
     """
 
     def __init__(self, gran_param: GranParam, buf_size: int = 100):
-
         self._RECORD_SIZE = buf_size
 
         TF_SEC = 60
@@ -123,7 +122,6 @@ class TimeFrameConverter:
         price_ask: float,
         price_bid: float,
     ) -> None:
-
         price_mid = (price_ask + price_bid) / 2
 
         day = self._days_tbl[time.day]
@@ -219,7 +217,6 @@ class OhlcStore:
     def __init__(
         self, node: Node, inst_param: InstParam, gran_param: GranParam, df_length: int
     ):
-
         self._DF_LENGTH_MAX = df_length
         self._inst_param = inst_param
         self._gran_param = gran_param
@@ -272,7 +269,10 @@ class OhlcStore:
         ]
 
         self._machine = HierarchicalMachine(
-            model=self, states=states, initial=self.States.idle, transitions=transitions
+            model=self,
+            states=states,  # type: ignore[arg-type]
+            initial=self.States.idle,
+            transitions=transitions,
         )
 
         # --------------- Initialize ROS service ---------------
@@ -368,7 +368,6 @@ class OhlcStore:
         return is_filled
 
     def do_cyclic_event(self) -> None:
-
         if self.state == self.States.idle:
             self._on_do_idle()
         elif self.state == self.States.updating:
@@ -377,7 +376,6 @@ class OhlcStore:
             pass
 
     def add_latest_comp_ohlc(self, msg_buff: list[LatestCandle]) -> None:
-
         for msg in msg_buff:
             comp_time = dt.datetime.strptime(msg.candle.time, FMT_YMDHMS)
             record = [
@@ -420,7 +418,6 @@ class OhlcStore:
     def update_incomp_ohlc(
         self, time: dt.datetime, tick_price_ask: float, tick_price_bid: float
     ) -> None:
-
         self._tfc.set_price(time, tick_price_ask, tick_price_bid)
         ohlc_series = self._tfc.df_ohlc.iloc[-1]
         record = ohlc_series.to_list() + [CompSts.INCOMP]
@@ -436,7 +433,6 @@ class OhlcStore:
         self._latest_tick_price_bid = tick_price_bid
 
     def _on_do_idle(self) -> None:
-
         # ---------- Verify "next_update_time" ----------
         now = dt.datetime.now()
         devi_time = now - self._next_update_time
@@ -459,7 +455,6 @@ class OhlcStore:
                 self.logger.debug("  - target time:[{}])".format(latest_time))
 
     def _on_enter_updating(self) -> None:
-
         self._future = None
 
         req = CandlesByLengthSrv.Request()
@@ -473,7 +468,6 @@ class OhlcStore:
             self.logger.error("[{}]".format(err))
 
     def _on_do_updating(self) -> None:
-
         if self._future is None:
             self._trans_self_updating()
             return
@@ -536,7 +530,6 @@ class OhlcStore:
         pass
 
     def _delete_overflowing_record(self, df_ohlc: pd.DataFrame) -> pd.DataFrame:
-
         df_flags = df_ohlc[ColOhlc.COMP_STS] == CompSts.COMP
         df_comp = df_ohlc[df_flags]
         drop_num = len(df_comp) - self._DF_LENGTH_MAX
