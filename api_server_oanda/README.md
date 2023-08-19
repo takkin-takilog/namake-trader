@@ -13,19 +13,12 @@ OANDA REST APIサーバーとのストリーミング接続がアクティブで
 
 ### Published Topics
 
-- **pricing_\*\*\* ([api_server_msgs/Pricing](https://github.com/takkin-takilog/namake-trader/blob/develop/api_server_msgs/msg/Pricing.msg))**
+- **pricing_### ([api_server_msgs/Pricing](https://github.com/takkin-takilog/namake-trader/blob/develop/api_server_msgs/msg/Pricing.msg))**
 
     特定の通貨ペアに対するリアルタイム為替レート。  
-    Parametersの`use_instrument.***`で`true`が設定された通貨ペアのみ有効となります。  
-    ***で指定可能な通貨ペアは以下となります。
-    - usdjpy
-    - eurjpy
-    - eurusd
-    - gbpjpy
-    - audjpy
-    - nzdjpy
-    - cadjpy
-    - chfjpy
+    Parametersの`use_instrument.###`で`true`が設定された通貨ペアのみ有効となります。  
+    `###`で指定可能な通貨ペアは以下となります。
+    - usdjpy, eurjpy, eurusd, gbpjpy, audjpy, nzdjpy, cadjpy, chfjpy
 
 - **heart_beat ([std_msgs/String](https://docs.ros2.org/foxy/api/std_msgs/msg/String.html))**
 
@@ -55,12 +48,12 @@ OANDA REST APIサーバーとのストリーミング接続がアクティブで
 
 - **connection_timeout (int, default=10)**
 
-    API接続アイムアウト時間(sec)
+    API接続アイムアウト時間[秒]
 
-- **use_instrument.\*\*\* (bool, default=`false`)**  
+- **use_instrument.### (bool, default=`false`)**  
 
     `true`の場合、指定通貨ペアのpublishが有効になります。  
-  （***で指定可能な通貨ペアはPublished Topicsの`pricing_***`を参照。）
+  （`###`で指定可能な通貨ペアはPublished Topicsの`pricing_###`を参照。）
 
 #### Example:
 ```
@@ -154,7 +147,7 @@ pricing_publisher:
 
 - **connection_timeout (int, default=10)**
 
-    API接続アイムアウト時間(sec)
+    API接続アイムアウト時間[秒]
 
 #### Example:
 ```
