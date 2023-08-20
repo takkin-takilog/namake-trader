@@ -64,7 +64,6 @@ class _CandlesElement:
         retry_count_max: int,
         self_retry_count_max: int,
     ) -> None:
-
         # --------------- Set logger lebel ---------------
         self.logger = node.get_logger()
 
@@ -258,7 +257,6 @@ class _CandlesElement:
         return self._df_comp.index[-1].to_pydatetime()  # type: ignore[no-any-return]
 
     def _get_next_update_datetime(self, latest_datetime: dt.datetime) -> dt.datetime:
-
         next_update_dt: dt.datetime = latest_datetime + self._GRAN_INTERVAL
 
         if next_update_dt.weekday() == WeekDay.SAT:
@@ -516,7 +514,6 @@ class _CandlesElement:
         self._self_retry_counter = 0
 
     def _update_dataframe(self, cndl_msg_list: list[Candle]) -> None:
-
         data = []
         for cndl_msg in cndl_msg_list:
             dt_ = dt.datetime.strptime(cndl_msg.time, FMT_YMDHMS)
@@ -762,7 +759,6 @@ class CandlesStore(Node):
         )
 
     def _do_cyclic_event(self) -> None:
-
         for candles_elem in self._candles_elem_list:
             candles_elem.do_cyclic_event()
             # self.logger.debug("inst_id:{}, gran_id:{}"
@@ -997,7 +993,6 @@ class CandlesStore(Node):
 
 
 def main(args: list[str] | None = None) -> None:
-
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()
     candles_store = CandlesStore()

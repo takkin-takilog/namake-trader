@@ -207,7 +207,6 @@ class ApiServer(Node):
     def _on_recv_order_create(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
-
         self.logger.debug("{:=^50}".format(" Service[order_create]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - ordertype_msg.type:[{}]".format(req.ordertype_msg.type))
@@ -287,7 +286,6 @@ class ApiServer(Node):
     def _on_recv_trade_details(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
-
         self.logger.debug("{:=^50}".format(" Service[trade_details]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - trade_id:[{}]".format(req.trade_id))
@@ -389,7 +387,6 @@ class ApiServer(Node):
     def _on_recv_trade_crcdo(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
-
         self.logger.debug("{:=^50}".format(" Service[trade_crcdo]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - trade_id:[{}]".format(req.trade_id))
@@ -461,7 +458,6 @@ class ApiServer(Node):
     def _on_recv_trade_close(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
-
         self.logger.debug("{:=^50}".format(" Service[trade_close]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - trade_id:[{}]".format(req.trade_id))
@@ -548,7 +544,6 @@ class ApiServer(Node):
     def _on_recv_order_details(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
-
         self.logger.debug("{:=^50}".format(" Service[order_details]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - order_id:[{}]".format(req.order_id))
@@ -637,7 +632,6 @@ class ApiServer(Node):
     def _on_recv_order_cancel(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
-
         self.logger.debug("{:=^50}".format(" Service[order_cancel]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - order_id:[{}]".format(req.order_id))
@@ -709,7 +703,6 @@ class ApiServer(Node):
     def _on_recv_candles_query(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
-
         self.logger.debug("{:=^50}".format(" Service[candles_query]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
@@ -869,7 +862,6 @@ class ApiServer(Node):
     def _on_recv_account_query(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse  # pylint: disable=W0613
     ) -> SrvTypeResponse:
-
         self.logger.debug("{:=^50}".format(" Service[account_query]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - None")
@@ -960,7 +952,6 @@ class ApiServer(Node):
     def _on_recv_pricing_query(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
-
         self.logger.debug("{:=^50}".format(" Service[pricing_query]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
@@ -1062,7 +1053,6 @@ class ApiServer(Node):
         if (req.ordertype_msg.type == OrderType.TYP_LIMIT) or (
             req.ordertype_msg.type == OrderType.TYP_STOP
         ):
-
             tmp = {
                 "price": self._fit_unit(req.price, one_pip_str),
                 "timeInForce": "GTC",
@@ -1090,7 +1080,6 @@ class ApiServer(Node):
         self,
         req: SrvTypeRequest,
     ) -> dict[str, dict[str, str]]:
-
         inst_param = InstParam.get_member_by_msgid(req.inst_msg.inst_id)
         one_pip_str = inst_param.one_pip_str
 
@@ -1114,7 +1103,6 @@ class ApiServer(Node):
 
 
 def main(args: list[str] | None = None) -> None:
-
     requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)

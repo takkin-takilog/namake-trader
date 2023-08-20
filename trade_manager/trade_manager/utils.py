@@ -4,7 +4,6 @@ from .constant import WeekDay
 
 
 def is_market_close(dt_: dt.datetime) -> bool:
-
     is_close = False
     if dt_.weekday() == WeekDay.SAT:
         close_time = get_market_close_time(dt_.date())
@@ -23,7 +22,6 @@ def is_market_close(dt_: dt.datetime) -> bool:
 
 
 def is_summer_time(dt_: dt.date) -> bool:
-
     pddt = pd.Timestamp(dt_.isoformat() + " 03:00:00", tz="America/New_York")
     if 3600 <= pddt.dst().seconds:
         return True
@@ -32,7 +30,6 @@ def is_summer_time(dt_: dt.date) -> bool:
 
 
 def get_market_open_time(dt_: dt.date) -> dt.time:
-
     if is_summer_time(dt_):
         open_time = dt.time(6, 0)
     else:
@@ -42,7 +39,6 @@ def get_market_open_time(dt_: dt.date) -> dt.time:
 
 
 def get_market_close_time(dt_: dt.date) -> dt.time:
-
     if is_summer_time(dt_):
         close_time = dt.time(6, 0)
     else:
@@ -52,7 +48,6 @@ def get_market_close_time(dt_: dt.date) -> dt.time:
 
 
 def limit(val: int | float, min_val: int | float, max_val: int | float) -> int | float:
-
     if val < min_val:
         ret_val = min_val
     elif max_val < val:

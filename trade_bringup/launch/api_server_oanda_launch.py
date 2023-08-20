@@ -8,7 +8,6 @@ from launch_ros.actions import Node, SetParameter
 
 
 def generate_launch_description() -> LaunchDescription:
-
     # ---------- Your OANDA Account Number and Access Token ----------
     # Demo Account
     PRAC_ACCOUNT_NUMBER = "***-***-*******-***"
