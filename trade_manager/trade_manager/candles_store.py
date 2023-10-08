@@ -741,7 +741,7 @@ class CandlesStore(Node):
         self._cbd_srv = self.create_service(
             CandlesByDatetimeSrv,
             "candles_by_datetime",
-            self._on_recv_candles_by_datetime,
+            self._handle_candles_by_datetime,
             callback_group=self._cb_grp_reent,
         )
 
@@ -749,7 +749,7 @@ class CandlesStore(Node):
         self._cbl_srv = self.create_service(
             CandlesByLengthSrv,
             "candles_by_length",
-            self._on_recv_candles_by_length,
+            self._handle_candles_by_length,
             callback_group=self._cb_grp_reent,
         )
 
@@ -764,7 +764,7 @@ class CandlesStore(Node):
             # self.logger.debug("inst_id:{}, gran_id:{}"
             #                   .format(candles_elem._inst_id, candles_data._gran_id))
 
-    def _on_recv_candles_by_datetime(
+    def _handle_candles_by_datetime(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_datetime]:Start "))
@@ -805,9 +805,8 @@ class CandlesStore(Node):
         if df_comp is None:
             self.logger.error("{:!^50}".format(" ROS Service Error "))
             self.logger.error(
-                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in candles_elem.".format(
-                    inst_id, gran_id
-                )
+                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in "
+                "candles_elem.".format(inst_id, gran_id)
             )
         else:
             if not req.datetime_start == "":
@@ -865,7 +864,7 @@ class CandlesStore(Node):
 
         return rsp
 
-    def _on_recv_candles_by_length(
+    def _handle_candles_by_length(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_length]:Start "))
@@ -891,9 +890,8 @@ class CandlesStore(Node):
         if df_comp is None:
             self.logger.error("{:!^50}".format(" ROS Service Error "))
             self.logger.error(
-                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in candles_elem.".format(
-                    inst_id, gran_id
-                )
+                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in "
+                "candles_elem.".format(inst_id, gran_id)
             )
         elif req.length < 1:
             self.logger.error("{:!^50}".format(" ROS Service Error "))

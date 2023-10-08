@@ -1008,7 +1008,7 @@ class OrderScheduler(Node):
         self._ordreq_srv = self.create_service(
             OrderRegisterSrv,
             "order_register",
-            self._on_order_register,
+            self._handle_order_register,
             callback_group=self._cb_grp_reent,
         )
 
@@ -1016,7 +1016,7 @@ class OrderScheduler(Node):
         self._trdclsreq_srv = self.create_service(
             TradeCloseRequestSrv,
             "trade_close_request",
-            self._on_requested_close,
+            self._handle_requested_close,
             callback_group=self._cb_grp_reent,
         )
         try:
@@ -1098,7 +1098,7 @@ class OrderScheduler(Node):
         self._sub_pri_usdjpy = self.create_subscription(
             Pricing,
             "pricing_usdjpy",
-            self._on_sub_pricing_usdjpy,
+            self._handle_pricing_usdjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1106,7 +1106,7 @@ class OrderScheduler(Node):
         self._sub_pri_eurjpy = self.create_subscription(
             Pricing,
             "pricing_eurjpy",
-            self._on_sub_pricing_eurjpy,
+            self._handle_pricing_eurjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1114,7 +1114,7 @@ class OrderScheduler(Node):
         self._sub_pri_gbpjpy = self.create_subscription(
             Pricing,
             "pricing_gbpjpy",
-            self._on_sub_pricing_gbpjpy,
+            self._handle_pricing_gbpjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1122,7 +1122,7 @@ class OrderScheduler(Node):
         self._sub_pri_audjpy = self.create_subscription(
             Pricing,
             "pricing_audjpy",
-            self._on_sub_pricing_audjpy,
+            self._handle_pricing_audjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1130,7 +1130,7 @@ class OrderScheduler(Node):
         self._sub_pri_nzdjpy = self.create_subscription(
             Pricing,
             "pricing_nzdjpy",
-            self._on_sub_pricing_nzdjpy,
+            self._handle_pricing_nzdjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1138,7 +1138,7 @@ class OrderScheduler(Node):
         self._sub_pri_cadjpy = self.create_subscription(
             Pricing,
             "pricing_cadjpy",
-            self._on_sub_pricing_cadjpy,
+            self._handle_pricing_cadjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1146,7 +1146,7 @@ class OrderScheduler(Node):
         self._sub_pri_chfjpy = self.create_subscription(
             Pricing,
             "pricing_chfjpy",
-            self._on_sub_pricing_chfjpy,
+            self._handle_pricing_chfjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1289,7 +1289,7 @@ class OrderScheduler(Node):
             self.logger.error("{:!^50}".format(err))
             self._trans_from_AccountUpdating_to_Idle()
 
-    def _on_order_register(
+    def _handle_order_register(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_register]:Start "))
@@ -1387,7 +1387,7 @@ class OrderScheduler(Node):
                     return False
         return True
 
-    def _on_requested_close(
+    def _handle_requested_close(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_close_request]:Start "))
@@ -1412,44 +1412,44 @@ class OrderScheduler(Node):
 
         return rsp
 
-    def _on_sub_pricing_usdjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_usdjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_USD_JPY] = tick_price
 
-    def _on_sub_pricing_eurjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_eurjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_EUR_JPY] = tick_price
             self._tick_price_dict[InstMng.INST_EUR_USD] = tick_price
 
-    def _on_sub_pricing_gbpjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_gbpjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_GBP_JPY] = tick_price
 
-    def _on_sub_pricing_audjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_audjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_AUD_JPY] = tick_price
 
-    def _on_sub_pricing_nzdjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_nzdjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_NZD_JPY] = tick_price
 
-    def _on_sub_pricing_cadjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_cadjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_CAD_JPY] = tick_price
 
-    def _on_sub_pricing_chfjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_chfjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
