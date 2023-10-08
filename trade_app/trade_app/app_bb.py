@@ -643,7 +643,7 @@ class AppBollingerBand(Node):
 
         # Create topic subscriber "HeartBeat"
         self._sub_hb = self.create_subscription(
-            String, "heart_beat", self._on_sub_heartbeat, qos_profile
+            String, "heart_beat", self._handle_heartbeat_msg, qos_profile
         )
 
         # Create topic subscriber "LatestCandle"
@@ -651,7 +651,7 @@ class AppBollingerBand(Node):
         gran_name = self._gran_param.namespace
         topic = inst_name + "_" + gran_name + "_latest_candle"
         self._sub_lc = self.create_subscription(
-            LatestCandle, topic, self._on_sub_latest_candle, qos_profile
+            LatestCandle, topic, self._handle_latest_candle_msg, qos_profile
         )
 
         # --------------- Instantiated OhlcStore ---------------
@@ -714,7 +714,7 @@ class AppBollingerBand(Node):
             history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
         )
         self._sub_pri = self.create_subscription(
-            Pricing, topic, self._on_sub_pricing, qos_profile
+            Pricing, topic, self._handle_pricing_msg, qos_profile
         )
 
     def _on_enter_normal(self) -> None:
@@ -746,12 +746,12 @@ class AppBollingerBand(Node):
     def _clear_timer(self) -> None:
         self._timer_start = time.monotonic()
 
-    def _on_sub_heartbeat(self, msg: String) -> None:  # pylint: disable=W0613
+    def _handle_heartbeat_msg(self, msg: String) -> None:  # pylint: disable=W0613
         if self.state == self.States.abnormal:
             self._trans_from_abnormal_to_normal()
         self._clear_timer()
 
-    def _on_sub_pricing(self, msg: Pricing) -> None:
+    def _handle_pricing_msg(self, msg: Pricing) -> None:
         if self.state == self.States.abnormal:
             self._trans_from_abnormal_to_normal()
 
@@ -773,7 +773,7 @@ class AppBollingerBand(Node):
 
         self._clear_timer()
 
-    def _on_sub_latest_candle(self, msg: LatestCandle) -> None:
+    def _handle_latest_candle_msg(self, msg: LatestCandle) -> None:
         self._latest_candle_msg_buff.append(msg)
 
 

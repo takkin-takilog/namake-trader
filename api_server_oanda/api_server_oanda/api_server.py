@@ -136,7 +136,7 @@ class ApiServer(Node):
         self.order_create_srv = self.create_service(
             OrderCreateSrv,
             "order_create",
-            self._on_recv_order_create,
+            self._handle_order_create,
             callback_group=self._cb_grp_reent,
         )
 
@@ -144,7 +144,7 @@ class ApiServer(Node):
         self.trade_details_srv = self.create_service(
             TradeDetailsSrv,
             "trade_details",
-            self._on_recv_trade_details,
+            self._handle_trade_details,
             callback_group=self._cb_grp_reent,
         )
 
@@ -152,7 +152,7 @@ class ApiServer(Node):
         self.trade_crcdo_srv = self.create_service(
             TradeCRCDOSrv,
             "trade_crcdo",
-            self._on_recv_trade_crcdo,
+            self._handle_trade_crcdo,
             callback_group=self._cb_grp_reent,
         )
 
@@ -160,7 +160,7 @@ class ApiServer(Node):
         self.trade_close_srv = self.create_service(
             TradeCloseSrv,
             "trade_close",
-            self._on_recv_trade_close,
+            self._handle_trade_close,
             callback_group=self._cb_grp_reent,
         )
 
@@ -168,7 +168,7 @@ class ApiServer(Node):
         self.order_details_srv = self.create_service(
             OrderDetailsSrv,
             "order_details",
-            self._on_recv_order_details,
+            self._handle_order_details,
             callback_group=self._cb_grp_reent,
         )
 
@@ -176,7 +176,7 @@ class ApiServer(Node):
         self.order_cancel_srv = self.create_service(
             OrderCancelSrv,
             "order_cancel",
-            self._on_recv_order_cancel,
+            self._handle_order_cancel,
             callback_group=self._cb_grp_reent,
         )
 
@@ -184,7 +184,7 @@ class ApiServer(Node):
         self._cdlque_srv = self.create_service(
             CandlesQuerySrv,
             "candles_query",
-            self._on_recv_candles_query,
+            self._handle_candles_query,
             callback_group=self._cb_grp_reent,
         )
 
@@ -192,7 +192,7 @@ class ApiServer(Node):
         self._accque_srv = self.create_service(
             AccountQuerySrv,
             "account_query",
-            self._on_recv_account_query,
+            self._handle_account_query,
             callback_group=self._cb_grp_reent,
         )
 
@@ -200,11 +200,11 @@ class ApiServer(Node):
         self._prcque_srv = self.create_service(
             PricingQuerySrv,
             "pricing_query",
-            self._on_recv_pricing_query,
+            self._handle_pricing_query,
             callback_group=self._cb_grp_reent,
         )
 
-    def _on_recv_order_create(
+    def _handle_order_create(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_create]:Start "))
@@ -283,7 +283,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _on_recv_trade_details(
+    def _handle_trade_details(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_details]:Start "))
@@ -384,7 +384,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _on_recv_trade_crcdo(
+    def _handle_trade_crcdo(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_crcdo]:Start "))
@@ -455,7 +455,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _on_recv_trade_close(
+    def _handle_trade_close(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_close]:Start "))
@@ -541,7 +541,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _on_recv_order_details(
+    def _handle_order_details(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_details]:Start "))
@@ -629,7 +629,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _on_recv_order_cancel(
+    def _handle_order_cancel(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_cancel]:Start "))
@@ -700,7 +700,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _on_recv_candles_query(
+    def _handle_candles_query(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_query]:Start "))
@@ -859,7 +859,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _on_recv_account_query(
+    def _handle_account_query(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse  # pylint: disable=W0613
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[account_query]:Start "))
@@ -949,7 +949,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _on_recv_pricing_query(
+    def _handle_pricing_query(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[pricing_query]:Start "))
