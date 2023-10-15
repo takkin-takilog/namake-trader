@@ -34,7 +34,7 @@ from .dataclass import RosParam
 from .parameter import GranParam, InstParam
 from . import utils as utl
 from . import ros_utils as rosutl
-from .wrapper import RosServiceClient, FutureWrapper
+from .wrapper import RosServiceClient, FutureWithTimeout
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -168,7 +168,7 @@ class _CandlesElement:
         self._is_update_complete = True
         self._self_retry_counter = 0
         self._needs_weekend_update = False
-        self._future: FutureWrapper | None = None
+        self._fwt: FutureWithTimeout | None = None
         dt_now = dt.datetime.now()
         self._next_updatetime = (
             dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
@@ -383,7 +383,7 @@ class _CandlesElement:
         dt_to = dt.datetime.now()
         self.logger.debug("  - time_from:[{}]".format(dt_from))
         self.logger.debug("  - time_to  :[{}]".format(dt_to))
-        self._future = None
+        self._fwt = None
 
         req = CandlesQuerySrv.Request()
         req.inst_msg.inst_id = self._inst_id
@@ -391,7 +391,7 @@ class _CandlesElement:
         req.dt_from = dt_from.strftime(FMT_YMDHMS)
         req.dt_to = dt_to.strftime(FMT_YMDHMS)
         try:
-            self._future = self._srvcli.call_async(req)
+            self._fwt = self._srvcli.call_async(req)
             self._request_start_dt = dt_from
             self._request_end_dt = dt_to
         except RosServiceErrorException as err:
@@ -405,16 +405,16 @@ class _CandlesElement:
         self.logger.debug(" - self_retry_counter:[{}]".format(self._self_retry_counter))
         self.logger.debug(" - retry_counter:[{}]".format(self._retry_counter))
 
-        if self._future is None:
+        if self._fwt is None:
             self._trans_updating_common()
             return
 
-        if not self._future.done():
+        if not self._fwt.future.done():
             self.logger.debug("  Requesting now...")
             return
 
         self.logger.debug("  Request done.")
-        rsp = self._future.result()  # type: ignore[var-annotated]
+        rsp = self._fwt.future.result()
         if rsp is None:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Updating) "))
             self.logger.error("  future.result() is None.")

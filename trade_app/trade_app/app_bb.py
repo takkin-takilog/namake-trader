@@ -26,7 +26,7 @@ from .parameter import InstParam, GranParam
 from . import utils as utl
 from . import ros_utils as rosutl
 from .store import OhlcStore, ColOhlc
-from .wrapper import RosServiceClient, FutureWrapper
+from .wrapper import RosServiceClient, FutureWithTimeout
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -75,7 +75,7 @@ class TradeItem:
         self._is_valid_trade = False
         self._has_done_order_register = True
         self._enable_trade_by_timeframe = True
-        self._future: FutureWrapper | None = None
+        self._fwt: FutureWithTimeout | None = None
 
         # --------------- Create State Machine ---------------
         states = [
@@ -330,11 +330,11 @@ class TradeItem:
         if (not self._is_valid_trade) or self._has_done_order_register:
             return
 
-        if self._future is None:
+        if self._fwt is None:
             return
-        elif self._future.done():
-            if self._future.result() is not None:
-                rsp = self._future.result()  # type: ignore[var-annotated]
+        elif self._fwt.future.done():
+            if self._fwt.future.result() is not None:
+                rsp = self._fwt.future.result()
                 self._register_id = rsp.register_id
                 self._has_done_order_register = True
                 self.logger.debug(
@@ -350,11 +350,11 @@ class TradeItem:
 
     def _on_after_action_from_standby_to_long(self) -> None:
         self._has_done_order_register = False
-        self._future = None
+        self._fwt = None
 
         if self._is_valid_trade:
             try:
-                self._future = self._request_order(is_long_order=True)
+                self._fwt = self._request_order(is_long_order=True)
             except RosServiceErrorException as err:
                 self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
                 self.logger.error("{}".format(err))
@@ -393,11 +393,11 @@ class TradeItem:
         if (not self._is_valid_trade) or self._has_done_order_register:
             return
 
-        if self._future is None:
+        if self._fwt is None:
             return
-        elif self._future.done():
-            if self._future.result() is not None:
-                rsp = self._future.result()  # type: ignore[var-annotated]
+        elif self._fwt.future.done():
+            if self._fwt.future.result() is not None:
+                rsp = self._fwt.future.result()
                 self._register_id = rsp.register_id
                 self._has_done_order_register = True
                 self.logger.debug(
@@ -413,11 +413,11 @@ class TradeItem:
 
     def _on_after_action_from_standby_to_short(self) -> None:
         self._has_done_order_register = False
-        self._future = None
+        self._fwt = None
 
         if self._is_valid_trade:
             try:
-                self._future = self._request_order(is_long_order=False)
+                self._fwt = self._request_order(is_long_order=False)
             except RosServiceErrorException as err:
                 self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
                 self.logger.error("{}".format(err))
@@ -465,7 +465,7 @@ class TradeItem:
         df[self._COL_NSTD] = sr_sma - sr_std
         return df
 
-    def _request_order(self, is_long_order: bool) -> FutureWrapper:
+    def _request_order(self, is_long_order: bool) -> FutureWithTimeout:
         latest_rec = self._df_bb.iloc[-1]
 
         if is_long_order:
@@ -497,7 +497,7 @@ class TradeItem:
         req.exit_exp_time = ""
         return self._srvcli_ord.call_async(req, timeout_sec=5.0)
 
-    def _request_trade_close(self, register_id: int) -> FutureWrapper:
+    def _request_trade_close(self, register_id: int) -> FutureWithTimeout:
         req = TradeCloseRequestSrv.Request()
         req.register_id = register_id
         return self._srvcli_trdcls.call_async(req, timeout_sec=5.0)
