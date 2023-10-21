@@ -11,7 +11,7 @@ from .constant import ConstantGroup
 from .constant import Transitions as Tr
 from .exception import InitializerErrorException, RosServiceErrorException
 from .parameter import InstParam, GranParam
-from .wrapper import RosServiceClient, FutureWrapper
+from .wrapper import RosServiceClient, FutureWithTimeout
 
 
 class TimeFrameConverter:
@@ -313,7 +313,7 @@ class OhlcStore:
         df = pd.DataFrame(tbl, columns=ColOhlc.to_list())
 
         # --------------- Initialize instance variable ---------------
-        self._future: FutureWrapper | None = None
+        self._fwt: FutureWithTimeout | None = None
         self._df_ohlc = df.set_index(ColOhlc.DATETIME)
         latest_rec = self._df_ohlc.iloc[-1]
         self._latest_tick_price_ask = latest_rec[ColOhlc.ASK_C]
@@ -455,29 +455,29 @@ class OhlcStore:
                 self.logger.debug("  - target time:[{}])".format(latest_time))
 
     def _on_enter_updating(self) -> None:
-        self._future = None
+        self._fwt = None
 
         req = CandlesByLengthSrv.Request()
         req.gran_msg.gran_id = self._gran_param.msg_id
         req.inst_msg.inst_id = self._inst_param.msg_id
         req.length = self._DF_LENGTH_MAX
         try:
-            self._future = self._srvcli.call_async(req)
+            self._fwt = self._srvcli.call_async(req)
         except RosServiceErrorException as err:
             self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
             self.logger.error("[{}]".format(err))
 
     def _on_do_updating(self) -> None:
-        if self._future is None:
+        if self._fwt is None:
             self._trans_self_updating()
             return
 
-        if not self._future.done():
+        if not self._fwt.future.done():
             self.logger.debug("  Updating now...")
             return
 
         self.logger.debug("{:-^50}".format(" Update OHLC data complete! "))
-        rsp = self._future.result()  # type: ignore[var-annotated]
+        rsp = self._fwt.future.result()
         if rsp is None:
             self.logger.error("{:!^50}".format(" Update DataFrame Error "))
             self.logger.error("  future.result() is None.")

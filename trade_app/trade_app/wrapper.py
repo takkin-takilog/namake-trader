@@ -14,9 +14,9 @@ SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
 
 
-class FutureWrapper:
+class FutureWithTimeout:
     """
-    FutureWrapper class.
+    FutureWithTimeout class.
     """
 
     def __init__(self, future: Future, end_time: float | None = None) -> None:
@@ -28,11 +28,9 @@ class FutureWrapper:
             return True
         return False
 
-    def done(self) -> bool:
-        return self._future.done()
-
-    def result(self) -> SrvTypeResponse:
-        return self._future.result()
+    @property
+    def future(self) -> Future:
+        return self._future
 
 
 class RosServiceClient:
@@ -101,7 +99,7 @@ class RosServiceClient:
 
     def call_async(
         self, request: SrvTypeRequest, timeout_sec: float | None = None
-    ) -> FutureWrapper:
+    ) -> FutureWithTimeout:
         if not self._cli.service_is_ready():
             msg = "Server [{}] Not Ready.".format(self._srv_name)
             raise RosServiceErrorException(msg)
@@ -118,4 +116,4 @@ class RosServiceClient:
         else:
             end_time = None
 
-        return FutureWrapper(future, end_time)
+        return FutureWithTimeout(future, end_time)
