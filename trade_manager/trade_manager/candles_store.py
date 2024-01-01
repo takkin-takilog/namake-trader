@@ -273,14 +273,14 @@ class _CandlesElement:
         now_dt = dt.datetime.now()
         if next_update_dt < now_dt:
             self.logger.warn(
-                "{:!^50}".format(" Next-update-time over the current time ")
+                "{:!^50}".format(" Next-update-time under the current time ")
             )
             self.logger.warn(" - Next-update-time:[{}]".format(next_update_dt))
             self.logger.warn(" - Current time:[{}]".format(now_dt))
             while next_update_dt < now_dt:
                 next_update_dt += self._GRAN_INTERVAL
             self.logger.warn(
-                " - Fail safe: optimize next update time[{}]".format(next_update_dt)
+                " - Fail safe: optimize Next-update-time[{}]".format(next_update_dt)
             )
 
         return next_update_dt
