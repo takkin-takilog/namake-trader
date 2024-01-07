@@ -603,7 +603,7 @@ class OrderTicket:
         elif self._enable_weekend_close:
             self._trans_from_EntryWaiting_to_EntryCanceling()
         elif self._next_pol_time < now:
-            self.logger.debug("<<< Timeout >>> in EntryWaiting")
+            self.logger.debug("transfer EntryWaiting to EntryChecking")
             self._trans_from_EntryWaiting_to_EntryChecking()
         else:
             pass
@@ -757,7 +757,7 @@ class OrderTicket:
         elif self._enable_trade_close:
             self._trans_from_ExitWaiting_to_ExitOrdering()
         elif self._next_pol_time < now:
-            self.logger.debug("<<< Timeout >>> in ExitWaiting")
+            self.logger.debug("transfer ExitWaiting to ExitChecking")
             self._trans_from_ExitWaiting_to_ExitChecking()
         else:
             pass
