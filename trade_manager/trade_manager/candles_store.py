@@ -34,7 +34,7 @@ from .dataclass import RosParam
 from .parameter import GranParam, InstParam
 from . import utils as utl
 from . import ros_utils as rosutl
-from .wrapper import RosServiceClient, FutureWrapper
+from .wrapper import RosServiceClient, FutureWithTimeout
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -168,7 +168,7 @@ class _CandlesElement:
         self._is_update_complete = True
         self._self_retry_counter = 0
         self._needs_weekend_update = False
-        self._future: FutureWrapper | None = None
+        self._fwt: FutureWithTimeout | None = None
         dt_now = dt.datetime.now()
         self._next_updatetime = (
             dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
@@ -268,6 +268,20 @@ class _CandlesElement:
                 next_update_dt = dt.datetime.combine(next_monday, open_time)
 
         next_update_dt += self._GRAN_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
+
+        # Fail safe - optimize next update time
+        now_dt = dt.datetime.now()
+        if next_update_dt < now_dt:
+            self.logger.warn(
+                "{:!^50}".format(" Next-update-time under the current time ")
+            )
+            self.logger.warn(" - Next-update-time:[{}]".format(next_update_dt))
+            self.logger.warn(" - Current time:[{}]".format(now_dt))
+            while next_update_dt < now_dt:
+                next_update_dt += self._GRAN_INTERVAL
+            self.logger.warn(
+                " - Fail safe: optimize Next-update-time[{}]".format(next_update_dt)
+            )
 
         return next_update_dt
 
@@ -383,7 +397,7 @@ class _CandlesElement:
         dt_to = dt.datetime.now()
         self.logger.debug("  - time_from:[{}]".format(dt_from))
         self.logger.debug("  - time_to  :[{}]".format(dt_to))
-        self._future = None
+        self._fwt = None
 
         req = CandlesQuerySrv.Request()
         req.inst_msg.inst_id = self._inst_id
@@ -391,7 +405,7 @@ class _CandlesElement:
         req.dt_from = dt_from.strftime(FMT_YMDHMS)
         req.dt_to = dt_to.strftime(FMT_YMDHMS)
         try:
-            self._future = self._srvcli.call_async(req)
+            self._fwt = self._srvcli.call_async(req)
             self._request_start_dt = dt_from
             self._request_end_dt = dt_to
         except RosServiceErrorException as err:
@@ -405,16 +419,16 @@ class _CandlesElement:
         self.logger.debug(" - self_retry_counter:[{}]".format(self._self_retry_counter))
         self.logger.debug(" - retry_counter:[{}]".format(self._retry_counter))
 
-        if self._future is None:
+        if self._fwt is None:
             self._trans_updating_common()
             return
 
-        if not self._future.done():
+        if not self._fwt.future.done():
             self.logger.debug("  Requesting now...")
             return
 
         self.logger.debug("  Request done.")
-        rsp = self._future.result()  # type: ignore[var-annotated]
+        rsp = self._fwt.future.result()
         if rsp is None:
             self.logger.error("{:!^50}".format(" Call ROS Service Error (Updating) "))
             self.logger.error("  future.result() is None.")
@@ -741,7 +755,7 @@ class CandlesStore(Node):
         self._cbd_srv = self.create_service(
             CandlesByDatetimeSrv,
             "candles_by_datetime",
-            self._on_recv_candles_by_datetime,
+            self._handle_candles_by_datetime,
             callback_group=self._cb_grp_reent,
         )
 
@@ -749,7 +763,7 @@ class CandlesStore(Node):
         self._cbl_srv = self.create_service(
             CandlesByLengthSrv,
             "candles_by_length",
-            self._on_recv_candles_by_length,
+            self._handle_candles_by_length,
             callback_group=self._cb_grp_reent,
         )
 
@@ -764,7 +778,7 @@ class CandlesStore(Node):
             # self.logger.debug("inst_id:{}, gran_id:{}"
             #                   .format(candles_elem._inst_id, candles_data._gran_id))
 
-    def _on_recv_candles_by_datetime(
+    def _handle_candles_by_datetime(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_datetime]:Start "))
@@ -805,9 +819,8 @@ class CandlesStore(Node):
         if df_comp is None:
             self.logger.error("{:!^50}".format(" ROS Service Error "))
             self.logger.error(
-                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in candles_elem.".format(
-                    inst_id, gran_id
-                )
+                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in "
+                "candles_elem.".format(inst_id, gran_id)
             )
         else:
             if not req.datetime_start == "":
@@ -865,7 +878,7 @@ class CandlesStore(Node):
 
         return rsp
 
-    def _on_recv_candles_by_length(
+    def _handle_candles_by_length(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_length]:Start "))
@@ -891,9 +904,8 @@ class CandlesStore(Node):
         if df_comp is None:
             self.logger.error("{:!^50}".format(" ROS Service Error "))
             self.logger.error(
-                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in candles_elem.".format(
-                    inst_id, gran_id
-                )
+                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in "
+                "candles_elem.".format(inst_id, gran_id)
             )
         elif req.length < 1:
             self.logger.error("{:!^50}".format(" ROS Service Error "))

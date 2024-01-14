@@ -44,7 +44,7 @@ from .constant import Transitions as Tr
 from .constant import INST_DICT
 from .exception import InitializerErrorException, RosServiceErrorException
 from .dataclass import RosParam
-from .wrapper import RosServiceClient, FutureWrapper
+from .wrapper import RosServiceClient, FutureWithTimeout
 from .trigger import TimeTrigger
 from . import backup as bk
 from . import ros_utils as rosutl
@@ -337,7 +337,7 @@ class OrderTicket:
         # --------------- Initialize instance variable ---------------
         self._trade_id = -1
         self._order_id = -1
-        self._future: FutureWrapper | None = None
+        self._fwt: FutureWithTimeout | None = None
         self._is_entry_exp_time_over = False
         self._enable_trade_close = False
         self._enable_weekend_close = False
@@ -428,7 +428,7 @@ class OrderTicket:
         req.stop_loss_price = self._stop_loss_price
         self.logger.debug("----- Requesting [Order Create] -----")
         try:
-            self._future = self._srvcli_ordcre.call_async(req, timeout_sec=5.0)
+            self._fwt = self._srvcli_ordcre.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
             self.logger.error("{}".format(err))
             raise InitializerErrorException(
@@ -550,12 +550,12 @@ class OrderTicket:
             pass
 
     def _on_do_EntryOrdering(self) -> None:
-        if self._future is None:
+        if self._fwt is None:
             return
 
-        if not self._future.done():
+        if not self._fwt.future.done():
             self.logger.debug("  Requesting now...")
-            if self._future.has_timed_out():
+            if self._fwt.has_timed_out():
                 self.logger.error(
                     "{:!^50}".format(" Call ROS Service Error (Order Create) ")
                 )
@@ -564,7 +564,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.")
-        rsp = self._future.result()  # type: ignore[var-annotated]
+        rsp = self._fwt.future.result()
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Order Create) ")
@@ -603,7 +603,7 @@ class OrderTicket:
         elif self._enable_weekend_close:
             self._trans_from_EntryWaiting_to_EntryCanceling()
         elif self._next_pol_time < now:
-            self.logger.debug("<<< Timeout >>> in EntryWaiting")
+            self.logger.debug("transfer EntryWaiting to EntryChecking")
             self._trans_from_EntryWaiting_to_EntryChecking()
         else:
             pass
@@ -624,9 +624,9 @@ class OrderTicket:
         )
         req = OrderDetailsSrv.Request()
         req.order_id = self._order_id
-        self._future = None
+        self._fwt = None
         try:
-            self._future = self._srvcli_orddet.call_async(req, timeout_sec=5.0)
+            self._fwt = self._srvcli_orddet.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Order Details) ")
@@ -634,13 +634,13 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_EntryChecking(self) -> None:
-        if self._future is None:
+        if self._fwt is None:
             self._trans_from_EntryChecking_to_EntryWaiting()
             return
 
-        if not self._future.done():
+        if not self._fwt.future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
-            if self._future.has_timed_out():
+            if self._fwt.has_timed_out():
                 self.logger.error(
                     "{:!^50}".format(" Call ROS Service Error (Order Details) ")
                 )
@@ -649,7 +649,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
-        rsp = self._future.result()  # type: ignore[var-annotated]
+        rsp = self._fwt.future.result()
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Order Details) ")
@@ -693,9 +693,9 @@ class OrderTicket:
         )
         req = OrderCancelSrv.Request()
         req.order_id = self._order_id
-        self._future = None
+        self._fwt = None
         try:
-            self._future = self._srvcli_ordcnc.call_async(req, timeout_sec=5.0)
+            self._fwt = self._srvcli_ordcnc.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
@@ -703,13 +703,13 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_EntryCanceling(self) -> None:
-        if self._future is None:
+        if self._fwt is None:
             self._trans_to_Complete()
             return
 
-        if not self._future.done():
+        if not self._fwt.future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
-            if self._future.has_timed_out():
+            if self._fwt.has_timed_out():
                 self.logger.error(
                     "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
                 )
@@ -718,7 +718,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
-        rsp = self._future.result()  # type: ignore[var-annotated]
+        rsp = self._fwt.future.result()
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
@@ -757,7 +757,7 @@ class OrderTicket:
         elif self._enable_trade_close:
             self._trans_from_ExitWaiting_to_ExitOrdering()
         elif self._next_pol_time < now:
-            self.logger.debug("<<< Timeout >>> in ExitWaiting")
+            self.logger.debug("transfer ExitWaiting to ExitChecking")
             self._trans_from_ExitWaiting_to_ExitChecking()
         else:
             pass
@@ -771,9 +771,9 @@ class OrderTicket:
         )
         req = TradeDetailsSrv.Request()
         req.trade_id = self._trade_id
-        self._future = None
+        self._fwt = None
         try:
-            self._future = self._srvcli_trddet.call_async(req, timeout_sec=5.0)
+            self._fwt = self._srvcli_trddet.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
@@ -781,13 +781,13 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_ExitChecking(self) -> None:
-        if self._future is None:
+        if self._fwt is None:
             self._trans_from_ExitChecking_to_ExitWaiting()
             return
 
-        if not self._future.done():
+        if not self._fwt.future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
-            if self._future.has_timed_out():
+            if self._fwt.has_timed_out():
                 self.logger.error(
                     "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
                 )
@@ -796,7 +796,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
-        rsp = self._future.result()  # type: ignore[var-annotated]
+        rsp = self._fwt.future.result()
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
@@ -839,9 +839,9 @@ class OrderTicket:
 
         req = TradeCloseSrv.Request()
         req.trade_id = self._trade_id
-        self._future = None
+        self._fwt = None
         try:
-            self._future = self._srvcli_trdcls.call_async(req, timeout_sec=5.0)
+            self._fwt = self._srvcli_trdcls.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
@@ -849,13 +849,13 @@ class OrderTicket:
             self.logger.error("{}".format(err))
 
     def _on_do_ExitOrdering(self) -> None:
-        if self._future is None:
+        if self._fwt is None:
             self._trans_to_Complete()
             return
 
-        if not self._future.done():
+        if not self._fwt.future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
-            if self._future.has_timed_out():
+            if self._fwt.has_timed_out():
                 self.logger.error(
                     "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
                 )
@@ -864,7 +864,7 @@ class OrderTicket:
             return
 
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
-        rsp = self._future.result()  # type: ignore[var-annotated]
+        rsp = self._fwt.future.result()
         if rsp is None:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
@@ -1008,7 +1008,7 @@ class OrderScheduler(Node):
         self._ordreq_srv = self.create_service(
             OrderRegisterSrv,
             "order_register",
-            self._on_order_register,
+            self._handle_order_register,
             callback_group=self._cb_grp_reent,
         )
 
@@ -1016,7 +1016,7 @@ class OrderScheduler(Node):
         self._trdclsreq_srv = self.create_service(
             TradeCloseRequestSrv,
             "trade_close_request",
-            self._on_requested_close,
+            self._handle_requested_close,
             callback_group=self._cb_grp_reent,
         )
         try:
@@ -1098,7 +1098,7 @@ class OrderScheduler(Node):
         self._sub_pri_usdjpy = self.create_subscription(
             Pricing,
             "pricing_usdjpy",
-            self._on_sub_pricing_usdjpy,
+            self._handle_pricing_usdjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1106,7 +1106,7 @@ class OrderScheduler(Node):
         self._sub_pri_eurjpy = self.create_subscription(
             Pricing,
             "pricing_eurjpy",
-            self._on_sub_pricing_eurjpy,
+            self._handle_pricing_eurjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1114,7 +1114,7 @@ class OrderScheduler(Node):
         self._sub_pri_gbpjpy = self.create_subscription(
             Pricing,
             "pricing_gbpjpy",
-            self._on_sub_pricing_gbpjpy,
+            self._handle_pricing_gbpjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1122,7 +1122,7 @@ class OrderScheduler(Node):
         self._sub_pri_audjpy = self.create_subscription(
             Pricing,
             "pricing_audjpy",
-            self._on_sub_pricing_audjpy,
+            self._handle_pricing_audjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1130,7 +1130,7 @@ class OrderScheduler(Node):
         self._sub_pri_nzdjpy = self.create_subscription(
             Pricing,
             "pricing_nzdjpy",
-            self._on_sub_pricing_nzdjpy,
+            self._handle_pricing_nzdjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1138,7 +1138,7 @@ class OrderScheduler(Node):
         self._sub_pri_cadjpy = self.create_subscription(
             Pricing,
             "pricing_cadjpy",
-            self._on_sub_pricing_cadjpy,
+            self._handle_pricing_cadjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1146,7 +1146,7 @@ class OrderScheduler(Node):
         self._sub_pri_chfjpy = self.create_subscription(
             Pricing,
             "pricing_chfjpy",
-            self._on_sub_pricing_chfjpy,
+            self._handle_pricing_chfjpy_msg,
             qos_profile,
             callback_group=self._cb_grp_reent,
         )
@@ -1157,7 +1157,7 @@ class OrderScheduler(Node):
         self._acc_trig = TimeTrigger(
             minute=0, second=self._rosprm_account_updatetime_sec.value
         )
-        self._future: FutureWrapper | None = None
+        self._fwt: FutureWithTimeout | None = None
 
         # --------------- Restore ---------------
         # ----- Order scheduler -----
@@ -1234,18 +1234,18 @@ class OrderScheduler(Node):
             if self._acc_trig.triggered():
                 self._trans_from_Idle_to_AccountUpdating()
         elif self.state == self.States.AccountUpdating:
-            if self._future is None:
+            if self._fwt is None:
                 self.logger.error(
                     "{:!^50}".format(" ROS Service [AccountQuerySrv] Error. ")
                 )
                 self.logger.error("  future is None.")
-            elif self._future.has_timed_out():
+            elif self._fwt.has_timed_out():
                 self.logger.error(
                     "{:!^50}".format(" ROS Service [AccountQuerySrv] Error. ")
                 )
                 self.logger.error("  service call timeout.")
-            elif self._future.done():
-                rsp = self._future.result()  # type: ignore[var-annotated]
+            elif self._fwt.future.done():
+                rsp = self._fwt.future.result()
                 self._balance = rsp.balance
             else:
                 self.logger.warn("{:!^50}".format(" Unexpected statement "))
@@ -1284,12 +1284,12 @@ class OrderScheduler(Node):
 
         req = AccountQuerySrv.Request()
         try:
-            self._future = self._srvcli_accque.call_async(req, timeout_sec=5.0)
+            self._fwt = self._srvcli_accque.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
             self.logger.error("{:!^50}".format(err))
             self._trans_from_AccountUpdating_to_Idle()
 
-    def _on_order_register(
+    def _handle_order_register(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_register]:Start "))
@@ -1387,7 +1387,7 @@ class OrderScheduler(Node):
                     return False
         return True
 
-    def _on_requested_close(
+    def _handle_requested_close(
         self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_close_request]:Start "))
@@ -1412,44 +1412,44 @@ class OrderScheduler(Node):
 
         return rsp
 
-    def _on_sub_pricing_usdjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_usdjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_USD_JPY] = tick_price
 
-    def _on_sub_pricing_eurjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_eurjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_EUR_JPY] = tick_price
             self._tick_price_dict[InstMng.INST_EUR_USD] = tick_price
 
-    def _on_sub_pricing_gbpjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_gbpjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_GBP_JPY] = tick_price
 
-    def _on_sub_pricing_audjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_audjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_AUD_JPY] = tick_price
 
-    def _on_sub_pricing_nzdjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_nzdjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_NZD_JPY] = tick_price
 
-    def _on_sub_pricing_cadjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_cadjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)
             self._tick_price_dict[InstMng.INST_CAD_JPY] = tick_price
 
-    def _on_sub_pricing_chfjpy(self, msg: Pricing) -> None:
+    def _handle_pricing_chfjpy_msg(self, msg: Pricing) -> None:
         # self.logger.debug("----- Call \"{}\"".format(sys._getframe().f_code.co_name))
         if (0 < len(msg.asks)) and (0 < len(msg.bids)):
             tick_price = _TickPrice(msg.time, msg.asks[0].price, msg.bids[0].price)

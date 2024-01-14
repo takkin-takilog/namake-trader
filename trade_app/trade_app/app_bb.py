@@ -26,7 +26,7 @@ from .parameter import InstParam, GranParam
 from . import utils as utl
 from . import ros_utils as rosutl
 from .store import OhlcStore, ColOhlc
-from .wrapper import RosServiceClient, FutureWrapper
+from .wrapper import RosServiceClient, FutureWithTimeout
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -75,7 +75,7 @@ class TradeItem:
         self._is_valid_trade = False
         self._has_done_order_register = True
         self._enable_trade_by_timeframe = True
-        self._future: FutureWrapper | None = None
+        self._fwt: FutureWithTimeout | None = None
 
         # --------------- Create State Machine ---------------
         states = [
@@ -330,11 +330,11 @@ class TradeItem:
         if (not self._is_valid_trade) or self._has_done_order_register:
             return
 
-        if self._future is None:
+        if self._fwt is None:
             return
-        elif self._future.done():
-            if self._future.result() is not None:
-                rsp = self._future.result()  # type: ignore[var-annotated]
+        elif self._fwt.future.done():
+            if self._fwt.future.result() is not None:
+                rsp = self._fwt.future.result()
                 self._register_id = rsp.register_id
                 self._has_done_order_register = True
                 self.logger.debug(
@@ -350,11 +350,11 @@ class TradeItem:
 
     def _on_after_action_from_standby_to_long(self) -> None:
         self._has_done_order_register = False
-        self._future = None
+        self._fwt = None
 
         if self._is_valid_trade:
             try:
-                self._future = self._request_order(is_long_order=True)
+                self._fwt = self._request_order(is_long_order=True)
             except RosServiceErrorException as err:
                 self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
                 self.logger.error("{}".format(err))
@@ -393,11 +393,11 @@ class TradeItem:
         if (not self._is_valid_trade) or self._has_done_order_register:
             return
 
-        if self._future is None:
+        if self._fwt is None:
             return
-        elif self._future.done():
-            if self._future.result() is not None:
-                rsp = self._future.result()  # type: ignore[var-annotated]
+        elif self._fwt.future.done():
+            if self._fwt.future.result() is not None:
+                rsp = self._fwt.future.result()
                 self._register_id = rsp.register_id
                 self._has_done_order_register = True
                 self.logger.debug(
@@ -413,11 +413,11 @@ class TradeItem:
 
     def _on_after_action_from_standby_to_short(self) -> None:
         self._has_done_order_register = False
-        self._future = None
+        self._fwt = None
 
         if self._is_valid_trade:
             try:
-                self._future = self._request_order(is_long_order=False)
+                self._fwt = self._request_order(is_long_order=False)
             except RosServiceErrorException as err:
                 self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
                 self.logger.error("{}".format(err))
@@ -465,7 +465,7 @@ class TradeItem:
         df[self._COL_NSTD] = sr_sma - sr_std
         return df
 
-    def _request_order(self, is_long_order: bool) -> FutureWrapper:
+    def _request_order(self, is_long_order: bool) -> FutureWithTimeout:
         latest_rec = self._df_bb.iloc[-1]
 
         if is_long_order:
@@ -497,7 +497,7 @@ class TradeItem:
         req.exit_exp_time = ""
         return self._srvcli_ord.call_async(req, timeout_sec=5.0)
 
-    def _request_trade_close(self, register_id: int) -> FutureWrapper:
+    def _request_trade_close(self, register_id: int) -> FutureWithTimeout:
         req = TradeCloseRequestSrv.Request()
         req.register_id = register_id
         return self._srvcli_trdcls.call_async(req, timeout_sec=5.0)
@@ -643,7 +643,7 @@ class AppBollingerBand(Node):
 
         # Create topic subscriber "HeartBeat"
         self._sub_hb = self.create_subscription(
-            String, "heart_beat", self._on_sub_heartbeat, qos_profile
+            String, "heart_beat", self._handle_heartbeat_msg, qos_profile
         )
 
         # Create topic subscriber "LatestCandle"
@@ -651,7 +651,7 @@ class AppBollingerBand(Node):
         gran_name = self._gran_param.namespace
         topic = inst_name + "_" + gran_name + "_latest_candle"
         self._sub_lc = self.create_subscription(
-            LatestCandle, topic, self._on_sub_latest_candle, qos_profile
+            LatestCandle, topic, self._handle_latest_candle_msg, qos_profile
         )
 
         # --------------- Instantiated OhlcStore ---------------
@@ -714,7 +714,7 @@ class AppBollingerBand(Node):
             history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
         )
         self._sub_pri = self.create_subscription(
-            Pricing, topic, self._on_sub_pricing, qos_profile
+            Pricing, topic, self._handle_pricing_msg, qos_profile
         )
 
     def _on_enter_normal(self) -> None:
@@ -746,12 +746,12 @@ class AppBollingerBand(Node):
     def _clear_timer(self) -> None:
         self._timer_start = time.monotonic()
 
-    def _on_sub_heartbeat(self, msg: String) -> None:  # pylint: disable=W0613
+    def _handle_heartbeat_msg(self, msg: String) -> None:  # pylint: disable=W0613
         if self.state == self.States.abnormal:
             self._trans_from_abnormal_to_normal()
         self._clear_timer()
 
-    def _on_sub_pricing(self, msg: Pricing) -> None:
+    def _handle_pricing_msg(self, msg: Pricing) -> None:
         if self.state == self.States.abnormal:
             self._trans_from_abnormal_to_normal()
 
@@ -773,7 +773,7 @@ class AppBollingerBand(Node):
 
         self._clear_timer()
 
-    def _on_sub_latest_candle(self, msg: LatestCandle) -> None:
+    def _handle_latest_candle_msg(self, msg: LatestCandle) -> None:
         self._latest_candle_msg_buff.append(msg)
 
 
