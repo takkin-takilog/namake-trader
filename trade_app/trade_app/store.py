@@ -131,22 +131,22 @@ class TimeFrameConverter:
         time_frame = dt.datetime(time.year, time.month, day, hour, minute, second)
 
         if time_frame in self._df_ohlc.index:
-            if self._df_ohlc.loc[time_frame][self._HIGH_ASK] < price_ask:
-                self._df_ohlc.loc[time_frame][self._HIGH_ASK] = price_ask
-            if self._df_ohlc.loc[time_frame][self._HIGH_MID] < price_mid:
-                self._df_ohlc.loc[time_frame][self._HIGH_MID] = price_mid
-            if self._df_ohlc.loc[time_frame][self._HIGH_BID] < price_bid:
-                self._df_ohlc.loc[time_frame][self._HIGH_BID] = price_bid
-            if price_ask < self._df_ohlc.loc[time_frame][self._LOW_ASK]:
-                self._df_ohlc.loc[time_frame][self._LOW_ASK] = price_ask
-            if price_mid < self._df_ohlc.loc[time_frame][self._LOW_MID]:
-                self._df_ohlc.loc[time_frame][self._LOW_MID] = price_mid
-            if price_bid < self._df_ohlc.loc[time_frame][self._LOW_BID]:
-                self._df_ohlc.loc[time_frame][self._LOW_BID] = price_bid
+            if self._df_ohlc.loc[time_frame, self._HIGH_ASK] < price_ask:
+                self._df_ohlc.loc[time_frame, self._HIGH_ASK] = price_ask
+            if self._df_ohlc.loc[time_frame, self._HIGH_MID] < price_mid:
+                self._df_ohlc.loc[time_frame, self._HIGH_MID] = price_mid
+            if self._df_ohlc.loc[time_frame, self._HIGH_BID] < price_bid:
+                self._df_ohlc.loc[time_frame, self._HIGH_BID] = price_bid
+            if price_ask < self._df_ohlc.loc[time_frame, self._LOW_ASK]:
+                self._df_ohlc.loc[time_frame, self._LOW_ASK] = price_ask
+            if price_mid < self._df_ohlc.loc[time_frame, self._LOW_MID]:
+                self._df_ohlc.loc[time_frame, self._LOW_MID] = price_mid
+            if price_bid < self._df_ohlc.loc[time_frame, self._LOW_BID]:
+                self._df_ohlc.loc[time_frame, self._LOW_BID] = price_bid
 
-            self._df_ohlc.loc[time_frame][self._CLOSE_ASK] = price_ask
-            self._df_ohlc.loc[time_frame][self._CLOSE_MID] = price_mid
-            self._df_ohlc.loc[time_frame][self._CLOSE_BID] = price_bid
+            self._df_ohlc.loc[time_frame, self._CLOSE_ASK] = price_ask
+            self._df_ohlc.loc[time_frame, self._CLOSE_MID] = price_mid
+            self._df_ohlc.loc[time_frame, self._CLOSE_BID] = price_bid
         else:
             ohlc_data = [
                 price_ask,
