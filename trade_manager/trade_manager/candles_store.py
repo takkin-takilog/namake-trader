@@ -14,7 +14,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.executors import ExternalShutdownException
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
+from rclpy.qos import QoSProfile, HistoryPolicy, ReliabilityPolicy
 from rclpy.parameter import Parameter
 from api_server_msgs.srv import CandlesQuerySrv
 from api_server_msgs.msg import Instrument as InstApi
@@ -223,7 +223,7 @@ class _CandlesElement:
 
         # --------------- Create ROS Communication ---------------
         qos_profile = QoSProfile(
-            history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
+            history=HistoryPolicy.KEEP_ALL, reliability=ReliabilityPolicy.RELIABLE
         )
         inst_name = InstParam.get_member_by_msgid(self._inst_id).namespace
         gran_name = GranParam.get_member_by_msgid(self._gran_id).namespace
@@ -751,11 +751,16 @@ class CandlesStore(Node):
                 )
                 self._candles_elem_list.append(candles_elem)
 
+        qos_profile_service = QoSProfile(
+            history=HistoryPolicy.KEEP_ALL, reliability=ReliabilityPolicy.RELIABLE
+        )
+
         # Create service server "CandlesByDatetime"
         self._cbd_srv = self.create_service(
             CandlesByDatetimeSrv,
             "candles_by_datetime",
             self._handle_candles_by_datetime,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
@@ -764,6 +769,7 @@ class CandlesStore(Node):
             CandlesByLengthSrv,
             "candles_by_length",
             self._handle_candles_by_length,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
