@@ -9,6 +9,7 @@ import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.executors import ExternalShutdownException
 from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.qos import QoSProfile, HistoryPolicy, ReliabilityPolicy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from oandapyV20 import API
@@ -132,11 +133,16 @@ class ApiServer(Node):
         self._cb_grp_reent = ReentrantCallbackGroup()
 
         # --------------- Create ROS Communication ---------------
+        qos_profile_service = QoSProfile(
+            history=HistoryPolicy.KEEP_ALL, reliability=ReliabilityPolicy.RELIABLE
+        )
+
         # Create service server "OrderCreate"
         self.order_create_srv = self.create_service(
             OrderCreateSrv,
             "order_create",
             self._handle_order_create,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
@@ -145,6 +151,7 @@ class ApiServer(Node):
             TradeDetailsSrv,
             "trade_details",
             self._handle_trade_details,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
@@ -153,6 +160,7 @@ class ApiServer(Node):
             TradeCRCDOSrv,
             "trade_crcdo",
             self._handle_trade_crcdo,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
@@ -161,6 +169,7 @@ class ApiServer(Node):
             TradeCloseSrv,
             "trade_close",
             self._handle_trade_close,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
@@ -169,6 +178,7 @@ class ApiServer(Node):
             OrderDetailsSrv,
             "order_details",
             self._handle_order_details,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
@@ -177,6 +187,7 @@ class ApiServer(Node):
             OrderCancelSrv,
             "order_cancel",
             self._handle_order_cancel,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
@@ -185,6 +196,7 @@ class ApiServer(Node):
             CandlesQuerySrv,
             "candles_query",
             self._handle_candles_query,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
@@ -193,6 +205,7 @@ class ApiServer(Node):
             AccountQuerySrv,
             "account_query",
             self._handle_account_query,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
@@ -201,6 +214,7 @@ class ApiServer(Node):
             PricingQuerySrv,
             "pricing_query",
             self._handle_pricing_query,
+            qos_profile=qos_profile_service,
             callback_group=self._cb_grp_reent,
         )
 
