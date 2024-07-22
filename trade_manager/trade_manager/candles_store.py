@@ -193,7 +193,7 @@ class _CandlesElement:
         req.dt_from = dt_from.strftime(FMT_YMDHMS)
         req.dt_to = dt_to.strftime(FMT_YMDHMS)
         try:
-            rsp = self._srvcli.call(req)  # type: ignore[var-annotated]
+            rsp = self._srvcli.call(req)  # type: ignore
         except RosServiceErrorException as err:
             self.logger.error(
                 "{:!^50}".format(" Call ROS Service Error (CandlesQuery) ")
@@ -951,7 +951,7 @@ class CandlesStore(Node):
 
         return rsp
 
-    def _use_inst_list(self) -> list:
+    def _use_inst_list(self) -> list[int]:
         inst_list: list[int] = []
         if self._rosprm_use_inst_usdjpy.value:
             inst_list.append(InstApi.INST_USD_JPY)
@@ -971,8 +971,8 @@ class CandlesStore(Node):
             inst_list.append(InstApi.INST_CHF_JPY)
         return inst_list
 
-    def _use_gran_list(self) -> list:
-        gran_list: list[tuple] = []
+    def _use_gran_list(self) -> list[tuple[int, int]]:
+        gran_list: list[tuple[int, int]] = []
         if self._rosprm_use_gran_m1.value:
             gran_list.append((GranApi.GRAN_M1, self._rosprm_length_m1.value))
         if self._rosprm_use_gran_m2.value:

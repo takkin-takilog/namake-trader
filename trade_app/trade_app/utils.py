@@ -19,7 +19,7 @@ def rounddown(number: float, digits: int) -> float:
     :param digits: The number of digits to which you want to round number.
     :return: Rounded down number.
     """
-    return int(number * 10**digits) / (10**digits)
+    return float(int(number * 10**digits) / (10**digits))
 
 
 def roundup(number: float, digits: int) -> float:
@@ -30,6 +30,7 @@ def roundup(number: float, digits: int) -> float:
     :param digits: The number of digits to which you want to round number.
     :return: Rounded up number.
     """
+    r_num: float = 0.0
     if 0 < number:
         r_num = math.ceil(number * 10**digits) / (10**digits)
     else:

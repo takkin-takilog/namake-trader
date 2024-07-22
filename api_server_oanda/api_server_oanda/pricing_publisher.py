@@ -1,5 +1,5 @@
 from typing import TypeVar
-import requests
+import requests  # type: ignore
 import traceback
 import rclpy
 from rclpy.executors import ExternalShutdownException
@@ -11,7 +11,8 @@ from api_server_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error, StreamTerminated
-from .constant import ADD_CIPHERS
+
+# from .constant import ADD_CIPHERS
 from .parameter import InstParam
 from .dataclass import RosParam
 from . import utils as utl
@@ -169,7 +170,7 @@ class PricingPublisher(Node):
 
 
 def main(args: list[str] | None = None) -> None:
-    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
+    # requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)
     pricing_publisher = PricingPublisher()

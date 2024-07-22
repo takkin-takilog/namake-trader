@@ -1,3 +1,4 @@
+from typing import Any
 import datetime as dt
 from trade_manager_msgs.msg import Instrument as InstMng
 from trade_manager_msgs.msg import Granularity as GranMng
@@ -20,7 +21,7 @@ class ConstantGroup:
     """
 
     @classmethod
-    def to_list(cls) -> list:
+    def to_list(cls) -> list[Any]:
         """
         Returns all constant values in class with the attribute requirements.
 

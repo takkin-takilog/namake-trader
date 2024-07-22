@@ -316,8 +316,8 @@ class OhlcStore:
         self._fwt: FutureWithTimeout | None = None
         self._df_ohlc = df.set_index(ColOhlc.DATETIME)
         latest_rec = self._df_ohlc.iloc[-1]
-        self._latest_tick_price_ask = latest_rec[ColOhlc.ASK_C]
-        self._latest_tick_price_bid = latest_rec[ColOhlc.BID_C]
+        self._latest_tick_price_ask: float = latest_rec[ColOhlc.ASK_C]
+        self._latest_tick_price_bid: float = latest_rec[ColOhlc.BID_C]
         self._next_update_time = dt.datetime.strptime(rsp.next_update_time, FMT_YMDHMS)
         if self._df_ohlc.empty:
             self._latest_comp_time = dt.datetime.now() - self._gran_param.timedelta

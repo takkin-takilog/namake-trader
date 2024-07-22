@@ -1,5 +1,5 @@
 from typing import TypeVar
-import requests
+import requests  # type: ignore
 import traceback
 import ast
 import json
@@ -32,7 +32,9 @@ from api_server_msgs.srv import (
     AccountQuerySrv,
     PricingQuerySrv,
 )
-from .constant import FMT_DTTM_API, FMT_YMDHMS, ADD_CIPHERS
+from .constant import FMT_DTTM_API, FMT_YMDHMS
+
+# from .constant import ADD_CIPHERS
 from .parameter import InstParam, GranParam
 from .dataclass import RosParam
 from . import utils as utl
@@ -874,7 +876,7 @@ class ApiServer(Node):
         return rsp
 
     def _handle_account_query(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse  # pylint: disable=W0613
+        self, req: SrvTypeRequest, rsp: SrvTypeResponse
     ) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[account_query]:Start "))
         self.logger.debug("<Request>")
@@ -1067,13 +1069,13 @@ class ApiServer(Node):
         if (req.ordertype_msg.type == OrderType.TYP_LIMIT) or (
             req.ordertype_msg.type == OrderType.TYP_STOP
         ):
-            tmp = {
+            sttmnt_pri = {
                 "price": self._fit_unit(req.price, one_pip_str),
                 "timeInForce": "GTC",
             }
-            data_order.update(tmp)
+            data_order.update(sttmnt_pri)
 
-        tmp = {
+        sttmnt_cmn = {
             "instrument": inst_param.name,
             "units": req.units,
             "positionFill": "DEFAULT",
@@ -1086,7 +1088,7 @@ class ApiServer(Node):
                 "price": self._fit_unit(req.stop_loss_price, one_pip_str),
             },
         }
-        data_order.update(tmp)
+        data_order.update(sttmnt_cmn)
 
         return data
 
@@ -1117,7 +1119,7 @@ class ApiServer(Node):
 
 
 def main(args: list[str] | None = None) -> None:
-    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
+    # requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()

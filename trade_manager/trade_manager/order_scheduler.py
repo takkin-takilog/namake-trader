@@ -1,6 +1,6 @@
 import sys
 import os
-from typing import TypeVar
+from typing import TypeVar, Any
 from dataclasses import dataclass
 from enum import Enum, auto
 import datetime as dt
@@ -444,7 +444,7 @@ class OrderTicket:
     def register_id(self) -> int:
         return self._register_id
 
-    def generate_buckup_record(self) -> list:
+    def generate_buckup_record(self) -> list[Any]:
         bk_rec_list = [
             self._register_id,
             self._order_id,
@@ -1082,7 +1082,7 @@ class OrderScheduler(Node):
 
         req = AccountQuerySrv.Request()
         try:
-            rsp = self._srvcli_accque.call(req, timeout_sec=10.0)  # type: ignore[var-annotated]
+            rsp = self._srvcli_accque.call(req, timeout_sec=10.0)  # type: ignore
         except RosServiceErrorException as err:
             self.logger.error("{}".format(err))
             raise InitializerErrorException(

@@ -746,7 +746,7 @@ class AppBollingerBand(Node):
     def _clear_timer(self) -> None:
         self._timer_start = time.monotonic()
 
-    def _handle_heartbeat_msg(self, msg: String) -> None:  # pylint: disable=W0613
+    def _handle_heartbeat_msg(self, msg: String) -> None:
         if self.state == self.States.abnormal:
             self._trans_from_abnormal_to_normal()
         self._clear_timer()
