@@ -43,12 +43,11 @@ from .constant import WeekDay
 from .constant import Transitions as Tr
 from .constant import INST_DICT
 from .exception import InitializerErrorException, RosServiceErrorException
-from .dataclass import RosParam
+from .dataclass import RosParam, RosParamTime
 from .wrapper import RosServiceClient, FutureWithTimeout
 from .trigger import TimeTrigger
 from . import backup as bk
 from . import ros_utils as rosutl
-from trade_manager.dataclass import RosParamTime
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
