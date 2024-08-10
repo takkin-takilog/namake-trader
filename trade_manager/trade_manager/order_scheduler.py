@@ -958,6 +958,7 @@ class OrderScheduler(Node):
 
         rosutl.set_parameters(self, self._rosprm_max_leverage)
         rosutl.set_parameters(self, self._rosprm_max_position_count)
+        rosutl.set_parameters(self, self._rosprm_use_homogenize_units)
         rosutl.set_parameters(self, self._rosprm_use_weekend_order_stop)
         rosutl.set_parameters(self, self._rosprm_weekend_order_stop_time)
         rosutl.set_parameters(self, self._rosprm_use_weekend_all_close)
