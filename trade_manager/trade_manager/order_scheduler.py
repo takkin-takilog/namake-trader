@@ -134,7 +134,9 @@ class OrderTicket:
         poll_interval_min: int,
         balance: int,
         req: SrvTypeRequest,
-        tick_price: _TickPrice,
+        tick_price_dict: dict[int, _TickPrice],
+        *,
+        use_homogenize_units: bool = False,
         use_restore: bool = False,
     ) -> None:
         # --------------- Set logger lebel ---------------
@@ -351,10 +353,18 @@ class OrderTicket:
 
         if req.units == 0:
             if self._order_type == OrderType.MARKET:
-                if req.orddir_msg.order_dir == OrderDir.LONG:
-                    price = tick_price.tick_ask
+                if use_homogenize_units:
+                    if req.orddir_msg.order_dir == OrderDir.LONG:
+                        price = max([i.tick_ask for i in tick_price_dict.values()])
+                    else:
+                        price = max([i.tick_bid for i in tick_price_dict.values()])
                 else:
-                    price = tick_price.tick_bid
+                    tick_price = self._tick_price_dict[req.inst_msg.inst_id]
+                    if req.orddir_msg.order_dir == OrderDir.LONG:
+                        price = tick_price.tick_ask
+                    else:
+                        price = tick_price.tick_bid
+
             else:
                 price = req.entry_price
 
@@ -924,6 +934,9 @@ class OrderScheduler(Node):
         self._rosprm_max_position_count = RosParam(
             "max_position_count", Parameter.Type.INTEGER
         )
+        self._rosprm_use_homogenize_units = RosParam(
+            "use_homogenize_units", Parameter.Type.BOOL
+        )
         self._rosprm_use_weekend_order_stop = RosParam(
             "use_weekend_order_stop", Parameter.Type.BOOL
         )
@@ -945,6 +958,7 @@ class OrderScheduler(Node):
 
         rosutl.set_parameters(self, self._rosprm_max_leverage)
         rosutl.set_parameters(self, self._rosprm_max_position_count)
+        rosutl.set_parameters(self, self._rosprm_use_homogenize_units)
         rosutl.set_parameters(self, self._rosprm_use_weekend_order_stop)
         rosutl.set_parameters(self, self._rosprm_weekend_order_stop_time)
         rosutl.set_parameters(self, self._rosprm_use_weekend_all_close)
@@ -1184,7 +1198,6 @@ class OrderScheduler(Node):
             )
             for _, row in df.iterrows():
                 req = OrderRegisterSrv.Request()
-                tick_price = _TickPrice("", 0, 0)  # Dummy
                 ticket = OrderTicket(
                     self.logger,
                     self._srvcli_ordcre,
@@ -1198,7 +1211,7 @@ class OrderScheduler(Node):
                     self._rosprm_poll_interval_min.value,
                     self._balance,
                     req,
-                    tick_price,
+                    self._tick_price_dict,
                     use_restore=True,
                 )
                 ticket.restore(row)
@@ -1329,7 +1342,6 @@ class OrderScheduler(Node):
             self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
             return rsp
 
-        tick_price = self._tick_price_dict[req.inst_msg.inst_id]
         try:
             ticket = OrderTicket(
                 self.logger,
@@ -1344,7 +1356,8 @@ class OrderScheduler(Node):
                 self._rosprm_poll_interval_min.value,
                 self._balance,
                 req,
-                tick_price,
+                self._tick_price_dict,
+                use_homogenize_units=self._rosprm_use_homogenize_units.value,
             )
         except InitializerErrorException as err:
             self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
