@@ -255,7 +255,7 @@ candles_store:
 
 - **use_homogenize_units (bool, default=`true`)**
 
-  「複利運用モード」時に各為替レート値の違いによる取引数量のバラツキを均一にするためのパラメータです。  
+  「複利運用モード」時に各為替レート値の違いによる取引数量の偏りを均一にするためのパラメータです。  
   `true`の場合、トレードしている為替レートの中で最も値が大きい為替レートで一律取引数量の計算が行われます。  
   詳細は以下の記事を参照してください。   
   ・[【NaMaKe Trader 活用術】複利で運用する方法](https://takilog.com/systra-utilization-compound-interest/)
