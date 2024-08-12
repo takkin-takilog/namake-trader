@@ -50,22 +50,16 @@ class RosServiceClient:
     ) -> None:
         self._node = node
         self.logger = self._node.get_logger()
-        cli = self._node.create_client(
-            srv_type, srv_name, qos_profile=qos_profile, callback_group=callback_group
-        )
+        cli = self._node.create_client(srv_type, srv_name, qos_profile=qos_profile, callback_group=callback_group)
         if use_wait_for_service:
             while not cli.wait_for_service(timeout_sec=1.0):
                 if not rclpy.ok():
-                    raise RosServiceErrorException(
-                        "Interrupted while waiting for service."
-                    )
+                    raise RosServiceErrorException("Interrupted while waiting for service.")
                 self.logger.info("Waiting for [{}] service...".format(srv_name))
         self._cli = cli
         self._srv_name = srv_name
 
-    def call(
-        self, request: SrvTypeRequest, timeout_sec: float | None = None
-    ) -> SrvTypeResponse:
+    def call(self, request: SrvTypeRequest, timeout_sec: float | None = None) -> SrvTypeResponse:
         if not self._cli.service_is_ready():
             msg = "Server [{}] Not Ready.".format(self._srv_name)
             raise RosServiceErrorException(msg)
@@ -97,9 +91,7 @@ class RosServiceClient:
 
         return result
 
-    def call_async(
-        self, request: SrvTypeRequest, timeout_sec: float | None = None
-    ) -> FutureWithTimeout:
+    def call_async(self, request: SrvTypeRequest, timeout_sec: float | None = None) -> FutureWithTimeout:
         if not self._cli.service_is_ready():
             msg = "Server [{}] Not Ready.".format(self._srv_name)
             raise RosServiceErrorException(msg)

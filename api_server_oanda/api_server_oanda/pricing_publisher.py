@@ -35,21 +35,11 @@ class PricingPublisher(Node):
 
         # --------------- Initialize ROS parameter ---------------
         self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
-        self._rosprm_pra_account_number = RosParam(
-            "env_practice.account_number", Parameter.Type.STRING
-        )
-        self._rosprm_pra_access_token = RosParam(
-            "env_practice.access_token", Parameter.Type.STRING
-        )
-        self._rosprm_liv_account_number = RosParam(
-            "env_live.account_number", Parameter.Type.STRING
-        )
-        self._rosprm_liv_access_token = RosParam(
-            "env_live.access_token", Parameter.Type.STRING
-        )
-        self._rosprm_connection_timeout = RosParam(
-            "connection_timeout", Parameter.Type.INTEGER
-        )
+        self._rosprm_pra_account_number = RosParam("env_practice.account_number", Parameter.Type.STRING)
+        self._rosprm_pra_access_token = RosParam("env_practice.access_token", Parameter.Type.STRING)
+        self._rosprm_liv_account_number = RosParam("env_live.account_number", Parameter.Type.STRING)
+        self._rosprm_liv_access_token = RosParam("env_live.access_token", Parameter.Type.STRING)
+        self._rosprm_connection_timeout = RosParam("connection_timeout", Parameter.Type.INTEGER)
 
         rosutl.set_parameters(self, self._rosprm_use_env_live)
         rosutl.set_parameters(self, self._rosprm_pra_account_number)
@@ -91,9 +81,7 @@ class PricingPublisher(Node):
         )
 
         # --------------- Create ROS Communication ---------------
-        qos_profile = QoSProfile(
-            history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
-        )
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE)
 
         # Create topic publisher "pricing_*****"
         inst_name_list = []

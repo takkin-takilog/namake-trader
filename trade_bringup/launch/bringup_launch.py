@@ -40,18 +40,14 @@ def generate_launch_description() -> LaunchDescription:
     bringup_cmd_group = GroupAction(
         [
             IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    os.path.join(launch_dir, "api_server_oanda_launch.py")
-                ),
+                PythonLaunchDescriptionSource(os.path.join(launch_dir, "api_server_oanda_launch.py")),
                 launch_arguments={
                     VN_LOG_LEVEL: lc_log_level,
                     VN_USE_ENV_LIVE: lc_use_env_live,
                 }.items(),
             ),
             IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    os.path.join(launch_dir, "system_trade_launch.py")
-                ),
+                PythonLaunchDescriptionSource(os.path.join(launch_dir, "system_trade_launch.py")),
                 launch_arguments={
                     VN_LOG_LEVEL: lc_log_level,
                     VN_USE_ENV_LIVE: lc_use_env_live,

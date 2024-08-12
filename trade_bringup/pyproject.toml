@@ -1,5 +1,5 @@
 [tool.ruff]
-# line-length = 120
+line-length = 119
 
 [tool.mypy]
 allow_redefinition = true

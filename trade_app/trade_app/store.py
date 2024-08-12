@@ -106,9 +106,7 @@ class TimeFrameConverter:
             self._CLOSE_BID,
         ]
 
-        columns = (
-            [self._INDEX] + self._COLUMNS_ASK + self._COLUMNS_MID + self._COLUMNS_BID
-        )
+        columns = [self._INDEX] + self._COLUMNS_ASK + self._COLUMNS_MID + self._COLUMNS_BID
         self._df_ohlc = pd.DataFrame(columns=columns)
         self._df_ohlc.set_index(self._INDEX, inplace=True)
 
@@ -214,9 +212,7 @@ class OhlcStore:
         idle = auto()
         updating = auto()
 
-    def __init__(
-        self, node: Node, inst_param: InstParam, gran_param: GranParam, df_length: int
-    ):
+    def __init__(self, node: Node, inst_param: InstParam, gran_param: GranParam, df_length: int):
         self._DF_LENGTH_MAX = df_length
         self._inst_param = inst_param
         self._gran_param = gran_param
@@ -411,13 +407,9 @@ class OhlcStore:
                 self._trans_from_idle_to_updating()
 
             self._latest_comp_time = comp_time
-            self._next_update_time = dt.datetime.strptime(
-                msg_buff[-1].next_update_time, FMT_YMDHMS
-            )
+            self._next_update_time = dt.datetime.strptime(msg_buff[-1].next_update_time, FMT_YMDHMS)
 
-    def update_incomp_ohlc(
-        self, time: dt.datetime, tick_price_ask: float, tick_price_bid: float
-    ) -> None:
+    def update_incomp_ohlc(self, time: dt.datetime, tick_price_ask: float, tick_price_bid: float) -> None:
         self._tfc.set_price(time, tick_price_ask, tick_price_bid)
         ohlc_series = self._tfc.df_ohlc.iloc[-1]
         record = ohlc_series.to_list() + [CompSts.INCOMP]
@@ -437,10 +429,7 @@ class OhlcStore:
         now = dt.datetime.now()
         devi_time = now - self._next_update_time
         if devi_time > self._gran_param.timedelta:
-            self.logger.warn(
-                "Time deviation between current-time and next-update-time "
-                + "has been over the threshold!"
-            )
+            self.logger.warn("Time deviation between current-time and next-update-time has been over the threshold!")
             self.logger.warn("  - now             :[{}]".format(now))
             self.logger.warn("  - next_update_time:[{}]".format(self._next_update_time))
             self.logger.warn("  - Time Deviation:[{}]".format(devi_time))
@@ -484,9 +473,7 @@ class OhlcStore:
             self._trans_self_updating()
             return
 
-        self.logger.debug(
-            "  - Appended record length:[{}]".format(len(rsp.cndl_msg_list))
-        )
+        self.logger.debug("  - Appended record length:[{}]".format(len(rsp.cndl_msg_list)))
         for cndl_msg in rsp.cndl_msg_list:
             time = dt.datetime.strptime(cndl_msg.time, FMT_YMDHMS)
             record = [
