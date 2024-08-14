@@ -88,7 +88,7 @@ class InstParam(Enum):
         round a price value to the digits.
         """
         p = 10**self.digit
-        return (physical_value * p * 2 + 1) // 2 / p
+        return float((physical_value * p * 2 + 1) // 2 / p)
 
 
 class GranParam(Enum):

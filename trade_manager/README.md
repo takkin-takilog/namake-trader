@@ -253,6 +253,13 @@ candles_store:
   同時にエントリーできる上限値。  
   エントリー数が上限に達しているときに新規注文を受けた場合、注文は無効となります。  
 
+- **use_homogenize_units (bool, default=`false`)**
+
+  「複利運用モード」時に各為替レート値の違いによる取引数量の偏りを均一にするためのパラメータです。  
+  `true`の場合、トレードしている為替レートの中で最も値が大きい為替レートで一律取引数量の計算が行われます。  
+  詳細は以下の記事を参照してください。   
+  ・[【NaMaKe Trader 活用術】複利で運用する方法](https://takilog.com/systra-utilization-compound-interest/)
+
 - **use_weekend_order_stop (bool, default=8)**
 
   `true`の場合、週末の新規注文受付が停止されます。  
@@ -291,6 +298,7 @@ order_scheduler:
   ros__parameters:
     max_leverage: 20.0
     max_position_count: 8
+    use_homogenize_units: true
     use_weekend_order_stop: false
     weekend_order_stop_time: 0:00:00  # "%H:%M:%S"
     use_weekend_all_close: false

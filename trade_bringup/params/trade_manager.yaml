@@ -55,6 +55,7 @@ order_scheduler:
   ros__parameters:
     max_leverage: 20.0
     max_position_count: 8
+    use_homogenize_units: false
     use_weekend_order_stop: false
     weekend_order_stop_time: 0:00:00  # "%H:%M:%S"
     use_weekend_all_close: false

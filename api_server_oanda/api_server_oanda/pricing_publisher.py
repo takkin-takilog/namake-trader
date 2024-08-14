@@ -1,5 +1,5 @@
 from typing import TypeVar
-import requests
+import requests  # type: ignore
 import traceback
 import rclpy
 from rclpy.executors import ExternalShutdownException
@@ -11,7 +11,8 @@ from api_server_msgs.msg import PriceBucket, Pricing
 from oandapyV20 import API
 from oandapyV20.endpoints import pricing as pr
 from oandapyV20.exceptions import V20Error, StreamTerminated
-from .constant import ADD_CIPHERS
+
+# from .constant import ADD_CIPHERS
 from .parameter import InstParam
 from .dataclass import RosParam
 from . import utils as utl
@@ -34,21 +35,11 @@ class PricingPublisher(Node):
 
         # --------------- Initialize ROS parameter ---------------
         self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
-        self._rosprm_pra_account_number = RosParam(
-            "env_practice.account_number", Parameter.Type.STRING
-        )
-        self._rosprm_pra_access_token = RosParam(
-            "env_practice.access_token", Parameter.Type.STRING
-        )
-        self._rosprm_liv_account_number = RosParam(
-            "env_live.account_number", Parameter.Type.STRING
-        )
-        self._rosprm_liv_access_token = RosParam(
-            "env_live.access_token", Parameter.Type.STRING
-        )
-        self._rosprm_connection_timeout = RosParam(
-            "connection_timeout", Parameter.Type.INTEGER
-        )
+        self._rosprm_pra_account_number = RosParam("env_practice.account_number", Parameter.Type.STRING)
+        self._rosprm_pra_access_token = RosParam("env_practice.access_token", Parameter.Type.STRING)
+        self._rosprm_liv_account_number = RosParam("env_live.account_number", Parameter.Type.STRING)
+        self._rosprm_liv_access_token = RosParam("env_live.access_token", Parameter.Type.STRING)
+        self._rosprm_connection_timeout = RosParam("connection_timeout", Parameter.Type.INTEGER)
 
         rosutl.set_parameters(self, self._rosprm_use_env_live)
         rosutl.set_parameters(self, self._rosprm_pra_account_number)
@@ -90,9 +81,7 @@ class PricingPublisher(Node):
         )
 
         # --------------- Create ROS Communication ---------------
-        qos_profile = QoSProfile(
-            history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
-        )
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE)
 
         # Create topic publisher "pricing_*****"
         inst_name_list = []
@@ -169,7 +158,7 @@ class PricingPublisher(Node):
 
 
 def main(args: list[str] | None = None) -> None:
-    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
+    # requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)
     pricing_publisher = PricingPublisher()
