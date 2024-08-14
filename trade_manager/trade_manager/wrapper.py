@@ -45,8 +45,8 @@ class RosServiceClient:
         srv_name: str,
         *,
         qos_profile: QoSProfile = qos_profile_services_default,
-        callback_group: CallbackGroup = None,
-        use_wait_for_service: bool = True
+        callback_group: CallbackGroup | None = None,
+        use_wait_for_service: bool = True,
     ) -> None:
         self._node = node
         self.logger = self._node.get_logger()

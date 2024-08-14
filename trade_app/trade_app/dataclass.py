@@ -1,6 +1,7 @@
 from typing import Any
 from dataclasses import dataclass
 import datetime as dt
+from rclpy.parameter import Parameter
 
 
 @dataclass
@@ -10,7 +11,7 @@ class RosParam:
     """
 
     name: str
-    type: int
+    type: Parameter.Type
     value: Any = None
 
 

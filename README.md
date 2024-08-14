@@ -24,8 +24,8 @@
 <br/>
 
 ## 1. システム動作環境
-* 動作OS： **Linux (Ubuntu 22.04 推奨)**
-* ソフトウェアPF： **[ROS2](https://docs.ros.org/en/humble/Releases/Release-Humble-Hawksbill.html) ([Humble Hawksbill](https://docs.ros.org/en/humble/Releases/Release-Humble-Hawksbill.html) 推奨)**
+* 動作OS： **Linux (Ubuntu 24.04 推奨)**
+* ソフトウェアPF： **[ROS2](https://docs.ros.org/en/jazzy/Releases/Release-Jazzy-Jalisco.html) ([Jazzy Jalisco](https://docs.ros.org/en/jazzy/Releases/Release-Jazzy-Jalisco.html) 推奨)**
 
 ### 1.1 依存関係
 * `Pandas`
@@ -86,7 +86,7 @@ UbuntuとROS2のインストール方法は僕が書いている以下の記事�
 
 1. 依存パッケージをインストールします。
 ```bash
-$ pip install pandas transitions oandapyV20
+$ pip install --break-system-packages pandas transitions oandapyV20
 ```
 
 2. ワークスペースを作成します。

@@ -1,5 +1,5 @@
 from typing import TypeVar
-import requests
+import requests  # type: ignore
 import traceback
 import ast
 import json
@@ -32,7 +32,9 @@ from api_server_msgs.srv import (
     AccountQuerySrv,
     PricingQuerySrv,
 )
-from .constant import FMT_DTTM_API, FMT_YMDHMS, ADD_CIPHERS
+from .constant import FMT_DTTM_API, FMT_YMDHMS
+
+# from .constant import ADD_CIPHERS
 from .parameter import InstParam, GranParam
 from .dataclass import RosParam
 from . import utils as utl
@@ -60,21 +62,11 @@ class ApiServer(Node):
 
         # --------------- Initialize ROS parameter ---------------
         self._rosprm_use_env_live = RosParam("use_env_live", Parameter.Type.BOOL)
-        self._rosprm_pra_account_number = RosParam(
-            "env_practice.account_number", Parameter.Type.STRING
-        )
-        self._rosprm_pra_access_token = RosParam(
-            "env_practice.access_token", Parameter.Type.STRING
-        )
-        self._rosprm_liv_account_number = RosParam(
-            "env_live.account_number", Parameter.Type.STRING
-        )
-        self._rosprm_liv_access_token = RosParam(
-            "env_live.access_token", Parameter.Type.STRING
-        )
-        self._rosprm_connection_timeout = RosParam(
-            "connection_timeout", Parameter.Type.INTEGER
-        )
+        self._rosprm_pra_account_number = RosParam("env_practice.account_number", Parameter.Type.STRING)
+        self._rosprm_pra_access_token = RosParam("env_practice.access_token", Parameter.Type.STRING)
+        self._rosprm_liv_account_number = RosParam("env_live.account_number", Parameter.Type.STRING)
+        self._rosprm_liv_access_token = RosParam("env_live.access_token", Parameter.Type.STRING)
+        self._rosprm_connection_timeout = RosParam("connection_timeout", Parameter.Type.INTEGER)
 
         rosutl.set_parameters(self, self._rosprm_use_env_live)
         rosutl.set_parameters(self, self._rosprm_pra_account_number)
@@ -133,9 +125,7 @@ class ApiServer(Node):
         self._cb_grp_reent = ReentrantCallbackGroup()
 
         # --------------- Create ROS Communication ---------------
-        qos_profile_service = QoSProfile(
-            history=HistoryPolicy.KEEP_ALL, reliability=ReliabilityPolicy.RELIABLE
-        )
+        qos_profile_service = QoSProfile(history=HistoryPolicy.KEEP_ALL, reliability=ReliabilityPolicy.RELIABLE)
 
         # Create service server "OrderCreate"
         self.order_create_srv = self.create_service(
@@ -218,9 +208,7 @@ class ApiServer(Node):
             callback_group=self._cb_grp_reent,
         )
 
-    def _handle_order_create(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_order_create(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_create]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - ordertype_msg.type:[{}]".format(req.ordertype_msg.type))
@@ -287,9 +275,7 @@ class ApiServer(Node):
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug(
-            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-        )
+        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
         self.logger.debug("  - id(Trade or Order):[{}]".format(rsp.id))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
@@ -297,9 +283,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _handle_trade_details(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_trade_details(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_details]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - trade_id:[{}]".format(req.trade_id))
@@ -350,14 +334,10 @@ class ApiServer(Node):
                 rsp.open_time = data_trd["openTime"]
                 data_tpo = data_trd["takeProfitOrder"]
                 rsp.profit_order_msg.price = float(data_tpo["price"])
-                rsp.profit_order_msg.order_state_msg.state = self._ordersts_dict[
-                    data_tpo["state"]
-                ]
+                rsp.profit_order_msg.order_state_msg.state = self._ordersts_dict[data_tpo["state"]]
                 data_slo = data_trd["stopLossOrder"]
                 rsp.loss_order_msg.price = float(data_slo["price"])
-                rsp.loss_order_msg.order_state_msg.state = self._ordersts_dict[
-                    data_slo["state"]
-                ]
+                rsp.loss_order_msg.order_state_msg.state = self._ordersts_dict[data_slo["state"]]
                 rsp.result = True
             else:
                 rsp.frc_msg.reason_code = frc.REASON_OTHERS
@@ -365,32 +345,20 @@ class ApiServer(Node):
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug(
-            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-        )
+        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
         self.logger.debug("  - contract_price:[{}]".format(rsp.contract_price))
-        self.logger.debug(
-            "  - trade_state_msg.state:[{}]".format(rsp.trade_state_msg.state)
-        )
+        self.logger.debug("  - trade_state_msg.state:[{}]".format(rsp.trade_state_msg.state))
         self.logger.debug("  - current_units:[{}]".format(rsp.current_units))
         self.logger.debug("  - realized_pl:[{}]".format(rsp.realized_pl))
         self.logger.debug("  - unrealized_pl:[{}]".format(rsp.unrealized_pl))
         self.logger.debug("  - open_time:[{}]".format(rsp.open_time))
+        self.logger.debug("  - profit_order_msg.price:[{}]".format(rsp.profit_order_msg.price))
         self.logger.debug(
-            "  - profit_order_msg.price:[{}]".format(rsp.profit_order_msg.price)
+            "  - profit_order_msg.order_state_msg.state:[{}]".format(rsp.profit_order_msg.order_state_msg.state)
         )
+        self.logger.debug("  - loss_order_msg.price:[{}]".format(rsp.loss_order_msg.price))
         self.logger.debug(
-            "  - profit_order_msg.order_state_msg.state:[{}]".format(
-                rsp.profit_order_msg.order_state_msg.state
-            )
-        )
-        self.logger.debug(
-            "  - loss_order_msg.price:[{}]".format(rsp.loss_order_msg.price)
-        )
-        self.logger.debug(
-            "  - loss_order_msg.order_state_msg.state:[{}]".format(
-                rsp.loss_order_msg.order_state_msg.state
-            )
+            "  - loss_order_msg.order_state_msg.state:[{}]".format(rsp.loss_order_msg.order_state_msg.state)
         )
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
@@ -398,9 +366,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _handle_trade_crcdo(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_trade_crcdo(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_crcdo]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - trade_id:[{}]".format(req.trade_id))
@@ -444,9 +410,7 @@ class ApiServer(Node):
             self.logger.debug("{}".format(json.dumps(apirsp, indent=2)))
 
             rsp.frc_msg.reason_code = frc.REASON_UNSET
-            if ("takeProfitOrderTransaction" in apirsp.keys()) and (
-                "stopLossOrderTransaction" in apirsp.keys()
-            ):
+            if ("takeProfitOrderTransaction" in apirsp.keys()) and ("stopLossOrderTransaction" in apirsp.keys()):
                 data_tpot = apirsp["takeProfitOrderTransaction"]
                 rsp.take_profit_price = float(data_tpot["price"])
                 data_slot = apirsp["stopLossOrderTransaction"]
@@ -458,9 +422,7 @@ class ApiServer(Node):
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug(
-            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-        )
+        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
         self.logger.debug("  - take_profit_price:[{}]".format(rsp.take_profit_price))
         self.logger.debug("  - stop_loss_price:[{}]".format(rsp.stop_loss_price))
         self.logger.debug("[Performance]")
@@ -469,9 +431,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _handle_trade_close(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_trade_close(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_close]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - trade_id:[{}]".format(req.trade_id))
@@ -540,9 +500,7 @@ class ApiServer(Node):
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug(
-            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-        )
+        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
         self.logger.debug("  - inst_msg.inst_id:[{}]".format(rsp.inst_msg.inst_id))
         self.logger.debug("  - time:[{}]".format(rsp.time))
         self.logger.debug("  - units:[{}]".format(rsp.units))
@@ -555,9 +513,7 @@ class ApiServer(Node):
 
         return rsp
 
-    def _handle_order_details(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_order_details(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_details]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - order_id:[{}]".format(req.order_id))
@@ -620,32 +576,22 @@ class ApiServer(Node):
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug(
-            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-        )
+        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
         self.logger.debug("  - ordertype_msg.type:[{}]".format(rsp.ordertype_msg.type))
         self.logger.debug("  - inst_msg.inst_id:[{}]".format(rsp.inst_msg.inst_id))
         self.logger.debug("  - units:[{}]".format(rsp.units))
         self.logger.debug("  - price:[{}]".format(rsp.price))
-        self.logger.debug(
-            "  - order_state_msg.state:[{}]".format(rsp.order_state_msg.state)
-        )
+        self.logger.debug("  - order_state_msg.state:[{}]".format(rsp.order_state_msg.state))
         self.logger.debug("  - open_trade_id:[{}]".format(rsp.open_trade_id))
-        self.logger.debug(
-            "  - take_profit_on_fill_price:[{}]".format(rsp.take_profit_on_fill_price)
-        )
-        self.logger.debug(
-            "  - stop_loss_on_fill_price:[{}]".format(rsp.stop_loss_on_fill_price)
-        )
+        self.logger.debug("  - take_profit_on_fill_price:[{}]".format(rsp.take_profit_on_fill_price))
+        self.logger.debug("  - stop_loss_on_fill_price:[{}]".format(rsp.stop_loss_on_fill_price))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[order_details]:End "))
 
         return rsp
 
-    def _handle_order_cancel(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_order_cancel(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_cancel]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - order_id:[{}]".format(req.order_id))
@@ -705,18 +651,14 @@ class ApiServer(Node):
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug(
-            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-        )
+        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[order_cancel]:End "))
 
         return rsp
 
-    def _handle_candles_query(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_candles_query(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_query]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_msg.gran_id:[{}]".format(req.gran_msg.gran_id))
@@ -745,16 +687,10 @@ class ApiServer(Node):
 
             self.logger.debug("<Response>")
             self.logger.debug("  - result:[{}]".format(rsp.result))
-            self.logger.debug(
-                "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-            )
-            self.logger.debug(
-                "  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list))
-            )
+            self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
+            self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
             self.logger.debug("[Performance]")
-            self.logger.debug(
-                "  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start)
-            )
+            self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
             self.logger.debug("{:=^50}".format(" Service[candles_query]:End "))
             return rsp
 
@@ -861,21 +797,15 @@ class ApiServer(Node):
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug(
-            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-        )
-        self.logger.debug(
-            "  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list))
-        )
+        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
+        self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[candles_query]:End "))
 
         return rsp
 
-    def _handle_account_query(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse  # pylint: disable=W0613
-    ) -> SrvTypeResponse:
+    def _handle_account_query(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[account_query]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - None")
@@ -934,18 +864,12 @@ class ApiServer(Node):
 
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug(
-            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-        )
+        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
         self.logger.debug("  - margin_rate:[{}]".format(rsp.margin_rate))
         self.logger.debug("  - balance:[{}]".format(rsp.balance))
         self.logger.debug("  - open_trade_count:[{}]".format(rsp.open_trade_count))
-        self.logger.debug(
-            "  - open_position_count:[{}]".format(rsp.open_position_count)
-        )
-        self.logger.debug(
-            "  - pending_order_count:[{}]".format(rsp.pending_order_count)
-        )
+        self.logger.debug("  - open_position_count:[{}]".format(rsp.open_position_count))
+        self.logger.debug("  - pending_order_count:[{}]".format(rsp.pending_order_count))
         self.logger.debug("  - pl:[{}]".format(rsp.pl))
         self.logger.debug("  - resettable_pl:[{}]".format(rsp.resettable_pl))
         self.logger.debug("  - financing:[{}]".format(rsp.financing))
@@ -954,18 +878,14 @@ class ApiServer(Node):
         self.logger.debug("  - margin_used:[{}]".format(rsp.margin_used))
         self.logger.debug("  - margin_available:[{}]".format(rsp.margin_available))
         self.logger.debug("  - position_value:[{}]".format(rsp.position_value))
-        self.logger.debug(
-            "  - margin_closeout(%):[{}]".format(rsp.margin_closeout_percent)
-        )
+        self.logger.debug("  - margin_closeout(%):[{}]".format(rsp.margin_closeout_percent))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response Time:[{}]".format(dbg_tm_end - dbg_tm_start))
         self.logger.debug("{:=^50}".format(" Service[account_query]:End "))
 
         return rsp
 
-    def _handle_pricing_query(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_pricing_query(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[pricing_query]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - inst_msg.inst_id:[{}]".format(req.inst_msg.inst_id))
@@ -1028,9 +948,7 @@ class ApiServer(Node):
 
         self.logger.debug("<Response>")
         self.logger.debug("  - result:[{}]".format(rsp.result))
-        self.logger.debug(
-            "  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code)
-        )
+        self.logger.debug("  - frc_msg.reason_code:[{}]".format(rsp.frc_msg.reason_code))
         self.logger.debug("  - time:[{}]".format(rsp.time))
         for i, bid in enumerate(rsp.bids):
             self.logger.debug("  - bids[{}]:".format(i))
@@ -1064,16 +982,14 @@ class ApiServer(Node):
         inst_param = InstParam.get_member_by_msgid(req.inst_msg.inst_id)
         one_pip_str = inst_param.one_pip_str
 
-        if (req.ordertype_msg.type == OrderType.TYP_LIMIT) or (
-            req.ordertype_msg.type == OrderType.TYP_STOP
-        ):
-            tmp = {
+        if (req.ordertype_msg.type == OrderType.TYP_LIMIT) or (req.ordertype_msg.type == OrderType.TYP_STOP):
+            sttmnt_pri = {
                 "price": self._fit_unit(req.price, one_pip_str),
                 "timeInForce": "GTC",
             }
-            data_order.update(tmp)
+            data_order.update(sttmnt_pri)
 
-        tmp = {
+        sttmnt_cmn = {
             "instrument": inst_param.name,
             "units": req.units,
             "positionFill": "DEFAULT",
@@ -1086,7 +1002,7 @@ class ApiServer(Node):
                 "price": self._fit_unit(req.stop_loss_price, one_pip_str),
             },
         }
-        data_order.update(tmp)
+        data_order.update(sttmnt_cmn)
 
         return data
 
@@ -1111,13 +1027,11 @@ class ApiServer(Node):
         return data
 
     def _fit_unit(self, value: float, one_pip_str: str) -> str:
-        return str(
-            Decimal(str(value)).quantize(Decimal(one_pip_str), rounding=ROUND_HALF_UP)
-        )
+        return str(Decimal(str(value)).quantize(Decimal(one_pip_str), rounding=ROUND_HALF_UP))
 
 
 def main(args: list[str] | None = None) -> None:
-    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
+    # requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ADD_CIPHERS
 
     rclpy.init(args=args)
     executor = MultiThreadedExecutor()

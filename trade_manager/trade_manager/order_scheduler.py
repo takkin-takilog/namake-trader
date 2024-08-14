@@ -1,6 +1,6 @@
 import sys
 import os
-from typing import TypeVar
+from typing import TypeVar, Any
 from dataclasses import dataclass
 from enum import Enum, auto
 import datetime as dt
@@ -43,12 +43,11 @@ from .constant import WeekDay
 from .constant import Transitions as Tr
 from .constant import INST_DICT
 from .exception import InitializerErrorException, RosServiceErrorException
-from .dataclass import RosParam
+from .dataclass import RosParam, RosParamTime
 from .wrapper import RosServiceClient, FutureWithTimeout
 from .trigger import TimeTrigger
 from . import backup as bk
 from . import ros_utils as rosutl
-from trade_manager.dataclass import RosParamTime
 
 SrvTypeRequest = TypeVar("SrvTypeRequest")
 SrvTypeResponse = TypeVar("SrvTypeResponse")
@@ -134,7 +133,9 @@ class OrderTicket:
         poll_interval_min: int,
         balance: int,
         req: SrvTypeRequest,
-        tick_price: _TickPrice,
+        tick_price_dict: dict[int, _TickPrice],
+        *,
+        use_homogenize_units: bool = False,
         use_restore: bool = False,
     ) -> None:
         # --------------- Set logger lebel ---------------
@@ -351,10 +352,18 @@ class OrderTicket:
 
         if req.units == 0:
             if self._order_type == OrderType.MARKET:
-                if req.orddir_msg.order_dir == OrderDir.LONG:
-                    price = tick_price.tick_ask
+                if use_homogenize_units:
+                    if req.orddir_msg.order_dir == OrderDir.LONG:
+                        price = max([i.tick_ask for i in tick_price_dict.values()])
+                    else:
+                        price = max([i.tick_bid for i in tick_price_dict.values()])
                 else:
-                    price = tick_price.tick_bid
+                    tick_price = self._tick_price_dict[req.inst_msg.inst_id]
+                    if req.orddir_msg.order_dir == OrderDir.LONG:
+                        price = tick_price.tick_ask
+                    else:
+                        price = tick_price.tick_bid
+
             else:
                 price = req.entry_price
 
@@ -431,9 +440,7 @@ class OrderTicket:
             self._fwt = self._srvcli_ordcre.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
             self.logger.error("{}".format(err))
-            raise InitializerErrorException(
-                "Call ROS Service Error (Order Create)"
-            ) from err
+            raise InitializerErrorException("Call ROS Service Error (Order Create)") from err
 
     def __del__(self) -> None:
         self.logger.debug("---------- Delete OrderTicket ----------")
@@ -444,7 +451,7 @@ class OrderTicket:
     def register_id(self) -> int:
         return self._register_id
 
-    def generate_buckup_record(self) -> list:
+    def generate_buckup_record(self) -> list[Any]:
         bk_rec_list = [
             self._register_id,
             self._order_id,
@@ -491,9 +498,7 @@ class OrderTicket:
         self._api_inst_id = int(rec[Col.API_INST_ID])
         self._api_order_type = int(rec[Col.API_ORDER_TYPE])
 
-        self.logger.info(
-            "<<<<<<<<<< Restore:register_id[{}] >>>>>>>>>>".format(self._register_id)
-        )
+        self.logger.info("<<<<<<<<<< Restore:register_id[{}] >>>>>>>>>>".format(self._register_id))
         self.logger.debug("  - inst_id:[{}]".format(self._inst_id))
         self.logger.debug("  - order_type:[{}]".format(self._order_type))
         self.logger.debug("  - units:[{}]".format(self._units))
@@ -556,9 +561,7 @@ class OrderTicket:
         if not self._fwt.future.done():
             self.logger.debug("  Requesting now...")
             if self._fwt.has_timed_out():
-                self.logger.error(
-                    "{:!^50}".format(" Call ROS Service Error (Order Create) ")
-                )
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_to_Complete()
             return
@@ -566,17 +569,13 @@ class OrderTicket:
         self.logger.debug("  Request done.")
         rsp = self._fwt.future.result()
         if rsp is None:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (Order Create) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Create) "))
             self.logger.error("  future.result() is None.")
             self._trans_to_Complete()
             return
 
         if not rsp.result:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Fail (Order Create) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Create) "))
             self._trans_to_Complete()
             return
 
@@ -610,27 +609,21 @@ class OrderTicket:
 
     def _conditions_trans_lock(self) -> Bool:
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
-        self.logger.debug(
-            "--- trans_lock state:[{}]".format(OrderTicket._is_trans_lock)
-        )
+        self.logger.debug("--- trans_lock state:[{}]".format(OrderTicket._is_trans_lock))
         return not OrderTicket._is_trans_lock
 
     def _on_enter_EntryChecking(self) -> None:
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = True
         self.logger.debug("--- Trans Locked")
-        self.logger.debug(
-            "----- Request [Order Details] (id:[{}]) -----".format(self._order_id)
-        )
+        self.logger.debug("----- Request [Order Details] (id:[{}]) -----".format(self._order_id))
         req = OrderDetailsSrv.Request()
         req.order_id = self._order_id
         self._fwt = None
         try:
             self._fwt = self._srvcli_orddet.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (Order Details) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
             self.logger.error("{}".format(err))
 
     def _on_do_EntryChecking(self) -> None:
@@ -641,9 +634,7 @@ class OrderTicket:
         if not self._fwt.future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
             if self._fwt.has_timed_out():
-                self.logger.error(
-                    "{:!^50}".format(" Call ROS Service Error (Order Details) ")
-                )
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_from_EntryChecking_to_EntryWaiting()
             return
@@ -651,17 +642,13 @@ class OrderTicket:
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
         rsp = self._fwt.future.result()
         if rsp is None:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (Order Details) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Details) "))
             self.logger.error("  future.result() is None.")
             self._trans_from_EntryChecking_to_EntryWaiting()
             return
 
         if not rsp.result:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Fail (Order Details) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Details) "))
             self._trans_from_EntryChecking_to_EntryWaiting()
             return
 
@@ -688,18 +675,14 @@ class OrderTicket:
 
     def _on_enter_EntryCanceling(self) -> None:
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
-        self.logger.debug(
-            "----- Request [Order Cancel] (id:[{}]) -----".format(self._order_id)
-        )
+        self.logger.debug("----- Request [Order Cancel] (id:[{}]) -----".format(self._order_id))
         req = OrderCancelSrv.Request()
         req.order_id = self._order_id
         self._fwt = None
         try:
             self._fwt = self._srvcli_ordcnc.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
             self.logger.error("{}".format(err))
 
     def _on_do_EntryCanceling(self) -> None:
@@ -710,9 +693,7 @@ class OrderTicket:
         if not self._fwt.future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._order_id))
             if self._fwt.has_timed_out():
-                self.logger.error(
-                    "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
-                )
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_to_Complete()
             return
@@ -720,30 +701,22 @@ class OrderTicket:
         self.logger.debug("  Request done.(id:[{}])".format(self._order_id))
         rsp = self._fwt.future.result()
         if rsp is None:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (Order Cancel) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Order Cancel) "))
             self.logger.error("  future.result() is None.")
             self._trans_to_Complete()
             return
 
         if rsp.result:
-            self.logger.debug(
-                "  EntryCanceling complete.(id:[{}])".format(self._order_id)
-            )
+            self.logger.debug("  EntryCanceling complete.(id:[{}])".format(self._order_id))
             self._trans_from_EntryCanceling_to_Complete()
         else:
             if rsp.frc_msg.reason_code == frc.REASON_ORDER_DOESNT_EXIST:
-                self.logger.warn(
-                    "  EntryCanceling fail.(id:[{}])".format(self._order_id)
-                )
+                self.logger.warn("  EntryCanceling fail.(id:[{}])".format(self._order_id))
                 self.logger.warn("   Order doesnt exist!")
                 self.logger.warn("   Possibility that order have been contracted.")
                 self._trans_from_EntryCanceling_to_EntryChecking()
             else:
-                self.logger.error(
-                    "{:!^50}".format(" Call ROS Service Fail (Order Cancel) ")
-                )
+                self.logger.error("{:!^50}".format(" Call ROS Service Fail (Order Cancel) "))
                 self._trans_to_Complete()
 
     def _on_enter_ExitWaiting(self) -> None:
@@ -766,18 +739,14 @@ class OrderTicket:
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
         OrderTicket._is_trans_lock = True
         self.logger.debug("--- Trans Locked")
-        self.logger.debug(
-            "----- Request [Trade Details] (id:[{}]) -----".format(self._trade_id)
-        )
+        self.logger.debug("----- Request [Trade Details] (id:[{}]) -----".format(self._trade_id))
         req = TradeDetailsSrv.Request()
         req.trade_id = self._trade_id
         self._fwt = None
         try:
             self._fwt = self._srvcli_trddet.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
             self.logger.error("{}".format(err))
 
     def _on_do_ExitChecking(self) -> None:
@@ -788,9 +757,7 @@ class OrderTicket:
         if not self._fwt.future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
             if self._fwt.has_timed_out():
-                self.logger.error(
-                    "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
-                )
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_from_ExitChecking_to_ExitWaiting()
             return
@@ -798,17 +765,13 @@ class OrderTicket:
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
         rsp = self._fwt.future.result()
         if rsp is None:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (Trade Details) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Details) "))
             self.logger.error("  future.result() is None.")
             self._trans_from_ExitChecking_to_ExitWaiting()
             return
 
         if not rsp.result:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Fail (Trade Details) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Fail (Trade Details) "))
             self._trans_from_ExitChecking_to_ExitWaiting()
             return
 
@@ -833,9 +796,7 @@ class OrderTicket:
 
     def _on_enter_ExitOrdering(self) -> None:
         self.logger.debug("----- Call [{}]".format(sys._getframe().f_code.co_name))
-        self.logger.debug(
-            "----- Request [Trade Close] (id:[{}]) -----".format(self._trade_id)
-        )
+        self.logger.debug("----- Request [Trade Close] (id:[{}]) -----".format(self._trade_id))
 
         req = TradeCloseSrv.Request()
         req.trade_id = self._trade_id
@@ -843,9 +804,7 @@ class OrderTicket:
         try:
             self._fwt = self._srvcli_trdcls.call_async(req, timeout_sec=5.0)
         except RosServiceErrorException as err:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
             self.logger.error("{}".format(err))
 
     def _on_do_ExitOrdering(self) -> None:
@@ -856,9 +815,7 @@ class OrderTicket:
         if not self._fwt.future.done():
             self.logger.debug("  Requesting now...(id:[{}])".format(self._trade_id))
             if self._fwt.has_timed_out():
-                self.logger.error(
-                    "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
-                )
+                self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
                 self.logger.error("  ROS Service Response Timeout.")
                 self._trans_to_Complete()
             return
@@ -866,9 +823,7 @@ class OrderTicket:
         self.logger.debug("  Request done.(id:[{}])".format(self._trade_id))
         rsp = self._fwt.future.result()
         if rsp is None:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (Trade Close) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (Trade Close) "))
             self.logger.error("  future.result() is None.")
             self._trans_to_Complete()
             return
@@ -882,9 +837,7 @@ class OrderTicket:
                 self.logger.warn("   Possibility that trade have been contracted.")
                 self._trans_from_ExitOrdering_to_Complete()
             else:
-                self.logger.error(
-                    "{:!^50}".format(" Call ROS Service Fail (Trade Close) ")
-                )
+                self.logger.error("{:!^50}".format(" Call ROS Service Fail (Trade Close) "))
                 self._trans_to_Complete()
 
     def _on_do_Complete(self) -> None:
@@ -921,30 +874,18 @@ class OrderScheduler(Node):
 
         # --------------- Initialize ROS parameter ---------------
         self._rosprm_max_leverage = RosParam("max_leverage", Parameter.Type.DOUBLE)
-        self._rosprm_max_position_count = RosParam(
-            "max_position_count", Parameter.Type.INTEGER
-        )
-        self._rosprm_use_weekend_order_stop = RosParam(
-            "use_weekend_order_stop", Parameter.Type.BOOL
-        )
-        self._rosprm_weekend_order_stop_time = RosParamTime(
-            "weekend_order_stop_time", Parameter.Type.STRING
-        )
-        self._rosprm_use_weekend_all_close = RosParam(
-            "use_weekend_all_close", Parameter.Type.BOOL
-        )
-        self._rosprm_weekend_all_close_time = RosParamTime(
-            "weekend_all_close_time", Parameter.Type.STRING
-        )
-        self._rosprm_account_updatetime_sec = RosParam(
-            "account_updatetime_sec", Parameter.Type.INTEGER
-        )
-        self._rosprm_poll_interval_min = RosParam(
-            "poll_interval_min", Parameter.Type.INTEGER
-        )
+        self._rosprm_max_position_count = RosParam("max_position_count", Parameter.Type.INTEGER)
+        self._rosprm_use_homogenize_units = RosParam("use_homogenize_units", Parameter.Type.BOOL)
+        self._rosprm_use_weekend_order_stop = RosParam("use_weekend_order_stop", Parameter.Type.BOOL)
+        self._rosprm_weekend_order_stop_time = RosParamTime("weekend_order_stop_time", Parameter.Type.STRING)
+        self._rosprm_use_weekend_all_close = RosParam("use_weekend_all_close", Parameter.Type.BOOL)
+        self._rosprm_weekend_all_close_time = RosParamTime("weekend_all_close_time", Parameter.Type.STRING)
+        self._rosprm_account_updatetime_sec = RosParam("account_updatetime_sec", Parameter.Type.INTEGER)
+        self._rosprm_poll_interval_min = RosParam("poll_interval_min", Parameter.Type.INTEGER)
 
         rosutl.set_parameters(self, self._rosprm_max_leverage)
         rosutl.set_parameters(self, self._rosprm_max_position_count)
+        rosutl.set_parameters(self, self._rosprm_use_homogenize_units)
         rosutl.set_parameters(self, self._rosprm_use_weekend_order_stop)
         rosutl.set_parameters(self, self._rosprm_weekend_order_stop_time)
         rosutl.set_parameters(self, self._rosprm_use_weekend_all_close)
@@ -1082,19 +1023,15 @@ class OrderScheduler(Node):
 
         req = AccountQuerySrv.Request()
         try:
-            rsp = self._srvcli_accque.call(req, timeout_sec=10.0)  # type: ignore[var-annotated]
+            rsp = self._srvcli_accque.call(req, timeout_sec=10.0)  # type: ignore
         except RosServiceErrorException as err:
             self.logger.error("{}".format(err))
-            raise InitializerErrorException(
-                "Call ROS Service Error (AccountQuerySrv)"
-            ) from err
+            raise InitializerErrorException("Call ROS Service Error (AccountQuerySrv)") from err
 
         self._balance = rsp.balance
 
         # --------------- Create topic subscriber "Pricing" ---------------
-        qos_profile = QoSProfile(
-            history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
-        )
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE)
         self._sub_pri_usdjpy = self.create_subscription(
             Pricing,
             "pricing_usdjpy",
@@ -1154,9 +1091,7 @@ class OrderScheduler(Node):
         # --------------- Initialize variable ---------------
         self._tick_price_dict: dict[int, _TickPrice] = {}
         self._tickets: list[OrderTicket] = []
-        self._acc_trig = TimeTrigger(
-            minute=0, second=self._rosprm_account_updatetime_sec.value
-        )
+        self._acc_trig = TimeTrigger(minute=0, second=self._rosprm_account_updatetime_sec.value)
         self._fwt: FutureWithTimeout | None = None
 
         # --------------- Restore ---------------
@@ -1179,12 +1114,9 @@ class OrderScheduler(Node):
             pass
         else:
             df = df.where(df.notna(), None)
-            self.logger.info(
-                "========== Restore order tickes ==========\n{}".format(df)
-            )
+            self.logger.info("========== Restore order tickes ==========\n{}".format(df))
             for _, row in df.iterrows():
                 req = OrderRegisterSrv.Request()
-                tick_price = _TickPrice("", 0, 0)  # Dummy
                 ticket = OrderTicket(
                     self.logger,
                     self._srvcli_ordcre,
@@ -1198,16 +1130,14 @@ class OrderScheduler(Node):
                     self._rosprm_poll_interval_min.value,
                     self._balance,
                     req,
-                    tick_price,
+                    self._tick_price_dict,
                     use_restore=True,
                 )
                 ticket.restore(row)
                 self._tickets.append(ticket)
 
         # --------------- Create ROS Timer ---------------
-        self._timer = self.create_timer(
-            1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer
-        )
+        self._timer = self.create_timer(1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer)
 
     def finalize(self) -> None:
         # ---------- write csv ----------
@@ -1215,9 +1145,7 @@ class OrderScheduler(Node):
         register_id = OrderTicket.get_register_id()
         osbk_tbl = [register_id]
         df = pd.DataFrame(osbk_tbl, columns=ColOrderSchedulerBackup.to_list())
-        bk.save_df_csv(
-            self._BUCKUP_FULLPATH_OS, df, index=False, date_format=FMT_YMDHMS
-        )
+        bk.save_df_csv(self._BUCKUP_FULLPATH_OS, df, index=False, date_format=FMT_YMDHMS)
 
         # ----- Backup order tickets -----
         otbk_tbl = []
@@ -1225,9 +1153,7 @@ class OrderScheduler(Node):
             rec = ticket.generate_buckup_record()
             otbk_tbl.append(rec)
         df = pd.DataFrame(otbk_tbl, columns=ColOrderTicketsBackup.to_list())
-        bk.save_df_csv(
-            self._BUCKUP_FULLPATH_OT, df, index=False, date_format=FMT_YMDHMS
-        )
+        bk.save_df_csv(self._BUCKUP_FULLPATH_OT, df, index=False, date_format=FMT_YMDHMS)
 
     def _do_cyclic_event(self) -> None:
         if self.state == self.States.Idle:
@@ -1235,14 +1161,10 @@ class OrderScheduler(Node):
                 self._trans_from_Idle_to_AccountUpdating()
         elif self.state == self.States.AccountUpdating:
             if self._fwt is None:
-                self.logger.error(
-                    "{:!^50}".format(" ROS Service [AccountQuerySrv] Error. ")
-                )
+                self.logger.error("{:!^50}".format(" ROS Service [AccountQuerySrv] Error. "))
                 self.logger.error("  future is None.")
             elif self._fwt.has_timed_out():
-                self.logger.error(
-                    "{:!^50}".format(" ROS Service [AccountQuerySrv] Error. ")
-                )
+                self.logger.error("{:!^50}".format(" ROS Service [AccountQuerySrv] Error. "))
                 self.logger.error("  service call timeout.")
             elif self._fwt.future.done():
                 rsp = self._fwt.future.result()
@@ -1257,9 +1179,7 @@ class OrderScheduler(Node):
         # Check weekend close proccess
         if self._rosprm_use_weekend_all_close.value:
             now = dt.datetime.now()
-            if (now.weekday() == WeekDay.SAT) and (
-                now.time() > self._rosprm_weekend_all_close_time.time
-            ):
+            if (now.weekday() == WeekDay.SAT) and (now.time() > self._rosprm_weekend_all_close_time.time):
                 for ticket in self._tickets:
                     ticket.enable_weekend_close()
 
@@ -1269,11 +1189,7 @@ class OrderScheduler(Node):
 
         # remove "Complete" States element
         len_bfr = len(self._tickets)
-        self._tickets = [
-            ticket
-            for ticket in self._tickets
-            if ticket.state != OrderTicket.States.Complete
-        ]
+        self._tickets = [ticket for ticket in self._tickets if ticket.state != OrderTicket.States.Complete]
 
         if len_bfr != len(self._tickets):
             if self.state == self.States.Idle:
@@ -1289,9 +1205,7 @@ class OrderScheduler(Node):
             self.logger.error("{:!^50}".format(err))
             self._trans_from_AccountUpdating_to_Idle()
 
-    def _handle_order_register(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_order_register(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[order_register]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - inst_id:[{}]".format(req.inst_msg.inst_id))
@@ -1329,7 +1243,6 @@ class OrderScheduler(Node):
             self.logger.debug("{:=^50}".format(" Service[order_register]:End "))
             return rsp
 
-        tick_price = self._tick_price_dict[req.inst_msg.inst_id]
         try:
             ticket = OrderTicket(
                 self.logger,
@@ -1344,7 +1257,8 @@ class OrderScheduler(Node):
                 self._rosprm_poll_interval_min.value,
                 self._balance,
                 req,
-                tick_price,
+                self._tick_price_dict,
+                use_homogenize_units=self._rosprm_use_homogenize_units.value,
             )
         except InitializerErrorException as err:
             self.logger.error("{:!^50}".format(" OrderTicket initialize Exception "))
@@ -1372,9 +1286,7 @@ class OrderScheduler(Node):
             try:
                 tick_price = self._tick_price_dict[req.inst_msg.inst_id]
             except KeyError:
-                self.logger.warn(
-                    "Key[{}] is not found in a dictionary".format(req.inst_msg.inst_id)
-                )
+                self.logger.warn("Key[{}] is not found in a dictionary".format(req.inst_msg.inst_id))
                 return False
 
             if req.ordtyp_msg.order_type == OrderType.MARKET:
@@ -1387,9 +1299,7 @@ class OrderScheduler(Node):
                     return False
         return True
 
-    def _handle_requested_close(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_requested_close(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[trade_close_request]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - register_id:[{}]".format(req.register_id))

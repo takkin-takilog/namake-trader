@@ -1,3 +1,5 @@
+from typing import Any
+
 FMT_YMDHMSF = "%Y-%m-%dT%H:%M:%S.%f"
 FMT_YMDHMS = "%Y-%m-%dT%H:%M:%S"
 FMT_TIME_HM = "%H:%M"
@@ -12,7 +14,7 @@ class ConstantGroup:
     """
 
     @classmethod
-    def to_list(cls) -> list:
+    def to_list(cls) -> list[Any]:
         """
         Returns all constant values in class with the attribute requirements.
 

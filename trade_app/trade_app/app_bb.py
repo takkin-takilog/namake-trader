@@ -199,13 +199,9 @@ class TradeItem:
         # ---------- Do state event ----------
         bb_rec = self._df_bb.iloc[-1]
         if self.state == self.States.preparing:
-            self._on_subscribe_price_in_preparing(
-                bb_rec, tick_price_ask, tick_price_bid
-            )
+            self._on_subscribe_price_in_preparing(bb_rec, tick_price_ask, tick_price_bid)
         elif self.state == self.States.standby:
-            self._on_subscribe_price_in_standby(
-                bb_rec, tick_price_ask, tick_price_bid, latest_rec
-            )
+            self._on_subscribe_price_in_standby(bb_rec, tick_price_ask, tick_price_bid, latest_rec)
         elif self.state == self.States.long:
             self._on_subscribe_price_in_long(bb_rec, tick_price_bid)
         elif self.state == self.States.short:
@@ -257,11 +253,7 @@ class TradeItem:
 
         if pstd < tick_price_ask:
             bid_o = latest_rec[ColOhlc.BID_O]
-            if (
-                self._enable_trade_by_timeframe
-                and (sma < tick_price_bid)
-                and (sma < bid_o)
-            ):
+            if self._enable_trade_by_timeframe and (sma < tick_price_bid) and (sma < bid_o):
                 self._is_valid_trade = True
                 self._enable_trade_by_timeframe = False
                 self.logger.debug("********** Trade Execute **********")
@@ -278,24 +270,14 @@ class TradeItem:
                 self.logger.debug("********** Trade Not Execute **********")
                 self.logger.debug("  [Param]SMA:[{}]".format(self._SMA_SPAN))
                 self.logger.debug("  [Param]STD:[{}]".format(self._STD_COEF))
-                self.logger.debug(
-                    "  - enable_trade_by_timeframe:[{}]".format(
-                        self._enable_trade_by_timeframe
-                    )
-                )
-                self.logger.debug(
-                    "  - SMA:[{}] < tick_price_bid:[{}]".format(sma, tick_price_bid)
-                )
+                self.logger.debug("  - enable_trade_by_timeframe:[{}]".format(self._enable_trade_by_timeframe))
+                self.logger.debug("  - SMA:[{}] < tick_price_bid:[{}]".format(sma, tick_price_bid))
                 self.logger.debug("  - SMA:[{}] < latest_bid_o:[{}]".format(sma, bid_o))
             self._trans_from_standby_to_long()
 
         elif nstd > tick_price_bid:
             ask_o = latest_rec[ColOhlc.ASK_O]
-            if (
-                self._enable_trade_by_timeframe
-                and (sma > tick_price_ask)
-                and (sma > ask_o)
-            ):
+            if self._enable_trade_by_timeframe and (sma > tick_price_ask) and (sma > ask_o):
                 self._is_valid_trade = True
                 self._enable_trade_by_timeframe = False
                 self.logger.debug("********** Trade Execute **********")
@@ -312,14 +294,8 @@ class TradeItem:
                 self.logger.debug("********** Trade Not Execute **********")
                 self.logger.debug("  [Param]SMA:[{}]".format(self._SMA_SPAN))
                 self.logger.debug("  [Param]STD:[{}]".format(self._STD_COEF))
-                self.logger.debug(
-                    "  - enable_trade_by_timeframe:[{}]".format(
-                        self._enable_trade_by_timeframe
-                    )
-                )
-                self.logger.debug(
-                    "  - SMA:[{}] > tick_price_ask:[{}]".format(sma, tick_price_ask)
-                )
+                self.logger.debug("  - enable_trade_by_timeframe:[{}]".format(self._enable_trade_by_timeframe))
+                self.logger.debug("  - SMA:[{}] > tick_price_ask:[{}]".format(sma, tick_price_ask))
                 self.logger.debug("  - SMA:[{}] > latest_ask_o:[{}]".format(sma, ask_o))
             self._trans_from_standby_to_short()
 
@@ -337,9 +313,7 @@ class TradeItem:
                 rsp = self._fwt.future.result()
                 self._register_id = rsp.register_id
                 self._has_done_order_register = True
-                self.logger.debug(
-                    "  Order complete.(register_id:[{}])".format(self._register_id)
-                )
+                self.logger.debug("  Order complete.(register_id:[{}])".format(self._register_id))
             else:
                 self.logger.error("{:!^50}".format(" Order Request Error "))
                 self.logger.error("  future.result() is None.")
@@ -366,16 +340,12 @@ class TradeItem:
                 try:
                     self._request_trade_close(self._register_id)
                 except RosServiceErrorException as err:
-                    self.logger.error(
-                        "{:!^50}".format(" Call Async ROS Service Error ")
-                    )
+                    self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
                     self.logger.error("{}".format(err))
             else:
                 self.logger.warn("{:!^50}".format(" Unexpected statement "))
 
-    def _on_subscribe_price_in_long(
-        self, bb_rec: pd.Series, tick_price_bid: float
-    ) -> None:
+    def _on_subscribe_price_in_long(self, bb_rec: pd.Series, tick_price_bid: float) -> None:
         if tick_price_bid < bb_rec[self._COL_SMA]:
             self._trans_from_long_to_standby()
             # ----- Long exit log -----
@@ -400,9 +370,7 @@ class TradeItem:
                 rsp = self._fwt.future.result()
                 self._register_id = rsp.register_id
                 self._has_done_order_register = True
-                self.logger.debug(
-                    "  Order complete.(register_id:[{}])".format(self._register_id)
-                )
+                self.logger.debug("  Order complete.(register_id:[{}])".format(self._register_id))
             else:
                 self.logger.error("{:!^50}".format(" Order Request Error "))
                 self.logger.error("  future.result() is None.")
@@ -429,20 +397,12 @@ class TradeItem:
                 try:
                     self._request_trade_close(self._register_id)
                 except RosServiceErrorException:
-                    self.logger.error(
-                        "{:!^50}".format(" Call Async ROS Service Error ")
-                    )
-                    self.logger.error(
-                        "  Trade close failed.(register_id:[{}])".format(
-                            self._register_id
-                        )
-                    )
+                    self.logger.error("{:!^50}".format(" Call Async ROS Service Error "))
+                    self.logger.error("  Trade close failed.(register_id:[{}])".format(self._register_id))
             else:
                 self.logger.warn("{:!^50}".format(" Unexpected statement "))
 
-    def _on_subscribe_price_in_short(
-        self, bb_rec: pd.Series, tick_price_ask: float
-    ) -> None:
+    def _on_subscribe_price_in_short(self, bb_rec: pd.Series, tick_price_ask: float) -> None:
         if tick_price_ask > bb_rec[self._COL_SMA]:
             self._trans_from_short_to_standby()
             if self._is_valid_trade:
@@ -469,22 +429,14 @@ class TradeItem:
         latest_rec = self._df_bb.iloc[-1]
 
         if is_long_order:
-            entry_price_ide = utl.roundup(
-                latest_rec[self._COL_PSTD], self._inst_param.digit
-            )
+            entry_price_ide = utl.roundup(latest_rec[self._COL_PSTD], self._inst_param.digit)
             take_profit_price = entry_price_ide + self._TAKE_PROFIT
-            stop_loss_price = utl.rounddown(
-                latest_rec[self._COL_SMA], self._inst_param.digit
-            )
+            stop_loss_price = utl.rounddown(latest_rec[self._COL_SMA], self._inst_param.digit)
             order_dir = OrderDir.LONG
         else:
-            entry_price_ide = utl.rounddown(
-                latest_rec[self._COL_NSTD], self._inst_param.digit
-            )
+            entry_price_ide = utl.rounddown(latest_rec[self._COL_NSTD], self._inst_param.digit)
             take_profit_price = entry_price_ide - self._TAKE_PROFIT
-            stop_loss_price = utl.roundup(
-                latest_rec[self._COL_SMA], self._inst_param.digit
-            )
+            stop_loss_price = utl.roundup(latest_rec[self._COL_SMA], self._inst_param.digit)
             order_dir = OrderDir.SHORT
 
         req = OrderRegisterSrv.Request()
@@ -526,15 +478,9 @@ class AppBollingerBand(Node):
         self._rosprm_inst = RosParam("instrument", Parameter.Type.STRING)
         self._rosprm_gran = RosParam("granularity", Parameter.Type.STRING)
         self._rosprm_units = RosParam("units", Parameter.Type.INTEGER)
-        self._rosprm_sma_span_list = RosParam(
-            "sma_span_list", Parameter.Type.INTEGER_ARRAY
-        )
-        self._rosprm_std_coef_list = RosParam(
-            "std_coef_list", Parameter.Type.DOUBLE_ARRAY
-        )
-        self._rosprm_take_profit_pips_list = RosParam(
-            "take_profit_pips_list", Parameter.Type.INTEGER_ARRAY
-        )
+        self._rosprm_sma_span_list = RosParam("sma_span_list", Parameter.Type.INTEGER_ARRAY)
+        self._rosprm_std_coef_list = RosParam("std_coef_list", Parameter.Type.DOUBLE_ARRAY)
+        self._rosprm_take_profit_pips_list = RosParam("take_profit_pips_list", Parameter.Type.INTEGER_ARRAY)
 
         rosutl.set_parameters(self, self._rosprm_inst)
         rosutl.set_parameters(self, self._rosprm_gran)
@@ -624,14 +570,10 @@ class AppBollingerBand(Node):
         self._cb_grp_mutua_timer = MutuallyExclusiveCallbackGroup()
 
         # --------------- Create ROS Communication ---------------
-        qos_profile = QoSProfile(
-            history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
-        )
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE)
 
         # Create service client "OrderRequest"
-        self._srvcli_ord = RosServiceClient(
-            self, OrderRegisterSrv, "order_register", use_wait_for_service=False
-        )
+        self._srvcli_ord = RosServiceClient(self, OrderRegisterSrv, "order_register", use_wait_for_service=False)
 
         # Create service client "TradeCloseRequest"
         self._srvcli_trdcls = RosServiceClient(
@@ -642,32 +584,24 @@ class AppBollingerBand(Node):
         )
 
         # Create topic subscriber "HeartBeat"
-        self._sub_hb = self.create_subscription(
-            String, "heart_beat", self._handle_heartbeat_msg, qos_profile
-        )
+        self._sub_hb = self.create_subscription(String, "heart_beat", self._handle_heartbeat_msg, qos_profile)
 
         # Create topic subscriber "LatestCandle"
         inst_name = self._inst_param.namespace
         gran_name = self._gran_param.namespace
         topic = inst_name + "_" + gran_name + "_latest_candle"
-        self._sub_lc = self.create_subscription(
-            LatestCandle, topic, self._handle_latest_candle_msg, qos_profile
-        )
+        self._sub_lc = self.create_subscription(LatestCandle, topic, self._handle_latest_candle_msg, qos_profile)
 
         # --------------- Instantiated OhlcStore ---------------
         try:
-            self._store = OhlcStore(
-                self, self._inst_param, self._gran_param, self._DF_LENGTH_MAX
-            )
+            self._store = OhlcStore(self, self._inst_param, self._gran_param, self._DF_LENGTH_MAX)
         except InitializerErrorException as err:
             self.logger.error("{:!^50}".format(" Initialize Error "))
             self.logger.error("{}".format(err))
             raise InitializerErrorException("Failed to create instance.") from err
 
         # --------------- Create ROS Timer ---------------
-        self._timer = self.create_timer(
-            1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer
-        )
+        self._timer = self.create_timer(1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer)
 
         self.logger.debug("{:=^50}".format(" Initialize Finish! "))
 
@@ -710,12 +644,8 @@ class AppBollingerBand(Node):
 
         # --------------- Create topic subscriber "Pricing" ---------------
         topic = "pricing_" + self._inst_param.namespace
-        qos_profile = QoSProfile(
-            history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE
-        )
-        self._sub_pri = self.create_subscription(
-            Pricing, topic, self._handle_pricing_msg, qos_profile
-        )
+        qos_profile = QoSProfile(history=QoSHistoryPolicy.KEEP_ALL, reliability=QoSReliabilityPolicy.RELIABLE)
+        self._sub_pri = self.create_subscription(Pricing, topic, self._handle_pricing_msg, qos_profile)
 
     def _on_enter_normal(self) -> None:
         self._clear_timer()
@@ -746,7 +676,7 @@ class AppBollingerBand(Node):
     def _clear_timer(self) -> None:
         self._timer_start = time.monotonic()
 
-    def _handle_heartbeat_msg(self, msg: String) -> None:  # pylint: disable=W0613
+    def _handle_heartbeat_msg(self, msg: String) -> None:
         if self.state == self.States.abnormal:
             self._trans_from_abnormal_to_normal()
         self._clear_timer()

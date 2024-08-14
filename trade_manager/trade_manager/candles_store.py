@@ -170,9 +170,7 @@ class _CandlesElement:
         self._needs_weekend_update = False
         self._fwt: FutureWithTimeout | None = None
         dt_now = dt.datetime.now()
-        self._next_updatetime = (
-            dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
-        )
+        self._next_updatetime = dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
         self._lock = threading.Lock()
 
         self.logger.debug("{:-^40}".format(" Create CandlesDataFrame:Start "))
@@ -193,44 +191,30 @@ class _CandlesElement:
         req.dt_from = dt_from.strftime(FMT_YMDHMS)
         req.dt_to = dt_to.strftime(FMT_YMDHMS)
         try:
-            rsp = self._srvcli.call(req)  # type: ignore[var-annotated]
+            rsp = self._srvcli.call(req)  # type: ignore
         except RosServiceErrorException as err:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (CandlesQuery) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("{}".format(err))
-            raise InitializerErrorException(
-                "[CandlesDataFrame] initialize failed."
-            ) from err
+            raise InitializerErrorException("[CandlesDataFrame] initialize failed.") from err
 
         if rsp.result is True:
             self._update_dataframe(rsp.cndl_msg_list)
-            self.logger.debug(
-                "---------- df_comp(length:[{}]) ----------".format(len(self._df_comp))
-            )
+            self.logger.debug("---------- df_comp(length:[{}]) ----------".format(len(self._df_comp)))
             self.logger.debug("  - Head:\n{}".format(self._df_comp[:5]))
             self.logger.debug("  - Tail:\n{}".format(self._df_comp[-5:]))
-            self.logger.debug(
-                "---------- df_prov(length:[{}]) ----------".format(len(self._df_prov))
-            )
+            self.logger.debug("---------- df_prov(length:[{}]) ----------".format(len(self._df_prov)))
             self.logger.debug("\n{}".format(self._df_prov))
         else:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (CandlesQuery) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("  future result is False")
             raise InitializerErrorException("[CandlesDataFrame] initialize failed.")
 
         # --------------- Create ROS Communication ---------------
-        qos_profile = QoSProfile(
-            history=HistoryPolicy.KEEP_ALL, reliability=ReliabilityPolicy.RELIABLE
-        )
+        qos_profile = QoSProfile(history=HistoryPolicy.KEEP_ALL, reliability=ReliabilityPolicy.RELIABLE)
         inst_name = InstParam.get_member_by_msgid(self._inst_id).namespace
         gran_name = GranParam.get_member_by_msgid(self._gran_id).namespace
         TPCNM_LATEST_CANDLE = inst_name + "_" + gran_name + "_latest_candle"
-        self._pub = node.create_publisher(
-            LatestCandle, TPCNM_LATEST_CANDLE, qos_profile
-        )
+        self._pub = node.create_publisher(LatestCandle, TPCNM_LATEST_CANDLE, qos_profile)
 
         # --------------- Initial process ---------------
         self._on_enter_waiting()
@@ -272,16 +256,12 @@ class _CandlesElement:
         # Fail safe - optimize next update time
         now_dt = dt.datetime.now()
         if next_update_dt < now_dt:
-            self.logger.warn(
-                "{:!^50}".format(" Next-update-time under the current time ")
-            )
+            self.logger.warn("{:!^50}".format(" Next-update-time under the current time "))
             self.logger.warn(" - Next-update-time:[{}]".format(next_update_dt))
             self.logger.warn(" - Current time:[{}]".format(now_dt))
             while next_update_dt < now_dt:
                 next_update_dt += self._GRAN_INTERVAL
-            self.logger.warn(
-                " - Fail safe: optimize Next-update-time[{}]".format(next_update_dt)
-            )
+            self.logger.warn(" - Fail safe: optimize Next-update-time[{}]".format(next_update_dt))
 
         return next_update_dt
 
@@ -312,9 +292,7 @@ class _CandlesElement:
             msg = LatestCandle()
             if self._needs_weekend_update:
                 self.logger.debug("  ----- Needs weekend update -----")
-                next_updatetime = self._get_next_update_datetime(
-                    self._weekend_close_time
-                )
+                next_updatetime = self._get_next_update_datetime(self._weekend_close_time)
                 latest_sr = self._df_comp.iloc[-1]
                 latest_close_ask = latest_sr[ColNames.ASK_CL]
                 latest_close_bid = latest_sr[ColNames.BID_CL]
@@ -359,9 +337,7 @@ class _CandlesElement:
         else:
             self.logger.debug("========== DF Update NG! ==========")
             dt_now = dt_now.replace(second=0, microsecond=0)
-            self._next_updatetime = (
-                dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
-            )
+            self._next_updatetime = dt_now + self._FAIL_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
 
         self.logger.debug(" ---------- Next update time ----------")
         self.logger.debug(" - Now time:        [{}]".format(dt_now))
@@ -409,9 +385,7 @@ class _CandlesElement:
             self._request_start_dt = dt_from
             self._request_end_dt = dt_to
         except RosServiceErrorException as err:
-            self.logger.error(
-                "{:!^50}".format(" Call ROS Service Error (CandlesQuery) ")
-            )
+            self.logger.error("{:!^50}".format(" Call ROS Service Error (CandlesQuery) "))
             self.logger.error("{}".format(err))
 
     def _on_do_updating(self) -> None:
@@ -441,23 +415,15 @@ class _CandlesElement:
             return
 
         self._update_dataframe(rsp.cndl_msg_list)
-        self.logger.debug(
-            "---------- df_comp(length:[{}]) ----------".format(len(self._df_comp))
-        )
+        self.logger.debug("---------- df_comp(length:[{}]) ----------".format(len(self._df_comp)))
         self.logger.debug("  - Head:\n{}".format(self._df_comp[:5]))
         self.logger.debug("  - Tail:\n{}".format(self._df_comp[-5:]))
-        self.logger.debug(
-            "---------- df_prov(length:[{}]) ----------".format(len(self._df_prov))
-        )
+        self.logger.debug("---------- df_prov(length:[{}]) ----------".format(len(self._df_prov)))
         self.logger.debug("\n{}".format(self._df_prov))
 
         if rsp.cndl_msg_list:
             latest_dt = self._get_latest_datetime_in_dataframe()
-            self.logger.debug(
-                "  - target_dt <= latest_dt:[{}] <= [{}]".format(
-                    self._request_start_dt, latest_dt
-                )
-            )
+            self.logger.debug("  - target_dt <= latest_dt:[{}] <= [{}]".format(self._request_start_dt, latest_dt))
             if self._request_start_dt <= latest_dt:
                 self.logger.debug(" - Update complete!")
                 self._is_update_complete = True
@@ -503,9 +469,7 @@ class _CandlesElement:
         )
         dt_now = dt.datetime.now()
         dt_now = dt_now.replace(second=0, microsecond=0)
-        self._next_updatetime = (
-            dt_now + self._RETRY_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
-        )
+        self._next_updatetime = dt_now + self._RETRY_INTERVAL + self._NEXT_UPDATETIME_OFS_SEC
 
         self.logger.debug("---------- Next retry update time ----------")
         self.logger.debug("  - Now time:        [{}]".format(dt_now))
@@ -594,30 +558,14 @@ class CandlesStore(Node):
         self.logger = super().get_logger()
 
         # --------------- Initialize ROS parameter ---------------
-        self._rosprm_use_inst_usdjpy = RosParam(
-            "use_instrument.usdjpy", Parameter.Type.BOOL
-        )
-        self._rosprm_use_inst_eurjpy = RosParam(
-            "use_instrument.eurjpy", Parameter.Type.BOOL
-        )
-        self._rosprm_use_inst_eurusd = RosParam(
-            "use_instrument.eurusd", Parameter.Type.BOOL
-        )
-        self._rosprm_use_inst_gbpjpy = RosParam(
-            "use_instrument.gbpjpy", Parameter.Type.BOOL
-        )
-        self._rosprm_use_inst_audjpy = RosParam(
-            "use_instrument.audjpy", Parameter.Type.BOOL
-        )
-        self._rosprm_use_inst_nzdjpy = RosParam(
-            "use_instrument.nzdjpy", Parameter.Type.BOOL
-        )
-        self._rosprm_use_inst_cadjpy = RosParam(
-            "use_instrument.cadjpy", Parameter.Type.BOOL
-        )
-        self._rosprm_use_inst_chfjpy = RosParam(
-            "use_instrument.chfjpy", Parameter.Type.BOOL
-        )
+        self._rosprm_use_inst_usdjpy = RosParam("use_instrument.usdjpy", Parameter.Type.BOOL)
+        self._rosprm_use_inst_eurjpy = RosParam("use_instrument.eurjpy", Parameter.Type.BOOL)
+        self._rosprm_use_inst_eurusd = RosParam("use_instrument.eurusd", Parameter.Type.BOOL)
+        self._rosprm_use_inst_gbpjpy = RosParam("use_instrument.gbpjpy", Parameter.Type.BOOL)
+        self._rosprm_use_inst_audjpy = RosParam("use_instrument.audjpy", Parameter.Type.BOOL)
+        self._rosprm_use_inst_nzdjpy = RosParam("use_instrument.nzdjpy", Parameter.Type.BOOL)
+        self._rosprm_use_inst_cadjpy = RosParam("use_instrument.cadjpy", Parameter.Type.BOOL)
+        self._rosprm_use_inst_chfjpy = RosParam("use_instrument.chfjpy", Parameter.Type.BOOL)
         self._rosprm_use_gran_m1 = RosParam("use_granularity.m1", Parameter.Type.BOOL)
         self._rosprm_use_gran_m2 = RosParam("use_granularity.m2", Parameter.Type.BOOL)
         self._rosprm_use_gran_m3 = RosParam("use_granularity.m3", Parameter.Type.BOOL)
@@ -652,21 +600,11 @@ class CandlesStore(Node):
         self._rosprm_length_h12 = RosParam("data_length.h12", Parameter.Type.INTEGER)
         self._rosprm_length_d = RosParam("data_length.d", Parameter.Type.INTEGER)
         self._rosprm_length_w = RosParam("data_length.w", Parameter.Type.INTEGER)
-        self._rosprm_next_updatetime_ofs_sec = RosParam(
-            "next_updatetime_ofs_sec", Parameter.Type.INTEGER
-        )
-        self._rosprm_retry_interval_min = RosParam(
-            "retry_interval_min", Parameter.Type.INTEGER
-        )
-        self._rosprm_fail_interval_min = RosParam(
-            "fail_interval_min", Parameter.Type.INTEGER
-        )
-        self._rosprm_retry_count_max = RosParam(
-            "retry_count_max", Parameter.Type.INTEGER
-        )
-        self._rosprm_self_retry_count_max = RosParam(
-            "self_retry_count_max", Parameter.Type.INTEGER
-        )
+        self._rosprm_next_updatetime_ofs_sec = RosParam("next_updatetime_ofs_sec", Parameter.Type.INTEGER)
+        self._rosprm_retry_interval_min = RosParam("retry_interval_min", Parameter.Type.INTEGER)
+        self._rosprm_fail_interval_min = RosParam("fail_interval_min", Parameter.Type.INTEGER)
+        self._rosprm_retry_count_max = RosParam("retry_count_max", Parameter.Type.INTEGER)
+        self._rosprm_self_retry_count_max = RosParam("self_retry_count_max", Parameter.Type.INTEGER)
 
         rosutl.set_parameters(self, self._rosprm_use_inst_usdjpy)
         rosutl.set_parameters(self, self._rosprm_use_inst_eurjpy)
@@ -751,9 +689,7 @@ class CandlesStore(Node):
                 )
                 self._candles_elem_list.append(candles_elem)
 
-        qos_profile_service = QoSProfile(
-            history=HistoryPolicy.KEEP_ALL, reliability=ReliabilityPolicy.RELIABLE
-        )
+        qos_profile_service = QoSProfile(history=HistoryPolicy.KEEP_ALL, reliability=ReliabilityPolicy.RELIABLE)
 
         # Create service server "CandlesByDatetime"
         self._cbd_srv = self.create_service(
@@ -774,9 +710,7 @@ class CandlesStore(Node):
         )
 
         # --------------- Create ROS Timer ---------------
-        self._timer = self.create_timer(
-            1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer
-        )
+        self._timer = self.create_timer(1.0, self._do_cyclic_event, callback_group=self._cb_grp_mutua_timer)
 
     def _do_cyclic_event(self) -> None:
         for candles_elem in self._candles_elem_list:
@@ -784,9 +718,7 @@ class CandlesStore(Node):
             # self.logger.debug("inst_id:{}, gran_id:{}"
             #                   .format(candles_elem._inst_id, candles_data._gran_id))
 
-    def _handle_candles_by_datetime(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_candles_by_datetime(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_datetime]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_id:[{}]".format(req.gran_msg.gran_id))
@@ -825,8 +757,7 @@ class CandlesStore(Node):
         if df_comp is None:
             self.logger.error("{:!^50}".format(" ROS Service Error "))
             self.logger.error(
-                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in "
-                "candles_elem.".format(inst_id, gran_id)
+                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in candles_elem.".format(inst_id, gran_id)
             )
         else:
             if not req.datetime_start == "":
@@ -874,9 +805,7 @@ class CandlesStore(Node):
 
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
-        self.logger.debug(
-            "  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list))
-        )
+        self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
         self.logger.debug("  - next_update_time:[{}]".format(rsp.next_update_time))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
@@ -884,9 +813,7 @@ class CandlesStore(Node):
 
         return rsp
 
-    def _handle_candles_by_length(
-        self, req: SrvTypeRequest, rsp: SrvTypeResponse
-    ) -> SrvTypeResponse:
+    def _handle_candles_by_length(self, req: SrvTypeRequest, rsp: SrvTypeResponse) -> SrvTypeResponse:
         self.logger.debug("{:=^50}".format(" Service[candles_by_length]:Start "))
         self.logger.debug("<Request>")
         self.logger.debug("  - gran_id:[{}]".format(req.gran_msg.gran_id))
@@ -910,14 +837,11 @@ class CandlesStore(Node):
         if df_comp is None:
             self.logger.error("{:!^50}".format(" ROS Service Error "))
             self.logger.error(
-                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in "
-                "candles_elem.".format(inst_id, gran_id)
+                "  Target(inst_id:[{}],gran_id:[{}]) is not exit in candles_elem.".format(inst_id, gran_id)
             )
         elif req.length < 1:
             self.logger.error("{:!^50}".format(" ROS Service Error "))
-            self.logger.error(
-                "  Requested length:[{}] is incorrect.".format(req.length)
-            )
+            self.logger.error("  Requested length:[{}] is incorrect.".format(req.length))
         else:
             df_comp = df_comp.tail(req.length)
 
@@ -941,9 +865,7 @@ class CandlesStore(Node):
 
         dbg_tm_end = dt.datetime.now()
         self.logger.debug("<Response>")
-        self.logger.debug(
-            "  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list))
-        )
+        self.logger.debug("  - cndl_msg_list(length):[{}]".format(len(rsp.cndl_msg_list)))
         self.logger.debug("  - next_update_time:[{}]".format(rsp.next_update_time))
         self.logger.debug("[Performance]")
         self.logger.debug("  - Response time:[{}]".format(dbg_tm_end - dbg_tm_start))
@@ -951,7 +873,7 @@ class CandlesStore(Node):
 
         return rsp
 
-    def _use_inst_list(self) -> list:
+    def _use_inst_list(self) -> list[int]:
         inst_list: list[int] = []
         if self._rosprm_use_inst_usdjpy.value:
             inst_list.append(InstApi.INST_USD_JPY)
@@ -971,8 +893,8 @@ class CandlesStore(Node):
             inst_list.append(InstApi.INST_CHF_JPY)
         return inst_list
 
-    def _use_gran_list(self) -> list:
-        gran_list: list[tuple] = []
+    def _use_gran_list(self) -> list[tuple[int, int]]:
+        gran_list: list[tuple[int, int]] = []
         if self._rosprm_use_gran_m1.value:
             gran_list.append((GranApi.GRAN_M1, self._rosprm_length_m1.value))
         if self._rosprm_use_gran_m2.value:
